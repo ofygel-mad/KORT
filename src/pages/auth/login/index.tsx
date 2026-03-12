@@ -56,7 +56,7 @@ export default function LoginPage() {
             placeholder="you@company.kz"
             autoComplete="email"
             autoFocus
-            className="crm-input"
+            className="kort-input"
             style={{
               width: '100%',
               boxSizing: 'border-box',
@@ -74,7 +74,7 @@ export default function LoginPage() {
               type={showPwd ? 'text' : 'password'}
               placeholder="••••••••"
               autoComplete="current-password"
-              className="crm-input"
+              className="kort-input"
               style={{
                 width: '100%',
                 boxSizing: 'border-box',

@@ -152,7 +152,7 @@ const SECTIONS = [
   { key: "organization", label: "Организация", icon: <Building2 size={16} /> },
   { key: "team", label: "Команда", icon: <Users size={16} /> },
   { key: "pipelines", label: "Воронки", icon: <GitBranch size={16} /> },
-  { key: "mode", label: "Режим CRM", icon: <Shield size={16} /> },
+  { key: "mode", label: "Режим Kort", icon: <Shield size={16} /> },
   { key: "integrations", label: "Интеграции", icon: <Globe size={16} /> },
   { key: "webhooks", label: "Webhooks", icon: <Zap size={16} /> },
   { key: "templates", label: "Шаблоны сообщений", icon: <MessageSquare size={16} /> },
@@ -211,13 +211,13 @@ function OrgSection() {
         <label style={{ fontSize: 12, fontWeight: 500, color: "var(--color-text-secondary)" }}>
           Название организации
         </label>
-        <input {...register("name")} defaultValue={org?.name ?? ""} className="crm-input" />
+        <input {...register("name")} defaultValue={org?.name ?? ""} className="kort-input" />
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         <label style={{ fontSize: 12, fontWeight: 500, color: "var(--color-text-secondary)" }}>
           Часовой пояс
         </label>
-        <select {...register("timezone")} defaultValue={org?.timezone ?? "Asia/Almaty"} className="crm-input">
+        <select {...register("timezone")} defaultValue={org?.timezone ?? "Asia/Almaty"} className="kort-input">
           <option value="Asia/Almaty">Asia/Almaty (UTC+5) — Алматы, Астана</option>
           <option value="Asia/Oral">Asia/Oral (UTC+5) — Уральск</option>
           <option value="Asia/Aqtobe">Asia/Aqtobe (UTC+5) — Актобе</option>
@@ -230,7 +230,7 @@ function OrgSection() {
         <label style={{ fontSize: 12, fontWeight: 500, color: "var(--color-text-secondary)" }}>
           Валюта по умолчанию
         </label>
-        <select {...register("currency")} defaultValue={org?.currency ?? "KZT"} className="crm-input">
+        <select {...register("currency")} defaultValue={org?.currency ?? "KZT"} className="kort-input">
           <option value="KZT">₸ KZT — Казахстанский тенге</option>
           <option value="USD">$ USD — Доллар США</option>
           <option value="EUR">€ EUR — Евро</option>
@@ -351,7 +351,7 @@ function TeamSection() {
                           role: e.target.value,
                         })
                       }
-                      className="crm-input"
+                      className="kort-input"
                       style={{
                         fontSize: 12,
                         padding: "3px 8px",
@@ -631,7 +631,7 @@ function PipelinesSection() {
                     if (e.key === "Escape") setAddingStage(false);
                   }}
                   placeholder="Название стадии..."
-                  className="crm-input"
+                  className="kort-input"
                   style={{ flex: 1, fontSize: 13 }}
                 />
                 <Button
@@ -704,7 +704,7 @@ function PipelinesSection() {
                         s ? { ...s, name: e.target.value } : null,
                       )
                     }
-                    className="crm-input"
+                    className="kort-input"
                   />
                 </div>
                 <div style={{ marginBottom: 20 }}>
@@ -811,7 +811,7 @@ function IntegrationsSection() {
           <input
             {...register("email_host")}
             placeholder="smtp.gmail.com"
-            className="crm-input"
+            className="kort-input"
           />
         </div>
         <div>
@@ -821,14 +821,14 @@ function IntegrationsSection() {
           <input
             type="number"
             {...register("email_port")}
-            className="crm-input"
+            className="kort-input"
           />
         </div>
         <div>
           <label style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>
             Email / логин
           </label>
-          <input {...register("email_username")} className="crm-input" />
+          <input {...register("email_username")} className="kort-input" />
         </div>
         <div>
           <label style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>
@@ -837,20 +837,20 @@ function IntegrationsSection() {
           <input
             type="password"
             {...register("email_password")}
-            className="crm-input"
+            className="kort-input"
           />
         </div>
         <div>
           <label style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>
             От кого
           </label>
-          <input {...register("email_from")} className="crm-input" />
+          <input {...register("email_from")} className="kort-input" />
         </div>
         <div>
           <label style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>
             TLS
           </label>
-          <select {...register("email_use_tls")} className="crm-input">
+          <select {...register("email_use_tls")} className="kort-input">
             <option value="true">Включён (рекомендуется)</option>
             <option value="false">Отключён</option>
           </select>
@@ -988,14 +988,14 @@ function WebhooksSection() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       <div style={{ fontSize: 13, color: "var(--color-text-secondary)", padding: "12px 16px", background: "var(--color-bg-muted)", borderRadius: "var(--radius-md)" }}>
-        При событиях CRM отправит POST-запрос на указанные URL. Заголовок <code>X-CRM-Signature-256</code> содержит HMAC-SHA256 подпись.
+        При событиях Kort отправит POST-запрос на указанные URL. Заголовок <code>X-Kort-Signature-256</code> содержит HMAC-SHA256 подпись.
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 10, padding: "16px", border: "1px solid var(--color-border)", borderRadius: "var(--radius-md)" }}>
         <div style={{ fontSize: 13, fontWeight: 600 }}>Добавить endpoint</div>
-        <input {...register("url", { required: true })} placeholder="https://your-app.com/crm-hook" className="crm-input" />
-        <input {...register("events")} placeholder="* или customer.created, deal.won" defaultValue="*" className="crm-input" />
-        <input {...register("description")} placeholder="Описание (опционально)" className="crm-input" />
+        <input {...register("url", { required: true })} placeholder="https://your-app.com/kort-hook" className="kort-input" />
+        <input {...register("events")} placeholder="* или customer.created, deal.won" defaultValue="*" className="kort-input" />
+        <input {...register("description")} placeholder="Описание (опционально)" className="kort-input" />
         <Button size="sm" onClick={handleSubmit((d) => createMutation.mutate(d))}>Добавить</Button>
       </div>
 
@@ -1045,12 +1045,12 @@ function ApiTokensSection() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       <div style={{ fontSize: 13, color: "var(--color-text-secondary)", padding: "12px 16px", background: "var(--color-bg-muted)", borderRadius: "var(--radius-md)" }}>
-        API-токены позволяют сторонним сервисам обращаться к CRM API без входа пользователя. Токен показывается один раз. Prefix: <code>crm_</code>
+        API-токены позволяют сторонним сервисам обращаться к Kort API без входа пользователя. Токен показывается один раз. Prefix: <code>kort_</code>
       </div>
 
       <div style={{ display: "flex", gap: 8 }}>
-        <input {...register("name", { required: true })} placeholder="Название интеграции" className="crm-input" style={{ flex: 1 }} />
-        <input {...register("scopes")} placeholder="* или customers:read,deals:read" defaultValue="*" className="crm-input" style={{ flex: 1 }} />
+        <input {...register("name", { required: true })} placeholder="Название интеграции" className="kort-input" style={{ flex: 1 }} />
+        <input {...register("scopes")} placeholder="* или customers:read,deals:read" defaultValue="*" className="kort-input" style={{ flex: 1 }} />
         <Button size="sm" onClick={handleSubmit((d) => createMutation.mutate(d))}>Создать</Button>
       </div>
 
@@ -1116,15 +1116,15 @@ function MessageTemplatesSection() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{ fontSize: 14, fontWeight: 600 }}>Шаблоны сообщений</div>
       <div style={{ display: 'grid', gap: 8 }}>
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Название" className="crm-input" />
-        <select value={channel} onChange={(e) => setChannel(e.target.value)} className="crm-input">
+        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Название" className="kort-input" />
+        <select value={channel} onChange={(e) => setChannel(e.target.value)} className="kort-input">
           <option value="general">Общий</option>
           <option value="whatsapp">WhatsApp</option>
           <option value="email">Email</option>
           <option value="call">Звонок</option>
         </select>
-        <textarea value={body} onChange={(e) => setBody(e.target.value)} placeholder="Текст" className="crm-textarea" />
-        <input value={shortcut} onChange={(e) => setShortcut(e.target.value)} placeholder="/shortcut" className="crm-input" />
+        <textarea value={body} onChange={(e) => setBody(e.target.value)} placeholder="Текст" className="kort-textarea" />
+        <input value={shortcut} onChange={(e) => setShortcut(e.target.value)} placeholder="/shortcut" className="kort-input" />
         <div><Button size="sm" icon={<Plus size={13} />} onClick={() => createMut.mutate()} disabled={!name || !body}>Добавить шаблон</Button></div>
       </div>
       {templates.map((t) => (

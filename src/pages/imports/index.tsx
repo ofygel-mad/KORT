@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 import { useDocumentTitle } from '../../shared/hooks/useDocumentTitle';
 import { SpreadsheetReview } from '../../widgets/spreadsheet-review/SpreadsheetReview';
 
-const CRM_FIELDS = [
+const Kort_FIELDS = [
   { value: '', label: '— Не импортировать —' },
   { value: 'full_name', label: 'Имя клиента' },
   { value: 'phone', label: 'Телефон' },
@@ -189,10 +189,10 @@ export default function ImportsPage() {
                     <select
                       value={mapping[header] ?? ''}
                       onChange={e => setMapping(m => ({ ...m, [header]: e.target.value }))}
-                      className="crm-select"
+                      className="kort-select"
                       style={{ width: 160, flexShrink: 0 }}
                     >
-                      {CRM_FIELDS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
+                      {Kort_FIELDS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
                     </select>
                   </div>
                 ))}

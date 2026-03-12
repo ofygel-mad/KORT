@@ -86,7 +86,7 @@ export default function AdminPage() {
 
   const upgradeMutation = useMutation({
     mutationFn: (mode: string) => api.patch('/organization/', { mode }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['organization'] }); toast.success('Режим CRM обновлён'); window.location.reload(); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['organization'] }); toast.success('Режим Kort обновлён'); window.location.reload(); },
     onError: (e: any) => toast.error(e?.response?.data?.detail ?? 'Ошибка'),
   });
 
@@ -160,7 +160,7 @@ export default function AdminPage() {
             </div>
 
             <div style={{ background: 'var(--color-bg-elevated)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', padding: '20px 24px' }}>
-              <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 16, margin: '0 0 16px' }}>Текущий режим CRM</h3>
+              <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 16, margin: '0 0 16px' }}>Текущий режим Kort</h3>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <div style={{ width: 10, height: 10, borderRadius: '50%', background: MODE_COLORS[org?.mode ?? 'basic'] }} />
                 <span style={{ fontSize: 15, fontWeight: 600, color: MODE_COLORS[org?.mode ?? 'basic'] }}>
@@ -305,7 +305,7 @@ export default function AdminPage() {
           <motion.div key="settings" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
             {!isOwner && (
               <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 'var(--radius-md)', padding: '14px 18px', marginBottom: 16, fontSize: 13, color: '#B91C1C', display: 'flex', alignItems: 'center', gap: 8 }}>
-                <AlertCircle size={16} /> Только владелец организации может менять режим CRM
+                <AlertCircle size={16} /> Только владелец организации может менять режим Kort
               </div>
             )}
             <p style={{ fontSize: 14, color: 'var(--color-text-secondary)', marginBottom: 20 }}>

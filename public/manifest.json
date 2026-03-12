@@ -1,6 +1,6 @@
 {
-  "name": "CRM Command Center",
-  "short_name": "CRM",
+  "name": "Kort Command Center",
+  "short_name": "Kort",
   "description": "Операционная среда для казахстанского бизнеса",
   "start_url": "/",
   "display": "standalone",

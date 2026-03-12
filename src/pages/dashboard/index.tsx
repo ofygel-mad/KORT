@@ -221,11 +221,11 @@ export default function DashboardPage() {
         {!isMobile && (
           <div style={{ display: 'flex', gap: 8 }}>
             <Button variant="secondary" size="sm" icon={<Plus size={13} />}
-              onClick={() => window.dispatchEvent(new CustomEvent('crm:new-customer'))}>
+              onClick={() => window.dispatchEvent(new CustomEvent('kort:new-customer'))}>
               Клиент
             </Button>
             <Button size="sm" icon={<Plus size={13} />}
-              onClick={() => window.dispatchEvent(new CustomEvent('crm:new-deal'))}>
+              onClick={() => window.dispatchEvent(new CustomEvent('kort:new-deal'))}>
               Сделка
             </Button>
           </div>
@@ -337,11 +337,11 @@ export default function DashboardPage() {
           }}>
             {[
               { label: 'Добавить клиента', icon: <Users size={14} />,
-                action: () => window.dispatchEvent(new CustomEvent('crm:new-customer')) },
+                action: () => window.dispatchEvent(new CustomEvent('kort:new-customer')) },
               { label: 'Создать сделку',  icon: <Briefcase size={14} />,
-                action: () => window.dispatchEvent(new CustomEvent('crm:new-deal')) },
+                action: () => window.dispatchEvent(new CustomEvent('kort:new-deal')) },
               { label: 'Новая задача',    icon: <CheckSquare size={14} />,
-                action: () => window.dispatchEvent(new CustomEvent('crm:new-task')) },
+                action: () => window.dispatchEvent(new CustomEvent('kort:new-task')) },
               { label: 'Импорт данных',   icon: <TrendingUp size={14} />,
                 action: () => navigate('/imports') },
             ].map(a => (

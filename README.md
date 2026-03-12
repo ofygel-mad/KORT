@@ -1,4 +1,4 @@
-# CRM — Frontend
+# Kort — Frontend
 
 React + Vite + TypeScript SPA. Запускается **без бэкенда** через мок-режим.
 

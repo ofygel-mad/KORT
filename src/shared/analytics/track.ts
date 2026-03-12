@@ -6,7 +6,7 @@ export function track(event: AnalyticsEventName, payload: AnalyticsPayload = {})
   }
 
   window.dispatchEvent(
-    new CustomEvent('crm:analytics', {
+    new CustomEvent('kort:analytics', {
       detail: { event, payload, ts: new Date().toISOString() },
     }),
   );

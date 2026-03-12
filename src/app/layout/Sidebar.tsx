@@ -57,7 +57,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void } = {}) {
               transition={{ duration: 0.15 }}
               style={{ overflow: 'hidden', whiteSpace: 'nowrap' }}
             >
-              CRM
+              Kort
             </motion.span>
           )}
         </AnimatePresence>

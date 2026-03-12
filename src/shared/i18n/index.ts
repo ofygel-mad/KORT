@@ -19,7 +19,7 @@ export const useI18n = create<I18nStore>()(
       t: ru,
       setLocale: (locale) => set({ locale, t: LOCALES[locale] }),
     }),
-    { name: 'crm-locale' },
+    { name: 'kort-locale' },
   ),
 );
 

@@ -299,12 +299,12 @@ function FollowUpBar({ customer, onUpdated }: { customer: CustomerDetail; onUpda
     </div>
     <AnimatePresence>{open && <motion.div initial={{opacity:0,height:0}} animate={{opacity:1,height:'auto'}} exit={{opacity:0,height:0}} style={{overflow:'hidden'}}>
       <div style={{ padding: 12, border:'1px solid var(--color-border)', borderTop:'none', borderRadius:'0 0 var(--radius-md) var(--radius-md)', display:'grid', gap:8 }}>
-        <input type="datetime-local" value={dueDate} onChange={(e)=>setDueDate(e.target.value)} className="crm-input" />
-        <select value={state} onChange={(e)=>setState(e.target.value)} className="crm-input">
+        <input type="datetime-local" value={dueDate} onChange={(e)=>setDueDate(e.target.value)} className="kort-input" />
+        <select value={state} onChange={(e)=>setState(e.target.value)} className="kort-input">
           <option value="">— не указан —</option>
           {Object.entries(RESPONSE_STATES).map(([k,v]) => <option key={k} value={k}>{v.label}</option>)}
         </select>
-        <textarea value={note} onChange={(e)=>setNote(e.target.value)} placeholder="Заметка" className="crm-textarea" style={{ minHeight: 52 }} />
+        <textarea value={note} onChange={(e)=>setNote(e.target.value)} placeholder="Заметка" className="kort-textarea" style={{ minHeight: 52 }} />
         <div style={{ display:'flex', justifyContent:'flex-end', gap:8 }}>
           <Button variant="secondary" size="sm" onClick={() => setOpen(false)}>Отмена</Button>
           <Button size="sm" loading={mutation.isPending} onClick={() => mutation.mutate()}>Сохранить</Button>
@@ -328,7 +328,7 @@ function TemplateQuickPick({ channel, onSelect }: { channel: string; onSelect: (
   if (!open) return <button type="button" onClick={() => setOpen(true)} style={{ fontSize: 11, border: '1px solid var(--color-amber)', borderRadius:'var(--radius-sm)', background:'none', color:'var(--color-amber)', padding:'2px 8px' }}>📋 Шаблон</button>;
   return <div style={{ border:'1px solid var(--color-border)', borderRadius:'var(--radius-md)', background:'var(--color-bg-elevated)' }}>
     <div style={{ display:'flex', gap:6, padding:'6px 8px', borderBottom:'1px solid var(--color-border)' }}>
-      <input autoFocus value={q} onChange={(e)=>setQ(e.target.value)} placeholder="Поиск" className="crm-input" style={{ flex:1, fontSize:12, height:28 }} />
+      <input autoFocus value={q} onChange={(e)=>setQ(e.target.value)} placeholder="Поиск" className="kort-input" style={{ flex:1, fontSize:12, height:28 }} />
       <button type="button" onClick={() => setOpen(false)} style={{ background:'none', border:'none' }}>✕</button>
     </div>
     <div style={{ maxHeight: 180, overflowY: 'auto' }}>
@@ -422,7 +422,7 @@ function NoteForm({
         <input
           {...register("subject")}
           placeholder="Тема письма"
-          className="crm-input"
+          className="kort-input"
           style={{ fontSize: 13 }}
         />
       )}
@@ -431,14 +431,14 @@ function NoteForm({
           type="number"
           {...register("duration_minutes")}
           placeholder="Длительность (мин)"
-          className="crm-input"
+          className="kort-input"
           style={{ fontSize: 13 }}
         />
       )}
 
       <textarea
         {...register("body", { required: true })}
-        className="crm-textarea"
+        className="kort-textarea"
         placeholder={
           noteType === "call"
             ? "Итог звонка..."
@@ -1346,7 +1346,7 @@ export default function CustomerProfilePage() {
               <input
                 {...register(f.name as any)}
                 placeholder={f.placeholder}
-                className="crm-input"
+                className="kort-input"
               />
             </div>
           ))}
@@ -1360,7 +1360,7 @@ export default function CustomerProfilePage() {
             >
               Статус
             </label>
-            <select {...register("status")} className="crm-select">
+            <select {...register("status")} className="kort-select">
               <option value="new">Новый</option>
               <option value="active">Активный</option>
               <option value="inactive">Неактивный</option>

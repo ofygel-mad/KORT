@@ -36,14 +36,14 @@ const NAV_COMMANDS = [
 ];
 
 const ACTION_COMMANDS = [
-  { id: 'new-customer', label: 'Новый клиент', icon: <Plus size={14} />, color: '#3B82F6', event: 'crm:new-customer' },
-  { id: 'new-deal', label: 'Новая сделка', icon: <Plus size={14} />, color: '#D97706', event: 'crm:new-deal' },
-  { id: 'new-task', label: 'Новая задача', icon: <Plus size={14} />, color: '#8B5CF6', event: 'crm:new-task' },
-  { id: 'new-followup', label: 'Запланировать follow-up', icon: <Plus size={14} />, color: '#10B981', event: 'crm:new-followup' },
-  { id: 'new-import', label: 'Импорт таблицы', icon: <Upload size={14} />, color: '#6B7280', event: 'crm:go-import' },
+  { id: 'new-customer', label: 'Новый клиент', icon: <Plus size={14} />, color: '#3B82F6', event: 'kort:new-customer' },
+  { id: 'new-deal', label: 'Новая сделка', icon: <Plus size={14} />, color: '#D97706', event: 'kort:new-deal' },
+  { id: 'new-task', label: 'Новая задача', icon: <Plus size={14} />, color: '#8B5CF6', event: 'kort:new-task' },
+  { id: 'new-followup', label: 'Запланировать follow-up', icon: <Plus size={14} />, color: '#10B981', event: 'kort:new-followup' },
+  { id: 'new-import', label: 'Импорт таблицы', icon: <Upload size={14} />, color: '#6B7280', event: 'kort:go-import' },
 ];
 
-const RECENT_KEY = 'crm:recent-items';
+const RECENT_KEY = 'kort:recent-items';
 const MAX_RECENT = 5;
 
 function getRecent(): Result[] {
@@ -145,11 +145,11 @@ export function CommandPalette() {
   const isSlash = query.startsWith('/');
   const slashMatch = isSlash ? query.slice(1).toLowerCase() : '';
   const SLASH_MAP = [
-    { keys: ['клиент', 'client', 'customer', 'new-customer', 'к'], label: 'Создать клиента', color: '#3B82F6', event: 'crm:new-customer' },
-    { keys: ['сделка', 'deal', 'new-deal', 'с'], label: 'Создать сделку', color: '#D97706', event: 'crm:new-deal' },
-    { keys: ['задача', 'task', 'new-task', 'з'], label: 'Создать задачу', color: '#8B5CF6', event: 'crm:new-task' },
-    { keys: ['импорт', 'import', 'и'], label: 'Открыть импорт', color: '#6B7280', event: 'crm:go-import' },
-    { keys: ['followup', 'follow', 'фол', 'ф'], label: 'Запланировать follow-up', color: '#10B981', event: 'crm:new-followup' },
+    { keys: ['клиент', 'client', 'customer', 'new-customer', 'к'], label: 'Создать клиента', color: '#3B82F6', event: 'kort:new-customer' },
+    { keys: ['сделка', 'deal', 'new-deal', 'с'], label: 'Создать сделку', color: '#D97706', event: 'kort:new-deal' },
+    { keys: ['задача', 'task', 'new-task', 'з'], label: 'Создать задачу', color: '#8B5CF6', event: 'kort:new-task' },
+    { keys: ['импорт', 'import', 'и'], label: 'Открыть импорт', color: '#6B7280', event: 'kort:go-import' },
+    { keys: ['followup', 'follow', 'фол', 'ф'], label: 'Запланировать follow-up', color: '#10B981', event: 'kort:new-followup' },
   ];
 
   if (!query) {

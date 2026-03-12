@@ -5,9 +5,9 @@ import { useNavigate } from 'react-router-dom';
 import { useIsMobile } from '../hooks/useIsMobile';
 
 const ACTIONS = [
-  { icon: <Users size={18} />, label: 'Клиент', event: 'crm:new-customer', path: '/customers' },
-  { icon: <Briefcase size={18} />, label: 'Сделка', event: 'crm:new-deal', path: '/deals' },
-  { icon: <CheckSquare size={18} />, label: 'Задача', event: 'crm:new-task', path: '/tasks' },
+  { icon: <Users size={18} />, label: 'Клиент', event: 'kort:new-customer', path: '/customers' },
+  { icon: <Briefcase size={18} />, label: 'Сделка', event: 'kort:new-deal', path: '/deals' },
+  { icon: <CheckSquare size={18} />, label: 'Задача', event: 'kort:new-task', path: '/tasks' },
 ];
 
 export function MobileFab() {
