@@ -48,9 +48,9 @@ export function AppShell() {
   }, []);
 
   useKeyboardShortcuts({
-    n: () => window.dispatchEvent(new CustomEvent('crm:new-customer')),
-    d: () => window.dispatchEvent(new CustomEvent('crm:new-deal')),
-    t: () => window.dispatchEvent(new CustomEvent('crm:new-task')),
+    n: () => window.dispatchEvent(new CustomEvent('kort:new-customer')),
+    d: () => window.dispatchEvent(new CustomEvent('kort:new-deal')),
+    t: () => window.dispatchEvent(new CustomEvent('kort:new-task')),
     f: () => toggleFocusMode(),
     '/': () => toggle(),
     '?': () => setShortcutsOpen(true),
@@ -70,8 +70,8 @@ export function AppShell() {
 
   useEffect(() => {
     const goImport = () => navigate('/imports');
-    window.addEventListener('crm:go-import', goImport);
-    return () => window.removeEventListener('crm:go-import', goImport);
+    window.addEventListener('kort:go-import', goImport);
+    return () => window.removeEventListener('kort:go-import', goImport);
   }, [navigate]);
 
   const sidebarW = isMobile ? 0 : sidebarCollapsed ? 64 : 220;

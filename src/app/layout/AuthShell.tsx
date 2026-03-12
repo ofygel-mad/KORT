@@ -84,7 +84,7 @@ export function AuthShell() {
               C
             </div>
             <span style={{ fontSize: 20, fontWeight: 700, color: '#F0F2F5', fontFamily: 'var(--font-display)' }}>
-              CRM
+              Kort
             </span>
           </div>
 
@@ -180,7 +180,7 @@ export function AuthShell() {
           <Outlet />
         </div>
         <div style={{ marginTop: 32, fontSize: 11, color: 'var(--color-text-muted)', textAlign: 'center' }}>
-          © 2025 CRM · Казахстан · Все права защищены
+          © 2025 Kort · Казахстан · Все права защищены
         </div>
       </motion.div>
     </div>

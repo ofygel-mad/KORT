@@ -56,14 +56,14 @@ export default function AuditPage() {
   };
 
   return (
-    <div style={{ padding: 24 }} className="crm-page">
+    <div style={{ padding: 24 }} className="kort-page">
       <PageHeader title="Журнал аудита" subtitle="История всех действий пользователей системы" />
       <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
         <div style={{ position: 'relative', flex: 1, minWidth: 200 }}>
           <Search size={13} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Поиск по объекту, пользователю..." className="crm-input" style={{ paddingLeft: 32 }} />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Поиск по объекту, пользователю..." className="kort-input" style={{ paddingLeft: 32 }} />
         </div>
-        <select value={filterAction} onChange={e => setFilterAction(e.target.value)} className="crm-select" style={{ width: 160 }}>
+        <select value={filterAction} onChange={e => setFilterAction(e.target.value)} className="kort-select" style={{ width: 160 }}>
           <option value="">Все действия</option>
           {Object.entries(ACTION_COLORS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
         </select>

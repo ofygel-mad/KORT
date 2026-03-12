@@ -52,6 +52,6 @@ export const useAuthStore = create<AuthState>()(
       clearAuth: () =>
         set({ user: null, org: null, token: null, refreshToken: null, role: 'viewer', capabilities: [] }),
     }),
-    { name: 'crm-auth' },
+    { name: 'kort-auth' },
   ),
 );

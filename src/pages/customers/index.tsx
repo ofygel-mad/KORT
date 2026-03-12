@@ -83,7 +83,7 @@ function FilterPanel({ open, onClose, filters, onChange }: {
       }>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         <Field label="Статус">
-          <select value={local.status} onChange={(e) => setLocal(f => ({ ...f, status: e.target.value }))} className="crm-input">
+          <select value={local.status} onChange={(e) => setLocal(f => ({ ...f, status: e.target.value }))} className="kort-input">
             <option value="">Все</option>
             <option value="new">Новый</option>
             <option value="active">Активный</option>
@@ -93,19 +93,19 @@ function FilterPanel({ open, onClose, filters, onChange }: {
         </Field>
         <Field label="Источник">
           <input value={local.source} onChange={(e) => setLocal(f => ({ ...f, source: e.target.value }))}
-            placeholder="Instagram, сайт..." className="crm-input" />
+            placeholder="Instagram, сайт..." className="kort-input" />
         </Field>
         <Field label="Ответственный">
-          <select value={local.owner_id} onChange={(e) => setLocal(f => ({ ...f, owner_id: e.target.value }))} className="crm-input">
+          <select value={local.owner_id} onChange={(e) => setLocal(f => ({ ...f, owner_id: e.target.value }))} className="kort-input">
             <option value="">Все</option>
             {(team?.results ?? []).map((u: any) => <option key={u.id} value={u.id}>{u.full_name}</option>)}
           </select>
         </Field>
         <Field label="Добавлен после">
-          <input type="date" value={local.created_after} onChange={(e) => setLocal(f => ({ ...f, created_after: e.target.value }))} className="crm-input" />
+          <input type="date" value={local.created_after} onChange={(e) => setLocal(f => ({ ...f, created_after: e.target.value }))} className="kort-input" />
         </Field>
         <Field label="Добавлен до">
-          <input type="date" value={local.created_before} onChange={(e) => setLocal(f => ({ ...f, created_before: e.target.value }))} className="crm-input" />
+          <input type="date" value={local.created_before} onChange={(e) => setLocal(f => ({ ...f, created_before: e.target.value }))} className="kort-input" />
         </Field>
       </div>
     </Drawer>
@@ -159,8 +159,8 @@ export default function CustomersPage() {
 
   useEffect(() => {
     const handler = () => setDrawer(true);
-    window.addEventListener('crm:new-customer', handler);
-    return () => window.removeEventListener('crm:new-customer', handler);
+    window.addEventListener('kort:new-customer', handler);
+    return () => window.removeEventListener('kort:new-customer', handler);
   }, []);
 
   const qp = { search: debouncedSearch,
@@ -230,7 +230,7 @@ export default function CustomersPage() {
         text: `Создать сделку для ${customerName}?`,
         dismissLabel: 'Открыть сделки',
         action: () => {
-          window.dispatchEvent(new CustomEvent('crm:new-deal', { detail: { customerId } }));
+          window.dispatchEvent(new CustomEvent('kort:new-deal', { detail: { customerId } }));
         },
       });
 
@@ -241,7 +241,7 @@ export default function CustomersPage() {
           text: `Поставить задачу "Первый контакт" для ${customerName}?`,
           dismissLabel: 'Создать задачу',
           action: () => {
-            window.dispatchEvent(new CustomEvent('crm:new-task', {
+            window.dispatchEvent(new CustomEvent('kort:new-task', {
               detail: { title: `Первый контакт — ${customerName}`, customerId },
             }));
           },
@@ -409,7 +409,7 @@ export default function CustomersPage() {
         if (!c) return null;
         const items: ContextMenuItem[] = [
           { label: 'Открыть профиль', icon: <ExternalLink size={13} />, onClick: () => navigate(`/customers/${c.id}`) },
-          { label: 'Новая задача', icon: <UserCog size={13} />, onClick: () => { window.dispatchEvent(new CustomEvent('crm:new-task', { detail: { customerId: c.id } })); } },
+          { label: 'Новая задача', icon: <UserCog size={13} />, onClick: () => { window.dispatchEvent(new CustomEvent('kort:new-task', { detail: { customerId: c.id } })); } },
           ...(c.phone ? [{ label: 'Написать в WhatsApp', icon: <MessageCircle size={13} />, color: '#10B981', onClick: () => window.open(`https://wa.me/${formatPhoneForWhatsApp(c.phone)}`, '_blank') }] : []),
           { label: '', divider: true, onClick: () => {} },
           { label: 'Удалить', icon: <Trash2 size={13} />, danger: true, onClick: () => bulkMutation.mutate({ action: 'delete', ids: [c.id] }) },
@@ -425,10 +425,10 @@ export default function CustomersPage() {
           </div>
         }>
         <form style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <Field label="Имя *"><input {...register('full_name', { required: true })} placeholder="Иван Иванов" className="crm-input" /></Field>
-          <Field label="Телефон"><input {...register('phone')} placeholder="+7 700 000 00 00" className="crm-input" /></Field>
-          <Field label="Email"><input {...register('email')} type="email" placeholder="ivan@company.kz" className="crm-input" /></Field>
-          <Field label="Компания"><input {...register('company_name')} placeholder="ТОО Компания" className="crm-input" /></Field>
+          <Field label="Имя *"><input {...register('full_name', { required: true })} placeholder="Иван Иванов" className="kort-input" /></Field>
+          <Field label="Телефон"><input {...register('phone')} placeholder="+7 700 000 00 00" className="kort-input" /></Field>
+          <Field label="Email"><input {...register('email')} type="email" placeholder="ivan@company.kz" className="kort-input" /></Field>
+          <Field label="Компания"><input {...register('company_name')} placeholder="ТОО Компания" className="kort-input" /></Field>
           <Field label="БИН/ИИН">
             <div style={{ position: 'relative' }}>
               <input
@@ -438,7 +438,7 @@ export default function CustomersPage() {
                 })}
                 placeholder="000000000000"
                 maxLength={12}
-                className="crm-input"
+                className="kort-input"
                 style={{ paddingRight: 80 }}
               />
               {watch('bin_iin') && validateBinIin(watch('bin_iin') ?? '') && (
@@ -464,7 +464,7 @@ export default function CustomersPage() {
               <span style={{ fontSize: 11, color: '#DC2626' }}>{formState.errors.bin_iin.message}</span>
             )}
           </Field>
-          <Field label="Источник"><input {...register('source')} placeholder="Instagram, Referral..." className="crm-input" /></Field>
+          <Field label="Источник"><input {...register('source')} placeholder="Instagram, Referral..." className="kort-input" /></Field>
         </form>
       </Drawer>
     </div>

@@ -34,7 +34,7 @@ const MODES: ModeCard[] = [
   { mode: 'industrial', title: 'Промышленный', subtitle: 'Для крупного бизнеса', features: ['Филиалы', 'API и интеграции', 'Аудит', 'Сложные права', 'SLA'], icon: <Factory size={22} />, color: '#8B5CF6' },
 ];
 
-const STEPS = ['Ваш бизнес', 'Режим CRM', 'Быстрый старт'];
+const STEPS = ['Ваш бизнес', 'Режим Kort', 'Быстрый старт'];
 
 export default function OnboardingPage() {
   const navigate = useNavigate();
@@ -64,7 +64,7 @@ export default function OnboardingPage() {
     <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #FFF8F0 0%, #FFFBF5 50%, #F9F9F7 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
       <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: 32, display: 'flex', alignItems: 'center', gap: 10 }}>
         <div style={{ width: 40, height: 40, borderRadius: 12, background: 'var(--color-amber-gradient)', boxShadow: 'var(--shadow-amber)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 800, color: '#fff', fontFamily: 'var(--font-display)' }}>C</div>
-        <span style={{ fontSize: 20, fontWeight: 700, fontFamily: 'var(--font-display)' }}>CRM</span>
+        <span style={{ fontSize: 20, fontWeight: 700, fontFamily: 'var(--font-display)' }}>Kort</span>
       </motion.div>
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 32 }}>
@@ -85,7 +85,7 @@ export default function OnboardingPage() {
         {step === 0 && (
           <>
             <h2 style={{ fontSize: 22, fontWeight: 700, fontFamily: 'var(--font-display)', marginBottom: 6 }}>Расскажите о вашем бизнесе</h2>
-            <p style={{ fontSize: 14, color: 'var(--color-text-secondary)', marginBottom: 28 }}>Это поможет нам настроить CRM под ваши задачи</p>
+            <p style={{ fontSize: 14, color: 'var(--color-text-secondary)', marginBottom: 28 }}>Это поможет нам настроить Kort под ваши задачи</p>
 
             <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 12 }}>Тип бизнеса</p>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8, marginBottom: 24 }}>
@@ -108,7 +108,7 @@ export default function OnboardingPage() {
 
         {step === 1 && (
           <>
-            <h2 style={{ fontSize: 22, fontWeight: 700, fontFamily: 'var(--font-display)', marginBottom: 6 }}>Выберите режим CRM</h2>
+            <h2 style={{ fontSize: 22, fontWeight: 700, fontFamily: 'var(--font-display)', marginBottom: 6 }}>Выберите режим Kort</h2>
             <p style={{ fontSize: 14, color: 'var(--color-text-secondary)', marginBottom: 28 }}>Вы сможете изменить это позже в настройках</p>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
               {MODES.map(m => (
@@ -132,7 +132,7 @@ export default function OnboardingPage() {
             <div style={{ textAlign: 'center', marginBottom: 28 }}>
               <div style={{ fontSize: 44, marginBottom: 12 }}>🎉</div>
               <h2 style={{ fontSize: 22, fontWeight: 700, fontFamily: 'var(--font-display)', marginBottom: 8 }}>Вы готовы к работе!</h2>
-              <p style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}>Привет, {user?.full_name?.split(' ')[0]}! CRM настроена и готова.</p>
+              <p style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}>Привет, {user?.full_name?.split(' ')[0]}! Kort настроена и готова.</p>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24 }}>

@@ -174,7 +174,7 @@ export function Topbar() {
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13,
           color: 'var(--color-text-secondary)', minWidth: 0 }}>
-          {!isMobile && <span style={{ color: 'var(--color-text-muted)' }}>CRM</span>}
+          {!isMobile && <span style={{ color: 'var(--color-text-muted)' }}>Kort</span>}
           {!isMobile && <ChevronRight size={13} style={{ color: 'var(--color-text-muted)', flexShrink: 0 }} />}
           {dynamic ? (
             <>

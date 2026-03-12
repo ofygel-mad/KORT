@@ -192,7 +192,7 @@ function ConditionRow({
       <select
         value={condition.field_path}
         onChange={(e) => onChange({ ...condition, field_path: e.target.value, operator: 'eq', value_json: '' })}
-        className="crm-input" style={{ flex: 2, fontSize: 12 }}
+        className="kort-input" style={{ flex: 2, fontSize: 12 }}
       >
         <option value="">Выберите поле...</option>
         {fields.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
@@ -200,7 +200,7 @@ function ConditionRow({
       <select
         value={condition.operator}
         onChange={(e) => onChange({ ...condition, operator: e.target.value })}
-        className="crm-input" style={{ flex: 1, fontSize: 12 }}
+        className="kort-input" style={{ flex: 1, fontSize: 12 }}
       >
         {ops.map((o) => <option key={o.v} value={o.v}>{o.l}</option>)}
       </select>
@@ -209,7 +209,7 @@ function ConditionRow({
           value={String(condition.value_json ?? '')}
           onChange={(e) => onChange({ ...condition, value_json: e.target.value })}
           placeholder="Значение"
-          className="crm-input" style={{ flex: 2, fontSize: 12 }}
+          className="kort-input" style={{ flex: 2, fontSize: 12 }}
         />
       )}
       {canRemove && (
@@ -390,7 +390,7 @@ function ActionCard({
               onChange={(e) => onChange({ ...action, config_json: { ...action.config_json, [f.key]: e.target.value } })}
               placeholder={f.placeholder}
               type={f.type === 'number' ? 'number' : 'text'}
-              className="crm-input" style={{ fontSize: 12, width: '100%', boxSizing: 'border-box' }}
+              className="kort-input" style={{ fontSize: 12, width: '100%', boxSizing: 'border-box' }}
             />
           </div>
         ))}
@@ -653,7 +653,7 @@ function BuilderDrawer({
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Название правила..."
-          className="crm-input"
+          className="kort-input"
           style={{ fontSize: 15, fontWeight: 500 }}
         />
 
@@ -757,7 +757,7 @@ export default function AutomationsPage() {
         <EmptyState
           icon={<Zap size={22} />}
           title="Автоматизации недоступны"
-          subtitle="Обновите режим CRM до Продвинутого или Промышленного"
+          subtitle="Обновите режим Kort до Продвинутого или Промышленного"
         />
       </div>
     );

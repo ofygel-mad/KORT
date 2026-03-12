@@ -30,7 +30,7 @@ export const MOCK_CUSTOMERS = [
 ];
 
 export const MOCK_DEALS = [
-  { id: 'd-001', title: 'Внедрение CRM', amount: 1500000, currency: 'KZT', stage: 'Переговоры', status: 'open', customer: { id: 'c-001', full_name: 'Асем Нурланова' }, customer_id: 'c-001', customer_name: 'Асем Нурланова', pipeline_id: 'p-001', stage_id: 's-002', created_at: '2025-01-10T10:00:00Z', updated_at: '2025-01-18T10:00:00Z', days_silent: 3 },
+  { id: 'd-001', title: 'Внедрение Kort', amount: 1500000, currency: 'KZT', stage: 'Переговоры', status: 'open', customer: { id: 'c-001', full_name: 'Асем Нурланова' }, customer_id: 'c-001', customer_name: 'Асем Нурланова', pipeline_id: 'p-001', stage_id: 's-002', created_at: '2025-01-10T10:00:00Z', updated_at: '2025-01-18T10:00:00Z', days_silent: 3 },
   { id: 'd-002', title: 'Поставка оборудования', amount: 4200000, currency: 'KZT', stage: 'Коммерческое предложение', status: 'open', customer: { id: 'c-004', full_name: 'Ерлан Аубакиров' }, customer_id: 'c-004', customer_name: 'Ерлан Аубакиров', pipeline_id: 'p-001', stage_id: 's-001', created_at: '2025-01-12T11:00:00Z', updated_at: '2025-01-16T11:00:00Z', days_silent: 12 },
   { id: 'd-003', title: 'Консалтинг Q1', amount: 800000, currency: 'KZT', stage: 'Квалификация', status: 'open', customer: { id: 'c-002', full_name: 'Дастан Жумабеков' }, customer_id: 'c-002', customer_name: 'Дастан Жумабеков', pipeline_id: 'p-001', stage_id: 's-001', created_at: '2025-01-14T09:00:00Z', updated_at: '2025-01-20T09:00:00Z', days_silent: 1 },
 ];

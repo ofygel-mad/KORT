@@ -7,8 +7,8 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <meta name="apple-mobile-web-app-title" content="CRM" />
-    <meta name="description" content="CRM для казахстанского бизнеса" />
+    <meta name="apple-mobile-web-app-title" content="Kort" />
+    <meta name="description" content="Kort для казахстанского бизнеса" />
 
     <link rel="manifest" href="/manifest.json" />
     <link rel="apple-touch-icon" href="/icons/icon-192.png" />
@@ -17,7 +17,7 @@
     <script>
       (function() {
         try {
-          var raw = localStorage.getItem('crm-ui');
+          var raw = localStorage.getItem('kort-ui');
           var theme = 'system';
           try { theme = JSON.parse(raw).state.theme; } catch(e) {}
           var dark = theme === 'dark' ||
@@ -28,7 +28,7 @@
       })();
     </script>
 
-    <title>CRM</title>
+    <title>Kort</title>
   </head>
   <body>
     <div id="root"></div>

@@ -200,7 +200,7 @@ export default function RegisterPage() {
           <motion.form key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
             onSubmit={handleSubmit(onSubmit)}>
             <p style={{ fontSize: 14, color: 'var(--color-text-secondary)', marginBottom: 16, textAlign: 'center' }}>
-              Выберите режим CRM. Вы сможете изменить его позже.
+              Выберите режим Kort. Вы сможете изменить его позже.
             </p>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 20 }}>
               {MODES.map((m) => (

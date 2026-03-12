@@ -373,7 +373,7 @@ export default function ReportsPage() {
             type="date"
             value={customRange.from}
             onChange={(e) => setCustomRange((r) => ({ ...r, from: e.target.value }))}
-            className="crm-input"
+            className="kort-input"
             style={{ fontSize: 12, padding: "4px 8px", width: 130 }}
           />
           <span style={{ fontSize: 12, color: "var(--color-text-muted)" }}>—</span>
@@ -381,7 +381,7 @@ export default function ReportsPage() {
             type="date"
             value={customRange.to}
             onChange={(e) => setCustomRange((r) => ({ ...r, to: e.target.value }))}
-            className="crm-input"
+            className="kort-input"
             style={{ fontSize: 12, padding: "4px 8px", width: 130 }}
           />
         </div>

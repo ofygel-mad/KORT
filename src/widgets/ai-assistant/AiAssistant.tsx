@@ -119,7 +119,7 @@ export function AiAssistant({ customerId, dealId }: Props) {
                 <Sparkles size={16} />
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 13, fontWeight: 700 }}>ИИ-ассистент CRM</div>
+                <div style={{ fontSize: 13, fontWeight: 700 }}>ИИ-ассистент Kort</div>
                 <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>
                   {customerId ? 'Контекст: клиент' : dealId ? 'Контекст: сделка' : 'Общий режим'}
                 </div>

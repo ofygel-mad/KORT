@@ -33,12 +33,12 @@ export const useUIStore = create<UIStore>()(
       toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
       toggleFocusMode: () => set((s) => ({ focusMode: !s.focusMode })),
     }),
-    { name: 'crm-ui' },
+    { name: 'kort-ui' },
   ),
 );
 
 if (typeof window !== 'undefined') {
-  const raw = localStorage.getItem('crm-ui');
+  const raw = localStorage.getItem('kort-ui');
   const theme: Theme = raw ? (JSON.parse(raw).state?.theme ?? 'system') : 'system';
   applyTheme(theme);
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {

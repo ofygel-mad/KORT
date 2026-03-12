@@ -289,7 +289,7 @@ function QuickNote({ dealId }: { dealId: string }) {
         onChange={(e) => setBody(e.target.value)}
         onFocus={() => setFocused(true)}
         placeholder="Добавить заметку..."
-        className="crm-input"
+        className="kort-input"
         style={{
           width: "100%",
           resize: "none",
@@ -1104,20 +1104,20 @@ export default function DealProfilePage() {
       >
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           <Field label="Название *">
-            <input {...register("title")} className="crm-input" />
+            <input {...register("title")} className="kort-input" />
           </Field>
           <Field label="Сумма">
             <input
               {...register("amount")}
               type="number"
-              className="crm-input"
+              className="kort-input"
             />
           </Field>
           <Field label="Дата закрытия">
             <input
               {...register("expected_close_date")}
               type="date"
-              className="crm-input"
+              className="kort-input"
             />
           </Field>
         </div>

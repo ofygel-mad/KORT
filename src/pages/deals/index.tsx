@@ -155,8 +155,8 @@ export default function DealsPage() {
 
   useEffect(() => {
     const handler = () => setCreateDrawer(true);
-    window.addEventListener('crm:new-deal', handler);
-    return () => window.removeEventListener('crm:new-deal', handler);
+    window.addEventListener('kort:new-deal', handler);
+    return () => window.removeEventListener('kort:new-deal', handler);
   }, []);
 
   const { data: customers } = useQuery<{ results: Array<{ id: string; full_name: string }> }>({
@@ -219,7 +219,7 @@ export default function DealsPage() {
           text: `Сделка "${deal?.title ?? ''}" выиграна! Попросить отзыв?`,
           dismissLabel: 'Создать задачу',
           action: () => {
-            window.dispatchEvent(new CustomEvent('crm:new-task', {
+            window.dispatchEvent(new CustomEvent('kort:new-task', {
               detail: { title: `Попросить отзыв по "${deal?.title}"`, dealId: vars.dealId },
             }));
           },
@@ -322,22 +322,22 @@ export default function DealsPage() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--color-text-secondary)' }}>Название *</label>
-            <input {...regCreate('title', { required: true })} className="crm-input" placeholder="Проект / Заказ / Клиент" />
+            <input {...regCreate('title', { required: true })} className="kort-input" placeholder="Проект / Заказ / Клиент" />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--color-text-secondary)' }}>Сумма</label>
-            <input {...regCreate('amount')} type="number" className="crm-input" placeholder="0" />
+            <input {...regCreate('amount')} type="number" className="kort-input" placeholder="0" />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--color-text-secondary)' }}>Клиент</label>
-            <select {...regCreate('customer_id')} className="crm-select">
+            <select {...regCreate('customer_id')} className="kort-select">
               <option value="">— Выбрать клиента —</option>
               {(customers?.results ?? []).map(c => <option key={c.id} value={c.id}>{c.full_name}</option>)}
             </select>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--color-text-secondary)' }}>Дата закрытия</label>
-            <input {...regCreate('expected_close_date')} type="date" className="crm-input" />
+            <input {...regCreate('expected_close_date')} type="date" className="kort-input" />
           </div>
         </div>
       </Drawer>

@@ -62,11 +62,11 @@ export function CustomFieldsTab({ entityType, entityId }: CustomFieldsTabProps) 
 }
 
 function FieldInput({ field, value, onChange }: { field: CustomField; value: any; onChange: (v: any) => void }) {
-  if (field.field_type === 'select') return <select value={value ?? ''} onChange={e => onChange(e.target.value)} className="crm-select"><option value="">— не выбрано —</option>{field.options.map(o => <option key={o} value={o}>{o}</option>)}</select>;
+  if (field.field_type === 'select') return <select value={value ?? ''} onChange={e => onChange(e.target.value)} className="kort-select"><option value="">— не выбрано —</option>{field.options.map(o => <option key={o} value={o}>{o}</option>)}</select>;
   if (field.field_type === 'boolean') return <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}><input type="checkbox" checked={!!value} onChange={e => onChange(e.target.checked)} style={{ width: 16, height: 16 }} /><span style={{ fontSize: 13 }}>Да</span></label>;
-  if (field.field_type === 'date') return <input type="date" value={value ?? ''} onChange={e => onChange(e.target.value)} className="crm-input" />;
-  if (field.field_type === 'number') return <input type="number" value={value ?? ''} onChange={e => onChange(Number(e.target.value))} className="crm-input" />;
-  return <input type="text" value={value ?? ''} onChange={e => onChange(e.target.value)} className="crm-input" />;
+  if (field.field_type === 'date') return <input type="date" value={value ?? ''} onChange={e => onChange(e.target.value)} className="kort-input" />;
+  if (field.field_type === 'number') return <input type="number" value={value ?? ''} onChange={e => onChange(Number(e.target.value))} className="kort-input" />;
+  return <input type="text" value={value ?? ''} onChange={e => onChange(e.target.value)} className="kort-input" />;
 }
 
 function formatFieldValue(field: CustomField, value: any): string {

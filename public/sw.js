@@ -1,4 +1,4 @@
-const CACHE_NAME = 'crm-static-v2';
+const CACHE_NAME = 'kort-static-v2';
 const STATIC = ['/', '/offline.html', '/manifest.json', '/icons/icon-192.png'];
 
 self.addEventListener('install', (e) => {

@@ -87,8 +87,8 @@ export default function TasksPage() {
       if (detail.title) reset({ ...{ priority: 'medium' }, title: detail.title });
       if (detail.customerId) setValue('customer_id', detail.customerId);
     };
-    window.addEventListener('crm:new-task', handler);
-    return () => window.removeEventListener('crm:new-task', handler);
+    window.addEventListener('kort:new-task', handler);
+    return () => window.removeEventListener('kort:new-task', handler);
   }, [reset, setValue]);
 
   useEffect(() => {
@@ -245,20 +245,20 @@ export default function TasksPage() {
       >
         <form style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <Field label="Заголовок *">
-            <input {...register('title', { required: true })} placeholder="Что нужно сделать?" className="crm-input" />
+            <input {...register('title', { required: true })} placeholder="Что нужно сделать?" className="kort-input" />
           </Field>
           <Field label="Описание">
-            <textarea {...register('description')} placeholder="Детали задачи..." className="crm-textarea" style={{ minHeight: 72 }} />
+            <textarea {...register('description')} placeholder="Детали задачи..." className="kort-textarea" style={{ minHeight: 72 }} />
           </Field>
           <Field label="Приоритет">
-            <select {...register('priority')} className="crm-input">
+            <select {...register('priority')} className="kort-input">
               <option value="low">Низкий</option>
               <option value="medium">Средний</option>
               <option value="high">Высокий</option>
             </select>
           </Field>
           <Field label="Срок выполнения">
-            <input type="datetime-local" {...register('due_at')} className="crm-input" />
+            <input type="datetime-local" {...register('due_at')} className="kort-input" />
           </Field>
         </form>
       </Drawer>
