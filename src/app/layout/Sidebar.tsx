@@ -17,6 +17,7 @@ import {
 import { useCapabilities } from '../../shared/hooks/useCapabilities';
 import { useRole } from '../../shared/hooks/useRole';
 import { useUIStore } from '../../shared/stores/ui';
+import { KortLogo } from '../../shared/ui/KortLogo';
 import styles from './Sidebar.module.css';
 
 const NAV = [
@@ -44,9 +45,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void } = {}) {
       transition={{ type: 'spring', stiffness: 320, damping: 32 }}
     >
       <div className={styles.logo}>
-        <div className={styles.logoIcon}>
-          <span>C</span>
-        </div>
+        <KortLogo size={28} />
         <AnimatePresence initial={false}>
           {!sidebarCollapsed && (
             <motion.span

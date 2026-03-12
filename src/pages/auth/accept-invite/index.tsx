@@ -5,6 +5,7 @@ import { api } from '../../../shared/api/client';
 import { useAuthStore } from '../../../shared/stores/auth';
 import { toast } from 'sonner';
 import { Eye, EyeOff } from 'lucide-react';
+import { KortLogo } from '../../../shared/ui/KortLogo';
 
 export default function AcceptInvitePage() {
   const [searchParams] = useSearchParams();
@@ -51,7 +52,7 @@ export default function AcceptInvitePage() {
         boxShadow: 'var(--shadow-lg)',
       }}>
       <div style={{ textAlign: 'center', marginBottom: 28 }}>
-        <div style={{ width: 44, height: 44, background: 'var(--color-amber)', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px', color: 'white', fontWeight: 800, fontSize: 20 }}>C</div>
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}><KortLogo size={44} /></div>
         <h1 style={{ fontSize: 20, fontWeight: 700, fontFamily: 'var(--font-display)', margin: 0 }}>Принять приглашение</h1>
         <p style={{ fontSize: 13, color: 'var(--color-text-muted)', marginTop: 6 }}>Создайте пароль для вашего аккаунта</p>
       </div>

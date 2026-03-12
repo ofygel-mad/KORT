@@ -1,472 +1,1375 @@
-import { useEffect, useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, User, Filter, X, Check, Trash2, UserCog, Tag, ExternalLink, MessageCircle } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { api } from '../../shared/api/client';
-import type { Customer } from '../../entities/customer/model/types';
-import { STATUS_LABELS, STATUS_COLORS } from '../../entities/customer/model/types';
-import { PageHeader } from '../../shared/ui/PageHeader';
-import { Button } from '../../shared/ui/Button';
-import { SearchInput } from '../../shared/ui/SearchInput';
-import { Badge } from '../../shared/ui/Badge';
-import { Skeleton } from '../../shared/ui/Skeleton';
-import { Drawer } from '../../shared/ui/Drawer';
-import { EmptyState } from '../../shared/ui/EmptyState';
-import { useDebounce } from '../../shared/hooks/useDebounce';
-import { useForm } from 'react-hook-form';
-import { toast } from 'sonner';
-import { useIsMobile } from '../../shared/hooks/useIsMobile';
-import { validateBinIin, formatBinIin, isBin, formatPhoneForWhatsApp } from '../../shared/utils/kz';
-import { ContextMenu, type ContextMenuItem } from '../../shared/ui/ContextMenu';
-import { HealthScoreBadge } from '../../shared/ui/HealthScoreBadge';
-import { useSuggestionsStore } from '../../shared/stores/suggestions';
-import { nanoid } from 'nanoid';
-import { useDocumentTitle } from '../../shared/hooks/useDocumentTitle';
+import { useEffect, useState, type ReactNode } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  ChevronLeft,
+  Phone,
+  Mail,
+  Building2,
+  User,
+  Edit3,
+  Plus,
+  MessageSquare,
+  CheckSquare,
+  Briefcase,
+  Clock,
+  Tag,
+  Calendar,
+  Send,
+  MessageCircle,
+  FileText,
+  PhoneCall,
+  Copy,
+  Check,
+} from "lucide-react";
+import { api } from "../../../shared/api/client";
+import { Button } from "../../../shared/ui/Button";
+import { Badge } from "../../../shared/ui/Badge";
+import { PageLoader } from "../../../shared/ui/PageLoader";
+import { EmptyState } from "../../../shared/ui/EmptyState";
+import { Drawer } from "../../../shared/ui/Drawer";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
+import { format, formatDistanceToNow } from "date-fns";
+import { CustomFieldsTab } from "../../../shared/ui/CustomFieldsTab";
+import { ru } from "date-fns/locale";
+import { formatPhoneForWhatsApp } from "../../../shared/utils/kz";
+import { formatMoney } from "../../../shared/utils/format";
+import { AiAssistant } from "../../../widgets/ai-assistant/AiAssistant";
+import { useCopyToClipboard } from '../../../shared/hooks/useCopyToClipboard';
+import { useDocumentTitle } from '../../../shared/hooks/useDocumentTitle';
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+interface CustomerDetail {
+  id: string;
+  full_name: string;
+  company_name: string;
+  phone: string;
+  email: string;
+  source: string;
+  status: string;
+  owner: { id: string; full_name: string } | null;
+  tags: string[];
+  notes: string;
+  created_at: string;
+  updated_at: string;
+  last_contact_at?: string | null;
+  follow_up_due_at?: string | null;
+  response_state?: string;
+  next_action_note?: string;
+}
+interface Activity {
+  id: string;
+  type: string;
+  payload: Record<string, unknown>;
+  actor: { full_name: string } | null;
+  created_at: string;
+}
+interface Deal {
+  id: string;
+  title: string;
+  amount: number | null;
+  currency: string;
+  status: string;
+  stage: { name: string; type: string };
+  created_at: string;
+}
+interface Task {
+  id: string;
+  title: string;
+  priority: string;
+  status: string;
+  due_at: string | null;
+  assigned_to: { full_name: string } | null;
+}
+
+const TABS = [
+  { key: "overview", label: "Обзор" },
+  { key: "activity", label: "Активность" },
+  { key: "deals", label: "Сделки" },
+  { key: "tasks", label: "Задачи" },
+  { key: "fields", label: "Доп. поля" },
+];
+
+const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
+  new: { bg: "#DBEAFE", color: "#1D4ED8" },
+  active: { bg: "#D1FAE5", color: "#065F46" },
+  inactive: { bg: "#F3F4F6", color: "#6B7280" },
+  archived: { bg: "#F3F4F6", color: "#9CA3AF" },
+};
+const STATUS_LABELS: Record<string, string> = {
+  new: "Новый",
+  active: "Активный",
+  inactive: "Неактивный",
+  archived: "Архив",
+};
+
+const ACTIVITY_META: Record<
+  string,
+  { icon: ReactNode; color: string; label: string }
+> = {
+  note: {
+    icon: <MessageSquare size={14} />,
+    color: "#6B7280",
+    label: "Заметка",
+  },
+  call: { icon: <PhoneCall size={14} />, color: "#3B82F6", label: "Звонок" },
+  whatsapp: {
+    icon: <MessageCircle size={14} />,
+    color: "#10B981",
+    label: "WhatsApp",
+  },
+  email_sent: {
+    icon: <Send size={14} />,
+    color: "#8B5CF6",
+    label: "Email отправлен",
+  },
+  email_in: {
+    icon: <Mail size={14} />,
+    color: "#F59E0B",
+    label: "Email получен",
+  },
+  task_created: {
+    icon: <CheckSquare size={14} />,
+    color: "#D97706",
+    label: "Задача",
+  },
+  task_done: {
+    icon: <CheckSquare size={14} />,
+    color: "#10B981",
+    label: "Задача выполнена",
+  },
+  deal_created: {
+    icon: <Briefcase size={14} />,
+    color: "#D97706",
+    label: "Сделка",
+  },
+  stage_change: {
+    icon: <Briefcase size={14} />,
+    color: "#3B82F6",
+    label: "Этап изменён",
+  },
+  status_change: {
+    icon: <Tag size={14} />,
+    color: "#EC4899",
+    label: "Статус изменён",
+  },
+  document_sent: {
+    icon: <FileText size={14} />,
+    color: "#06B6D4",
+    label: "Документ отправлен",
+  },
+};
+const DEFAULT_ACTIVITY = {
+  icon: <Clock size={14} />,
+  color: "#9CA3AF",
+  label: "Событие",
+};
+
+function CopyableValue({ value, href, children }: { value: string; href?: string; children: React.ReactNode }) {
+  const [copied, setCopied] = useState(false);
+  const copyToClipboard = useCopyToClipboard();
+  const copy = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    copyToClipboard(value);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1800);
+  };
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-      <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--color-text-secondary)' }}>{label}</label>
-      {children}
+    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+      {href ? <a href={href} style={{ color: "var(--color-text-primary)", textDecoration: "none" }}>{children}</a> : children}
+      <button
+        onClick={copy}
+        title="Копировать"
+        style={{
+          background: "none", border: "none", cursor: "pointer", padding: "0 2px",
+          color: copied ? "#10B981" : "var(--color-text-muted)", display: "flex", transition: "color 0.15s",
+        }}
+      >
+        {copied ? <Check size={12} /> : <Copy size={12} />}
+      </button>
     </div>
   );
 }
 
-interface Filters { status: string; source: string; owner_id: string; created_after: string; created_before: string; }
-const EMPTY: Filters = { status: '', source: '', owner_id: '', created_after: '', created_before: '' };
-const countActive = (f: Filters) => Object.values(f).filter(Boolean).length;
-
-function CheckboxIcon({ checked, indeterminate }: { checked: boolean; indeterminate?: boolean }) {
-  return (
-    <motion.div animate={{ scale: checked || indeterminate ? 1 : 0.95 }}
-      style={{ width: 16, height: 16, borderRadius: 4, flexShrink: 0,
-        border: `1.5px solid ${checked || indeterminate ? 'var(--color-amber)' : 'var(--color-border)'}`,
-        background: checked || indeterminate ? 'var(--color-amber)' : 'transparent',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        transition: 'all var(--transition-fast)' }}>
-      {checked && <Check size={10} style={{ color: 'white' }} />}
-      {indeterminate && !checked && <div style={{ width: 8, height: 2, background: 'white', borderRadius: 1 }} />}
-    </motion.div>
-  );
-}
-
-function Chip({ label, onRemove }: { label: string; onRemove: () => void }) {
-  return (
-    <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}
-      style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '3px 8px 3px 10px',
-        background: 'var(--color-amber-light)', border: '1px solid var(--color-amber)',
-        borderRadius: 'var(--radius-full)', fontSize: 12, color: 'var(--color-amber-dark)' }}>
-      {label}
-      <button onClick={onRemove} style={{ background: 'none', border: 'none', cursor: 'pointer',
-        color: 'var(--color-amber-dark)', padding: 0, display: 'flex', alignItems: 'center' }}>
-        <X size={11} />
-      </button>
-    </motion.div>
-  );
-}
-
-function FilterPanel({ open, onClose, filters, onChange }: {
-  open: boolean; onClose: () => void; filters: Filters; onChange: (f: Filters) => void;
+function ContactItem({
+  icon,
+  label,
+  value,
+  href,
+}: {
+  icon: ReactNode;
+  label: string;
+  value: ReactNode;
+  href?: string;
 }) {
-  const [local, setLocal] = useState<Filters>(filters);
-  const { data: team } = useQuery<{ results: any[] }>({
-    queryKey: ['team'], queryFn: () => api.get('/users/team/'), enabled: open,
+  if (!value) return null;
+  const content = (
+    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      <span
+        style={{
+          width: 32,
+          height: 32,
+          borderRadius: "var(--radius-md)",
+          background: "var(--color-bg-muted)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: "var(--color-text-secondary)",
+          flexShrink: 0,
+        }}
+      >
+        {icon}
+      </span>
+      <div>
+        <div style={{ fontSize: 11, color: "var(--color-text-muted)" }}>
+          {label}
+        </div>
+        <div
+          style={{
+            fontSize: 13,
+            fontWeight: 500,
+            color: "var(--color-text-primary)",
+          }}
+        >
+          {value}
+        </div>
+      </div>
+    </div>
+  );
+  return href ? (
+    <a href={href} style={{ textDecoration: "none" }}>
+      {content}
+    </a>
+  ) : (
+    content
+  );
+}
+
+type NoteType = "note" | "call" | "whatsapp" | "email_sent";
+interface NoteFormData {
+  body: string;
+  type: NoteType;
+  subject?: string;
+  duration_minutes?: number;
+}
+
+
+
+const RESPONSE_STATES: Record<string, { label: string; color: string; bg: string }> = {
+  waiting_reply: { label: 'Ждём ответа', color: '#D97706', bg: '#FEF3C7' },
+  replied: { label: 'Ответил', color: '#065F46', bg: '#D1FAE5' },
+  no_response: { label: 'Не отвечает', color: '#991B1B', bg: '#FEE2E2' },
+  not_contacted: { label: 'Не связались', color: '#6B7280', bg: '#F3F4F6' },
+};
+
+function FollowUpBar({ customer, onUpdated }: { customer: CustomerDetail; onUpdated: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [dueDate, setDueDate] = useState('');
+  const [state, setState] = useState(customer.response_state ?? '');
+  const [note, setNote] = useState('');
+  const qc = useQueryClient();
+  useEffect(() => { setState(customer.response_state ?? ''); }, [customer.response_state]);
+
+  const mutation = useMutation({
+    mutationFn: () => api.post(`/customers/${customer.id}/follow-up/`, {
+      follow_up_due_at: dueDate || null,
+      response_state: state,
+      note,
+    }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['customer', customer.id] });
+      qc.invalidateQueries({ queryKey: ['customer-activities', customer.id] });
+      toast.success('Follow-up сохранён');
+      setOpen(false);
+      setNote('');
+      onUpdated();
+    },
+  });
+
+  const rs = RESPONSE_STATES[customer.response_state ?? ''];
+  const isOverdue = !!(customer.follow_up_due_at && new Date(customer.follow_up_due_at) < new Date());
+
+  return <div style={{ marginBottom: 12 }}>
+    <div onClick={() => setOpen((v) => !v)} style={{ display:'flex', gap:8, alignItems:'center', padding:'8px 12px', border:'1px solid var(--color-border)', borderRadius:'var(--radius-md)', cursor:'pointer', background: isOverdue ? '#FFF1F1' : 'var(--color-bg-muted)' }}>
+      <span style={{ fontSize: 13 }}>🎯</span>
+      <div style={{ flex:1, fontSize:12 }}>Follow-up {customer.follow_up_due_at && <span style={{ color: isOverdue ? '#EF4444' : 'var(--color-text-muted)' }}>{format(new Date(customer.follow_up_due_at), 'd MMM HH:mm', { locale: ru })}</span>}</div>
+      {rs && <span style={{ fontSize:11, fontWeight:600, padding:'2px 8px', borderRadius: 99, color: rs.color, background: rs.bg }}>{rs.label}</span>}
+    </div>
+    <AnimatePresence>{open && <motion.div initial={{opacity:0,height:0}} animate={{opacity:1,height:'auto'}} exit={{opacity:0,height:0}} style={{overflow:'hidden'}}>
+      <div style={{ padding: 12, border:'1px solid var(--color-border)', borderTop:'none', borderRadius:'0 0 var(--radius-md) var(--radius-md)', display:'grid', gap:8 }}>
+        <input type="datetime-local" value={dueDate} onChange={(e)=>setDueDate(e.target.value)} className="kort-input" />
+        <select value={state} onChange={(e)=>setState(e.target.value)} className="kort-input">
+          <option value="">— не указан —</option>
+          {Object.entries(RESPONSE_STATES).map(([k,v]) => <option key={k} value={k}>{v.label}</option>)}
+        </select>
+        <textarea value={note} onChange={(e)=>setNote(e.target.value)} placeholder="Заметка" className="kort-textarea" style={{ minHeight: 52 }} />
+        <div style={{ display:'flex', justifyContent:'flex-end', gap:8 }}>
+          <Button variant="secondary" size="sm" onClick={() => setOpen(false)}>Отмена</Button>
+          <Button size="sm" loading={mutation.isPending} onClick={() => mutation.mutate()}>Сохранить</Button>
+        </div>
+      </div>
+    </motion.div>}</AnimatePresence>
+  </div>;
+}
+
+function TemplateQuickPick({ channel, onSelect }: { channel: string; onSelect: (body: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState('');
+  const { data } = useQuery<{ results: Array<{ id: string; name: string; body: string; shortcut: string }> }>({
+    queryKey: ['msg-templates', channel],
+    queryFn: () => api.get('/message-templates/', { channel }),
+    enabled: open,
+    staleTime: 30_000,
+  });
+  const templates = data?.results ?? [];
+  const filtered = q ? templates.filter((t) => t.name.toLowerCase().includes(q.toLowerCase()) || (t.shortcut || '').includes(q)) : templates;
+  if (!open) return <button type="button" onClick={() => setOpen(true)} style={{ fontSize: 11, border: '1px solid var(--color-amber)', borderRadius:'var(--radius-sm)', background:'none', color:'var(--color-amber)', padding:'2px 8px' }}>📋 Шаблон</button>;
+  return <div style={{ border:'1px solid var(--color-border)', borderRadius:'var(--radius-md)', background:'var(--color-bg-elevated)' }}>
+    <div style={{ display:'flex', gap:6, padding:'6px 8px', borderBottom:'1px solid var(--color-border)' }}>
+      <input autoFocus value={q} onChange={(e)=>setQ(e.target.value)} placeholder="Поиск" className="kort-input" style={{ flex:1, fontSize:12, height:28 }} />
+      <button type="button" onClick={() => setOpen(false)} style={{ background:'none', border:'none' }}>✕</button>
+    </div>
+    <div style={{ maxHeight: 180, overflowY: 'auto' }}>
+      {filtered.map((t) => <button key={t.id} type="button" onClick={() => { onSelect(t.body); setOpen(false); api.post(`/message-templates/${t.id}/use/`); }} style={{ width:'100%', textAlign:'left', background:'none', border:'none', borderBottom:'1px solid var(--color-border)', padding:'8px 10px' }}>
+        <div style={{ fontSize:12, fontWeight:600 }}>{t.name} <span style={{ fontSize:10, color:'var(--color-text-muted)' }}>{t.shortcut}</span></div>
+        <div style={{ fontSize:11, color:'var(--color-text-muted)' }}>{t.body.slice(0, 80)}</div>
+      </button>)}
+    </div>
+  </div>;
+}
+
+const TYPE_LABELS: Record<NoteType, string> = {
+  note: "💬 Заметка",
+  call: "📞 Звонок",
+  whatsapp: "📱 WhatsApp",
+  email_sent: "✉️ Email",
+};
+
+function NoteForm({
+  customerId,
+  dealId,
+  onSuccess,
+}: {
+  customerId?: string;
+  dealId?: string;
+  onSuccess: () => void;
+}) {
+  const {
+    register,
+    handleSubmit,
+    reset,
+    watch,
+    setValue,
+    formState: { isSubmitting },
+  } = useForm<NoteFormData>({ defaultValues: { type: "note" } });
+  const noteType = watch("type");
+  const mutation = useMutation({
+    mutationFn: (data: NoteFormData) =>
+      api.post("/activities/", {
+        ...data,
+        customer_id: customerId,
+        deal_id: dealId,
+      }),
+    onSuccess: () => {
+      onSuccess();
+      reset({ type: noteType });
+      toast.success("Добавлено");
+    },
   });
   return (
-    <Drawer open={open} onClose={onClose} title="Фильтры"
-      footer={
-        <div style={{ display: 'flex', gap: 8, justifyContent: 'space-between' }}>
-          <Button variant="ghost" size="sm" onClick={() => { setLocal(EMPTY); onChange(EMPTY); onClose(); }}>Сбросить</Button>
-          <Button size="sm" onClick={() => { onChange(local); onClose(); }}>Применить</Button>
+    <form
+      onSubmit={handleSubmit((d) => mutation.mutate(d))}
+      style={{ display: "flex", flexDirection: "column", gap: 10 }}
+    >
+      <div style={{ display: "flex", gap: 4 }}>
+        {(Object.keys(TYPE_LABELS) as NoteType[]).map((t) => (
+          <label
+            key={t}
+            style={{
+              padding: "4px 10px",
+              borderRadius: "var(--radius-full)",
+              fontSize: 12,
+              fontWeight: 500,
+              cursor: "pointer",
+              fontFamily: "var(--font-body)",
+              background:
+                noteType === t ? "var(--color-amber)" : "var(--color-bg-muted)",
+              color: noteType === t ? "#fff" : "var(--color-text-secondary)",
+              border: `1px solid ${noteType === t ? "var(--color-amber)" : "var(--color-border)"}`,
+              transition: "all var(--transition-fast)",
+            }}
+          >
+            <input
+              type="radio"
+              {...register("type")}
+              value={t}
+              style={{ display: "none" }}
+            />
+            {TYPE_LABELS[t]}
+          </label>
+        ))}
+        <div style={{ marginLeft: "auto" }}>
+          <TemplateQuickPick
+            channel={noteType === "email_sent" ? "email" : noteType === "call" ? "call" : noteType}
+            onSelect={(body) => setValue("body", body)}
+          />
         </div>
-      }>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        <Field label="Статус">
-          <select value={local.status} onChange={(e) => setLocal(f => ({ ...f, status: e.target.value }))} className="kort-input">
-            <option value="">Все</option>
-            <option value="new">Новый</option>
-            <option value="active">Активный</option>
-            <option value="inactive">Неактивный</option>
-            <option value="archived">Архив</option>
-          </select>
-        </Field>
-        <Field label="Источник">
-          <input value={local.source} onChange={(e) => setLocal(f => ({ ...f, source: e.target.value }))}
-            placeholder="Instagram, сайт..." className="kort-input" />
-        </Field>
-        <Field label="Ответственный">
-          <select value={local.owner_id} onChange={(e) => setLocal(f => ({ ...f, owner_id: e.target.value }))} className="kort-input">
-            <option value="">Все</option>
-            {(team?.results ?? []).map((u: any) => <option key={u.id} value={u.id}>{u.full_name}</option>)}
-          </select>
-        </Field>
-        <Field label="Добавлен после">
-          <input type="date" value={local.created_after} onChange={(e) => setLocal(f => ({ ...f, created_after: e.target.value }))} className="kort-input" />
-        </Field>
-        <Field label="Добавлен до">
-          <input type="date" value={local.created_before} onChange={(e) => setLocal(f => ({ ...f, created_before: e.target.value }))} className="kort-input" />
-        </Field>
       </div>
-    </Drawer>
+
+      {noteType === "email_sent" && (
+        <input
+          {...register("subject")}
+          placeholder="Тема письма"
+          className="kort-input"
+          style={{ fontSize: 13 }}
+        />
+      )}
+      {noteType === "call" && (
+        <input
+          type="number"
+          {...register("duration_minutes")}
+          placeholder="Длительность (мин)"
+          className="kort-input"
+          style={{ fontSize: 13 }}
+        />
+      )}
+
+      <textarea
+        {...register("body", { required: true })}
+        className="kort-textarea"
+        placeholder={
+          noteType === "call"
+            ? "Итог звонка..."
+            : noteType === "whatsapp"
+              ? "Что обсудили..."
+              : noteType === "email_sent"
+                ? "Текст / краткое содержание..."
+                : "Написать заметку..."
+        }
+        style={{ minHeight: 72 }}
+      />
+      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+        <Button size="sm" loading={isSubmitting} type="submit">
+          Сохранить
+        </Button>
+      </div>
+    </form>
   );
 }
 
-function BulkBar({ count, onAssign, onStatus, onDelete, onClear }: {
-  count: number; onAssign: () => void; onStatus: () => void; onDelete: () => void; onClear: () => void;
-}) {
-  const Btn = ({ onClick, children, danger }: { onClick: () => void; children: React.ReactNode; danger?: boolean }) => (
-    <button onClick={onClick} style={{
-      display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: 'none',
-      cursor: 'pointer', color: danger ? '#FCA5A5' : 'rgba(255,255,255,0.85)',
-      fontSize: 13, fontFamily: 'var(--font-body)', padding: '4px 6px', borderRadius: 6,
-    }}>{children}</button>
-  );
-  return (
-    <motion.div initial={{ opacity: 0, y: 32, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: 32, scale: 0.96 }} transition={{ type: 'spring', stiffness: 400, damping: 32 }}
-      style={{ position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)',
-        background: 'var(--color-text-primary)', color: 'white', borderRadius: 'var(--radius-full)',
-        padding: '10px 20px', display: 'flex', alignItems: 'center', gap: 10,
-        boxShadow: '0 8px 32px rgba(0,0,0,0.25)', zIndex: 300, whiteSpace: 'nowrap' }}>
-      <span style={{ fontSize: 13, fontWeight: 600 }}>Выбрано: {count}</span>
-      <div style={{ width: 1, height: 18, background: 'rgba(255,255,255,0.18)' }} />
-      <Btn onClick={onAssign}><UserCog size={14} />Назначить</Btn>
-      <Btn onClick={onStatus}><Tag size={14} />Статус</Btn>
-      <Btn onClick={onDelete} danger><Trash2 size={14} />Удалить</Btn>
-      <div style={{ width: 1, height: 18, background: 'rgba(255,255,255,0.18)' }} />
-      <button onClick={onClear} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.5)', padding: 2 }}>
-        <X size={15} />
-      </button>
-    </motion.div>
-  );
-}
-
-export default function CustomersPage() {
-  useDocumentTitle('Клиенты');
+export default function CustomerProfilePage() {
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const [search, setSearch] = useState('');
-  const [drawerOpen, setDrawer] = useState(false);
-  const [filterOpen, setFilterOpen] = useState(false);
-  const [assignOpen, setAssignOpen] = useState(false);
-  const [statusOpen, setStatusOpen] = useState(false);
-  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; customerId: string } | null>(null);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [filters, setFilters] = useState<Filters>(EMPTY);
-  const isMobile = useIsMobile();
-  const debouncedSearch = useDebounce(search, 300);
+  const [activeTab, setActiveTab] = useState("overview");
+  const [editDrawer, setEditDrawer] = useState(false);
 
-  useEffect(() => {
-    const handler = () => setDrawer(true);
-    window.addEventListener('kort:new-customer', handler);
-    return () => window.removeEventListener('kort:new-customer', handler);
-  }, []);
-
-  const qp = { search: debouncedSearch,
-    ...(filters.status        && { status:         filters.status }),
-    ...(filters.source        && { source:         filters.source }),
-    ...(filters.owner_id      && { owner_id:        filters.owner_id }),
-    ...(filters.created_after  && { created_after:  filters.created_after }),
-    ...(filters.created_before && { created_before: filters.created_before }),
-  };
-
-  const { data, isLoading } = useQuery<{ results: Customer[]; count: number }>({
-    queryKey: ['customers', qp], queryFn: () => api.get('/customers/', qp),
+  const { data: customer, isLoading } = useQuery<CustomerDetail>({
+    queryKey: ["customer", id],
+    queryFn: () => api.get(`/customers/${id}/`),
+  });
+  useDocumentTitle(customer?.full_name);
+  const { data: activities } = useQuery<{ results: Activity[] }>({
+    queryKey: ["customer-activities", id],
+    queryFn: () => api.get(`/customers/${id}/activities/`),
+    enabled: activeTab === "activity" || activeTab === "overview",
+  });
+  const { data: deals } = useQuery<{ results: Deal[] }>({
+    queryKey: ["customer-deals", id],
+    queryFn: () => api.get(`/customers/${id}/deals/`),
+    enabled: activeTab === "deals" || activeTab === "overview",
+  });
+  const { data: tasks } = useQuery<{ results: Task[] }>({
+    queryKey: ["customer-tasks", id],
+    queryFn: () => api.get(`/customers/${id}/tasks/`),
+    enabled: activeTab === "tasks",
   });
 
-  const customers = data?.results ?? [];
-  const allChecked = selected.size === customers.length && customers.length > 0;
-  const someChecked = selected.size > 0 && selected.size < customers.length;
-  const toggleOne = (id: string) => setSelected(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
-  const toggleAll = () => setSelected(allChecked ? new Set() : new Set(customers.map(c => c.id)));
+  const {
+    register,
+    handleSubmit,
+    reset: resetEdit,
+    formState: { isSubmitting: editSubmitting },
+  } = useForm<Partial<CustomerDetail>>();
 
-  const restoreMutation = useMutation({
-    mutationFn: (body: { ids: string[] }) => api.post('/customers/bulk/', { ...body, action: 'restore' }),
+  const updateMutation = useMutation({
+    mutationFn: (data: Partial<CustomerDetail>) =>
+      api.patch(`/customers/${id}/`, data),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['customers'] });
-      toast.success('Восстановлено');
+      qc.invalidateQueries({ queryKey: ["customer", id] });
+      qc.invalidateQueries({ queryKey: ["customers"] });
+      toast.success("Клиент обновлён");
+      setEditDrawer(false);
     },
   });
 
-  const bulkMutation = useMutation({
-    mutationFn: (body: object) => api.post('/customers/bulk/', body),
-    onSuccess: (res: any, v: any) => {
-      qc.invalidateQueries({ queryKey: ['customers'] });
-      setSelected(new Set());
-      if (v.action === 'delete') {
-        toast.success(`Удалено ${res.affected ?? v.ids?.length ?? ''} клиентов`, {
-          action: {
-            label: 'Отменить',
-            onClick: () => restoreMutation.mutate({ ids: v.ids }),
-          },
-          duration: 5000,
-        });
-      } else {
-        const messages: Record<string, string> = { assign: 'Назначено', change_status: 'Статус изменён' };
-        toast.success(messages[v.action] ?? 'Готово');
-      }
-    },
-  });
+  if (isLoading) return <PageLoader />;
+  if (!customer)
+    return <EmptyState icon={<User size={22} />} title="Клиент не найден" />;
 
-  const { register, handleSubmit, reset, watch, formState } = useForm<{
-    full_name: string; phone?: string; email?: string; company_name?: string; source?: string; bin_iin?: string;
-  }>();
-  const createMutation = useMutation({
-    mutationFn: (d: object) => api.post('/customers/', d),
-    onSuccess: (created: any) => {
-      qc.invalidateQueries({ queryKey: ['customers'] });
-      toast.success('Клиент создан');
-      setDrawer(false);
-      reset();
-
-      const { push } = useSuggestionsStore.getState();
-      const customerId = created.id;
-      const customerName = created.full_name;
-
-      push({
-        id: nanoid(),
-        emoji: '💡',
-        text: `Создать сделку для ${customerName}?`,
-        dismissLabel: 'Открыть сделки',
-        action: () => {
-          window.dispatchEvent(new CustomEvent('kort:new-deal', { detail: { customerId } }));
-        },
-      });
-
-      setTimeout(() => {
-        push({
-          id: nanoid(),
-          emoji: '💡',
-          text: `Поставить задачу "Первый контакт" для ${customerName}?`,
-          dismissLabel: 'Создать задачу',
-          action: () => {
-            window.dispatchEvent(new CustomEvent('kort:new-task', {
-              detail: { title: `Первый контакт — ${customerName}`, customerId },
-            }));
-          },
-        });
-      }, 800);
-    },
-  });
-
-  const { data: team } = useQuery<{ results: any[] }>({
-    queryKey: ['team'], queryFn: () => api.get('/users/team/'), enabled: assignOpen,
-  });
-
-  const fc = countActive(filters);
+  const sc = STATUS_COLORS[customer.status] ?? STATUS_COLORS.new;
+  const activeDeals = deals?.results.filter((d) => d.status === "open") ?? [];
 
   return (
-    <div style={{ padding: isMobile ? '14px' : '24px 28px' }}>
-      <PageHeader
-        title="Клиенты"
-        subtitle={data ? `${data.count} всего` : undefined}
-        actions={
-          <div style={{ display: 'flex', gap: 8 }}>
-            <Button variant="secondary" size="sm" icon={<Filter size={13} />} onClick={() => setFilterOpen(true)}>
-              Фильтры{fc > 0 && <span style={{ marginLeft: 4, background: 'var(--color-amber)', color: 'white',
-                borderRadius: 'var(--radius-full)', padding: '0 5px', fontSize: 10, fontWeight: 700 }}>{fc}</span>}
+    <div style={{ maxWidth: 1000, animation: "slideUp 0.25s ease" }}>
+      <button
+        onClick={() => navigate("/customers")}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          marginBottom: 20,
+          fontSize: 13,
+          color: "var(--color-text-secondary)",
+          background: "none",
+          border: "none",
+          cursor: "pointer",
+          padding: 0,
+          fontFamily: "var(--font-body)",
+        }}
+      >
+        <ChevronLeft size={16} /> Назад к клиентам
+      </button>
+
+      <div
+        style={{
+          background: "var(--color-bg-elevated)",
+          border: "1px solid var(--color-border)",
+          borderRadius: "var(--radius-xl)",
+          padding: "24px 28px",
+          marginBottom: 16,
+          boxShadow: "var(--shadow-sm)",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            justifyContent: "space-between",
+            gap: 16,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <div
+              style={{
+                width: 52,
+                height: 52,
+                borderRadius: "var(--radius-lg)",
+                background: "var(--color-amber-light)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 20,
+                fontWeight: 700,
+                color: "var(--color-amber)",
+                fontFamily: "var(--font-display)",
+                flexShrink: 0,
+              }}
+            >
+              {customer.full_name.charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <h1
+                style={{
+                  fontSize: 22,
+                  fontWeight: 700,
+                  fontFamily: "var(--font-display)",
+                  margin: 0,
+                }}
+              >
+                {customer.full_name}
+              </h1>
+              {customer.company_name && (
+                <div
+                  style={{
+                    fontSize: 14,
+                    color: "var(--color-text-secondary)",
+                    marginTop: 3,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 5,
+                  }}
+                >
+                  <Building2 size={13} />
+                  {customer.company_name}
+                </div>
+              )}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  marginTop: 8,
+                }}
+              >
+                <Badge bg={sc.bg} color={sc.color}>
+                  {STATUS_LABELS[customer.status]}
+                </Badge>
+                {customer.source && (
+                  <span
+                    style={{
+                      fontSize: 11,
+                      color: "var(--color-text-muted)",
+                      background: "var(--color-bg-muted)",
+                      padding: "2px 8px",
+                      borderRadius: "var(--radius-full)",
+                    }}
+                  >
+                    {customer.source}
+                  </span>
+                )}
+                {activeDeals.length > 0 && (
+                  <span
+                    style={{
+                      fontSize: 11,
+                      color: "#065F46",
+                      background: "#D1FAE5",
+                      padding: "2px 8px",
+                      borderRadius: "var(--radius-full)",
+                    }}
+                  >
+                    {activeDeals.length} активных сделок
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={<Edit3 size={13} />}
+              onClick={() => {
+                resetEdit(customer);
+                setEditDrawer(true);
+              }}
+            >
+              Редактировать
             </Button>
-            <Button icon={<Plus size={15} />} onClick={() => setDrawer(true)}>Добавить клиента</Button>
+            <Button
+              size="sm"
+              icon={<Plus size={13} />}
+              onClick={() => navigate("/deals")}
+            >
+              Сделка
+            </Button>
           </div>
-        }
-      />
-
-      <AnimatePresence>
-        {fc > 0 && (
-          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
-            style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
-            {filters.status        && <Chip label={`Статус: ${STATUS_LABELS[filters.status as keyof typeof STATUS_LABELS] ?? filters.status}`} onRemove={() => setFilters(f => ({ ...f, status: '' }))} />}
-            {filters.source        && <Chip label={`Источник: ${filters.source}`}                        onRemove={() => setFilters(f => ({ ...f, source: '' }))} />}
-            {filters.created_after  && <Chip label={`После: ${filters.created_after}`}                   onRemove={() => setFilters(f => ({ ...f, created_after: '' }))} />}
-            {filters.created_before && <Chip label={`До: ${filters.created_before}`}                     onRemove={() => setFilters(f => ({ ...f, created_before: '' }))} />}
-            <button onClick={() => setFilters(EMPTY)} style={{ fontSize: 11, color: 'var(--color-text-muted)',
-              background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-body)' }}>Сбросить все</button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <div style={{ marginBottom: 14 }}>
-        <SearchInput value={search} onChange={setSearch} placeholder="Поиск по имени, телефону, email..." />
-      </div>
-
-      <div style={{ background: 'var(--color-bg-elevated)', border: '1px solid var(--color-border)',
-        borderRadius: 'var(--radius-xl)', overflow: 'hidden' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '36px 1fr 1fr 1fr' : '36px 2fr 1.4fr 1.4fr 1fr 1fr',
-          padding: '10px 16px', borderBottom: '1px solid var(--color-border)',
-          fontSize: 11, fontWeight: 600, color: 'var(--color-text-muted)',
-          textTransform: 'uppercase', letterSpacing: '0.05em', background: 'var(--color-bg-muted)' }}>
-          <div onClick={toggleAll} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
-            <CheckboxIcon checked={allChecked} indeterminate={someChecked} />
-          </div>
-          <span>Имя</span><span>Телефон</span>{!isMobile && <span>Email</span>}<span>Статус</span>{!isMobile && <span>Добавлен</span>}
         </div>
 
-        {isLoading
-          ? [1, 2, 3, 4, 5].map(i => (
-              <div key={i} style={{ display: 'grid', gridTemplateColumns: isMobile ? '36px 1fr 1fr 1fr' : '36px 2fr 1.4fr 1.4fr 1fr 1fr',
-                padding: '13px 16px', borderBottom: '1px solid var(--color-border)', gap: 12, alignItems: 'center' }}>
-                <Skeleton height={14} width={14} /><Skeleton height={14} width="70%" /><Skeleton height={14} width="60%" />
-                <Skeleton height={14} width="80%" /><Skeleton height={16} width={60} radius="var(--radius-full)" /><Skeleton height={14} width={60} />
+        <div
+          style={{ display: "flex", gap: 24, marginTop: 20, flexWrap: "wrap" }}
+        >
+          {customer.phone && (
+            <ContactItem
+              icon={<Phone size={14} />}
+              label="Телефон"
+              value={<CopyableValue value={customer.phone} href={`tel:${customer.phone}`}>{customer.phone}</CopyableValue>}
+            />
+          )}
+          {customer.phone && (
+            <a
+              href={`https://wa.me/${formatPhoneForWhatsApp(customer.phone)}?text=${encodeURIComponent(`Добрый день, ${customer.full_name}!`)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ textDecoration: "none" }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  cursor: "pointer",
+                }}
+              >
+                <span
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: "var(--radius-md)",
+                    background: "#D1FAE5",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#059669",
+                    flexShrink: 0,
+                  }}
+                >
+                  <MessageCircle size={14} />
+                </span>
+                <div>
+                  <div
+                    style={{ fontSize: 11, color: "var(--color-text-muted)" }}
+                  >
+                    WhatsApp
+                  </div>
+                  <div
+                    style={{ fontSize: 13, fontWeight: 500, color: "#059669" }}
+                  >
+                    Написать в WhatsApp
+                  </div>
+                </div>
               </div>
-            ))
-          : customers.length === 0
-            ? <EmptyState icon={<User size={22} />} title="Клиентов нет"
-                subtitle={fc > 0 ? 'Попробуйте изменить фильтры' : 'Добавьте первого клиента'}
-                action={<Button size="sm" icon={<Plus size={14} />} onClick={() => setDrawer(true)}>Добавить</Button>} />
-            : customers.map((c, idx) => {
-                const sc = STATUS_COLORS[c.status];
-                const isSel = selected.has(c.id);
-                return (
-                  <motion.div key={c.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: idx * 0.025 }}
-                    onContextMenu={e => {
-                      e.preventDefault();
-                      setCtxMenu({ x: e.clientX, y: e.clientY, customerId: c.id });
-                    }}
-                    style={{ display: 'grid', gridTemplateColumns: isMobile ? '36px 1fr 1fr 1fr' : '36px 2fr 1.4fr 1.4fr 1fr 1fr',
-                      padding: '11px 16px', borderBottom: '1px solid var(--color-border)',
-                      cursor: 'pointer', fontSize: 13, alignItems: 'center',
-                      background: isSel ? 'var(--color-amber-subtle)' : 'transparent',
-                      transition: 'background var(--transition-fast)' }}
-                    onMouseEnter={e => { if (!isSel) (e.currentTarget as HTMLElement).style.background = 'var(--color-bg-muted)'; }}
-                    onMouseLeave={e => { if (!isSel) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}>
-                    <div onClick={e => { e.stopPropagation(); toggleOne(c.id); }} style={{ display: 'flex', alignItems: 'center' }}>
-                      <CheckboxIcon checked={isSel} />
-                    </div>
-                    <div onClick={() => navigate(`/customers/${c.id}`)}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <div style={{ fontWeight: 500 }}>{c.full_name}</div>
-                        {c.health && <HealthScoreBadge score={c.health.score} band={c.health.band} />}
-                      </div>
-                      {c.company_name && <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>{c.company_name}</div>}
-                    </div>
-                    <span onClick={() => navigate(`/customers/${c.id}`)} style={{ color: 'var(--color-text-secondary)' }}>{c.phone || '—'}</span>
-                    {!isMobile && <span onClick={() => navigate(`/customers/${c.id}`)} style={{ color: 'var(--color-text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.email || '—'}</span>}
-                    <div onClick={() => navigate(`/customers/${c.id}`)}><Badge bg={sc.bg} color={sc.color}>{STATUS_LABELS[c.status]}</Badge></div>
-                    {!isMobile && <span onClick={() => navigate(`/customers/${c.id}`)} style={{ color: 'var(--color-text-muted)', fontSize: 12 }}>
-                      {new Date(c.created_at).toLocaleDateString('ru-RU')}
-                    </span>}
-                  </motion.div>
-                );
-              })
-        }
+            </a>
+          )}
+          {customer.email && (
+            <ContactItem
+              icon={<Mail size={14} />}
+              label="Email"
+              value={<CopyableValue value={customer.email} href={`mailto:${customer.email}`}>{customer.email}</CopyableValue>}
+            />
+          )}
+          {customer.owner && (
+            <ContactItem
+              icon={<User size={14} />}
+              label="Ответственный"
+              value={customer.owner.full_name}
+            />
+          )}
+          <ContactItem
+            icon={<Calendar size={14} />}
+            label="Добавлен"
+            value={format(new Date(customer.created_at), "d MMM yyyy", {
+              locale: ru,
+            })}
+          />
+        </div>
       </div>
 
-      <AnimatePresence>
-        {selected.size > 0 && (
-          <BulkBar count={selected.size}
-            onAssign={() => setAssignOpen(true)}
-            onStatus={() => setStatusOpen(true)}
-            onDelete={() => { if (confirm(`Удалить ${selected.size} клиентов?`)) bulkMutation.mutate({ action: 'delete', ids: Array.from(selected) }); }}
-            onClear={() => setSelected(new Set())} />
-        )}
-      </AnimatePresence>
+      <div
+        style={{
+          display: "flex",
+          gap: 2,
+          background: "var(--color-bg-elevated)",
+          border: "1px solid var(--color-border)",
+          borderRadius: "var(--radius-lg)",
+          padding: "4px",
+          marginBottom: 16,
+          width: "fit-content",
+        }}
+      >
+        {TABS.map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            style={{
+              padding: "6px 16px",
+              borderRadius: "var(--radius-md)",
+              border: "none",
+              cursor: "pointer",
+              fontSize: 13,
+              fontWeight: 500,
+              fontFamily: "var(--font-body)",
+              background:
+                activeTab === tab.key ? "var(--color-amber)" : "transparent",
+              color:
+                activeTab === tab.key ? "#fff" : "var(--color-text-secondary)",
+              transition:
+                "background var(--transition-fast), color var(--transition-fast)",
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
 
-      {/* Assign Drawer */}
-      <Drawer open={assignOpen} onClose={() => setAssignOpen(false)} title={`Назначить (${selected.size})`}
-        footer={<Button variant="secondary" size="sm" onClick={() => setAssignOpen(false)}>Закрыть</Button>}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          {(team?.results ?? []).map((u: any) => (
-            <motion.button key={u.id} whileHover={{ x: 3 }}
-              onClick={() => { bulkMutation.mutate({ action: 'assign', ids: Array.from(selected), payload: { owner_id: u.id } }); setAssignOpen(false); }}
-              style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
-                border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)',
-                background: 'transparent', cursor: 'pointer', textAlign: 'left' }}>
-              <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'var(--color-amber-light)',
-                color: 'var(--color-amber)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 13 }}>
-                {u.full_name[0]}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={activeTab}
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -4 }}
+          transition={{ duration: 0.15 }}
+        >
+          {activeTab === "overview" && (
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 16,
+              }}
+            >
+              <FollowUpBar
+                customer={customer}
+                onUpdated={() => qc.invalidateQueries({ queryKey: ["customer", id] })}
+              />
+              <div
+                style={{
+                  background: "var(--color-bg-elevated)",
+                  border: "1px solid var(--color-border)",
+                  borderRadius: "var(--radius-lg)",
+                  overflow: "hidden",
+                }}
+              >
+                <div
+                  style={{
+                    padding: "14px 18px",
+                    borderBottom: "1px solid var(--color-border)",
+                    fontSize: 13,
+                    fontWeight: 600,
+                  }}
+                >
+                  Последняя активность
+                </div>
+                <div style={{ padding: "12px 18px" }}>
+                  <NoteForm
+                    customerId={id!}
+                    onSuccess={() =>
+                      qc.invalidateQueries({
+                        queryKey: ["customer-activities", id],
+                      })
+                    }
+                  />
+                </div>
+                <div>
+                  {(activities?.results ?? []).slice(0, 5).map((act) => (
+                    <div
+                      key={act.id}
+                      style={{
+                        display: "flex",
+                        gap: 10,
+                        padding: "10px 18px",
+                        borderTop: "1px solid var(--color-border)",
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: 28,
+                          height: 28,
+                          borderRadius: "var(--radius-md)",
+                          background: "var(--color-bg-muted)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          color: "var(--color-text-muted)",
+                          flexShrink: 0,
+                          marginTop: 1,
+                        }}
+                      >
+                        {(ACTIVITY_META[act.type] ?? DEFAULT_ACTIVITY).icon}
+                      </span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div
+                          style={{
+                            fontSize: 12,
+                            color: "var(--color-text-secondary)",
+                            lineHeight: 1.5,
+                          }}
+                        >
+                          {(act.payload as any)?.body ?? act.type}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: 11,
+                            color: "var(--color-text-muted)",
+                            marginTop: 2,
+                          }}
+                        >
+                          {act.actor?.full_name && (
+                            <>{act.actor.full_name} · </>
+                          )}
+                          {formatDistanceToNow(new Date(act.created_at), {
+                            addSuffix: true,
+                            locale: ru,
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {(activities?.results ?? []).length === 0 && (
+                    <div
+                      style={{
+                        padding: "20px 18px",
+                        textAlign: "center",
+                        fontSize: 12,
+                        color: "var(--color-text-muted)",
+                      }}
+                    >
+                      Активностей пока нет
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div
+                style={{
+                  background: "var(--color-bg-elevated)",
+                  border: "1px solid var(--color-border)",
+                  borderRadius: "var(--radius-lg)",
+                  overflow: "hidden",
+                }}
+              >
+                <div
+                  style={{
+                    padding: "14px 18px",
+                    borderBottom: "1px solid var(--color-border)",
+                    fontSize: 13,
+                    fontWeight: 600,
+                    display: "flex",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <span>Сделки</span>
+                  <button
+                    onClick={() => navigate("/deals")}
+                    style={{
+                      fontSize: 12,
+                      color: "var(--color-amber)",
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      fontFamily: "var(--font-body)",
+                    }}
+                  >
+                    + Создать
+                  </button>
+                </div>
+                {(deals?.results ?? []).length === 0 ? (
+                  <div
+                    style={{
+                      padding: "24px",
+                      textAlign: "center",
+                      fontSize: 12,
+                      color: "var(--color-text-muted)",
+                    }}
+                  >
+                    Сделок нет. Создайте первую.
+                  </div>
+                ) : (
+                  (deals?.results ?? []).map((deal) => {
+                    const stageColors: Record<string, string> = {
+                      won: "#10B981",
+                      lost: "#EF4444",
+                      open: "var(--color-amber)",
+                    };
+                    return (
+                      <motion.div
+                        key={deal.id}
+                        whileHover={{
+                          backgroundColor: "var(--color-bg-muted)",
+                        }}
+                        onClick={() => navigate(`/deals/${deal.id}`)}
+                        style={{
+                          padding: "12px 18px",
+                          borderBottom: "1px solid var(--color-border)",
+                          cursor: "pointer",
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                          }}
+                        >
+                          <span style={{ fontSize: 13, fontWeight: 500 }}>
+                            {deal.title}
+                          </span>
+                          {deal.amount && (
+                            <span
+                              style={{
+                                fontSize: 13,
+                                fontWeight: 700,
+                                color: "var(--color-amber)",
+                                fontFamily: "var(--font-display)",
+                              }}
+                            >
+                              {formatMoney(deal.amount, deal.currency)}
+                            </span>
+                          )}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: 11,
+                            color:
+                              stageColors[deal.stage.type] ??
+                              "var(--color-text-muted)",
+                            marginTop: 3,
+                          }}
+                        >
+                          {deal.stage.name}
+                        </div>
+                      </motion.div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          )}
+
+          {activeTab === "activity" && (
+            <div
+              style={{
+                background: "var(--color-bg-elevated)",
+                border: "1px solid var(--color-border)",
+                borderRadius: "var(--radius-lg)",
+                overflow: "hidden",
+              }}
+            >
+              <div
+                style={{
+                  padding: "16px 20px",
+                  borderBottom: "1px solid var(--color-border)",
+                }}
+              >
+                <NoteForm
+                  customerId={id!}
+                  onSuccess={() =>
+                    qc.invalidateQueries({
+                      queryKey: ["customer-activities", id],
+                    })
+                  }
+                />
               </div>
               <div>
-                <div style={{ fontSize: 13, fontWeight: 500 }}>{u.full_name}</div>
-                <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>{u.email}</div>
-              </div>
-            </motion.button>
-          ))}
-        </div>
-      </Drawer>
-
-      {/* Status Drawer */}
-      <Drawer open={statusOpen} onClose={() => setStatusOpen(false)} title={`Изменить статус (${selected.size})`}
-        footer={<Button variant="secondary" size="sm" onClick={() => setStatusOpen(false)}>Закрыть</Button>}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {(['new', 'active', 'inactive', 'archived'] as const).map(s => (
-            <motion.button key={s} whileHover={{ x: 3 }}
-              onClick={() => { bulkMutation.mutate({ action: 'change_status', ids: Array.from(selected), payload: { status: s } }); setStatusOpen(false); }}
-              style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px',
-                border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)',
-                background: 'transparent', cursor: 'pointer', textAlign: 'left' }}>
-              <Badge bg={STATUS_COLORS[s].bg} color={STATUS_COLORS[s].color}>{STATUS_LABELS[s]}</Badge>
-            </motion.button>
-          ))}
-        </div>
-      </Drawer>
-
-      <FilterPanel open={filterOpen} onClose={() => setFilterOpen(false)} filters={filters} onChange={setFilters} />
-
-
-      {ctxMenu && (() => {
-        const c = data?.results?.find((x) => x.id === ctxMenu.customerId);
-        if (!c) return null;
-        const items: ContextMenuItem[] = [
-          { label: 'Открыть профиль', icon: <ExternalLink size={13} />, onClick: () => navigate(`/customers/${c.id}`) },
-          { label: 'Новая задача', icon: <UserCog size={13} />, onClick: () => { window.dispatchEvent(new CustomEvent('kort:new-task', { detail: { customerId: c.id } })); } },
-          ...(c.phone ? [{ label: 'Написать в WhatsApp', icon: <MessageCircle size={13} />, color: '#10B981', onClick: () => window.open(`https://wa.me/${formatPhoneForWhatsApp(c.phone)}`, '_blank') }] : []),
-          { label: '', divider: true, onClick: () => {} },
-          { label: 'Удалить', icon: <Trash2 size={13} />, danger: true, onClick: () => bulkMutation.mutate({ action: 'delete', ids: [c.id] }) },
-        ];
-        return <ContextMenu x={ctxMenu.x} y={ctxMenu.y} items={items} onClose={() => setCtxMenu(null)} />;
-      })()}
-
-      <Drawer open={drawerOpen} onClose={() => { setDrawer(false); reset(); }} title="Новый клиент"
-        footer={
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-            <Button variant="secondary" onClick={() => { setDrawer(false); reset(); }}>Отмена</Button>
-            <Button loading={formState.isSubmitting} onClick={handleSubmit(d => createMutation.mutate(d))}>Создать</Button>
-          </div>
-        }>
-        <form style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <Field label="Имя *"><input {...register('full_name', { required: true })} placeholder="Иван Иванов" className="kort-input" /></Field>
-          <Field label="Телефон"><input {...register('phone')} placeholder="+7 700 000 00 00" className="kort-input" /></Field>
-          <Field label="Email"><input {...register('email')} type="email" placeholder="ivan@company.kz" className="kort-input" /></Field>
-          <Field label="Компания"><input {...register('company_name')} placeholder="ТОО Компания" className="kort-input" /></Field>
-          <Field label="БИН/ИИН">
-            <div style={{ position: 'relative' }}>
-              <input
-                {...register('bin_iin', {
-                  validate: (v) => !v || validateBinIin(v) || 'Неверный БИН/ИИН',
-                  onChange: (e) => { e.target.value = formatBinIin(e.target.value); },
+                {(activities?.results ?? []).map((act, idx) => {
+                  const meta = ACTIVITY_META[act.type] ?? DEFAULT_ACTIVITY;
+                  const p = act.payload as any;
+                  return (
+                    <motion.div
+                      key={act.id}
+                      initial={{ opacity: 0, x: -8 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: idx * 0.03 }}
+                      style={{
+                        display: "flex",
+                        gap: 12,
+                        padding: "14px 20px",
+                        borderBottom: "1px solid var(--color-border)",
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: "var(--radius-md)",
+                          background: `${meta.color}18`,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          color: meta.color,
+                          flexShrink: 0,
+                        }}
+                      >
+                        {meta.icon}
+                      </span>
+                      <div style={{ flex: 1 }}>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                            marginBottom: 3,
+                          }}
+                        >
+                          <span
+                            style={{
+                              fontSize: 12,
+                              fontWeight: 600,
+                              color: meta.color,
+                            }}
+                          >
+                            {meta.label}
+                          </span>
+                          {p?.subject && (
+                            <span
+                              style={{
+                                fontSize: 12,
+                                color: "var(--color-text-secondary)",
+                              }}
+                            >
+                              · {p.subject}
+                            </span>
+                          )}
+                          {p?.duration_minutes && (
+                            <span
+                              style={{
+                                fontSize: 11,
+                                color: "var(--color-text-muted)",
+                              }}
+                            >
+                              {p.duration_minutes} мин
+                            </span>
+                          )}
+                        </div>
+                        {p?.body && (
+                          <div
+                            style={{
+                              fontSize: 13,
+                              lineHeight: 1.6,
+                              color: "var(--color-text-primary)",
+                              whiteSpace: "pre-wrap",
+                            }}
+                          >
+                            {p.body}
+                          </div>
+                        )}
+                        <div
+                          style={{
+                            fontSize: 11,
+                            color: "var(--color-text-muted)",
+                            marginTop: 4,
+                          }}
+                        >
+                          {act.actor?.full_name && <b>{act.actor.full_name}</b>}
+                          {act.actor && " · "}
+                          {format(new Date(act.created_at), "d MMM, HH:mm", {
+                            locale: ru,
+                          })}
+                        </div>
+                      </div>
+                    </motion.div>
+                  );
                 })}
-                placeholder="000000000000"
-                maxLength={12}
-                className="kort-input"
-                style={{ paddingRight: 80 }}
-              />
-              {watch('bin_iin') && validateBinIin(watch('bin_iin') ?? '') && (
-                <span style={{
-                  position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
-                  fontSize: 11, fontWeight: 600, color: '#059669',
-                  background: '#D1FAE5', padding: '2px 6px', borderRadius: 4,
-                }}>
-                  {isBin(watch('bin_iin') ?? '') ? 'БИН ✓' : 'ИИН ✓'}
-                </span>
-              )}
-              {watch('bin_iin') && !validateBinIin(watch('bin_iin') ?? '') && (watch('bin_iin') ?? '').length === 12 && (
-                <span style={{
-                  position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
-                  fontSize: 11, fontWeight: 600, color: '#DC2626',
-                  background: '#FEE2E2', padding: '2px 6px', borderRadius: 4,
-                }}>
-                  Ошибка
-                </span>
+                {(activities?.results ?? []).length === 0 && (
+                  <EmptyState
+                    icon={<Clock size={20} />}
+                    title="Активностей нет"
+                    subtitle="Добавьте заметку выше"
+                  />
+                )}
+              </div>
+            </div>
+          )}
+
+          {activeTab === "deals" && (
+            <div
+              style={{
+                background: "var(--color-bg-elevated)",
+                border: "1px solid var(--color-border)",
+                borderRadius: "var(--radius-lg)",
+                overflow: "hidden",
+              }}
+            >
+              {(deals?.results ?? []).length === 0 ? (
+                <EmptyState
+                  icon={<Briefcase size={20} />}
+                  title="Сделок нет"
+                  subtitle="Создайте первую сделку"
+                />
+              ) : (
+                (deals?.results ?? []).map((deal) => {
+                  return (
+                    <motion.div
+                      key={deal.id}
+                      whileHover={{ backgroundColor: "var(--color-bg-muted)" }}
+                      onClick={() => navigate(`/deals/${deal.id}`)}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        padding: "14px 20px",
+                        borderBottom: "1px solid var(--color-border)",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 500 }}>
+                          {deal.title}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: 11,
+                            color: "var(--color-text-muted)",
+                            marginTop: 2,
+                          }}
+                        >
+                          {deal.stage.name} ·{" "}
+                          {format(new Date(deal.created_at), "d MMM yyyy", {
+                            locale: ru,
+                          })}
+                        </div>
+                      </div>
+                      {deal.amount && (
+                        <span
+                          style={{
+                            fontSize: 14,
+                            fontWeight: 700,
+                            color: "var(--color-amber)",
+                            fontFamily: "var(--font-display)",
+                          }}
+                        >
+                          {formatMoney(deal.amount, deal.currency)}
+                        </span>
+                      )}
+                    </motion.div>
+                  );
+                })
               )}
             </div>
-            {formState.errors.bin_iin && (
-              <span style={{ fontSize: 11, color: '#DC2626' }}>{formState.errors.bin_iin.message}</span>
-            )}
-          </Field>
-          <Field label="Источник"><input {...register('source')} placeholder="Instagram, Referral..." className="kort-input" /></Field>
-        </form>
+          )}
+
+          {activeTab === "fields" && id && (
+            <CustomFieldsTab entityType="customer" entityId={id} />
+          )}
+
+          {activeTab === "tasks" && (
+            <div
+              style={{
+                background: "var(--color-bg-elevated)",
+                border: "1px solid var(--color-border)",
+                borderRadius: "var(--radius-lg)",
+                overflow: "hidden",
+              }}
+            >
+              {(tasks?.results ?? []).length === 0 ? (
+                <EmptyState
+                  icon={<CheckSquare size={20} />}
+                  title="Задач нет"
+                />
+              ) : (
+                (tasks?.results ?? []).map((task) => {
+                  const priorityColors: Record<
+                    string,
+                    { bg: string; color: string }
+                  > = {
+                    low: { bg: "#F3F4F6", color: "#6B7280" },
+                    medium: { bg: "#FEF3C7", color: "#D97706" },
+                    high: { bg: "#FEE2E2", color: "#DC2626" },
+                  };
+                  const pc =
+                    priorityColors[task.priority] ?? priorityColors.low;
+                  return (
+                    <div
+                      key={task.id}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 12,
+                        padding: "12px 20px",
+                        borderBottom: "1px solid var(--color-border)",
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: 18,
+                          height: 18,
+                          borderRadius: "var(--radius-sm)",
+                          border: `2px solid ${task.status === "done" ? "#10B981" : "var(--color-border-strong)"}`,
+                          background:
+                            task.status === "done" ? "#10B981" : "transparent",
+                          flexShrink: 0,
+                        }}
+                      />
+                      <div style={{ flex: 1 }}>
+                        <div
+                          style={{
+                            fontSize: 13,
+                            fontWeight: 500,
+                            textDecoration:
+                              task.status === "done" ? "line-through" : "none",
+                            color:
+                              task.status === "done"
+                                ? "var(--color-text-muted)"
+                                : "var(--color-text-primary)",
+                          }}
+                        >
+                          {task.title}
+                        </div>
+                        {task.due_at && (
+                          <div
+                            style={{
+                              fontSize: 11,
+                              color: "var(--color-text-muted)",
+                              marginTop: 2,
+                            }}
+                          >
+                            {format(new Date(task.due_at), "d MMM, HH:mm", {
+                              locale: ru,
+                            })}
+                          </div>
+                        )}
+                      </div>
+                      <Badge bg={pc.bg} color={pc.color}>
+                        {task.priority}
+                      </Badge>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          )}
+        </motion.div>
+      </AnimatePresence>
+
+      <Drawer
+        open={editDrawer}
+        onClose={() => setEditDrawer(false)}
+        title="Редактировать клиента"
+        footer={
+          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+            <Button variant="secondary" onClick={() => setEditDrawer(false)}>
+              Отмена
+            </Button>
+            <Button
+              loading={editSubmitting}
+              onClick={handleSubmit((d) => updateMutation.mutate(d))}
+            >
+              Сохранить
+            </Button>
+          </div>
+        }
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {(
+            [
+              { label: "Имя *", name: "full_name", placeholder: "Иван Иванов" },
+              {
+                label: "Компания",
+                name: "company_name",
+                placeholder: "ТОО Название",
+              },
+              {
+                label: "Телефон",
+                name: "phone",
+                placeholder: "+7 700 000 00 00",
+              },
+              { label: "Email", name: "email", placeholder: "ivan@company.kz" },
+              { label: "Источник", name: "source", placeholder: "Instagram" },
+            ] as const
+          ).map((f) => (
+            <div
+              key={f.name}
+              style={{ display: "flex", flexDirection: "column", gap: 6 }}
+            >
+              <label
+                style={{
+                  fontSize: 12,
+                  fontWeight: 500,
+                  color: "var(--color-text-secondary)",
+                }}
+              >
+                {f.label}
+              </label>
+              <input
+                {...register(f.name as any)}
+                placeholder={f.placeholder}
+                className="kort-input"
+              />
+            </div>
+          ))}
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <label
+              style={{
+                fontSize: 12,
+                fontWeight: 500,
+                color: "var(--color-text-secondary)",
+              }}
+            >
+              Статус
+            </label>
+            <select {...register("status")} className="kort-select">
+              <option value="new">Новый</option>
+              <option value="active">Активный</option>
+              <option value="inactive">Неактивный</option>
+              <option value="archived">Архив</option>
+            </select>
+          </div>
+        </div>
       </Drawer>
+      <AiAssistant customerId={id} />
     </div>
   );
 }

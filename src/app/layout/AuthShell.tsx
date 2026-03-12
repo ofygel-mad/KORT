@@ -2,6 +2,7 @@ import { Outlet, Navigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuthStore } from '../../shared/stores/auth';
 import { TrendingUp, Users, CheckSquare, Zap, Shield, Globe } from 'lucide-react';
+import { KortLogo } from '../../shared/ui/KortLogo';
 
 const STATS = [
   { icon: <Users size={14} />, value: '2 400+', label: 'клиентов под управлением' },
@@ -65,24 +66,7 @@ export function AuthShell() {
 
         <div style={{ position: 'relative', zIndex: 1, maxWidth: 480 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 52 }}>
-            <div
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: 12,
-                background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
-                boxShadow: '0 4px 14px rgba(217,119,6,0.35)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: 18,
-                fontWeight: 800,
-                color: '#fff',
-                fontFamily: 'var(--font-display)',
-              }}
-            >
-              C
-            </div>
+            <KortLogo size={40} />
             <span style={{ fontSize: 20, fontWeight: 700, color: '#F0F2F5', fontFamily: 'var(--font-display)' }}>
               Kort
             </span>

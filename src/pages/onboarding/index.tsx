@@ -5,6 +5,7 @@ import { CheckCircle2, Zap, Factory, ChevronRight, ArrowLeft, Users } from 'luci
 import { useMutation } from '@tanstack/react-query';
 import { api } from '../../shared/api/client';
 import { Button } from '../../shared/ui/Button';
+import { KortLogo } from '../../shared/ui/KortLogo';
 import { useAuthStore } from '../../shared/stores/auth';
 import { toast } from 'sonner';
 
@@ -63,7 +64,7 @@ export default function OnboardingPage() {
   return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #FFF8F0 0%, #FFFBF5 50%, #F9F9F7 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
       <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: 32, display: 'flex', alignItems: 'center', gap: 10 }}>
-        <div style={{ width: 40, height: 40, borderRadius: 12, background: 'var(--color-amber-gradient)', boxShadow: 'var(--shadow-amber)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 800, color: '#fff', fontFamily: 'var(--font-display)' }}>C</div>
+        <KortLogo size={40} />
         <span style={{ fontSize: 20, fontWeight: 700, fontFamily: 'var(--font-display)' }}>Kort</span>
       </motion.div>
 
