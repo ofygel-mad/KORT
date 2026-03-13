@@ -1,8 +1,8 @@
 import { NavLink } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  LayoutDashboard, Users, Briefcase, CheckSquare, BarChart2,
-  Settings, Shield, Zap, Upload, ChevronLeft, Crown, Activity, Inbox,
+  LayoutDashboard, BarChart2,
+  Settings, Shield, Zap, Upload, ChevronLeft, Crown,
 } from 'lucide-react';
 import { useCapabilities } from '../../shared/hooks/useCapabilities';
 import { useRole } from '../../shared/hooks/useRole';
@@ -15,11 +15,7 @@ import { t } from '../../shared/motion/presets';
 
 // ─── Navigation map — product-level IA (Глава 8) ─────────────────────────
 const NAV_MAIN = [
-  { to: '/',          icon: LayoutDashboard, label: 'Главная',          always: true },
-  { to: '/feed',      icon: Inbox,           label: 'Лента',            always: true },
-  { to: '/customers', icon: Users,           label: 'Клиенты',          always: true },
-  { to: '/deals',     icon: Briefcase,       label: 'Сделки',           always: true },
-  { to: '/tasks',     icon: CheckSquare,     label: 'Задачи',           always: true },
+  { to: '/', icon: LayoutDashboard, label: 'Главная', always: true },
 ];
 
 const NAV_SECONDARY = [

@@ -20,7 +20,7 @@ interface FieldBaseProps {
 }
 
 // ─── Input ─────────────────────────────────────────────────────────────────
-interface InputProps extends FieldBaseProps, Omit<InputHTMLAttributes<HTMLInputElement>, 'size' | 'prefix'> {}
+interface InputProps extends FieldBaseProps, Omit<InputHTMLAttributes<HTMLInputElement>, 'size'> {}
 
 /**
  * Input — полноценное поле с label, hint, error и иконками.
@@ -106,7 +106,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
 );
 
 // ─── Textarea ──────────────────────────────────────────────────────────────
-interface TextareaProps extends FieldBaseProps, Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, 'size' | 'prefix'> {
+interface TextareaProps extends FieldBaseProps, Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, 'size'> {
   rows?: number;
 }
 
@@ -115,7 +115,7 @@ interface TextareaProps extends FieldBaseProps, Omit<TextareaHTMLAttributes<HTML
  */
 export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
   function Textarea(
-    { label, hint, error, required, prefix: _prefix, suffix: _suffix, size = 'md', className, id, rows = 3, ...props },
+    { label, hint, error, required, size = 'md', className, id, rows = 3, ...props },
     ref,
   ) {
     const inputId = id ?? (label ? `textarea-${label.toLowerCase().replace(/\s+/g, '-')}` : undefined);

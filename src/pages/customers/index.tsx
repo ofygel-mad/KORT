@@ -93,7 +93,7 @@ export default function CustomersPage() {
           page_size: 20,
         },
       }),
-    placeholderData: (prev) => prev,
+    keepPreviousData: true,
   });
 
   const totalPages = Math.ceil((data?.count ?? 0) / 20);
@@ -120,7 +120,7 @@ export default function CustomersPage() {
   }, []);
 
   const toggleAll = useCallback(() => {
-    const ids = data?.results.map((c: Customer) => c.id) ?? [];
+    const ids = data?.results.map(c => c.id) ?? [];
     setSelected(prev =>
       prev.size === ids.length ? new Set() : new Set(ids)
     );
@@ -132,7 +132,7 @@ export default function CustomersPage() {
       : <ChevronDown size={12} className={styles.sortIcon} />
   );
 
-  const customers: Customer[] = data?.results ?? [];
+  const customers = data?.results ?? [];
   const hasSelection = selected.size > 0;
   const hasActiveFilters = Boolean(search.trim() || status);
 

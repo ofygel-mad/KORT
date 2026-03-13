@@ -9,7 +9,6 @@ import {
 import { api } from '../../shared/api/client';
 import { useAuthStore } from '../../shared/stores/auth';
 import { useUIStore } from '../../shared/stores/ui';
-import { useCapabilities } from '../../shared/hooks/useCapabilities';
 import { formatMoney, formatNumber } from '../../shared/utils/format';
 import { Button } from '../../shared/ui/Button';
 import { Badge } from '../../shared/ui/Badge';
