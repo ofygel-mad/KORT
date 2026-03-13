@@ -5,6 +5,7 @@ interface SkeletonProps {
   height?: string | number;
   radius?: string | number;
   style?:  CSSProperties;
+  className?: string;
 }
 
 const BASE: CSSProperties = {
@@ -14,8 +15,8 @@ const BASE: CSSProperties = {
 };
 
 /** Base skeleton primitive */
-export function Skeleton({ width = '100%', height = 16, radius = 'var(--radius-sm)', style }: SkeletonProps) {
-  return <div style={{ width, height, borderRadius: radius, flexShrink: 0, ...BASE, ...style }} />;
+export function Skeleton({ width = '100%', height = 16, radius = 'var(--radius-sm)', style, className }: SkeletonProps) {
+  return <div className={className} style={{ width, height, borderRadius: radius, flexShrink: 0, ...BASE, ...style }} />;
 }
 
 /** Skeleton for a single line of text */

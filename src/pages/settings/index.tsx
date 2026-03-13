@@ -34,9 +34,16 @@ interface Pipeline { id: string; name: string; is_default: boolean; stages: Pipe
 interface PipelineStage { id: string; name: string; stage_type: string; color: string; position: number; }
 interface OrgData { id: string; name: string; mode: string; industry: string; company_size: string; timezone: string; currency: string; }
 interface UserItem { id: string; full_name: string; email: string; status: string; role?: string; }
+interface SectionItem {
+  key: string;
+  label: string;
+  icon: React.ReactElement;
+  capability?: string;
+  adminOnly?: boolean;
+}
 
 /* ── Section nav ─────────────────────────────────────────────── */
-const SECTIONS = [
+const SECTIONS: SectionItem[] = [
   { key: 'organization', label: 'Организация', icon: <Building2 size={15} /> },
   { key: 'appearance', label: 'Оформление', icon: <MonitorCog size={15} /> },
   { key: 'pipelines', label: 'Воронки', icon: <GitBranch size={15} /> },
@@ -46,7 +53,7 @@ const SECTIONS = [
   { key: 'integrations', label: 'Интеграции', icon: <Globe size={15} />, capability: 'integrations.manage', adminOnly: true },
   { key: 'webhooks', label: 'Webhooks', icon: <Zap size={15} />, capability: 'automations.manage', adminOnly: true },
   { key: 'api', label: 'API токены', icon: <Key size={15} />, capability: 'admin.mode', adminOnly: true },
-] as const;
+];
 
 const SECTION_FALLBACK = 'organization';
 

@@ -8,7 +8,7 @@ export const MOCK_USER = {
   full_name: 'Алибек Сейткали',
   email: 'alibek@company.kz',
   phone: '+7 777 000 01 01',
-  avatar_url: null,
+  avatar_url: undefined,
   status: 'active',
 };
 
