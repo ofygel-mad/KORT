@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   DndContext, closestCorners, PointerSensor, useSensor, useSensors,
@@ -16,6 +16,7 @@ import { api } from '../../shared/api/client';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { Button } from '../../shared/ui/Button';
 import { Badge } from '../../shared/ui/Badge';
+import { EmptyState } from '../../shared/ui/EmptyState';
 import { Skeleton } from '../../shared/ui/Skeleton';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
@@ -24,6 +25,7 @@ import { useCapabilities } from '../../shared/hooks/useCapabilities';
 import { useDocumentTitle } from '../../shared/hooks/useDocumentTitle';
 import { useUIStore, type ThemePack } from '../../shared/stores/ui';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useTabsKeyboardNav } from '../../shared/hooks/useTabsKeyboardNav';
 import { copyToClipboard } from '../../shared/lib/browser';
 import s from './Settings.module.css';
 
@@ -532,8 +534,17 @@ function ApiSection() {
   );
 }
 
-/* ── Stub section ────────────────────────────────────────────── */
-function StubSection({ title, subtitle }: { title: string; subtitle: string }) {
+/* ── Planned section ─────────────────────────────────────────── */
+function PlannedSection({
+  title, subtitle, icon, bullets, footnote, action,
+}: {
+  title: string;
+  subtitle: string;
+  icon: ReactNode;
+  bullets: string[];
+  footnote: string;
+  action?: ReactNode;
+}) {
   return (
     <div className={s.section}>
       <div className={s.sectionHeader}>
@@ -543,7 +554,18 @@ function StubSection({ title, subtitle }: { title: string; subtitle: string }) {
         </div>
       </div>
       <div className={s.sectionBody}>
-        <p className={s.stubText}>Раздел находится в разработке.</p>
+        <div className={s.appearanceHintCard}>
+          <EmptyState
+            icon={icon}
+            title="Раздел включён в архитектуру Kort"
+            subtitle="Здесь лучше честно показать будущую зону ответственности раздела, чем прятать пустой экран под безликое «в разработке»."
+          />
+          <ul className={s.appearanceHintList}>
+            {bullets.map((bullet) => <li key={bullet}>{bullet}</li>)}
+          </ul>
+          <p className={s.appearanceHintText}>{footnote}</p>
+          {action && <div className={s.editStageActions}>{action}</div>}
+        </div>
       </div>
     </div>
   );
@@ -589,11 +611,14 @@ export default function SettingsPage() {
     navigate(next === SECTION_FALLBACK ? '/settings' : `/settings/${next}`);
   };
 
+  const sectionKeys = visibleSections.map((sec) => sec.key);
+  const handleSectionTabKeyDown = useTabsKeyboardNav(sectionKeys, section, changeSection);
+
   return (
     <div className={s.page}>
       <PageHeader title="Настройки" subtitle="Конфигурация организации и инструментов" />
 
-      <div className={s.navTabs} role="tablist" aria-label="Разделы настроек">
+      <div className={s.navTabs} role="tablist" aria-label="Разделы настроек" aria-orientation="horizontal" onKeyDown={handleSectionTabKeyDown}>
         {visibleSections.map(sec => (
           <button
             key={sec.key}
@@ -601,6 +626,7 @@ export default function SettingsPage() {
             id={`settings-tab-${sec.key}`}
             aria-selected={section === sec.key}
             aria-controls={`settings-panel-${sec.key}`}
+            tabIndex={section === sec.key ? 0 : -1}
             className={`${s.navTab} ${section === sec.key ? s.active : ''} ${sec.adminOnly && !adminMode ? s.lockedTab : ''}`}
             onClick={() => changeSection(sec.key)}
           >
@@ -615,6 +641,7 @@ export default function SettingsPage() {
         <motion.div
           key={section}
           id={`settings-panel-${section}`}
+          tabIndex={0}
           role="tabpanel"
           aria-labelledby={`settings-tab-${section}`}
           initial={{ opacity: 0, y: 6 }}
@@ -634,10 +661,59 @@ export default function SettingsPage() {
           {!sectionLocked && section === 'pipelines'    && <PipelinesSection />}
           {!sectionLocked && section === 'appearance'   && <AppearanceSection />}
           {!sectionLocked && section === 'api'          && <ApiSection />}
-          {!sectionLocked && section === 'mode'         && <StubSection title="Админ-режим" subtitle="Базовый, продвинутый или промышленный режим работы CRM" />}
-          {!sectionLocked && section === 'integrations' && <StubSection title="Интеграции" subtitle="Подключение внешних сервисов: 1С, WhatsApp, Telegram и другие" />}
-          {!sectionLocked && section === 'webhooks'     && <StubSection title="Webhooks" subtitle="Настройка уведомлений по HTTP при событиях в системе" />}
-          {!sectionLocked && section === 'templates'    && <StubSection title="Шаблоны сообщений" subtitle="Сохранённые тексты для быстрой коммуникации с клиентами" />}
+          {!sectionLocked && section === 'mode' && (
+            <PlannedSection
+              title="Админ-режим"
+              subtitle="Owner/admin surface для чувствительных сценариев и расширенного управления."
+              icon={<Shield size={18} />}
+              bullets={[
+                'дельта между рабочим и административным режимом без дубляжа экранов',
+                'capability-aware секции и действия с server-friendly contract',
+                'явные risk states для действий, которые влияют на организацию целиком',
+              ]}
+              footnote="Следующий шаг - соединить adminMode с более плотным capability layer, а не превращать всё в хаос из случайных if в JSX."
+              action={canUseAdminMode && !adminMode ? <Button size="sm" onClick={() => useUIStore.getState().setAdminMode(true)}>Включить режим администратора</Button> : undefined}
+            />
+          )}
+          {!sectionLocked && section === 'integrations' && (
+            <PlannedSection
+              title="Интеграции"
+              subtitle="Подключение внешних сервисов и каналов без мусора в основном интерфейсе."
+              icon={<Globe size={18} />}
+              bullets={[
+                'каталог подключений: телефония, мессенджеры, аналитика, ERP',
+                'health/status по каждому коннектору и последней синхронизации',
+                'зоны для ключей, webhooks и ошибок авторизации отдельно от everyday settings',
+              ]}
+              footnote="Раздел оставлен в IA намеренно: команда видит, что интеграции - это системная зона, а не потерянная кнопка где-то в меню."
+            />
+          )}
+          {!sectionLocked && section === 'webhooks' && (
+            <PlannedSection
+              title="Webhooks"
+              subtitle="Технический контур автоматизаций и доставки событий."
+              icon={<Zap size={18} />}
+              bullets={[
+                'endpoint list с режимами active / paused / failed',
+                'подписи запросов, retry policy и sample payload',
+                'история последних delivery attempts без прыжков в аудит',
+              ]}
+              footnote="Когда backend-контракты будут окончательно закреплены, этот раздел должен стать рабочим инструментом, а не декоративной админкой."
+            />
+          )}
+          {!sectionLocked && section === 'templates' && (
+            <PlannedSection
+              title="Шаблоны сообщений"
+              subtitle="Повторно используемые тексты для команды, продаж и follow-up."
+              icon={<MessageSquare size={18} />}
+              bullets={[
+                'шаблоны по сценариям: welcome, follow-up, повторный контакт, закрытие сделки',
+                'переменные клиента и сделки с предпросмотром перед отправкой',
+                'роль и канал доставки как часть шаблона, а не отдельный хаос настроек',
+              ]}
+              footnote="Здесь логика должна помогать команде работать быстрее, а не плодить ещё одну свалку фраз ради галочки."
+            />
+          )}
         </motion.div>
       </AnimatePresence>
     </div>

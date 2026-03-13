@@ -47,6 +47,11 @@
 
 .navTab:hover { color: var(--text-primary); }
 
+.navTab:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 1px var(--border-strong), var(--rc-focus-ring);
+}
+
 .navTab.active {
   color: var(--fill-accent);
   border-bottom-color: var(--fill-accent);

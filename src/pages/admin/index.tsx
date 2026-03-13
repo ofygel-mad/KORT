@@ -17,6 +17,7 @@ import { toast } from 'sonner';
 import { useNavigate, useParams } from 'react-router-dom';
 import { reloadWindow } from '../../shared/lib/browser';
 import { useCapabilities } from '../../shared/hooks/useCapabilities';
+import { useTabsKeyboardNav } from '../../shared/hooks/useTabsKeyboardNav';
 import styles from './Admin.module.css';
 
 interface TeamMember { id: string; full_name: string; email: string; status: string; role?: string; }
@@ -128,6 +129,9 @@ export default function AdminPage() {
   const visibleTabs = useMemo(() => TABS.filter((tab) => tab.visible), [TABS]);
   const requestedTab = (params.section as Tab | undefined) ?? 'overview';
   const activeTab = visibleTabs.some((tab) => tab.key === requestedTab) ? requestedTab : (visibleTabs[0]?.key ?? 'overview');
+  const tabKeys = visibleTabs.map((tab) => tab.key);
+  const goToTab = (next: Tab) => navigate(next === 'overview' ? '/admin' : `/admin/${next}`);
+  const handleTabKeyDown = useTabsKeyboardNav(tabKeys, activeTab, goToTab);
 
   const overviewCards = [
     { label: 'Клиентов всего', value: statsLoading ? null : stats?.customers_count, icon: <Users size={20} />, color: '#3B82F6' },
@@ -149,14 +153,17 @@ export default function AdminPage() {
         subtitle={`Организация: ${org?.name ?? '—'} · Режим работы: ${MODE_LABELS[org?.mode ?? 'basic']}`}
       />
 
-      <div className={styles.tabs} role="tablist" aria-label="Разделы панели управления">
+      <div className={styles.tabs} role="tablist" aria-label="Разделы панели управления" aria-orientation="horizontal" onKeyDown={handleTabKeyDown}>
         {visibleTabs.map((t) => (
           <button
             key={t.key}
             type="button"
-            onClick={() => navigate(t.key === 'overview' ? '/admin' : `/admin/${t.key}`)}
+            onClick={() => goToTab(t.key)}
             role="tab"
+            id={`admin-tab-${t.key}`}
             aria-selected={activeTab === t.key}
+            aria-controls={`admin-panel-${t.key}`}
+            tabIndex={activeTab === t.key ? 0 : -1}
             className={cx(styles.tabButton, activeTab === t.key && styles.active)}
           >
             {t.icon} {t.label}
@@ -166,7 +173,7 @@ export default function AdminPage() {
 
       <AnimatePresence mode="wait">
         {activeTab === 'overview' && (
-          <motion.div key="overview" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+          <motion.div key="overview" id="admin-panel-overview" role="tabpanel" aria-labelledby="admin-tab-overview" tabIndex={0} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
             <div className={styles.panelGrid}>
               {overviewCards.map((card) => (
                 <div key={card.label} className={styles.statCard}>
@@ -195,32 +202,36 @@ export default function AdminPage() {
         )}
 
         {activeTab === 'team' && (
-          <motion.div key="team" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+          <motion.div key="team" id="admin-panel-team" role="tabpanel" aria-labelledby="admin-tab-team" tabIndex={0} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
             <div className={styles.teamHeader}>
               <span className={styles.memberCount}>{team?.count ?? 0} сотрудников</span>
-              <Button size="sm" icon={<Send size={13} />} onClick={() => setShowInviteForm(!showInviteForm)}>
-                Пригласить сотрудника
-              </Button>
+              {canManageTeam && (
+                <Button size="sm" icon={<Send size={13} />} onClick={() => setShowInviteForm(!showInviteForm)}>
+                  Пригласить сотрудника
+                </Button>
+              )}
             </div>
 
             <AnimatePresence>
               {showInviteForm && (
                 <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className={styles.inviteWrap}>
                   <div className={styles.inviteCard}>
-                    <div className={styles.inviteForm}>
+                    <fieldset className={styles.inviteForm}>
+                      <legend className={styles.surfaceTitle}>Приглашение сотрудника</legend>
                       <input
                         className="kort-input"
                         placeholder="email@company.com"
+                        aria-label="Email сотрудника"
                         value={inviteEmail}
                         onChange={(e) => setInviteEmail(e.target.value)}
                       />
-                      <select className={styles.inviteSelect} value={inviteRole} onChange={(e) => setInviteRole(e.target.value)}>
+                      <select className={styles.inviteSelect} aria-label="Роль сотрудника" value={inviteRole} onChange={(e) => setInviteRole(e.target.value)}>
                         <option value="admin">Администратор</option>
                         <option value="manager">Менеджер</option>
                         <option value="viewer">Наблюдатель</option>
                       </select>
                       <Button size="sm" loading={inviting} onClick={handleInvite}>Отправить</Button>
-                    </div>
+                    </fieldset>
                   </div>
                 </motion.div>
               )}
@@ -280,7 +291,7 @@ export default function AdminPage() {
         )}
 
         {activeTab === 'audit' && (
-          <motion.div key="audit" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+          <motion.div key="audit" id="admin-panel-audit" role="tabpanel" aria-labelledby="admin-tab-audit" tabIndex={0} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
             <div className={styles.auditCard}>
               <div className={styles.auditHead}>
                 {['Действие', 'Объект', 'Описание', 'Сотрудник', 'Время'].map((h) => (
@@ -317,7 +328,7 @@ export default function AdminPage() {
         )}
 
         {activeTab === 'settings' && (
-          <motion.div key="settings" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+          <motion.div key="settings" id="admin-panel-settings" role="tabpanel" aria-labelledby="admin-tab-settings" tabIndex={0} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
             {!isOwner && (
               <div className={styles.warningBanner}>
                 <AlertCircle size={16} />

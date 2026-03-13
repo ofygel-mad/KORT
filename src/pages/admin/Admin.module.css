@@ -43,6 +43,11 @@
   color: var(--text-primary);
 }
 
+.tabButton:focus-visible {
+  outline: none;
+  box-shadow: var(--rc-focus-ring);
+}
+
 .active {
   background: var(--bg-surface);
   color: var(--text-primary);
@@ -187,6 +192,10 @@
 
 .inviteForm {
   gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
 }
 
 .teamCard,

@@ -27,6 +27,7 @@ import styles from './CustomerProfile.module.css';
 import { setProductMoment } from '../../../shared/utils/productMoment';
 import { openExternal } from '../../../shared/lib/browser';
 import { useCapabilities } from '../../../shared/hooks/useCapabilities';
+import { useTabsKeyboardNav } from '../../../shared/hooks/useTabsKeyboardNav';
 
 interface CustomerDetail {
   id: string; full_name: string; company_name: string;
@@ -91,8 +92,10 @@ export default function CustomerProfilePage() {
   const canEditCustomer = can('customers:write');
   const canCreateDeal = can('deals:write');
   const canCreateTask = can('tasks:write');
-  const [tab, setTab]         = useState('overview');
+  const [tab, setTab]         = useState<typeof TABS[number]['key']>('overview');
   const [editDrawer, setEditDrawer] = useState(false);
+  const tabKeys = TABS.map((item) => item.key);
+  const handleTabKeyDown = useTabsKeyboardNav(tabKeys, tab, setTab);
 
   const { data: customer, isLoading } = useQuery<CustomerDetail>({
     queryKey: ['customer', id],
@@ -258,10 +261,15 @@ export default function CustomerProfilePage() {
       </div>
 
       {/* ── Tabs ────────────────────────────────────────────── */}
-      <div className={styles.tabs}>
+      <div className={styles.tabs} role="tablist" aria-label="Разделы карточки клиента" aria-orientation="horizontal" onKeyDown={handleTabKeyDown}>
         {TABS.map(t => (
           <button
             key={t.key}
+            role="tab"
+            id={`customer-tab-${t.key}`}
+            aria-selected={tab === t.key}
+            aria-controls={`customer-panel-${t.key}`}
+            tabIndex={tab === t.key ? 0 : -1}
             className={`${styles.tab}${tab === t.key ? ' ' + styles.tabActive : ''}`}
             onClick={() => setTab(t.key)}
           >
@@ -276,7 +284,7 @@ export default function CustomerProfilePage() {
         <div>
           {/* Overview */}
           {tab === 'overview' && (
-            <div className={styles.overviewStack}>
+            <div id="customer-panel-overview" role="tabpanel" aria-labelledby="customer-tab-overview" tabIndex={0} className={styles.overviewStack}>
               {/* Core info */}
               <div className={styles.panel}>
                 <div className={styles.panelHeader}>
@@ -362,7 +370,7 @@ export default function CustomerProfilePage() {
 
           {/* Activity tab */}
           {tab === 'activity' && (
-            <div className={styles.panel}>
+            <div id="customer-panel-activity" role="tabpanel" aria-labelledby="customer-tab-activity" tabIndex={0} className={styles.panel}>
               <div className={styles.panelHeader}>
                 <span className={styles.panelTitle}>История активности</span>
               </div>
@@ -394,7 +402,7 @@ export default function CustomerProfilePage() {
 
           {/* Deals tab */}
           {tab === 'deals' && (
-            <div className={styles.panel}>
+            <div id="customer-panel-deals" role="tabpanel" aria-labelledby="customer-tab-deals" tabIndex={0} className={styles.panel}>
               <div className={styles.panelHeader}>
                 <span className={styles.panelTitle}>Сделки</span>
                 {can('deals:write') && <button className={styles.panelAction} onClick={() => openCreateDeal({ customerId: customer.id })}>
@@ -420,7 +428,7 @@ export default function CustomerProfilePage() {
 
           {/* Tasks tab */}
           {tab === 'tasks' && (
-            <div className={styles.panel}>
+            <div id="customer-panel-tasks" role="tabpanel" aria-labelledby="customer-tab-tasks" tabIndex={0} className={styles.panel}>
               <div className={styles.panelHeader}>
                 <span className={styles.panelTitle}>Задачи</span>
                 {can('tasks:write') && <button className={styles.panelAction} onClick={() => openCreateTask({ customerId: customer.id })}>
