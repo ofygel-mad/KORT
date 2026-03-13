@@ -65,7 +65,7 @@ export function CreateDealDrawer() {
   );
 
   const createDeal = useMutation({
-    mutationFn: (payload: DealForm) => api.post('/deals/', {
+    mutationFn: (payload: DealForm) => api.post<CreatedDeal>('/deals/', {
       ...payload,
       title: payload.title.trim(),
       amount: payload.amount ? Number(payload.amount) : null,

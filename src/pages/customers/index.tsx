@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, Search, ChevronUp, ChevronDown, Phone, Mail,
@@ -84,7 +84,7 @@ export default function CustomersPage() {
   const { data, isLoading } = useQuery<CustomerList>({
     queryKey: ['customers', debouncedSearch, status, sortKey, sortDir, page],
     queryFn: () =>
-      api.get('/customers/', {
+      api.get<CustomerList>('/customers/', {
         params: {
           search:   debouncedSearch || undefined,
           status:   status || undefined,
@@ -93,7 +93,7 @@ export default function CustomersPage() {
           page_size: 20,
         },
       }),
-    keepPreviousData: true,
+    placeholderData: keepPreviousData,
   });
 
   const totalPages = Math.ceil((data?.count ?? 0) / 20);
@@ -120,7 +120,7 @@ export default function CustomersPage() {
   }, []);
 
   const toggleAll = useCallback(() => {
-    const ids = data?.results.map(c => c.id) ?? [];
+    const ids = data?.results.map((customer) => customer.id) ?? [];
     setSelected(prev =>
       prev.size === ids.length ? new Set() : new Set(ids)
     );

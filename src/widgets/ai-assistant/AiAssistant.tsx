@@ -86,7 +86,12 @@ export function AiAssistant({ customerId, dealId, entityType, entityId }: Props)
 
   useEffect(() => {
     if (!confirmation) return;
-    return runTimeout(() => setConfirmation(''), 2800);
+    const timeoutId = runTimeout(() => setConfirmation(''), 2800);
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.clearTimeout(timeoutId);
+      }
+    };
   }, [confirmation]);
 
   const handleKey = (e: React.KeyboardEvent) => {

@@ -115,8 +115,7 @@ export function FocusMode() {
 
           <motion.div
             key="focus-panel"
-            className={s.panel}
-            className={s.centerOrb}
+            className={`${s.panel} ${s.centerOrb}`}
             initial={{ opacity: 0, scale: 0.95, y: 24 }}
             animate={{ opacity: 1, scale: 1,    y: 0 }}
             exit={{ opacity: 0,   scale: 0.95, y: 24 }}
