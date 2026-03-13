@@ -6,7 +6,7 @@ type User = {
   full_name: string;
   email: string;
   phone?: string;
-  avatar_url?: string;
+  avatar_url?: string | null;
   status?: string;
 };
 

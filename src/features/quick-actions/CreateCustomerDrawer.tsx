@@ -41,7 +41,7 @@ export function CreateCustomerDrawer() {
   });
 
   const createCustomer = useMutation({
-    mutationFn: (payload: CustomerForm) => api.post('/customers/', payload),
+    mutationFn: (payload: CustomerForm) => api.post<CreatedCustomer>('/customers/', payload),
     onSuccess: (created: CreatedCustomer) => {
       qc.invalidateQueries({ queryKey: ['customers'] });
       qc.invalidateQueries({ queryKey: ['dashboard'] });

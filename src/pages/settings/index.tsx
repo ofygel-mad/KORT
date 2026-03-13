@@ -36,7 +36,17 @@ interface OrgData { id: string; name: string; mode: string; industry: string; co
 interface UserItem { id: string; full_name: string; email: string; status: string; role?: string; }
 
 /* ── Section nav ─────────────────────────────────────────────── */
-const SECTIONS = [
+type SectionKey = 'organization' | 'appearance' | 'pipelines' | 'templates' | 'team' | 'mode' | 'integrations' | 'webhooks' | 'api';
+
+interface SettingsSection {
+  key: SectionKey;
+  label: string;
+  icon: ReactNode;
+  capability?: string;
+  adminOnly?: boolean;
+}
+
+const SECTIONS: SettingsSection[] = [
   { key: 'organization', label: 'Организация', icon: <Building2 size={15} /> },
   { key: 'appearance', label: 'Оформление', icon: <MonitorCog size={15} /> },
   { key: 'pipelines', label: 'Воронки', icon: <GitBranch size={15} /> },
@@ -46,11 +56,11 @@ const SECTIONS = [
   { key: 'integrations', label: 'Интеграции', icon: <Globe size={15} />, capability: 'integrations.manage', adminOnly: true },
   { key: 'webhooks', label: 'Webhooks', icon: <Zap size={15} />, capability: 'automations.manage', adminOnly: true },
   { key: 'api', label: 'API токены', icon: <Key size={15} />, capability: 'admin.mode', adminOnly: true },
-] as const;
+];
 
-const SECTION_FALLBACK = 'organization';
+const SECTION_FALLBACK: SectionKey = 'organization';
 
-const SECTION_LOCK_REASON: Record<string, string> = {
+const SECTION_LOCK_REASON: Partial<Record<SectionKey, string>> = {
   team: 'team.manage',
   mode: 'admin.mode',
   integrations: 'integrations.manage',
@@ -590,7 +600,7 @@ export default function SettingsPage() {
     SECTIONS.filter((sec) => !sec.capability || accessMap[sec.capability])
   ), [accessMap]);
 
-  const requestedSection = params.section ?? SECTION_FALLBACK;
+  const requestedSection = (params.section as SectionKey | undefined) ?? SECTION_FALLBACK;
   const requestedMeta = SECTIONS.find((sec) => sec.key === requestedSection);
   const defaultSection = visibleSections[0]?.key ?? SECTION_FALLBACK;
   const section = requestedMeta ? requestedSection : defaultSection;

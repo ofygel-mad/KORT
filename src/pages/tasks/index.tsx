@@ -46,17 +46,19 @@ const PRIORITY_BADGE: Record<string, { bg: string; color: string }> = {
   high:   { bg: 'var(--fill-negative-soft)', color: 'var(--fill-negative-text)' },
 };
 
-const FILTERS = [
-  { key: 'mine',      label: 'Мои' },
+type TaskFilter = 'mine' | 'due_today' | 'overdue' | '';
+
+const FILTERS: Array<{ key: TaskFilter; label: string }> = [
+  { key: 'mine', label: 'Мои' },
   { key: 'due_today', label: 'Сегодня' },
-  { key: 'overdue',   label: 'Просрочено' },
-  { key: '',          label: 'Все' },
+  { key: 'overdue', label: 'Просрочено' },
+  { key: '', label: 'Все' },
 ];
 
 export default function TasksPage() {
   useDocumentTitle('Задачи');
   const qc = useQueryClient();
-  const [filter, setFilter] = useState<string>('mine');
+  const [filter, setFilter] = useState<TaskFilter>('mine');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const isMobile = useIsMobile();
   const taskRequest = useUIStore(s => s.createTaskRequest);
@@ -173,7 +175,7 @@ export default function TasksPage() {
           />
           {(filter === 'overdue' || filter === 'due_today' || filter === 'mine') && (
             <div className={s.emptyRecoveryRail}>
-              {filter !== '' && <button className={s.emptyRecoveryBtn} onClick={() => setFilter('')}>Показать все задачи</button>}
+              <button className={s.emptyRecoveryBtn} onClick={() => setFilter('')}>Показать все задачи</button>
               <button className={s.emptyRecoveryBtn} onClick={() => openAssistantPrompt('Какой следующий шаг по задачам сегодня?')}>Спросить Copilot</button>
             </div>
           )}
