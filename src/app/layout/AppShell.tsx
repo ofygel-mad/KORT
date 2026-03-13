@@ -5,6 +5,7 @@ import { Topbar } from './Topbar';
 import { MobileNav } from './MobileNav';
 import { CommandPalette } from '../../widgets/command-palette/CommandPalette';
 import { useEffect, useState } from 'react';
+import { WifiOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { pageTransition } from '../../shared/motion/presets';
 import { useCommandPalette } from '../../shared/stores/commandPalette';
@@ -23,6 +24,40 @@ import { CreateCustomerDrawer } from '../../features/quick-actions/CreateCustome
 import { CreateDealDrawer } from '../../features/quick-actions/CreateDealDrawer';
 import { useCapabilities } from '../../shared/hooks/useCapabilities';
 import styles from './AppShell.module.css';
+
+
+function OfflineBanner() {
+  const [offline, setOffline] = useState(typeof navigator !== 'undefined' ? !navigator.onLine : false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const onOnline = () => setOffline(false);
+    const onOffline = () => setOffline(true);
+    window.addEventListener('online', onOnline);
+    window.addEventListener('offline', onOffline);
+    return () => {
+      window.removeEventListener('online', onOnline);
+      window.removeEventListener('offline', onOffline);
+    };
+  }, []);
+
+  return (
+    <AnimatePresence>
+      {offline && (
+        <motion.div
+          initial={{ y: -40, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: -40, opacity: 0 }}
+          className={styles.offlineBanner}
+          role="status"
+          aria-live="polite"
+        >
+          <WifiOff size={14} /> Нет подключения. Данные могут быть устаревшими.
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
 
 export function AppShell() {
   const { isOpen, toggle } = useCommandPalette();
@@ -77,6 +112,7 @@ export function AppShell() {
 
   return (
     <div className={styles.root}>
+      <OfflineBanner />
       {!isMobile && (
         <motion.div className={styles.sidebarRail} animate={{ width: sidebarW }} transition={{ type: 'spring', stiffness: 320, damping: 32 }}>
           <Sidebar />

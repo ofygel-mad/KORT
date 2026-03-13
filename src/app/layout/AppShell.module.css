@@ -37,3 +37,21 @@
 .routeViewport {
   min-height: 100%;
 }
+
+
+.offlineBanner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--fill-warning);
+  color: var(--text-on-accent);
+  font-size: 13px;
+  font-weight: 600;
+}

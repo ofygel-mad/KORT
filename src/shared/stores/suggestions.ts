@@ -1,8 +1,9 @@
+import type { ReactNode } from 'react';
 import { create } from 'zustand';
 
 export interface Suggestion {
   id: string;
-  emoji: string;
+  icon?: ReactNode;
   text: string;
   action: () => void;
   dismissLabel?: string;

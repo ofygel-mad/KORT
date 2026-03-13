@@ -15,6 +15,7 @@ import { Skeleton } from '../../shared/ui/Skeleton';
 import { EmptyState } from '../../shared/ui/EmptyState';
 import { useDebounce } from '../../shared/hooks/useDebounce';
 import { useIsMobile } from '../../shared/hooks/useIsMobile';
+import { useCapabilities } from '../../shared/hooks/useCapabilities';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import styles from './Customers.module.css';

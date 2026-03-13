@@ -28,8 +28,8 @@ export default function LoginPage() {
       setAuth(res.user, res.org, res.access, res.refresh, res.capabilities ?? [], res.role ?? 'viewer');
       const onboardingCompleted = resolveOnboardingCompleted(res, res.org?.onboarding_completed ?? false);
       setProductMoment(onboardingCompleted
-        ? 'С возвращением. Home уже собран вокруг следующего полезного действия, а не просто открывает ещё один экран.'
-        : 'Вы внутри. Осталось быстро зафиксировать контекст компании, и Kort сразу переведёт вас в рабочий контур.');
+        ? 'С возвращением. Данные загружены, очередь обновлена.'
+        : 'Добро пожаловать. Первый шаг - заполнить профиль компании.');
       navigate(onboardingCompleted ? '/' : '/onboarding', { replace: true });
     } catch (e: any) {
       const msg = e?.response?.data?.detail;

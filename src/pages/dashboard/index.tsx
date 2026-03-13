@@ -18,6 +18,7 @@ import { InlineErrorState } from '../../shared/ui/InlineErrorState';
 import { useIsMobile } from '../../shared/hooks/useIsMobile';
 import { useCapabilities } from '../../shared/hooks/useCapabilities';
 import { getProductMoment, clearProductMoment } from '../../shared/utils/productMoment';
+import { COPY } from '../../shared/i18n/ru-product';
 import styles from './Dashboard.module.css';
 
 interface DashboardData {
@@ -123,35 +124,35 @@ function TodayFocusCard({ data, onOpenTasks, onOpenDeals, onOpenCustomers, onAsk
 
   const focus = overdueTasks > 0
     ? {
-        title: `Разберите ${overdueTasks} просроченных задач`,
-        description: 'Сначала снимите просрочку. Пока она висит, всё остальное выглядит прилично только в отчётах.',
-        primary: { label: 'Открыть задачи', action: onOpenTasks },
-        secondary: { label: 'Спросить ассистента', action: onAskAssistant },
+        title: COPY.Focus_overdue_title(overdueTasks),
+        description: COPY.Focus_overdue_desc,
+        primary: { label: COPY.Action_open_tasks, action: onOpenTasks },
+        secondary: { label: COPY.Action_ask_assistant, action: onAskAssistant },
       }
     : stalledDeals > 0
       ? {
-          title: `Верните в движение ${stalledDeals} сделок`,
-          description: 'Сделки без движения уже сказали всё, что хотели. Теперь надо, чтобы кто-то сделал ход.',
-          primary: { label: 'Открыть сделки', action: onOpenDeals },
-          secondary: { label: 'Следующий шаг', action: onAskAssistant },
+          title: COPY.Focus_stalled_title(stalledDeals),
+          description: COPY.Focus_stalled_desc,
+          primary: { label: COPY.Action_open_deals, action: onOpenDeals },
+          secondary: { label: COPY.Action_next_step, action: onAskAssistant },
         }
       : silentCustomers > 0
         ? {
-            title: `Свяжитесь с ${silentCustomers} молчащими клиентами`,
-            description: 'Тишина редко считается стратегией. Обычно это просто потеря темпа.',
-            primary: { label: 'Открыть клиентов', action: onOpenCustomers },
-            secondary: { label: 'Спросить ассистента', action: onAskAssistant },
+            title: COPY.Focus_silent_title(silentCustomers),
+            description: COPY.Focus_silent_desc,
+            primary: { label: COPY.Action_open_customers, action: onOpenCustomers },
+            secondary: { label: COPY.Action_ask_assistant, action: onAskAssistant },
           }
         : {
-            title: 'День выглядит спокойно',
-            description: 'Критических сигналов нет. Значит, можно вести базу вперёд, а не тушить пожары.',
-            primary: { label: 'Создать задачу', action: onOpenTasks },
-            secondary: { label: 'Открыть сделки', action: onOpenDeals },
+            title: COPY.Focus_calm_title,
+            description: COPY.Focus_calm_desc,
+            primary: { label: COPY.Action_create_task, action: onOpenTasks },
+            secondary: { label: COPY.Action_open_deals, action: onOpenDeals },
           };
 
   return (
     <section className={styles.focusCard} aria-labelledby="dashboard-focus-title">
-      <div className={styles.focusBadge}><Sparkles size={13} /> Фокус на сегодня</div>
+      <div className={styles.focusBadge}><Sparkles size={13} /> {COPY.Dashboard_focus_badge}</div>
       <h2 id="dashboard-focus-title" className={styles.focusTitle}>{focus.title}</h2>
       <p className={styles.focusDescription}>{focus.description}</p>
       <div className={styles.focusActions}>
@@ -187,8 +188,8 @@ function CriticalQueue({ data, navigate }: { data: DashboardData; navigate: Retu
     const today = (data.today_tasks ?? []).slice(0, 3).map((task) => ({
       id: `task-${task.id}`,
       title: task.title,
-      sub: task.customer?.full_name ?? 'Без клиента',
-      badge: task.priority === 'high' ? 'Важно' : undefined,
+      sub: task.customer?.full_name ?? COPY.Queue_without_customer,
+      badge: task.priority === 'high' ? COPY.Queue_priority_high : undefined,
       icon: <ClipboardList size={14} />,
       critical: false,
       onClick: () => navigate('/tasks'),
@@ -203,10 +204,10 @@ function CriticalQueue({ data, navigate }: { data: DashboardData; navigate: Retu
     <section className={styles.section} aria-labelledby="dashboard-queue-title">
       <div className={styles.sectionHeader}>
         <div>
-          <div className={styles.sectionEyebrow}>Требуют внимания</div>
-          <h2 id="dashboard-queue-title" className={styles.sectionTitle}>Критическая очередь</h2>
+          <div className={styles.sectionEyebrow}>{COPY.Dashboard_queue_eyebrow}</div>
+          <h2 id="dashboard-queue-title" className={styles.sectionTitle}>{COPY.Dashboard_queue_title}</h2>
         </div>
-        <button className={styles.sectionLink} onClick={() => navigate('/tasks')}>Открыть всё <ArrowRight size={12} /></button>
+        <button className={styles.sectionLink} onClick={() => navigate('/tasks')}>{COPY.Queue_open_all} <ArrowRight size={12} /></button>
       </div>
       <div className={styles.queueGrid} aria-live="polite">
         {items.map((item) => (
@@ -240,7 +241,7 @@ export default function DashboardPage() {
   const { can } = useCapabilities();
 
   const hour = new Date().getHours();
-  const greeting = hour < 12 ? 'Доброе утро' : hour < 18 ? 'Добрый день' : 'Добрый вечер';
+  const greeting = hour < 12 ? COPY.Dashboard_greeting_morning : hour < 18 ? COPY.Dashboard_greeting_day : COPY.Dashboard_greeting_evening;
   const [productMoment, setProductMoment] = useState<string | null>(null);
 
   useEffect(() => {
@@ -262,12 +263,10 @@ export default function DashboardPage() {
     <div className={styles.page}>
       <section className={styles.hero} aria-labelledby="dashboard-title">
         <div className={styles.heroCopy}>
-          <div className={styles.heroContext}>Главная · План на сегодня</div>
+          <div className={styles.heroContext}>{COPY.Dashboard_context_label}</div>
           <p className={styles.heroGreeting}>{greeting},</p>
           <h1 id="dashboard-title" className={styles.heroTitle}>{user?.full_name?.split(' ')[0] ?? 'команда'}</h1>
-          <p className={styles.heroDescription}>
-            {org?.name ? `${org.name}. ` : ''}Сначала видно срочное, затем понятен следующий ход. Ничего мистического, просто редкая дисциплина в CRM.
-          </p>
+          <p className={styles.heroDescription}>{org?.name ?? 'Рабочий стол'}</p>
           <div className={styles.heroSignals} aria-live="polite">
             <span className={styles.signalChip}><CircleAlert size={12} /> Сигналов: <strong>{watchSignals}</strong></span>
             <span className={styles.signalChip}><ClipboardList size={12} /> Задач на сегодня: <strong>{data?.tasks_today ?? 0}</strong></span>
@@ -294,18 +293,18 @@ export default function DashboardPage() {
       {productMoment && (
         <div className={styles.productMoment} role="status" aria-live="polite">
           <div className={styles.productMomentCopy}>
-            <div className={styles.productMomentTitle}>Сценарий продолжен</div>
+            <div className={styles.productMomentTitle}>{COPY.Product_moment_title}</div>
             <div className={styles.productMomentText}>{productMoment}</div>
           </div>
-          <button className={styles.productMomentClose} onClick={() => setProductMoment(null)}>Закрыть</button>
+          <button className={styles.productMomentClose} onClick={() => setProductMoment(null)}>{COPY.Product_moment_close}</button>
         </div>
       )}
 
       {isError && (
         <InlineErrorState
-          title="Главный экран не загрузился"
-          description="API решил поиграть в молчанку. Обновите блок и продолжайте работу."
-          action={{ label: 'Повторить', onClick: () => void refetch() }}
+          title={COPY.Dashboard_error_title}
+          description={COPY.Dashboard_error_description}
+          action={{ label: COPY.Dashboard_retry, onClick: () => void refetch() }}
         />
       )}
 
@@ -324,12 +323,12 @@ export default function DashboardPage() {
           <section className={styles.section} aria-labelledby="dashboard-metrics-title">
             <div className={styles.sectionHeader}>
               <div>
-                <div className={styles.sectionEyebrow}>Сводка</div>
-                <h2 id="dashboard-metrics-title" className={styles.sectionTitle}>Коротко по состоянию</h2>
+                <div className={styles.sectionEyebrow}>{COPY.Dashboard_metrics_eyebrow}</div>
+                <h2 id="dashboard-metrics-title" className={styles.sectionTitle}>{COPY.Dashboard_metrics_title}</h2>
               </div>
             </div>
             <motion.div initial="hidden" animate="show" className={styles.metricsGrid}>
-              <MetricCard label="Клиенты" value={data?.customers_count ?? 0} icon={<Users size={15} />} accentColor="#3B82F6" subtitle={data?.customers_delta ? `${data.customers_delta > 0 ? '+' : ''}${data.customers_delta} за период` : undefined} loading={isLoading} />
+              <MetricCard label="Клиенты" value={data?.customers_count ?? 0} icon={<Users size={15} />} accentColor="#3B82F6" loading={isLoading} />
               <MetricCard label="Активные сделки" value={data?.active_deals_count ?? 0} icon={<Briefcase size={15} />} accentColor="#D97706" loading={isLoading} />
               <MetricCard label="Задачи на сегодня" value={data?.tasks_today ?? 0} icon={<CheckSquare size={15} />} accentColor="#10B981" loading={isLoading} />
               <MetricCard label="Выручка за месяц" value={data?.revenue_month ?? 0} fmt="c" icon={<TrendingUp size={15} />} accentColor="#8B5CF6" loading={isLoading} />

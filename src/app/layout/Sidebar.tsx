@@ -9,6 +9,7 @@ import { useRole } from '../../shared/hooks/useRole';
 import { useUIStore } from '../../shared/stores/ui';
 import { useAuthStore } from '../../shared/stores/auth';
 import { KortLogo } from '../../shared/ui/KortLogo';
+import { Tooltip } from '../../shared/ui/Tooltip';
 import styles from './Sidebar.module.css';
 import { t } from '../../shared/motion/presets';
 
@@ -75,20 +76,20 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
       {/* Primary nav */}
       <nav className={styles.nav}>
         {NAV_MAIN.map(({ to, icon: Icon, label: lbl }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={to === '/'}
-            onClick={onNavigate}
-            title={collapsed ? lbl : undefined}
-            aria-label={lbl}
-            className={navItemClass}
-          >
-            <span className={styles.navIcon}>
-              <Icon size={17} strokeWidth={1.75} />
-            </span>
-            {label(lbl, collapsed)}
-          </NavLink>
+          <Tooltip key={to} content={lbl} disabled={!collapsed} side="right">
+            <NavLink
+              to={to}
+              end={to === '/'}
+              onClick={onNavigate}
+              aria-label={lbl}
+              className={navItemClass}
+            >
+              <span className={styles.navIcon}>
+                <Icon size={17} strokeWidth={1.75} />
+              </span>
+              {label(lbl, collapsed)}
+            </NavLink>
+          </Tooltip>
         ))}
 
         {/* Secondary section */}
@@ -98,19 +99,19 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
               <div className={styles.navSection}>Инструменты</div>
             )}
             {secondaryVisible.map(({ to, icon: Icon, label: lbl }) => (
-              <NavLink
-                key={to}
-                to={to}
-                onClick={onNavigate}
-                title={collapsed ? lbl : undefined}
-                aria-label={lbl}
-                className={navItemClass}
-              >
-                <span className={styles.navIcon}>
-                  <Icon size={17} strokeWidth={1.75} />
-                </span>
-                {label(lbl, collapsed)}
-              </NavLink>
+              <Tooltip key={to} content={lbl} disabled={!collapsed} side="right">
+                <NavLink
+                  to={to}
+                  onClick={onNavigate}
+                  aria-label={lbl}
+                  className={navItemClass}
+                >
+                  <span className={styles.navIcon}>
+                    <Icon size={17} strokeWidth={1.75} />
+                  </span>
+                  {label(lbl, collapsed)}
+                </NavLink>
+              </Tooltip>
             ))}
           </>
         )}
@@ -126,32 +127,34 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
         )}
 
         {canUseAdminMode && adminMode && (
+          <Tooltip content="Управление" disabled={!collapsed} side="right">
+            <NavLink
+              to="/admin"
+              onClick={onNavigate}
+              aria-label="Управление"
+              className={navItemClass}
+            >
+              <span className={styles.navIcon}>
+                <Crown size={17} strokeWidth={1.75} />
+              </span>
+              {label('Управление', collapsed)}
+            </NavLink>
+          </Tooltip>
+        )}
+
+        <Tooltip content="Настройки" disabled={!collapsed} side="right">
           <NavLink
-            to="/admin"
+            to="/settings"
             onClick={onNavigate}
-            title={collapsed ? 'Управление' : undefined}
-            aria-label="Управление"
+            aria-label="Настройки"
             className={navItemClass}
           >
             <span className={styles.navIcon}>
-              <Crown size={17} strokeWidth={1.75} />
+              <Settings size={17} strokeWidth={1.75} />
             </span>
-            {label('Управление', collapsed)}
+            {label('Настройки', collapsed)}
           </NavLink>
-        )}
-
-        <NavLink
-          to="/settings"
-          onClick={onNavigate}
-          title={collapsed ? 'Настройки' : undefined}
-          aria-label="Настройки"
-          className={navItemClass}
-        >
-          <span className={styles.navIcon}>
-            <Settings size={17} strokeWidth={1.75} />
-          </span>
-          {label('Настройки', collapsed)}
-        </NavLink>
+        </Tooltip>
 
         {/* User indicator */}
         {user && !collapsed && (
@@ -167,19 +170,20 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
         )}
 
         {/* Collapse toggle */}
-        <button
-          className={styles.collapseBtn}
-          onClick={toggleSidebar}
-          title={collapsed ? 'Развернуть' : 'Свернуть'}
-          aria-label={collapsed ? 'Развернуть боковую панель' : 'Свернуть боковую панель'}
-        >
-          <motion.div
-            animate={{ rotate: collapsed ? 180 : 0 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+        <Tooltip content={collapsed ? 'Развернуть' : 'Свернуть'} disabled={!collapsed} side="right">
+          <button
+            className={styles.collapseBtn}
+            onClick={toggleSidebar}
+            aria-label={collapsed ? 'Развернуть боковую панель' : 'Свернуть боковую панель'}
           >
-            <ChevronLeft size={15} />
-          </motion.div>
-        </button>
+            <motion.div
+              animate={{ rotate: collapsed ? 180 : 0 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+            >
+              <ChevronLeft size={15} />
+            </motion.div>
+          </button>
+        </Tooltip>
       </div>
     </motion.aside>
   );

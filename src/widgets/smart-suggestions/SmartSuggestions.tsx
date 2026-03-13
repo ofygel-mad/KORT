@@ -18,7 +18,7 @@ export function SmartSuggestions() {
             exit={{ opacity: 0,    x: 48,  scale: 0.9  }}
             transition={{ type: 'spring', stiffness: 400, damping: 28 }}
           >
-            <span className={s.cardEmoji}>{item.emoji}</span>
+            {item.icon ? <span className={s.cardEmoji}>{item.icon}</span> : null}
 
             <div className={s.cardBody}>
               <div className={s.cardText}>{item.text}</div>
