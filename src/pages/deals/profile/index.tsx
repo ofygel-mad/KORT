@@ -26,6 +26,7 @@ import { fadeUp } from '../../../shared/motion/presets';
 import s from './DealProfile.module.css';
 import { setProductMoment } from '../../../shared/utils/productMoment';
 import { useCapabilities } from '../../../shared/hooks/useCapabilities';
+import { useTabsKeyboardNav } from '../../../shared/hooks/useTabsKeyboardNav';
 
 /* ── Types ──────────────────────────────────────────────────── */
 interface Stage { id: string; name: string; position: number; type: string; color?: string; }
@@ -77,6 +78,8 @@ export default function DealProfilePage() {
   const { can } = useCapabilities();
   const canEditDeal = can('deals:write');
   const canWriteTasks = can('tasks:write');
+  const tabKeys = TABS.filter((item) => item.key !== 'tasks' || canWriteTasks).map((item) => item.key);
+  const handleTabKeyDown = useTabsKeyboardNav(tabKeys, tab, setTab);
   const [newTask, setNewTask]   = useState(false);
   const [noteText, setNoteText] = useState('');
   const convert = useConvert();
@@ -216,10 +219,15 @@ export default function DealProfilePage() {
         {/* Main column ──────────────────────────────────────── */}
         <div className={s.card}>
           {/* Tab bar */}
-          <div className={s.tabBar}>
-            {TABS.map(t => (
+          <div className={s.tabBar} role="tablist" aria-label="Разделы карточки сделки" aria-orientation="horizontal" onKeyDown={handleTabKeyDown}>
+            {TABS.filter((item) => item.key !== 'tasks' || canWriteTasks).map(t => (
               <button
                 key={t.key}
+                role="tab"
+                id={`deal-tab-${t.key}`}
+                aria-selected={tab === t.key}
+                aria-controls={`deal-panel-${t.key}`}
+                tabIndex={tab === t.key ? 0 : -1}
                 className={`${s.tab} ${tab === t.key ? s.active : ''}`}
                 onClick={() => setTab(t.key)}
               >
@@ -232,6 +240,10 @@ export default function DealProfilePage() {
             <AnimatePresence mode="wait">
               <motion.div
                 key={tab}
+                id={`deal-panel-${tab}`}
+                role="tabpanel"
+                aria-labelledby={`deal-tab-${tab}`}
+                tabIndex={0}
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -4 }}
