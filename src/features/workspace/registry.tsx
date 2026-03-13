@@ -13,7 +13,7 @@ export interface WorkspaceWidgetDefinition {
   description: string;
   route: string;
   icon: LucideIcon;
-  render: (snapshot?: WorkspaceSnapshot) => JSX.Element;
+  render: (snapshot?: WorkspaceSnapshot, version?: number) => JSX.Element;
 }
 
 export const WORKSPACE_WIDGETS: WorkspaceWidgetDefinition[] = [
@@ -23,7 +23,7 @@ export const WORKSPACE_WIDGETS: WorkspaceWidgetDefinition[] = [
     description: 'Превью базы клиентов с быстрым доступом к последним записям.',
     route: '/customers',
     icon: Users,
-    render: (snapshot) => <CustomersTilePreview snapshot={snapshot} />,
+    render: (snapshot, version) => <CustomersTilePreview key={version} snapshot={snapshot} />,
   },
   {
     kind: 'deals',
@@ -31,7 +31,7 @@ export const WORKSPACE_WIDGETS: WorkspaceWidgetDefinition[] = [
     description: 'Стадии и зависшие сделки внутри отдельной рабочей плитки.',
     route: '/deals',
     icon: Briefcase,
-    render: (snapshot) => <DealsTilePreview snapshot={snapshot} />,
+    render: (snapshot, version) => <DealsTilePreview key={version} snapshot={snapshot} />,
   },
   {
     kind: 'tasks',
@@ -39,7 +39,7 @@ export const WORKSPACE_WIDGETS: WorkspaceWidgetDefinition[] = [
     description: 'Локальный центр контроля задач. Можно создать сколько угодно копий.',
     route: '/tasks',
     icon: CheckSquare,
-    render: (snapshot) => <TasksTilePreview snapshot={snapshot} />,
+    render: (snapshot, version) => <TasksTilePreview key={version} snapshot={snapshot} />,
   },
   {
     kind: 'reports',
@@ -47,7 +47,7 @@ export const WORKSPACE_WIDGETS: WorkspaceWidgetDefinition[] = [
     description: 'Компактная метрика для тех, кому нужно видеть только нерв системы.',
     route: '/reports',
     icon: DatabaseZap,
-    render: (snapshot) => <ReportsTilePreview snapshot={snapshot} />,
+    render: (snapshot, version) => <ReportsTilePreview key={version} snapshot={snapshot} />,
   },
   {
     kind: 'imports',
@@ -55,7 +55,7 @@ export const WORKSPACE_WIDGETS: WorkspaceWidgetDefinition[] = [
     description: 'Быстрый вход в поток загрузки и синхронизации данных.',
     route: '/imports',
     icon: FolderInput,
-    render: () => <ImportsTilePreview />,
+    render: (_snapshot, version) => <ImportsTilePreview key={version} />,
   },
 ];
 

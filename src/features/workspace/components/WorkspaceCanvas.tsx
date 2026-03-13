@@ -1,11 +1,13 @@
 import type { PointerEvent as ReactPointerEvent } from 'react';
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
+import { AnimatePresence } from 'framer-motion';
 import { Plus } from 'lucide-react';
 import { Button } from '../../../shared/ui/Button';
 import { useWorkspaceStore, WORLD_FACTOR } from '../model/store';
 import { useWorkspaceSnapshot } from '../model/useWorkspaceSnapshot';
 import type { WorkspaceTile as WorkspaceTileType } from '../model/types';
 import { WorkspaceTile } from './WorkspaceTile';
+import { WorkspaceTileModal } from './WorkspaceTileModal';
 import styles from './Workspace.module.css';
 
 interface WorkspaceCanvasProps {
@@ -20,11 +22,16 @@ export function WorkspaceCanvas({ onOpenCreateMenu }: WorkspaceCanvasProps) {
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const viewport = useWorkspaceStore((s) => s.viewport);
   const tiles = useWorkspaceStore((s) => s.tiles);
+  const activeTileId = useWorkspaceStore((s) => s.activeTileId);
   const setViewport = useWorkspaceStore((s) => s.setViewport);
   const setTilePosition = useWorkspaceStore((s) => s.setTilePosition);
-  const removeTile = useWorkspaceStore((s) => s.removeTile);
   const initializeViewport = useWorkspaceStore((s) => s.initializeViewport);
   const { data: snapshot } = useWorkspaceSnapshot();
+
+  const activeTile = useMemo(
+    () => tiles.find((tile) => tile.id === activeTileId) ?? null,
+    [activeTileId, tiles],
+  );
 
   useEffect(() => {
     const node = viewportRef.current;
@@ -42,7 +49,7 @@ export function WorkspaceCanvas({ onOpenCreateMenu }: WorkspaceCanvasProps) {
     const target = event.target as HTMLElement | null;
     if (target?.closest('[data-workspace-tile="true"]')) return;
     const node = viewportRef.current;
-    if (!node) return;
+    if (!node || activeTileId) return;
 
     const startX = event.clientX;
     const startY = event.clientY;
@@ -74,7 +81,7 @@ export function WorkspaceCanvas({ onOpenCreateMenu }: WorkspaceCanvasProps) {
   const startTileDrag = (event: ReactPointerEvent<HTMLDivElement>, tile: WorkspaceTileType) => {
     event.stopPropagation();
     const node = viewportRef.current;
-    if (!node) return;
+    if (!node || activeTileId) return;
 
     const startX = event.clientX;
     const startY = event.clientY;
@@ -102,14 +109,7 @@ export function WorkspaceCanvas({ onOpenCreateMenu }: WorkspaceCanvasProps) {
   return (
     <section className={styles.workspaceShell}>
       <div className={styles.workspaceToolbar}>
-        <div>
-          <div className={styles.workspaceEyebrow}>Настраиваемое пространство</div>
-          <h1 className={styles.workspaceTitle}>Главный рабочий экран</h1>
-          <p className={styles.workspaceDescription}>
-            Пользователь сам собирает себе рабочую среду. Плитки можно дублировать, двигать и раскладывать как угодно. Да, людям снова дали свободу.
-          </p>
-        </div>
-
+        <div className={styles.workspaceEyebrow}>Настраиваемое пространство</div>
         <Button size="lg" icon={<Plus size={16} />} onClick={onOpenCreateMenu}>
           Создать плитку
         </Button>
@@ -127,7 +127,6 @@ export function WorkspaceCanvas({ onOpenCreateMenu }: WorkspaceCanvasProps) {
               key={tile.id}
               tile={tile}
               snapshot={snapshot}
-              onRemove={removeTile}
               onDragStart={startTileDrag}
             />
           ))}
@@ -135,9 +134,9 @@ export function WorkspaceCanvas({ onOpenCreateMenu }: WorkspaceCanvasProps) {
 
         {tiles.length === 0 && (
           <div className={styles.emptyState}>
-            <div className={styles.emptyTitle}>Пустое поле без жёсткого сценария</div>
+            <div className={styles.emptyTitle}>Пустое рабочее поле</div>
             <p className={styles.emptyText}>
-              Никаких вбитых навсегда карточек справа и статистики слева. Сначала пользователь решает, что ему здесь вообще нужно.
+              Сначала добавляется плитка, потом уже собирается личная среда. Никаких вбитых навсегда блоков, потому что один шаблон на всех обычно делает всем хуже.
             </p>
             <Button size="lg" icon={<Plus size={16} />} onClick={onOpenCreateMenu}>
               Добавить первую плитку
@@ -145,6 +144,10 @@ export function WorkspaceCanvas({ onOpenCreateMenu }: WorkspaceCanvasProps) {
           </div>
         )}
       </div>
+
+      <AnimatePresence>
+        {activeTile ? <WorkspaceTileModal tile={activeTile} snapshot={snapshot} /> : null}
+      </AnimatePresence>
     </section>
   );
 }

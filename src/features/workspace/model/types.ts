@@ -5,6 +5,8 @@ export interface WorkspaceViewport {
   y: number;
 }
 
+export type WorkspaceModalSize = 'compact' | 'default' | 'wide';
+
 export interface WorkspaceTile {
   id: string;
   kind: WorkspaceWidgetKind;
@@ -13,6 +15,8 @@ export interface WorkspaceTile {
   y: number;
   width: number;
   height: number;
+  modalSize: WorkspaceModalSize;
+  version: number;
   createdAt: string;
 }
 
