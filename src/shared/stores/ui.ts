@@ -1,35 +1,57 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-type Theme = 'light' | 'dark' | 'system';
+export type Theme = 'light' | 'dark' | 'system';
+export type ThemePack = 'neutral' | 'graphite' | 'sand' | 'obsidian' | 'enterprise';
 
 interface UIStore {
   theme: Theme;
+  themePack: ThemePack;
   sidebarCollapsed: boolean;
   focusMode: boolean;
+  adminMode: boolean;
   setTheme: (t: Theme) => void;
+  setThemePack: (pack: ThemePack) => void;
+  setAdminMode: (value: boolean) => void;
+  toggleAdminMode: () => void;
   toggleSidebar: () => void;
   toggleFocusMode: () => void;
 }
 
-function applyTheme(theme: Theme) {
+function resolveThemeMode(theme: Theme) {
+  if (theme === 'system') {
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  }
+  return theme;
+}
+
+function applyTheme(theme: Theme, pack: ThemePack = 'neutral') {
   const root = document.documentElement;
-  const dark =
-    theme === 'dark' ||
-    (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-  dark ? root.setAttribute('data-theme', 'dark') : root.removeAttribute('data-theme');
+  const mode = resolveThemeMode(theme);
+  root.setAttribute('data-theme', mode);
+  root.setAttribute('data-theme-mode', theme);
+  root.setAttribute('data-theme-pack', pack);
+  root.style.colorScheme = mode;
 }
 
 export const useUIStore = create<UIStore>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       theme: 'system',
+      themePack: 'neutral',
       sidebarCollapsed: false,
       focusMode: false,
+      adminMode: false,
       setTheme: (theme) => {
         set({ theme });
-        applyTheme(theme);
+        applyTheme(theme, get().themePack);
       },
+      setThemePack: (themePack) => {
+        set({ themePack });
+        applyTheme(get().theme, themePack);
+      },
+      setAdminMode: (adminMode) => set({ adminMode }),
+      toggleAdminMode: () => set((s) => ({ adminMode: !s.adminMode })),
       toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
       toggleFocusMode: () => set((s) => ({ focusMode: !s.focusMode })),
     }),
@@ -39,9 +61,12 @@ export const useUIStore = create<UIStore>()(
 
 if (typeof window !== 'undefined') {
   const raw = localStorage.getItem('kort-ui');
-  const theme: Theme = raw ? (JSON.parse(raw).state?.theme ?? 'system') : 'system';
-  applyTheme(theme);
+  const parsed = raw ? JSON.parse(raw).state ?? {} : {};
+  const theme: Theme = parsed.theme ?? 'system';
+  const themePack: ThemePack = parsed.themePack ?? 'neutral';
+  applyTheme(theme, themePack);
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
-    if (useUIStore.getState().theme === 'system') applyTheme('system');
+    const state = useUIStore.getState();
+    if (state.theme === 'system') applyTheme('system', state.themePack);
   });
 }

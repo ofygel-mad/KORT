@@ -237,3 +237,6 @@
 .collapseBtn:hover {
   transform: translateX(1px);
 }
+
+.modeSwitch { display:flex; align-items:center; gap:8px; width:100%; min-height:38px; padding:0 12px; border-radius:12px; border:1px solid var(--border-subtle); background:var(--bg-surface-inset); color:var(--text-secondary); font:inherit; font-size:12px; font-weight:600; cursor:pointer; margin:0 0 8px; }
+.modeSwitchActive { background: color-mix(in srgb, var(--fill-warning-soft) 72%, var(--bg-surface-inset)); color: var(--fill-warning-text); border-color: color-mix(in srgb, var(--fill-warning-text) 34%, var(--border-default)); }

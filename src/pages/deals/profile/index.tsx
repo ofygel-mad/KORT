@@ -160,6 +160,30 @@ export default function DealProfilePage() {
         </div>
       </div>
 
+      <div className={s.scenarioRail}>
+        <div className={s.scenarioCopy}>
+          <span className={s.scenarioEyebrow}>Deal flow</span>
+          <div className={s.scenarioText}>Движение по этапу, заметки и задачи находятся рядом, чтобы сделка вела к следующему действию, а не терялась в CRM-шуме.</div>
+        </div>
+        <div className={s.scenarioChips}>
+          <span className={s.scenarioChip}>Stage</span>
+          <span className={s.scenarioChip}>Note</span>
+          <span className={s.scenarioChip}>Task</span>
+        </div>
+      </div>
+      <div className={s.nextActionSurface}>
+        <div className={s.nextActionCopy}>
+          <span className={s.nextActionEyebrow}>Next best action</span>
+          <strong className={s.nextActionTitle}>Закройте следующий шаг, а не просто прочитайте карточку сделки</strong>
+          <span className={s.nextActionText}>Сдвиньте этап, оставьте заметку или зафиксируйте задачу, пока сделка ещё находится в рабочем фокусе команды.</span>
+        </div>
+        <div className={s.nextActionButtons}>
+          <button className={s.nextActionBtn} onClick={() => { localStorage.setItem('kort:product-moment', `Сделка «${deal.title}» в фокусе. Зафиксируйте следующий шаг, пока контекст не остыл.`); setTab('notes'); }}>Открыть заметки</button>
+          <button className={s.nextActionBtn} onClick={() => setTab('tasks')}>Открыть задачи</button>
+          <button className={s.nextActionBtn} onClick={() => window.dispatchEvent(new CustomEvent('kort:assistant-prompt', { detail: `Что сейчас лучший следующий шаг по сделке ${deal.title}?` }))}>Спросить Copilot</button>
+        </div>
+      </div>
+
       {/* Pipeline progress ───────────────────────────────────── */}
       <div className={s.pipelineSection}>
         <div className={s.pipelineLabel}>{deal.pipeline.name}</div>

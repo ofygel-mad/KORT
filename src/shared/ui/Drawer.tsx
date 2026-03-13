@@ -46,8 +46,8 @@ export function Drawer({ open, onClose, title, subtitle, children, size = 'md', 
             <motion.div className={s.overlay} variants={overlayVariants}
               initial="hidden" animate="visible" exit="hidden" onClick={onClose} />
             <motion.div className={s.panelMobile}
-              initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-              transition={{ type: 'spring', stiffness: 380, damping: 38 }}>
+              variants={sheetVariants}
+              initial="hidden" animate="visible" exit="hidden">
               <div className={s.header}>{titleBlock}{closeBtn}</div>
               <div className={s.body}>{children}</div>
               {footer && <div className={s.footer}>{footer}</div>}

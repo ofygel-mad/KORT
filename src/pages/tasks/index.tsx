@@ -160,16 +160,24 @@ export default function TasksPage() {
           ))}
         </div>
       ) : tasks.length === 0 ? (
-        <EmptyState
-          icon={<CheckSquare size={22} />}
-          title="Задач нет"
-          subtitle={
-            filter === 'overdue' ? 'Просроченных задач нет 🎉' :
-            filter === 'due_today' ? 'На сегодня задач нет' :
-            'Создайте первую задачу'
-          }
-          action={{ label: 'Создать задачу', onClick: () => setDrawerOpen(true) }}
-        />
+        <div className={s.emptyStateWrap}>
+          <EmptyState
+            icon={<CheckSquare size={22} />}
+            title="Задач нет"
+            subtitle={
+              filter === 'overdue' ? 'Просроченных задач нет 🎉' :
+              filter === 'due_today' ? 'На сегодня задач нет' :
+              'Создайте первую задачу'
+            }
+            action={{ label: 'Создать задачу', onClick: () => setDrawerOpen(true) }}
+          />
+          {(filter === 'overdue' || filter === 'due_today' || filter === 'mine') && (
+            <div className={s.emptyRecoveryRail}>
+              {filter !== '' && <button className={s.emptyRecoveryBtn} onClick={() => setFilter('')}>Показать все задачи</button>}
+              <button className={s.emptyRecoveryBtn} onClick={() => window.dispatchEvent(new CustomEvent('kort:assistant-prompt', { detail: 'Какой следующий шаг по задачам сегодня?' }))}>Спросить Copilot</button>
+            </div>
+          )}
+        </div>
       ) : (
         <motion.div className={s.taskList} variants={listContainer} initial="hidden" animate="visible">
           <AnimatePresence>

@@ -671,3 +671,8 @@
 .ruleRow:hover, .executionRow:hover { background: var(--bg-hover); transform: translateY(-1px); }
 
 .ruleRow:hover, .executionRow:hover { background: color-mix(in srgb, var(--bg-hover) 64%, transparent); }
+
+
+.groupCard, .actionCard, .rulesCard, .executionsCard, .preview, .addActionMenu { background: var(--rc-detail-surface-bg); border-color: var(--rc-detail-surface-border); box-shadow: var(--brand-panel-shadow); }
+.selectorButton, .logicButton, .previewToggle { transition: transform var(--motion-fast) var(--motion-ease), border-color var(--motion-fast) var(--motion-ease), box-shadow var(--motion-fast) var(--motion-ease); }
+.selectorButton:hover, .logicButton:hover, .previewToggle:hover { transform: var(--feedback-raise-hover); box-shadow: var(--shadow-sm); }

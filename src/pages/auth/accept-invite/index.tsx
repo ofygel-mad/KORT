@@ -4,7 +4,7 @@ import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { api } from '../../../shared/api/client';
 import { useAuthStore } from '../../../shared/stores/auth';
 import { toast } from 'sonner';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, ShieldCheck, ArrowRight } from 'lucide-react';
 import { KortLogo } from '../../../shared/ui/KortLogo';
 import s from './AcceptInvite.module.css';
 
@@ -54,6 +54,13 @@ export default function AcceptInvitePage() {
         <div className={s.logoWrap}><KortLogo size={44} /></div>
         <h1 className={s.title}>Принять приглашение</h1>
         <p className={s.subtitle}>Создайте пароль для вашего аккаунта</p>
+        <div className={s.journeyRail}>
+          <div className={s.journeyCopy}>
+            <span className={s.journeyEyebrow}><ShieldCheck size={12} /> Активация доступа</span>
+            <div className={s.journeyText}>Примите приглашение один раз, затем Kort направит вас в рабочий контур команды.</div>
+          </div>
+          <span className={s.journeyArrow}><ArrowRight size={14} /></span>
+        </div>
       </div>
 
       <form className={s.form} onSubmit={handleSubmit}>

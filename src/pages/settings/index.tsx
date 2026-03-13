@@ -9,7 +9,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import {
   GripVertical, Pencil, Trash2, Building2, Users, GitBranch,
-  Shield, Globe, Zap, Key, Copy, Plus, MessageSquare,
+  Shield, Globe, Zap, Key, Copy, Plus, MessageSquare, MonitorCog, Sun, Moon, Monitor, Check, Palette, Layers3, Sparkles,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { api } from '../../shared/api/client';
@@ -21,6 +21,7 @@ import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { useRole } from '../../shared/hooks/useRole';
 import { useDocumentTitle } from '../../shared/hooks/useDocumentTitle';
+import { useUIStore, type ThemePack } from '../../shared/stores/ui';
 import s from './Settings.module.css';
 
 /* ── Types ──────────────────────────────────────────────────── */
@@ -34,11 +35,20 @@ const SECTIONS = [
   { key: 'organization', label: 'Организация',        icon: <Building2 size={15} /> },
   { key: 'team',         label: 'Команда',             icon: <Users size={15} /> },
   { key: 'pipelines',   label: 'Воронки',              icon: <GitBranch size={15} /> },
+  { key: 'appearance',  label: 'Темы и вид',           icon: <MonitorCog size={15} /> },
   { key: 'mode',        label: 'Режим Kort',           icon: <Shield size={15} /> },
   { key: 'integrations',label: 'Интеграции',           icon: <Globe size={15} /> },
   { key: 'webhooks',    label: 'Webhooks',             icon: <Zap size={15} /> },
   { key: 'templates',   label: 'Шаблоны сообщений',   icon: <MessageSquare size={15} /> },
   { key: 'api',         label: 'API токены',           icon: <Key size={15} /> },
+];
+
+const THEME_PACKS: Array<{ value: ThemePack; title: string; subtitle: string; accent: string; depth: string; density: string; }> = [
+  { value: 'neutral', title: 'Neutral Premium', subtitle: 'Тёплый базовый характер Kort', accent: 'linear-gradient(135deg, #FBBF24 0%, #D97706 100%)', depth: 'Мягкая глубина', density: 'Сбалансированный акцент' },
+  { value: 'graphite', title: 'Graphite', subtitle: 'Спокойный строгий режим', accent: 'linear-gradient(135deg, #94A3B8 0%, #64748B 100%)', depth: 'Холодная глубина', density: 'Низкая плотность' },
+  { value: 'sand', title: 'Sand', subtitle: 'Тёплая операционная среда', accent: 'linear-gradient(135deg, #D6A46B 0%, #B77939 100%)', depth: 'Светлая глубина', density: 'Тёплый акцент' },
+  { value: 'obsidian', title: 'Obsidian', subtitle: 'Контрастный premium-night', accent: 'linear-gradient(135deg, #A78BFA 0%, #7C3AED 100%)', depth: 'Глубокая тень', density: 'Выразительный акцент' },
+  { value: 'enterprise', title: 'Enterprise Hybrid', subtitle: 'Сдержанный blue-brown для команд', accent: 'linear-gradient(135deg, #2D5B8A 0%, #6A4D2F 100%)', depth: 'Деловая глубина', density: 'Структурный акцент' },
 ];
 
 /* ── Organisation section ────────────────────────────────────── */
@@ -373,7 +383,105 @@ function PipelinesSection() {
   );
 }
 
+function AppearanceSection() {
+  const { theme, setTheme, themePack, setThemePack } = useUIStore();
+
+  return (
+    <div className={s.section}>
+      <div className={s.sectionHeader}>
+        <div>
+          <div className={s.sectionTitle}>Темы и характер интерфейса</div>
+          <div className={s.sectionSubtitle}>Mode отвечает за свет и тьму, theme pack - за surface, глубину и плотность акцента.</div>
+        </div>
+      </div>
+      <div className={s.sectionBody}>
+        <div className={s.appearanceStack}>
+          <div className={s.appearanceBlock}>
+            <div className={s.appearanceLabel}>Режим отображения</div>
+            <div className={s.themeModeRow}>
+              {[
+                { value: 'light', label: 'Светлая', icon: <Sun size={14} /> },
+                { value: 'dark', label: 'Тёмная', icon: <Moon size={14} /> },
+                { value: 'system', label: 'Системная', icon: <Monitor size={14} /> },
+              ].map((mode) => (
+                <button key={mode.value} className={`${s.themeModeBtn} ${theme === mode.value ? s.themeModeBtnActive : ''}`} onClick={() => setTheme(mode.value as 'light' | 'dark' | 'system')}>
+                  {mode.icon}
+                  {mode.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className={s.appearanceBlock}>
+            <div className={s.appearanceLabel}>Theme packs</div>
+            <div className={s.themeGrid}>
+              {THEME_PACKS.map((pack) => (
+                <button key={pack.value} className={`${s.themeTile} ${themePack === pack.value ? s.themeTileActive : ''}`} onClick={() => setThemePack(pack.value)}>
+                  <div className={s.themeTilePreview} style={{ '--theme-preview-accent': pack.accent } as CSSProperties}>
+                    <div className={s.themePreviewTopbar} />
+                    <div className={s.themePreviewSidebar} />
+                    <div className={s.themePreviewSurfaceLg} />
+                    <div className={s.themePreviewSurfaceSm} />
+                    <div className={s.themePreviewChip} />
+                  </div>
+                  <div className={s.themeTileBody}>
+                    <div className={s.themeTileHead}>
+                      <div>
+                        <div className={s.themeTileTitle}>{pack.title}</div>
+                        <div className={s.themeTileSub}>{pack.subtitle}</div>
+                      </div>
+                      {themePack === pack.value && <span className={s.themeTileCheck}><Check size={13} /></span>}
+                    </div>
+                    <div className={s.themeTileMeta}>
+                      <span className={s.themeMetaChip}><Layers3 size={12} /> {pack.depth}</span>
+                      <span className={s.themeMetaChip}><Sparkles size={12} /> {pack.density}</span>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className={s.appearanceAside}>
+            <div className={s.appearanceHintCard}>
+              <div className={s.appearanceHintTitle}><Palette size={14} /> Что меняет pack</div>
+              <ul className={s.appearanceHintList}>
+                <li>surface hierarchy и глубину панелей</li>
+                <li>плотность фирменного акцента</li>
+                <li>характер dashboard, drawers, assistant и palette</li>
+              </ul>
+              <p className={s.appearanceHintText}>Настройка хранится локально и уважает системную тему, если выбран режим «Системная».</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ── API tokens section ──────────────────────────────────────── */
+function LockedAdminSection() {
+  const { setAdminMode } = useUIStore();
+  return (
+    <div className={s.section}>
+      <div className={s.sectionHeader}>
+        <div>
+          <div className={s.sectionTitle}>Раздел доступен в режиме администратора</div>
+          <div className={s.sectionSubtitle}>Системные настройки, роли и API должны открываться только владельцу или администратору в отдельном контуре управления.</div>
+        </div>
+      </div>
+      <div className={s.sectionBody}>
+        <div className={s.adminGateCard}>
+          <Shield size={18} />
+          <div>
+            <div className={s.adminGateTitle}>Включите режим администратора</div>
+            <div className={s.adminGateText}>Так обычный рабочий интерфейс остаётся лёгким, а критичные функции не лезут в глаза сотрудникам каждый день.</div>
+          </div>
+          <Button size="sm" onClick={() => setAdminMode(true)}>Включить режим</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ApiSection() {
   const { data: keys, isLoading } = useQuery<{ results: { id: string; name: string; key: string; created_at: string }[] }>({
     queryKey: ['api-keys'], queryFn: () => api.get('/api-keys/'),
@@ -427,6 +535,10 @@ function StubSection({ title, subtitle }: { title: string; subtitle: string }) {
 export default function SettingsPage() {
   useDocumentTitle('Настройки');
   const [section, setSection] = useState('organization');
+  const { adminMode } = useUIStore();
+  const sensitiveSections = new Set(['team', 'api', 'mode', 'integrations', 'webhooks']);
+  const visibleSections = SECTIONS.filter((sec) => adminMode || !sensitiveSections.has(sec.key));
+  const sectionLocked = sensitiveSections.has(section) && !adminMode;
 
   return (
     <div className={s.page}>
@@ -434,7 +546,7 @@ export default function SettingsPage() {
 
       {/* Nav tabs */}
       <div className={s.navTabs}>
-        {SECTIONS.map(sec => (
+        {visibleSections.map(sec => (
           <button
             key={sec.key}
             className={`${s.navTab} ${section === sec.key ? s.active : ''}`}
@@ -455,14 +567,16 @@ export default function SettingsPage() {
           exit={{ opacity: 0 }}
           transition={{ duration: 0.14 }}
         >
-          {section === 'organization' && <OrgSection />}
-          {section === 'team'         && <TeamSection />}
-          {section === 'pipelines'    && <PipelinesSection />}
-          {section === 'api'          && <ApiSection />}
-          {section === 'mode'         && <StubSection title="Режим Kort" subtitle="Базовый, продвинутый или промышленный режим работы CRM" />}
-          {section === 'integrations' && <StubSection title="Интеграции" subtitle="Подключение внешних сервисов: 1С, WhatsApp, Telegram и другие" />}
-          {section === 'webhooks'     && <StubSection title="Webhooks" subtitle="Настройка уведомлений по HTTP при событиях в системе" />}
-          {section === 'templates'    && <StubSection title="Шаблоны сообщений" subtitle="Сохранённые тексты для быстрой коммуникации с клиентами" />}
+          {sectionLocked && <LockedAdminSection />}
+          {!sectionLocked && section === 'organization' && <OrgSection />}
+          {!sectionLocked && section === 'team'         && <TeamSection />}
+          {!sectionLocked && section === 'pipelines'    && <PipelinesSection />}
+          {!sectionLocked && section === 'appearance'   && <AppearanceSection />}
+          {!sectionLocked && section === 'api'          && <ApiSection />}
+          {!sectionLocked && section === 'mode'         && <StubSection title="Режим Kort" subtitle="Базовый, продвинутый или промышленный режим работы CRM" />}
+          {!sectionLocked && section === 'integrations' && <StubSection title="Интеграции" subtitle="Подключение внешних сервисов: 1С, WhatsApp, Telegram и другие" />}
+          {!sectionLocked && section === 'webhooks'     && <StubSection title="Webhooks" subtitle="Настройка уведомлений по HTTP при событиях в системе" />}
+          {!sectionLocked && section === 'templates'    && <StubSection title="Шаблоны сообщений" subtitle="Сохранённые тексты для быстрой коммуникации с клиентами" />}
         </motion.div>
       </AnimatePresence>
     </div>

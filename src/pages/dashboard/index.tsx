@@ -1,11 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
+import { routeHandoff, successBurst } from '../../shared/motion/presets';
 import type { CSSProperties } from 'react';
 import {
   Users, Briefcase, CheckSquare, TrendingUp,
-  Plus, ArrowRight, AlertTriangle, Clock,
+  Plus, ArrowRight, AlertTriangle, Clock, Sparkles, Radar, BellRing,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import { api } from '../../shared/api/client';
 import { useAuthStore } from '../../shared/stores/auth';
 import { formatNumber, formatMoney } from '../../shared/utils/format';
@@ -192,11 +194,73 @@ export default function DashboardPage() {
   const isMobile  = useIsMobile();
   const hour      = new Date().getHours();
   const greeting  = hour < 12 ? 'Доброе утро' : hour < 18 ? 'Добрый день' : 'Добрый вечер';
+  const operationalTone = hour < 12 ? 'Утренний обзор' : hour < 18 ? 'Рабочий контур дня' : 'Вечерняя сверка';
+  const presenceTitle = hour < 12 ? 'Сначала разберите входящий поток и сигналы риска' : hour < 18 ? 'Держите темп: сделки, follow-up и просрочка должны быть видны сразу' : 'Сведите день: что закрыто, что требует handoff на завтра';
+  const [productMoment, setProductMoment] = useState<string | null>(null);
+
+  useEffect(() => {
+    const moment = localStorage.getItem('kort:product-moment');
+    if (moment) {
+      setProductMoment(moment);
+      localStorage.removeItem('kort:product-moment');
+    }
+  }, []);
 
   const { data, isLoading } = useQuery<DashboardData>({
     queryKey: ['dashboard-summary'],
     queryFn:  () => api.get('/reports/dashboard'),
   });
+
+  const watchSignals = (data?.stalled_deals?.length ?? 0) + (data?.silent_customers?.length ?? 0) + (data?.today_tasks?.length ?? 0);
+
+  const nextBestActions = [
+    (data?.overdue_tasks ?? 0) > 0
+      ? {
+          eyebrow: 'Recovery',
+          title: 'Разобрать просроченные задачи',
+          text: 'Снимите блокеры и верните темп команды до того, как сделки начнут молчать.',
+          action: () => navigate('/tasks'),
+        }
+      : (data?.recent_customers?.length ?? 0) > 0
+        ? {
+            eyebrow: 'Next best action',
+            title: 'Проверить новых клиентов',
+            text: 'Быстро очистить входящий поток и понять, кого уже можно двигать в сделку.',
+            action: () => navigate('/customers'),
+          }
+        : {
+            eyebrow: 'Bootstrap',
+            title: 'Загрузить новые данные',
+            text: 'Если контур ещё пустой, начните с импорта и соберите рабочую базу без ручной рутины.',
+            action: () => navigate('/imports'),
+          },
+    (data?.stalled_deals?.length ?? 0) > 0
+      ? {
+          eyebrow: 'Deal pressure',
+          title: 'Вернуть сделки в движение',
+          text: 'Откройте воронку и снимите зависания до того, как они превратятся в потерянный доход.',
+          action: () => navigate('/deals'),
+        }
+      : {
+          eyebrow: 'AI cue',
+          title: 'Спросить у Kort Copilot',
+          text: 'Получить следующий шаг по рискам, просрочке и узким местам команды.',
+          action: () => window.dispatchEvent(new CustomEvent('kort:assistant-prompt', { detail: 'Что сейчас требует внимания в Kort?' })),
+        },
+    hour >= 18
+      ? {
+          eyebrow: 'Evening handoff',
+          title: 'Сверить итог дня',
+          text: 'Проверьте сигналы риска, handoff и то, что должно перейти в завтрашний контур.',
+          action: () => navigate('/reports'),
+        }
+      : {
+          eyebrow: 'Flow',
+          title: 'Открыть рабочий контур дня',
+          text: 'Перейти в обзор команды и не терять темп между задачами, сделками и входящим потоком.',
+          action: () => navigate('/tasks'),
+        },
+  ];
 
   return (
     <div className={styles.page}>
@@ -204,11 +268,19 @@ export default function DashboardPage() {
 
       {/* ── Header ──────────────────────────────────────────── */}
       <div className={styles.header}>
-        <div>
+        <div className={styles.headerLeft}>
+          <span className={styles.headerIntro}>Kort home · {operationalTone}</span>
           <p className={styles.greeting}>{greeting},</p>
           <h1 className={styles.username}>
             {user?.full_name?.split(' ')[0] ?? 'пользователь'} 👋
           </h1>
+          <p className={styles.homeDesc}>Важное, срочное и следующее действие собраны в одном ритме, без CRM-шума и лишнего кликанья.</p>
+          <div className={styles.homeSignals}>
+            <span className={styles.signalChip}><Sparkles size={12} /> Режим: <strong>{operationalTone}</strong></span>
+            <span className={styles.signalChip}><Radar size={12} /> Сигналов: <strong>{watchSignals}</strong></span>
+            <span className={styles.signalChip}><Sparkles size={12} /> Fokus на сегодня: <strong>{data?.tasks_today ?? 0}</strong></span>
+            <span className={styles.signalChip}><BellRing size={12} /> Просрочено: <strong>{data?.overdue_tasks ?? 0}</strong></span>
+          </div>
         </div>
         {!isMobile && (
           <div className={styles.headerActions}>
@@ -223,6 +295,17 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
+
+      {productMoment && (
+        <motion.div variants={routeHandoff} initial="hidden" animate="visible" exit="exit" className={styles.productMoment}>
+          <div className={styles.productMomentBadge}>Signature moment</div>
+          <div className={styles.productMomentBody}>
+            <div className={styles.productMomentTitle}>Kort продолжает сценарий без обрыва</div>
+            <div className={styles.productMomentText}>{productMoment}</div>
+          </div>
+          <button className={styles.productMomentClose} onClick={() => setProductMoment(null)}>Понятно</button>
+        </motion.div>
+      )}
 
       {/* ── Attention banner ───────────────────────────────── */}
       {(data?.overdue_tasks ?? 0) > 0 && (
@@ -241,6 +324,8 @@ export default function DashboardPage() {
         </motion.div>
       )}
 
+      <div className={styles.sectionIntro}>Operational overview</div>
+
       {/* ── Stats grid ─────────────────────────────────────── */}
       <motion.div variants={stagger} initial="hidden" animate="show" className={styles.statsGrid}>
         <StatCard label="Клиентов"        value={data?.customers_count    ?? 0} delta={data?.customers_delta}
@@ -252,6 +337,35 @@ export default function DashboardPage() {
         <StatCard label="Выручка / мес"   value={data?.revenue_month      ?? 0} fmt="c"
           icon={<TrendingUp size={15} />}   accentColor="#8B5CF6"  loading={isLoading} />
       </motion.div>
+
+      <div className={styles.sectionIntro}>Рабочие панели и быстрые действия</div>
+
+      <div className={styles.presenceSurface}>
+        <div className={styles.presenceEyebrow}>Operational presence</div>
+        <div className={styles.presenceTitle}>{presenceTitle}</div>
+        <div className={styles.presenceText}>Kort подстраивает home под ритм дня, чтобы в центре был не набор карточек, а следующий осмысленный шаг команды.</div>
+      </div>
+
+      <div className={styles.journeyRail}>
+        <div className={styles.journeyCopy}>
+          <div className={styles.journeyTitle}>Продолжить сценарий без лишних переходов</div>
+          <div className={styles.journeySub}>После входа и настройки Kort сразу ведёт в действие: клиент, сделка, задача или импорт.</div>
+        </div>
+        <div className={styles.journeyActions}>
+          <button className={styles.journeyBtn} onClick={() => navigate('/customers')}>Клиенты</button>
+          <button className={styles.journeyBtn} onClick={() => navigate('/deals')}>Сделки</button>
+          <button className={styles.journeyBtn} onClick={() => navigate('/imports')}>Импорт</button>
+        </div>
+        <div className={styles.nextBestGrid}>
+          {nextBestActions.map((item) => (
+            <button key={item.title} className={styles.nextBestCard} onClick={item.action}>
+              <span className={styles.nextBestEyebrow}>{item.eyebrow}</span>
+              <strong>{item.title}</strong>
+              <span>{item.text}</span>
+            </button>
+          ))}
+        </div>
+      </div>
 
       {/* ── Body grid ──────────────────────────────────────── */}
       <div className={styles.bodyGrid}>
@@ -338,6 +452,8 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {!isLoading && data && <div className={styles.sectionIntro}>Watchlist · где нужно вмешательство</div>}
 
       {/* ── Watchlist ────────────────────────────────────────── */}
       {!isLoading && data && (

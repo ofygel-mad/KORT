@@ -18,6 +18,17 @@
   justify-content: space-between;
   gap: var(--space-4);
   flex-wrap: wrap;
+  position: relative;
+}
+
+.listHeader::before,
+.detailHeader::before {
+  content: "";
+  position: absolute;
+  inset: -10px 0 auto 0;
+  height: 1px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--fill-accent) 26%, var(--border-subtle)) 0%, transparent 100%);
+  pointer-events: none;
 }
 
 .listTitle {
@@ -42,6 +53,8 @@
   font-size: var(--text-size-base);
   color: var(--text-tertiary);
   margin: 0;
+  max-width: 720px;
+  line-height: 1.6;
 }
 
 .listActions {
@@ -73,6 +86,10 @@
 .detailBack,
 .detailHeader,
 .detailTabs { margin-bottom: 0; }
+
+.detailHeader {
+  position: relative;
+}
 
 .detailBody {
   display: grid;
@@ -149,4 +166,5 @@
   position: sticky;
   top: calc(var(--topbar-height) + 10px);
   z-index: 5;
+  padding-top: 2px;
 }

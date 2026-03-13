@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { api } from '../../../shared/api/client';
 import { useAuthStore } from '../../../shared/stores/auth';
 import { toast } from 'sonner';
+import { resolveOnboardingCompleted } from '../../../shared/lib/auth';
 import { useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { Button } from '../../../shared/ui/Button';
@@ -24,7 +25,11 @@ export default function LoginPage() {
         password: data.password,
       });
       setAuth(res.user, res.org, res.access, res.refresh, res.capabilities ?? [], res.role ?? 'viewer');
-      navigate(res.onboarding_completed ? '/' : '/onboarding', { replace: true });
+      const onboardingCompleted = resolveOnboardingCompleted(res, res.org?.onboarding_completed ?? false);
+      localStorage.setItem('kort:product-moment', onboardingCompleted
+        ? 'С возвращением. Home уже собран вокруг следующего полезного действия, а не просто открывает ещё один экран.'
+        : 'Вы внутри. Осталось быстро зафиксировать контекст компании, и Kort сразу переведёт вас в рабочий контур.');
+      navigate(onboardingCompleted ? '/' : '/onboarding', { replace: true });
     } catch (e: any) {
       const msg = e?.response?.data?.detail;
       if (msg?.includes('деактивирован')) {
@@ -42,6 +47,10 @@ export default function LoginPage() {
       <div className={styles.header}>
         <h2 className={styles.title}>Добро пожаловать</h2>
         <p className={styles.subtitle}>Войдите, чтобы продолжить работу</p>
+        <div className={styles.journeyRail}>
+          <span className={styles.journeyBadge}>Входной маршрут</span>
+          <div className={styles.journeyText}>Вход → настройка → рабочий контур без лишних шагов.</div>
+        </div>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className={styles.form} noValidate>
@@ -89,9 +98,9 @@ export default function LoginPage() {
         </div>
 
         {/* Forgot link */}
-        <Link to="/auth/forgot" className={styles.forgotLink}>
+        <button type="button" className={styles.forgotLink} onClick={() => toast.info('Восстановление пароля будет доступно в следующем релизном проходе.')}>
           Забыли пароль?
-        </Link>
+        </button>
 
         {/* Submit */}
         <div className={styles.submitBtn}>

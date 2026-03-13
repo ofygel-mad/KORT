@@ -464,3 +464,9 @@
 .statCard, .surfaceCard, .teamCard, .auditCard, .planCard, .inviteCard, .warningBanner { box-shadow: var(--surface-shadow-rest); }
 .memberRow, .auditRow { transition: background var(--motion-fast) var(--motion-ease), transform var(--motion-fast) var(--motion-ease); }
 .memberRow:hover, .auditRow:hover { background: var(--bg-hover); transform: translateY(-1px); }
+
+
+/* ── Theme pack final pass ───────────────────────────────────────────────── */
+.teamCard, .auditCard, .plansCard, .modeCard, .inviteWrap { background: var(--rc-detail-surface-bg); border-color: var(--rc-detail-surface-border); box-shadow: var(--brand-panel-shadow); }
+.memberRow:hover, .auditRow:hover { background: var(--rc-table-row-hover); }
+.modeLink:focus-visible { box-shadow: var(--rc-focus-ring); outline: none; border-radius: 999px; }

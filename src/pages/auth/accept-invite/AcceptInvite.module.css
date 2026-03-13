@@ -42,9 +42,10 @@
 .errorState {
   padding: 32px;
   text-align: center;
-  border-radius: calc(var(--surface-radius-tight) - 2px);
-  background: color-mix(in srgb, var(--state-danger-bg) 52%, transparent);
-  border: 1px solid color-mix(in srgb, var(--fill-negative) 24%, var(--border-subtle));
+  border-radius: calc(var(--surface-radius) + 2px);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--state-danger-bg) 66%, transparent) 0%, color-mix(in srgb, var(--bg-surface) 90%, transparent) 100%);
+  border: 1px solid color-mix(in srgb, var(--fill-negative) 24%, var(--brand-panel-border));
+  box-shadow: var(--brand-panel-shadow);
 }
 
 .errorText {
@@ -118,3 +119,22 @@
 
 .submitBtn:hover:not(:disabled) { transform: var(--feedback-raise-hover); }
 .submitBtn:active:not(:disabled) { transform: var(--feedback-soft-press); }
+
+
+.journeyRail {
+  margin-top: 16px;
+  padding: 12px 14px;
+  border-radius: calc(var(--surface-radius-tight) + 2px);
+  border: 1px solid var(--journey-rail-border);
+  background: var(--journey-rail-bg);
+  box-shadow: var(--brand-panel-shadow);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  text-align: left;
+}
+.journeyCopy { display: grid; gap: 4px; }
+.journeyEyebrow { display: inline-flex; align-items: center; gap: 6px; color: var(--text-tertiary); font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+.journeyText { color: var(--text-secondary); font-size: 13px; line-height: 1.5; }
+.journeyArrow { color: var(--text-tertiary); flex-shrink: 0; }

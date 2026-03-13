@@ -9,8 +9,8 @@
   /* Статичный light-themed gradient — дизайн-решение, не runtime */
   background: radial-gradient(circle at top center, color-mix(in srgb, var(--fill-accent) 12%, transparent) 0%, transparent 28%), linear-gradient(135deg, color-mix(in srgb, var(--bg-canvas) 92%, white 8%) 0%, var(--bg-canvas) 100%);
   display: flex;
-  flex-direction: column;
-  align-items: center;
+  flex-direction: row;
+  align-items: flex-start;
   justify-content: center;
   padding: 24px;
 }
@@ -132,18 +132,18 @@
 /* ── Industry grid ───────────────────────────────────────────── */
 .industryGrid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
   margin-bottom: 24px;
 }
 
 .industryBtn {
-  padding: 12px 8px;
+  padding: 14px 14px;
   border-radius: var(--radius-md);
   cursor: pointer;
   display: flex;
-  flex-direction: column;
-  align-items: center;
+  flex-direction: row;
+  align-items: flex-start;
   gap: 6px;
   font-family: var(--font-body);
   border: 2px solid var(--border-default);
@@ -158,16 +158,20 @@
   background: var(--fill-accent-soft);
 }
 
-.industryEmoji { font-size: 22px; line-height: 1; }
+.industryIcon { width: 38px; height: 38px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; background: color-mix(in srgb, var(--fill-accent-subtle) 78%, var(--bg-surface)); color: var(--fill-accent); flex-shrink: 0; }
+
+.industryMeta { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
 
 .industryLabel {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
   transition: color var(--motion-duration-fast) var(--motion-ease-standard);
 }
 
 .industryLabel.selected { color: var(--fill-accent-dark, var(--fill-accent)); }
 .industryLabel.default  { color: var(--text-primary); }
+
+.industryDesc { font-size: 11px; line-height: 1.45; color: var(--text-tertiary); text-align: left; }
 
 /* ── Size grid ───────────────────────────────────────────────── */
 .sizeGrid {
@@ -202,7 +206,7 @@
 /* ── Plan grid ───────────────────────────────────────────────── */
 .planGrid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
 }
 
@@ -282,10 +286,22 @@
 /* ── Success / quick-start step ──────────────────────────────── */
 .successStep {
   padding: clamp(28px, 5vw, 42px);
-  border-radius: calc(var(--surface-radius-tight) - 2px);
-  background: color-mix(in srgb, var(--state-success-bg) 48%, transparent);
+  border-radius: calc(var(--surface-radius) + 2px);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--state-success-bg) 62%, transparent) 0%, color-mix(in srgb, var(--bg-surface) 88%, transparent) 100%);
+  border: 1px solid color-mix(in srgb, var(--fill-positive) 22%, var(--brand-panel-border));
+  box-shadow: var(--brand-panel-shadow);
   text-align: center;
   margin-bottom: 28px;
+  position: relative;
+  overflow: hidden;
+}
+
+.successStep::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, color-mix(in srgb, white 8%, transparent) 0%, transparent 20%);
 }
 
 .successEmoji { font-size: 44px; margin-bottom: 12px; }
@@ -328,8 +344,10 @@
 }
 
 .quickLinkBtn:hover {
-  background: var(--bg-hover);
-  border-color: var(--border-default);
+  background: color-mix(in srgb, var(--bg-hover) 82%, var(--fill-accent-subtle));
+  border-color: var(--brand-panel-border);
+  transform: var(--feedback-raise-hover);
+  box-shadow: var(--shadow-sm);
 }
 
 .quickLinkEmoji { font-size: 24px; line-height: 1; }
@@ -380,7 +398,7 @@
 @media (max-width: 640px) {
   .page { padding: 16px; }
   .card { padding: 24px 20px; }
-  .industryGrid { grid-template-columns: repeat(3, 1fr); }
+  .industryGrid { grid-template-columns: 1fr; }
   .planGrid { grid-template-columns: 1fr; }
   .steps { gap: 4px; }
   .stepLabel { display: none; }
@@ -429,4 +447,47 @@
     border-color var(--motion-duration-fast) var(--motion-ease-standard),
     background var(--motion-duration-fast) var(--motion-ease-standard),
     color var(--motion-duration-fast) var(--motion-ease-standard);
+}
+
+
+.scenarioRail {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 16px;
+  margin-bottom: 18px;
+  border-radius: calc(var(--surface-radius-tight) + 2px);
+  border: 1px solid var(--journey-rail-border);
+  background: var(--journey-rail-bg);
+  box-shadow: var(--brand-panel-shadow);
+}
+.scenarioCopy { display: grid; gap: 4px; }
+.scenarioEyebrow { display: inline-flex; align-items: center; gap: 6px; color: var(--text-tertiary); font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+.scenarioText { color: var(--text-secondary); font-size: 13px; line-height: 1.55; max-width: 540px; }
+.scenarioChips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+.scenarioChip { display: inline-flex; align-items: center; min-height: 28px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--journey-chip-border); background: var(--journey-chip-bg); color: var(--text-secondary); font-size: 12px; font-weight: 600; }
+.completionActions { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 18px 0 12px; flex-wrap: wrap; }
+.completionHint { color: var(--text-tertiary); font-size: 12px; font-weight: 600; }
+@media (max-width: 760px) { .scenarioRail { flex-direction: column; align-items: stretch; } .scenarioChips { justify-content: flex-start; } }
+
+
+.successStep {
+  animation: successPulse 420ms var(--motion-ease);
+  background: var(--journey-success-bg);
+  border: 1px solid var(--confirmation-shell-border);
+  box-shadow: var(--brand-panel-shadow);
+}
+
+.quickLinkBtn:hover {
+  box-shadow: var(--brand-panel-shadow);
+}
+
+@media (min-width: 900px) and (max-width: 1280px) {
+  .planGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .planCard:last-child { grid-column: 1 / -1; }
+}
+
+@media (max-width: 899px) {
+  .industryGrid, .planGrid, .sizeGrid { grid-template-columns: 1fr; }
 }

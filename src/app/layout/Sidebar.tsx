@@ -24,8 +24,8 @@ const NAV_MAIN = [
 const NAV_SECONDARY = [
   { to: '/reports',     icon: BarChart2, label: 'Отчёты',        cap: 'reports.basic' },
   { to: '/imports',     icon: Upload,    label: 'Импорт',        cap: 'customers.import' },
-  { to: '/automations', icon: Zap,       label: 'Автоматизации', cap: 'automations.manage' },
-  { to: '/audit',       icon: Shield,    label: 'Аудит',         cap: 'audit.read' },
+  { to: '/automations', icon: Zap,       label: 'Автоматизации', cap: 'automations.manage', adminOnly: true },
+  { to: '/audit',       icon: Shield,    label: 'Аудит',         cap: 'audit.read', adminOnly: true },
 ];
 
 const label = (text: string, collapsed: boolean) => (
@@ -51,10 +51,10 @@ interface SidebarProps {
 export function Sidebar({ onNavigate }: SidebarProps = {}) {
   const { can } = useCapabilities();
   const { isAdmin } = useRole();
-  const { sidebarCollapsed, toggleSidebar } = useUIStore();
+  const { sidebarCollapsed, toggleSidebar, adminMode, toggleAdminMode } = useUIStore();
   const user = useAuthStore(s => s.user);
 
-  const secondaryVisible = NAV_SECONDARY.filter(i => i.cap && can(i.cap));
+  const secondaryVisible = NAV_SECONDARY.filter(i => i.cap && can(i.cap) && (!i.adminOnly || (isAdmin && adminMode)));
   const collapsed = sidebarCollapsed;
 
   const navItemClass = ({ isActive }: { isActive: boolean }) =>
@@ -116,7 +116,14 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
 
       {/* Bottom: admin + settings + collapse */}
       <div className={styles.bottom}>
-        {isAdmin && (
+        {isAdmin && !collapsed && (
+          <button className={`${styles.modeSwitch} ${adminMode ? styles.modeSwitchActive : ''}`} onClick={toggleAdminMode}>
+            <Shield size={15} strokeWidth={1.75} />
+            <span>{adminMode ? 'Режим администратора' : 'Рабочий режим команды'}</span>
+          </button>
+        )}
+
+        {isAdmin && adminMode && (
           <NavLink
             to="/admin"
             onClick={onNavigate}

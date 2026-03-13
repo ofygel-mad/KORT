@@ -1,6 +1,8 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, type CSSProperties } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
+import { successBurst } from '../../shared/motion/presets';
 import { Upload, FileText, CheckCircle2, AlertCircle, ArrowRight } from 'lucide-react';
 import { api } from '../../shared/api/client';
 import { PageHeader } from '../../shared/ui/PageHeader';
@@ -65,6 +67,7 @@ function connClass(idx: number, current: number) {
 export default function ImportsPage() {
   useDocumentTitle('Импорт');
   const qc       = useQueryClient();
+  const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement>(null);
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
   const [mapping, setMapping]         = useState<Record<string, string>>({});
@@ -130,7 +133,19 @@ export default function ImportsPage() {
 
   return (
     <div className={s.page}>
-      <PageHeader title="Импорт данных" subtitle="Загрузите клиентов из Excel или CSV" />
+      <PageHeader title="Импорт данных" subtitle="Загрузите клиентов из Excel или CSV" actions={<Button variant="secondary" size="sm" onClick={() => navigate(-1)}>Вернуться</Button>} />
+
+      <div className={s.scenarioRail}>
+        <div className={s.scenarioCopy}>
+          <span className={s.scenarioEyebrow}>Сценарий данных</span>
+          <div className={s.scenarioText}>Загрузка → сопоставление → импорт → следующий рабочий шаг без провала в пустоту.</div>
+        </div>
+        <div className={s.scenarioChips}>
+          <span className={s.scenarioChip}>Upload</span>
+          <span className={s.scenarioChip}>Map</span>
+          <span className={s.scenarioChip}>Use in Kort</span>
+        </div>
+      </div>
 
       {/* ── Wizard card ────────────────────────────────────── */}
       <div className={s.wizardCard}>
@@ -236,13 +251,13 @@ export default function ImportsPage() {
           {wizardStep === 2 && (
             <motion.div key="result" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
               {activeJob?.status === 'processing' ? (
-                <div className={s.resultCenter}>
+                <motion.div className={s.resultCenter} variants={successBurst} initial="hidden" animate="visible">
                   <div className={s.resultSpinner} />
                   <div className={s.resultProcessingTitle}>Импортируем клиентов...</div>
                   <div className={s.resultProcessingDesc}>Обновим результат автоматически</div>
-                </div>
+                </motion.div>
               ) : activeJob?.status === 'completed' ? (
-                <div className={s.resultCenter}>
+                <motion.div className={s.resultCenter} variants={successBurst} initial="hidden" animate="visible">
                   <CheckCircle2 size={40} color="var(--fill-positive)" className={s.resultSuccessIcon} />
                   <div className={s.resultSuccessTitle}>Импорт завершён!</div>
                   <div className={s.statsRow}>
@@ -257,12 +272,29 @@ export default function ImportsPage() {
                       </div>
                     ))}
                   </div>
-                  <Button className={s.resultNewImport} onClick={resetWizard}>Новый импорт</Button>
-                </div>
+                  <div className={s.resultActions}>
+                    <Button className={s.resultNewImport} onClick={resetWizard}>Новый импорт</Button>
+                    <Button variant="secondary" onClick={() => { localStorage.setItem('kort:product-moment', 'Импорт завершён · сначала проверьте карточки клиентов, чтобы быстро превратить свежие данные в живой контур команды.'); navigate('/customers'); }}>Открыть клиентов</Button>
+                    <Button variant="secondary" onClick={() => { localStorage.setItem('kort:product-moment', 'Импорт завершён · Kort Home уже собран как следующий контур действий: проверить базу, создать сделки и распределить задачи.'); navigate('/'); }}>Перейти в Kort Home</Button>
+                  </div>
+                  <div className={s.nextActionRail}>
+                    <div className={s.nextActionTitle}>Что делать дальше</div>
+                    <div className={s.nextActionGrid}>
+                      <button className={s.nextActionCard} onClick={() => { localStorage.setItem('kort:product-moment', 'Импорт завершён. Проверяйте клиентов сразу после загрузки, пока контекст ещё горячий.'); navigate('/customers'); }}>Проверить карточки клиентов</button>
+                      <button className={s.nextActionCard} onClick={() => { localStorage.setItem('kort:product-moment', 'Импорт завершён · переходите к сделкам, пока свежие клиенты ещё не остыли в системе.'); navigate('/deals'); }}>Создать первую сделку</button>
+                      <button className={s.nextActionCard} onClick={() => { localStorage.setItem('kort:product-moment', 'Импорт завершён. Возвращайтесь в обзор команды, чтобы увидеть, что требует следующего действия прямо сейчас.'); navigate('/'); }}>Вернуться в обзор команды</button>
+                    </div>
+                  </div>
+                </motion.div>
               ) : (
                 <div className={s.resultError}>
                   <AlertCircle size={32} className={s.resultErrorIcon} />
-                  <div>Ошибка импорта. Попробуйте снова.</div>
+                  <div className={s.resultErrorTitle}>Ошибка импорта</div>
+                  <div className={s.resultErrorText}>Проверьте файл, сопоставление полей и попробуйте снова без потери текущего сценария.</div>
+                  <div className={s.resultErrorActions}>
+                    <button className={s.resultRecoveryBtn} onClick={() => setWizardStep(0)}>Исправить и повторить</button>
+                    <button className={s.resultRecoveryBtn} onClick={resetWizard}>Начать заново</button>
+                  </div>
                 </div>
               )}
             </motion.div>

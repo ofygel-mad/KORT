@@ -376,3 +376,12 @@
 }
 
 .taskList > * { scroll-margin-top: 88px; }
+
+
+.emptyStateWrap { display: grid; gap: 12px; }
+.emptyRecoveryRail { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.emptyRecoveryBtn { min-height: 36px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--empty-recovery-border); background: var(--empty-recovery-bg); color: var(--text-secondary); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; transition: transform var(--motion-fast) var(--motion-ease), border-color var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease), box-shadow var(--motion-fast) var(--motion-ease); }
+.emptyRecoveryBtn:hover { transform: var(--feedback-raise-hover); border-color: var(--fill-accent); box-shadow: var(--shadow-sm); color: var(--text-primary); }
+.emptyRecoveryBtn:active { transform: var(--feedback-soft-press); }
+.taskItem { background: var(--rc-table-shell-bg); border-color: var(--rc-table-shell-border); }
+.taskItem:hover { background: var(--rc-table-row-hover); }

@@ -42,7 +42,7 @@ const PERIODS: { key: Period; label: string }[] = [
   { key: 'custom',  label: 'Свой' },
 ];
 
-const COLORS = ['#D97706','#3B82F6','#10B981','#8B5CF6','#EC4899','#06B6D4','#F59E0B','#6B7280'];
+const COLORS = ['var(--chart-series-1)','var(--chart-series-2)','var(--chart-series-3)','var(--chart-series-4)','var(--chart-series-5)','var(--chart-series-6)','var(--fill-warning)','var(--text-tertiary)'];
 
 function periodToDates(p: Period, custom?: { from: string; to: string }) {
   if (p === 'custom' && custom?.from && custom?.to) return { date_from: custom.from, date_to: custom.to };
@@ -169,11 +169,11 @@ export default function ReportsPage() {
             ? <Skeleton height={220} />
             : <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={data?.revenue_by_month ?? []} barSize={24}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" vertical={false} />
-                  <XAxis dataKey="month" tick={{ fontSize: 11, fill: 'var(--text-tertiary)' }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 11, fill: 'var(--text-tertiary)' }} axisLine={false} tickLine={false} tickFormatter={v => `${(v/1000).toFixed(0)}k`} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" vertical={false} />
+                  <XAxis dataKey="month" tick={{ fontSize: 11, fill: 'var(--chart-axis)' }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 11, fill: 'var(--chart-axis)' }} axisLine={false} tickLine={false} tickFormatter={v => `${(v/1000).toFixed(0)}k`} />
                   <Tooltip content={<ChartTooltip />} />
-                  <Bar dataKey="revenue" fill="var(--fill-accent)" radius={[4,4,0,0]} />
+                  <Bar dataKey="revenue" fill="var(--chart-series-1)" radius={[6,6,0,0]} />
                 </BarChart>
               </ResponsiveContainer>
           }

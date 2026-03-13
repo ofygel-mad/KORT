@@ -1,5 +1,5 @@
 import { useLocation, useNavigate, useMatch } from 'react-router-dom';
-import { Search, ChevronRight, Bell, Sun, Moon, Monitor } from 'lucide-react';
+import { Search, ChevronRight, Bell, Sun, Moon, Monitor, ArrowLeft, Shield, ShieldCheck } from 'lucide-react';
 import { useCommandPalette } from '../../shared/stores/commandPalette';
 import { useAuthStore } from '../../shared/stores/auth';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -8,6 +8,7 @@ import { api } from '../../shared/api/client';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useSSE } from '../../shared/hooks/useSSE';
 import { useUIStore } from '../../shared/stores/ui';
+import { useRole } from '../../shared/hooks/useRole';
 import { useIsMobile } from '../../shared/hooks/useIsMobile';
 import { useT } from '../../shared/i18n';
 import { popoverVariants, overlayVariants, t } from '../../shared/motion/presets';
@@ -145,21 +146,39 @@ const BREADCRUMBS: Record<string, string> = {
 };
 
 // ─── Topbar ────────────────────────────────────────────────────────────────────
+function resolveBackTarget(pathname: string) {
+  if (pathname.startsWith('/customers/')) return '/customers';
+  if (pathname.startsWith('/deals/')) return '/deals';
+  if (pathname.startsWith('/settings')) return '/';
+  if (pathname.startsWith('/admin')) return '/';
+  if (pathname.startsWith('/imports')) return '/';
+  return '/';
+}
+
 export function Topbar() {
   const location = useLocation();
   const navigate  = useNavigate();
   const { toggle } = useCommandPalette();
   const user       = useAuthStore(s => s.user);
-  const { theme, setTheme } = useUIStore();
+  const { theme, setTheme, adminMode, setAdminMode } = useUIStore();
   const isMobile   = useIsMobile();
   const { locale, setLocale } = useT();
+  const { isAdmin } = useRole();
   const dynamic    = useDynamicCrumb();
   const crumb      = BREADCRUMBS[location.pathname] ?? location.pathname.slice(1);
+  const showBack = location.pathname !== '/' && location.pathname !== '/onboarding';
+  const backTarget = resolveBackTarget(location.pathname);
 
   return (
     <header className={styles.topbar}>
       {/* Breadcrumb */}
       <div className={styles.left}>
+        {showBack && (
+          <button className={styles.backBtn} onClick={() => navigate(backTarget)} aria-label="Назад">
+            <ArrowLeft size={14} />
+            {!isMobile && <span>Назад</span>}
+          </button>
+        )}
         <nav className={styles.breadcrumb} aria-label="breadcrumb">
           {!isMobile && <span className={styles.crumbRoot}>Kort</span>}
           {!isMobile && <ChevronRight size={12} className={styles.crumbSep} />}
@@ -191,6 +210,18 @@ export function Topbar() {
         </button>
 
         <NotificationBell />
+
+        {isAdmin && (
+          <button
+            className={`${styles.adminModeBtn} ${adminMode ? styles.adminModeBtnActive : ''}`}
+            onClick={() => setAdminMode(!adminMode)}
+            aria-label={adminMode ? 'Выйти из режима администратора' : 'Включить режим администратора'}
+            title={adminMode ? 'Режим администратора активен' : 'Включить режим администратора'}
+          >
+            {adminMode ? <ShieldCheck size={14} /> : <Shield size={14} />}
+            {!isMobile && <span>{adminMode ? 'Admin mode' : 'Рабочий режим'}</span>}
+          </button>
+        )}
 
         {/* Language */}
         <button

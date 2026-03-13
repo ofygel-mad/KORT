@@ -84,6 +84,18 @@ export default function DealsPage() {
         </div>
       </div>
 
+      <div className={styles.scenarioRail}>
+        <div className={styles.scenarioCopy}>
+          <span className={styles.scenarioEyebrow}>Deal pattern</span>
+          <div className={styles.scenarioText}>Список и доска ведут к одному и тому же действию: быстро понять статус, открыть сделку и двинуть её дальше без потери контекста.</div>
+        </div>
+        <div className={styles.scenarioChips}>
+          <span className={styles.scenarioChip}>Board</span>
+          <span className={styles.scenarioChip}>List</span>
+          <span className={styles.scenarioChip}>Move stage</span>
+        </div>
+      </div>
+
       {/* ── Pipeline stats ──────────────────────────────────── */}
       {!isLoading && (
         <div className={styles.pipelineStats}>
@@ -146,11 +158,17 @@ export default function DealsPage() {
               ))}
             </div>
           ) : stages.length === 0 ? (
-            <EmptyState
-              icon={<Briefcase size={24} />}
-              title="Воронки ещё нет"
-              description="Настройте этапы воронки в разделе Настройки"
-            />
+            <div className={styles.listEmpty}>
+              <EmptyState
+                icon={<Briefcase size={24} />}
+                title="Воронки ещё нет"
+                description="Настройте этапы воронки в разделе Настройки"
+              />
+              <div className={styles.emptyRecoveryRail}>
+                <button className={styles.emptyRecoveryBtn} onClick={() => navigate('/settings')}>Открыть настройки</button>
+                <button className={styles.emptyRecoveryBtn} onClick={() => window.dispatchEvent(new CustomEvent('kort:new-deal'))}>Создать тестовую сделку</button>
+              </div>
+            </div>
           ) : (
             <div className={styles.kanbanBoard}>
               {stages.map((stage, stageIdx) => {
@@ -200,7 +218,7 @@ export default function DealsPage() {
                                 isOverdue ? styles.dealCardOverdue :
                                 isStale   ? styles.dealCardStale   : '',
                               ].filter(Boolean).join(' ')}
-                              onClick={() => navigate(`/deals/${deal.id}`)}
+                              onClick={() => { localStorage.setItem('kort:product-moment', `Вы открыли сделку «${deal.title}». Следующий шаг должен быть ближе, чем просто чтение карточки.`); navigate(`/deals/${deal.id}`); }}
                               initial={{ opacity: 0, scale: 0.97 }}
                               animate={{ opacity: 1, scale: 1 }}
                               transition={{ delay: di * 0.04, duration: 0.2 }}
@@ -271,6 +289,10 @@ export default function DealsPage() {
                   onClick: () => window.dispatchEvent(new CustomEvent('kort:new-deal')),
                 }}
               />
+              <div className={styles.emptyRecoveryRail}>
+                <button className={styles.emptyRecoveryBtn} onClick={() => navigate('/imports')}>Импортировать базу</button>
+                <button className={styles.emptyRecoveryBtn} onClick={() => window.dispatchEvent(new CustomEvent('kort:assistant-prompt', { detail: 'С чего начать в воронке сделок прямо сейчас?' }))}>Спросить Copilot</button>
+              </div>
             </div>
           ) : (
             <table className={styles.table}>
@@ -289,7 +311,7 @@ export default function DealsPage() {
                   <motion.tr
                     key={deal.id}
                     className={styles.tr}
-                    onClick={() => navigate(`/deals/${deal.id}`)}
+                    onClick={() => { localStorage.setItem('kort:product-moment', `Вы открыли сделку «${deal.title}». Следующий шаг должен быть ближе, чем просто чтение карточки.`); navigate(`/deals/${deal.id}`); }}
                     initial={{ opacity: 0, y: 4 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: idx * 0.025, duration: 0.2 }}

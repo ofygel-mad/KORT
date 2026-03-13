@@ -25,7 +25,7 @@ const MODES = [
   {
     mode: 'basic',
     title: 'Базовый',
-    subtitle: 'Малый бизнес, старт',
+    subtitle: 'Для запуска и первых процессов',
     icon: <Users size={20} />,
     color: '#3B82F6',
     features: ['Клиенты и контакты', 'Сделки и воронка', 'Задачи и заметки', 'Простые отчёты'],
@@ -33,7 +33,7 @@ const MODES = [
   {
     mode: 'advanced',
     title: 'Продвинутый',
-    subtitle: 'Растущая команда',
+    subtitle: 'Для команды с рабочим ритмом',
     icon: <Zap size={20} />,
     color: '#D97706',
     features: ['Всё из Базового', 'Роли сотрудников', 'Автоматизации', 'Расширенная аналитика', 'Кастомные поля'],
@@ -42,7 +42,7 @@ const MODES = [
   {
     mode: 'industrial',
     title: 'Промышленный',
-    subtitle: 'Крупный бизнес',
+    subtitle: 'Для сложных процессов и контроля',
     icon: <Factory size={20} />,
     color: '#8B5CF6',
     features: ['Всё из Продвинутого', 'API доступ', 'Аудит действий', 'SLA и очереди', 'Мультифилиальность'],
@@ -117,7 +117,7 @@ export default function RegisterPage() {
                 <label className={s.label}>Название организации *</label>
                 <input
                   {...register('organization_name', { required: true })}
-                  placeholder="ООО Ромашка"
+                  placeholder="ТОО Ромашка"
                   className={`kort-input ${errors.organization_name ? s.inputError : ''}`}
                 />
               </div>

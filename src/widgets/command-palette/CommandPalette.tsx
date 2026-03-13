@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState, useCallback, useMemo, type CSSProperties, type ReactNode, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { motion } from 'framer-motion';
-import { overlayVariants, popoverVariants } from '../../shared/motion/presets';
+import { overlayVariants, commandInvoke } from '../../shared/motion/presets';
 import { useNavigate } from 'react-router-dom';
 import {
   Search, Users, Briefcase, CheckSquare, Settings,
   BarChart2, Zap, Upload, Shield, Clock, Loader2,
-  ArrowRight, Plus, Activity, MessageSquare,
+  ArrowRight, Plus, Activity, MessageSquare, Sparkles, Command, Wand2, CornerDownLeft,
 } from 'lucide-react';
 import { useCommandPalette } from '../../shared/stores/commandPalette';
 import { api } from '../../shared/api/client';
@@ -37,11 +37,11 @@ const NAV_COMMANDS = [
 ];
 
 const ACTION_COMMANDS = [
-  { id: 'new-customer', label: 'Новый клиент', icon: <Plus size={14} />, color: '#3B82F6', event: 'kort:new-customer' },
-  { id: 'new-deal', label: 'Новая сделка', icon: <Plus size={14} />, color: '#D97706', event: 'kort:new-deal' },
-  { id: 'new-task', label: 'Новая задача', icon: <Plus size={14} />, color: '#8B5CF6', event: 'kort:new-task' },
-  { id: 'new-followup', label: 'Запланировать follow-up', icon: <Plus size={14} />, color: '#10B981', event: 'kort:new-followup' },
-  { id: 'new-import', label: 'Импорт таблицы', icon: <Upload size={14} />, color: '#6B7280', event: 'kort:go-import' },
+  { id: 'new-customer', label: 'Новый клиент', icon: <Plus size={14} />, color: 'var(--fill-info-text)', event: 'kort:new-customer' },
+  { id: 'new-deal', label: 'Новая сделка', icon: <Plus size={14} />, color: 'var(--fill-warning-text)', event: 'kort:new-deal' },
+  { id: 'new-task', label: 'Новая задача', icon: <Plus size={14} />, color: 'var(--text-accent)', event: 'kort:new-task' },
+  { id: 'new-followup', label: 'Запланировать follow-up', icon: <Plus size={14} />, color: 'var(--fill-positive-text)', event: 'kort:new-followup' },
+  { id: 'new-import', label: 'Импорт таблицы', icon: <Upload size={14} />, color: 'var(--text-secondary)', event: 'kort:go-import' },
 ];
 
 const RECENT_KEY = 'kort:recent-items';
@@ -69,8 +69,22 @@ function useDebounce<T>(value: T, ms: number): T {
   return dv;
 }
 
+function filterChipVars(type: string): CSSProperties {
+  if (type === 'customer') return { '--chip-bg': 'var(--fill-info-soft)', '--chip-color': 'var(--fill-info-text)' } as CSSProperties;
+  if (type === 'deal') return { '--chip-bg': 'var(--fill-warning-soft)', '--chip-color': 'var(--fill-warning-text)' } as CSSProperties;
+  return { '--chip-bg': 'var(--fill-accent-soft)', '--chip-color': 'var(--text-accent)' } as CSSProperties;
+}
+
+function resultIconVars(type: Result['type'], color?: string): CSSProperties {
+  if (color) return { '--result-icon-bg': 'color-mix(in srgb, ' + color + ' 16%, var(--bg-surface-inset))', '--result-icon-color': color } as CSSProperties;
+  if (type === 'customer') return { '--result-icon-bg': 'var(--fill-info-soft)', '--result-icon-color': 'var(--fill-info-text)' } as CSSProperties;
+  if (type === 'deal') return { '--result-icon-bg': 'var(--fill-warning-soft)', '--result-icon-color': 'var(--fill-warning-text)' } as CSSProperties;
+  if (type === 'task') return { '--result-icon-bg': 'var(--fill-accent-soft)', '--result-icon-color': 'var(--text-accent)' } as CSSProperties;
+  return { '--result-icon-bg': 'var(--bg-surface-inset)', '--result-icon-color': 'var(--text-tertiary)' } as CSSProperties;
+}
+
 export function CommandPalette() {
-  const { close } = useCommandPalette();
+  const { close, toggle } = useCommandPalette();
   const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -78,6 +92,7 @@ export function CommandPalette() {
   const [apiRes, setApiRes] = useState<Result[]>([]);
   const [searching, setSearching] = useState(false);
   const [activeIdx, setActiveIdx] = useState(0);
+  const [assistantHint, setAssistantHint] = useState('');
 
   const dq = useDebounce(query.trim(), 200);
 
@@ -90,10 +105,25 @@ export function CommandPalette() {
   useEffect(() => { inputRef.current?.focus(); }, []);
 
   useEffect(() => {
+    const handleAssistantConfirmation = (event: Event) => {
+      const custom = event as CustomEvent<string>;
+      setAssistantHint(custom.detail ? `AI уже обработал: ${custom.detail}` : 'AI уже подготовил следующий шаг.');
+    };
+    window.addEventListener('kort:assistant-confirmed-action', handleAssistantConfirmation as EventListener);
+    return () => window.removeEventListener('kort:assistant-confirmed-action', handleAssistantConfirmation as EventListener);
+  }, []);
+
+  useEffect(() => {
     const h = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
     document.addEventListener('keydown', h);
     return () => document.removeEventListener('keydown', h);
   }, [close]);
+
+  useEffect(() => {
+    const handleToggle = () => toggle();
+    window.addEventListener('kort:toggle-command-palette', handleToggle);
+    return () => window.removeEventListener('kort:toggle-command-palette', handleToggle);
+  }, [toggle]);
 
   useEffect(() => {
     const effectiveQ = cleanQuery.trim();
@@ -117,9 +147,9 @@ export function CommandPalette() {
           icon: r.type === 'customer' ? <Users size={14} />
             : r.type === 'deal' ? <Briefcase size={14} />
               : <CheckSquare size={14} />,
-          color: r.type === 'customer' ? '#3B82F6'
-            : r.type === 'deal' ? '#D97706'
-              : '#8B5CF6',
+          color: r.type === 'customer' ? 'var(--fill-info-text)'
+            : r.type === 'deal' ? 'var(--fill-warning-text)'
+              : 'var(--text-accent)',
           action: () => {
             pushRecent({
               id: `api-${r.type}-${r.id}`,
@@ -146,11 +176,11 @@ export function CommandPalette() {
   const isSlash = query.startsWith('/');
   const slashMatch = isSlash ? query.slice(1).toLowerCase() : '';
   const SLASH_MAP = [
-    { keys: ['клиент', 'client', 'customer', 'new-customer', 'к'], label: 'Создать клиента', color: '#3B82F6', event: 'kort:new-customer' },
-    { keys: ['сделка', 'deal', 'new-deal', 'с'], label: 'Создать сделку', color: '#D97706', event: 'kort:new-deal' },
-    { keys: ['задача', 'task', 'new-task', 'з'], label: 'Создать задачу', color: '#8B5CF6', event: 'kort:new-task' },
-    { keys: ['импорт', 'import', 'и'], label: 'Открыть импорт', color: '#6B7280', event: 'kort:go-import' },
-    { keys: ['followup', 'follow', 'фол', 'ф'], label: 'Запланировать follow-up', color: '#10B981', event: 'kort:new-followup' },
+    { keys: ['клиент', 'client', 'customer', 'new-customer', 'к'], label: 'Создать клиента', color: 'var(--fill-info-text)', event: 'kort:new-customer' },
+    { keys: ['сделка', 'deal', 'new-deal', 'с'], label: 'Создать сделку', color: 'var(--fill-warning-text)', event: 'kort:new-deal' },
+    { keys: ['задача', 'task', 'new-task', 'з'], label: 'Создать задачу', color: 'var(--text-accent)', event: 'kort:new-task' },
+    { keys: ['импорт', 'import', 'и'], label: 'Открыть импорт', color: 'var(--text-secondary)', event: 'kort:go-import' },
+    { keys: ['followup', 'follow', 'фол', 'ф'], label: 'Запланировать follow-up', color: 'var(--fill-positive-text)', event: 'kort:new-followup' },
   ];
 
   if (!query) {
@@ -232,14 +262,46 @@ export function CommandPalette() {
   return (
     <>
       <motion.div className={styles.backdrop} variants={overlayVariants} initial="hidden" animate="visible" exit="exit" onClick={close} />
-      <motion.div className={styles.palette} variants={popoverVariants} initial="hidden" animate="visible" exit="exit">
+      <motion.div className={styles.palette} variants={commandInvoke} initial="hidden" animate="visible" exit="exit">
+        <div className={styles.hero}>
+          <div className={styles.heroBadge}><Sparkles size={12} /> Kort Command</div>
+          <div className={styles.heroTitle}>Навигация, команды и поиск в одном контуре</div>
+          <div className={styles.heroSub}>Используйте @ для типа сущности, / для команды и Enter для мгновенного действия.</div>
+          <div className={styles.heroMeta}>Palette ведёт к действию, ассистент помогает выбрать следующий лучший ход.</div>
+          {assistantHint && <div className={styles.heroAssistMeta}>{assistantHint}</div>}
+          <div className={styles.heroChips}>
+            {[
+              { label: '@customer', value: '@customer ' },
+              { label: '@deal', value: '@deal ' },
+              { label: '@task', value: '@task ' },
+              { label: '/клиент', value: '/клиент' },
+              { label: 'AI next step', value: 'assistant:next-step' },
+            ].map((h) => (
+              <button
+                key={h.label}
+                onClick={() => {
+                  if (h.value === 'assistant:next-step') {
+                    window.dispatchEvent(new CustomEvent('kort:assistant-prompt', { detail: 'Какой следующий шаг по текущему контексту?' }));
+                    close();
+                    return;
+                  }
+                  setQuery(h.value);
+                }}
+                className={styles.heroChip}
+              >
+                <Wand2 size={12} /> {h.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className={styles.inputWrap}>
           {searching
             ? <Loader2 size={15} className={styles.spinnerIcon} />
             : <Search size={15} className={styles.searchIcon} />}
           <input ref={inputRef} className={styles.input} value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={handleKey} placeholder="Поиск · @ для фильтра · / для команд" />
           {filterType && (
-            <span className={styles.filterChip} style={{ '--chip-bg': filterType === 'customer' ? '#DBEAFE' : filterType === 'deal' ? '#FEF3C7' : '#EDE9FE', '--chip-color': filterType === 'customer' ? '#1D4ED8' : filterType === 'deal' ? '#92400E' : '#5B21B6' } as CSSProperties}>
+            <span className={styles.filterChip} style={filterChipVars(filterType)}>
               {filterType === 'customer' ? 'Клиенты' : filterType === 'deal' ? 'Сделки' : 'Задачи'}
               <span onClick={() => setQuery('')} className={styles.filterChipClear}>✕</span>
             </span>
@@ -249,26 +311,32 @@ export function CommandPalette() {
 
         {!query && (
           <div className={styles.hintRow}>
-            {[
-              { label: '@customer', hint: 'клиенты' },
-              { label: '@deal', hint: 'сделки' },
-              { label: '@task', hint: 'задачи' },
-              { label: '/', hint: 'команды' },
-            ].map((h) => (
-              <button key={h.label} onClick={() => setQuery(h.label)} className={styles.hintButton}>
-                {h.label}
-              </button>
-            ))}
+            <span className={styles.helperHint}><Command size={12} /> Быстрый путь по Kort</span>
+            <span className={styles.helperHint}><CornerDownLeft size={12} /> Enter открывает активный результат</span>
           </div>
         )}
 
         <div className={styles.results}>
-          {results.length === 0 && query.length >= 1 && !searching && <div className={styles.empty}>Ничего не найдено по «{query}»</div>}
+          {results.length === 0 && query.length >= 1 && !searching && (
+            <div className={styles.empty}>
+              <div className={styles.emptyBadge}>Ничего не найдено</div>
+              <div className={styles.emptyTitle}>По «{query}» пока пусто</div>
+              <div className={styles.emptySub}>Попробуйте сменить тип через @ или выполните действие через /команду.</div>
+              <div className={styles.emptyMeta}>Retry path · смените контекст и Kort предложит следующий ход.</div>
+              <div className={styles.emptyActions}>
+                <button className={styles.emptyActionBtn} onClick={() => { window.dispatchEvent(new CustomEvent('kort:assistant-prompt', { detail: `Помоги найти следующий ход по запросу: ${query}` })); close(); }}>Спросить Copilot</button>
+                <button className={styles.emptyAction} onClick={() => setQuery('/клиент')}>/клиент</button>
+                <button className={styles.emptyAction} onClick={() => setQuery('@deal ')}>@deal</button>
+                <button className={styles.emptyAction} onClick={() => { window.dispatchEvent(new CustomEvent('kort:assistant-prompt', { detail: `Помоги найти следующий шаг по запросу: ${query}` })); close(); }}>Спросить AI</button>
+                <button className={styles.emptyAction} onClick={() => setQuery('')}>Сбросить</button>
+              </div>
+            </div>
+          )}
           {results.map((r, idx) => (
             <div key={r.id}>
               {r._section && <div className={styles.sectionLabel}>{r._section}</div>}
               <button className={[styles.resultItem, idx === activeIdx ? styles.resultItemActive : ''].join(' ')} onMouseEnter={() => setActiveIdx(idx)} onClick={() => { r.action(); close(); }}>
-                <span className={styles.resultIcon} style={{ background: r.color ? `${r.color}18` : 'var(--bg-surface-inset)', color: r.color ?? 'var(--text-tertiary)' }}>{r.icon}</span>
+                <span className={styles.resultIcon} style={resultIconVars(r.type, r.color)}>{r.icon}</span>
                 <span className={styles.resultText}>
                   <span className={styles.resultLabel}>{r.label}</span>
                   {r.sub && <span className={styles.resultSub}>{r.sub}</span>}

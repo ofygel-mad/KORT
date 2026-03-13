@@ -333,3 +333,64 @@
 }
 
 .kpiCard, .panel, .chartCard, .tableCard, .statCard, .widgetCard { box-shadow: var(--surface-shadow-rest); }
+
+
+.chartCard {
+  background: var(--chart-surface);
+  box-shadow: var(--brand-panel-shadow);
+}
+
+.chartCard :global(.recharts-cartesian-grid-horizontal line),
+.chartCard :global(.recharts-cartesian-grid-vertical line) {
+  stroke: var(--chart-grid);
+}
+
+.chartCard :global(.recharts-text) {
+  fill: var(--chart-axis);
+}
+
+.chartCard :global(.recharts-sector:focus),
+.chartCard :global(.recharts-rectangle:focus) {
+  outline: none;
+}
+
+.periodBar {
+  background: color-mix(in srgb, var(--bg-surface) 84%, var(--fill-accent-subtle));
+  border-color: var(--brand-panel-border);
+  box-shadow: var(--surface-shadow-rest);
+}
+
+.periodTab.active {
+  background: color-mix(in srgb, var(--bg-surface) 88%, white 12%);
+  border-color: var(--brand-panel-border);
+}
+
+.tooltip {
+  background: var(--chart-tooltip-bg);
+  border-color: var(--brand-panel-border);
+  box-shadow: var(--brand-panel-shadow);
+}
+
+.leaderRow {
+  border-top-color: var(--status-shell-border);
+  transition: background var(--motion-fast) var(--motion-ease), transform var(--motion-fast) var(--motion-ease);
+  border-radius: 12px;
+  padding-inline: 8px;
+}
+
+.leaderRow:hover {
+  background: color-mix(in srgb, var(--table-row-hover) 76%, transparent);
+  transform: var(--feedback-raise-hover);
+}
+
+.funnelBarTrack {
+  background: color-mix(in srgb, var(--bg-surface-inset) 86%, var(--fill-accent-subtle));
+  border: 1px solid var(--status-shell-border);
+}
+
+
+/* ── Release-candidate theme / legibility pass ───────────────────────────── */
+.chartCard { background: var(--chart-surface, var(--bg-surface)); border-color: var(--rc-table-shell-border); box-shadow: var(--brand-panel-shadow); }
+.tooltip { background: var(--chart-tooltip-bg, var(--bg-surface-elevated)); border-color: var(--rc-table-shell-border); }
+.leaderRow { transition: background var(--motion-fast) var(--motion-ease), transform var(--motion-fast) var(--motion-ease); border-radius: 12px; }
+.leaderRow:hover { background: var(--rc-table-row-hover); transform: translateY(-1px); }

@@ -1,13 +1,14 @@
 import { useState, useRef, useEffect, useCallback, type CSSProperties } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Sparkles, X, Send, Loader2, User, Bot, Trash2 } from 'lucide-react';
+import { assistantReply, commandInvoke } from '../../shared/motion/presets';
+import { Sparkles, X, Send, Loader2, User, Bot, Trash2, Command, Wand2, CornerDownLeft, CheckCircle2 } from 'lucide-react';
 import { api } from '../../shared/api/client';
 import { useIsMobile } from '../../shared/hooks/useIsMobile';
 import s from './AiAssistant.module.css';
 
 /* ── Types ──────────────────────────────────────────────────── */
 interface Message { role: 'user' | 'assistant'; content: string; }
-interface Props { customerId?: string; dealId?: string; }
+interface Props { customerId?: string; dealId?: string; entityType?: 'customer' | 'deal'; entityId?: string; }
 
 const SUGGESTIONS = [
   'Расскажи о последних взаимодействиях',
@@ -37,17 +38,31 @@ const MOBILE_PANEL: CSSProperties = {
 };
 
 /* ── Component ───────────────────────────────────────────────── */
-export function AiAssistant({ customerId, dealId }: Props) {
+export function AiAssistant({ customerId, dealId, entityType, entityId }: Props) {
+  const resolvedCustomerId = customerId ?? (entityType === 'customer' ? entityId : undefined);
+  const resolvedDealId = dealId ?? (entityType === 'deal' ? entityId : undefined);
+
   const [open, setOpen]       = useState(false);
   const [input, setInput]     = useState('');
   const [history, setHistory] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
+  const [confirmation, setConfirmation] = useState('');
   const isMobile              = useIsMobile();
   const bottomRef             = useRef<HTMLDivElement>(null);
   const inputRef              = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => { if (open) inputRef.current?.focus(); }, [open]);
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [history, loading]);
+
+  useEffect(() => {
+    const handlePrompt = (event: Event) => {
+      const custom = event as CustomEvent<string>;
+      setOpen(true);
+      setInput(custom.detail ?? 'Какой следующий шаг?');
+    };
+    window.addEventListener('kort:assistant-prompt', handlePrompt as EventListener);
+    return () => window.removeEventListener('kort:assistant-prompt', handlePrompt as EventListener);
+  }, []);
 
   const send = useCallback(async (text?: string) => {
     const msg = (text ?? input).trim();
@@ -57,21 +72,36 @@ export function AiAssistant({ customerId, dealId }: Props) {
     setHistory(h => [...h, { role: 'user', content: msg }]);
     try {
       const res = await api.post('/ai/chat/', {
-        message: msg, customer_id: customerId, deal_id: dealId, history: history.slice(-10),
+        message: msg, customer_id: resolvedCustomerId, deal_id: resolvedDealId, history: history.slice(-10),
       }) as any;
       setHistory(h => [...h, { role: 'assistant', content: res.reply }]);
+      setConfirmation('Ответ готов · можно уточнить, выполнить действие или передать следующий ход в palette.');
+      window.dispatchEvent(new CustomEvent('kort:assistant-confirmed-action', { detail: msg }));
     } catch {
-      setHistory(h => [...h, { role: 'assistant', content: '❌ Не удалось получить ответ. Проверьте API-ключ.' }]);
+      setHistory(h => [...h, { role: 'assistant', content: 'Не удалось получить ответ. Попробуйте уточнить запрос или повторить чуть позже.' }]);
+      setConfirmation('Не получилось ответить с первого раза · уточните запрос или отправьте его через palette.');
     } finally {
       setLoading(false);
     }
-  }, [input, history, loading, customerId, dealId]);
+  }, [input, history, loading, resolvedCustomerId, resolvedDealId]);
+
+  useEffect(() => {
+    if (!confirmation) return;
+    const t = window.setTimeout(() => setConfirmation(''), 2800);
+    return () => window.clearTimeout(t);
+  }, [confirmation]);
 
   const handleKey = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
   };
 
-  const contextLabel = customerId ? 'Контекст: клиент' : dealId ? 'Контекст: сделка' : 'Общий режим';
+  const contextLabel = resolvedCustomerId ? 'Контекст: клиент' : resolvedDealId ? 'Контекст: сделка' : 'Общий режим';
+  const contextChips = resolvedCustomerId
+    ? ['Последние касания', 'Риски оттока', 'Следующий шаг']
+    : resolvedDealId
+      ? ['Вероятность закрытия', 'Блокеры', 'Аргументы для next step']
+      : ['Что просрочено', 'Где риск', 'Куда нажать дальше'];
+  const promptChips = ['Сводка', 'Рекомендация', 'Следующее действие'];
 
   return (
     <>
@@ -91,11 +121,12 @@ export function AiAssistant({ customerId, dealId }: Props) {
       <AnimatePresence>
         {open && (
           <motion.div
+            className={s.panel}
             style={isMobile ? MOBILE_PANEL : DESKTOP_PANEL}
-            initial={{ opacity: 0, scale: 0.95, y: 16 }}
-            animate={{ opacity: 1, scale: 1,    y: 0 }}
-            exit={{ opacity: 0,  scale: 0.95, y: 16 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 28 }}
+            variants={commandInvoke}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
           >
             {/* Header */}
             <div className={s.panelHeader}>
@@ -118,10 +149,24 @@ export function AiAssistant({ customerId, dealId }: Props) {
             <div className={s.messages}>
               {history.length === 0 && (
                 <div className={s.suggestions}>
-                  <div className={s.suggestionsHint}>Задайте вопрос или выберите подсказку:</div>
-                  {SUGGESTIONS.map(sug => (
-                    <button key={sug} className={s.suggestionBtn} onClick={() => send(sug)}>{sug}</button>
-                  ))}
+                  <div className={s.signatureIntro}>Kort Copilot · думай вопросом, действуй командой</div>
+                  <div className={s.suggestionsHint}>Задайте вопрос или выберите сценарий:</div>
+                  <div className={s.contextRail}>
+                    {contextChips.map((chip) => (
+                      <button key={chip} className={s.contextChip} onClick={() => send(chip)}><Wand2 size={12} /> {chip}</button>
+                    ))}
+                  </div>
+                  <div className={s.suggestionGrid}>
+                    {SUGGESTIONS.map(sug => (
+                      <button key={sug} className={s.suggestionBtn} onClick={() => send(sug)}>{sug}</button>
+                    ))}
+                  </div>
+                  <div className={s.promptRail}>
+                    {promptChips.map((chip) => (
+                      <button key={chip} className={s.promptChip} onClick={() => send(chip)}>{chip}</button>
+                    ))}
+                  </div>
+                  <div className={s.commandHint}><Command size={12} /> Palette отвечает за переход и запуск, ассистент - за решение, риск и следующий шаг.</div>
                 </div>
               )}
 
@@ -129,8 +174,9 @@ export function AiAssistant({ customerId, dealId }: Props) {
                 <motion.div
                   key={i}
                   className={`${s.msgRow} ${msg.role === 'user' ? s.user : ''}`}
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
+                  variants={assistantReply}
+                  initial="hidden"
+                  animate="visible"
                 >
                   <div className={`${s.msgAvatar} ${msg.role === 'user' ? s.user : s.bot}`}>
                     {msg.role === 'user' ? <User size={13} /> : <Bot size={13} />}
@@ -161,13 +207,26 @@ export function AiAssistant({ customerId, dealId }: Props) {
             </div>
 
             {/* Input */}
+            {confirmation && (
+              <motion.div className={s.confirmationRail} variants={assistantReply} initial="hidden" animate="visible">
+                <CheckCircle2 size={12} />
+                <span>{confirmation}</span>
+                <button className={s.confirmationAction} onClick={() => window.dispatchEvent(new CustomEvent('kort:toggle-command-palette'))}>Открыть palette</button>
+              </motion.div>
+            )}
+
+            <div className={s.composerMeta}>
+              <span className={s.composerHint}><CornerDownLeft size={12} /> Enter отправляет, Shift+Enter переносит строку</span>
+              <span className={s.composerHint}><CheckCircle2 size={12} /> Kort отвечает в контексте текущего сценария</span>
+            </div>
+
             <div className={s.inputArea}>
               <textarea
                 ref={inputRef}
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={handleKey}
-                placeholder="Спросить про клиента, сделку..."
+                placeholder="Спросить про клиента, сделку или следующий шаг..."
                 rows={1}
                 className={s.inputTextarea}
               />

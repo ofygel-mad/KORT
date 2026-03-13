@@ -121,3 +121,8 @@
 .feedList {
   margin-top: 8px;
 }
+
+
+.feedItem { background: var(--rc-detail-surface-bg); border-color: var(--rc-detail-surface-border); box-shadow: var(--shadow-xs); }
+.feedItem:hover { box-shadow: var(--brand-panel-shadow); }
+.feedLink:focus-visible { outline: none; box-shadow: var(--rc-focus-ring); border-radius: 8px; }

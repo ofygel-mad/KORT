@@ -13,6 +13,8 @@ import {
   MOCK_TEAM,
 } from './mock-data';
 
+let mockSessionOrg = { ...MOCK_AUTH_RESPONSE.org };
+
 function delay(ms = 180) {
   return new Promise(r => setTimeout(r, ms));
 }
@@ -33,12 +35,12 @@ export function installMockAdapter(client: AxiosInstance) {
 
     // ── AUTH ───────────────────────────────────────────────────────────────
     if (url.startsWith('/auth/')) {
-      responseData = MOCK_AUTH_RESPONSE;
+      responseData = { ...MOCK_AUTH_RESPONSE, org: mockSessionOrg, onboarding_completed: mockSessionOrg.onboarding_completed };
     }
 
     // ── BOOTSTRAP / PROFILE ───────────────────────────────────────────────
     else if (url === '/bootstrap/' || url === '/me/') {
-      responseData = MOCK_AUTH_RESPONSE;
+      responseData = { ...MOCK_AUTH_RESPONSE, org: mockSessionOrg, onboarding_completed: mockSessionOrg.onboarding_completed };
     }
 
     // ── DASHBOARD ─────────────────────────────────────────────────────────
@@ -111,7 +113,11 @@ export function installMockAdapter(client: AxiosInstance) {
 
     // ── ORGANIZATIONS ─────────────────────────────────────────────────────
     else if (url.includes('/organizations') || url.includes('/org')) {
-      responseData = MOCK_AUTH_RESPONSE.org;
+      if (method === 'patch' || method === 'put') {
+        const payload = JSON.parse(config.data ?? '{}');
+        mockSessionOrg = { ...mockSessionOrg, ...payload };
+      }
+      responseData = mockSessionOrg;
     }
 
     // ── REPORTS ───────────────────────────────────────────────────────────

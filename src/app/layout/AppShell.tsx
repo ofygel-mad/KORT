@@ -5,6 +5,7 @@ import { MobileNav } from './MobileNav';
 import { CommandPalette } from '../../widgets/command-palette/CommandPalette';
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { pageTransition } from '../../shared/motion/presets';
 import { useCommandPalette } from '../../shared/stores/commandPalette';
 import { useUIStore } from '../../shared/stores/ui';
 import { useKeyboardShortcuts } from '../../shared/hooks/useKeyboardShortcuts';
@@ -16,6 +17,7 @@ import { useAuthStore } from '../../shared/stores/auth';
 import { api } from '../../shared/api/client';
 import { MobileFab } from '../../shared/ui/MobileFab';
 import { AiAssistant } from '../../widgets/ai-assistant/AiAssistant';
+import { resolveOnboardingCompleted } from '../../shared/lib/auth';
 import styles from './AppShell.module.css';
 
 export function AppShell() {
@@ -25,20 +27,21 @@ export function AppShell() {
   const isMobile = useIsMobile();
   const location = useLocation();
   const navigate = useNavigate();
-  const { setAuth, clearAuth } = useAuthStore();
+  const { setAuth, clearAuth, org: currentOrg } = useAuthStore();
 
   useEffect(() => {
     api.get<any>('/auth/me')
       .then((data) => {
+        const onboardingCompleted = resolveOnboardingCompleted(data, currentOrg?.onboarding_completed ?? false);
         setAuth(
           data.user,
-          data.org,
+          { ...data.org, onboarding_completed: onboardingCompleted },
           useAuthStore.getState().token!,
           useAuthStore.getState().refreshToken!,
           data.capabilities ?? [],
           data.role ?? 'viewer',
         );
-        if (!data.onboarding_completed && location.pathname !== '/onboarding') {
+        if (!onboardingCompleted && location.pathname !== '/onboarding') {
           navigate('/onboarding', { replace: true });
         }
       })
@@ -46,7 +49,7 @@ export function AppShell() {
         clearAuth();
         navigate('/auth/login', { replace: true });
       });
-  }, []);
+  }, [clearAuth, currentOrg?.onboarding_completed, location.pathname, navigate, setAuth]);
 
   useKeyboardShortcuts({
     n: () => window.dispatchEvent(new CustomEvent('kort:new-customer')),
@@ -95,10 +98,10 @@ export function AppShell() {
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
               key={location.pathname}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6 }}
-              transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+              initial={pageTransition.initial}
+              animate={pageTransition.animate}
+              exit={pageTransition.exit}
+              transition={pageTransition.transition}
               className={styles.routeViewport}
             >
               <Outlet />

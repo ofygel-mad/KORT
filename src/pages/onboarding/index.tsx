@@ -1,7 +1,8 @@
 import { useState, type ReactNode, type CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { CheckCircle2, Zap, Factory, ChevronRight, ArrowLeft, Users } from 'lucide-react';
+import { successBurst } from '../../shared/motion/presets';
+import { CheckCircle2, Zap, Factory, ChevronRight, ArrowLeft, Users, Sparkles, LayoutDashboard, Store, HandCoins, BriefcaseBusiness, Blocks } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import { api } from '../../shared/api/client';
 import { Button } from '../../shared/ui/Button';
@@ -13,11 +14,11 @@ import s from './Onboarding.module.css';
 
 /* ── Data ────────────────────────────────────────────────────── */
 const BUSINESS_TYPES = [
-  { value: 'retail',      label: 'Розница',      icon: '🛍️' },
-  { value: 'services',    label: 'Услуги',        icon: '🎯' },
-  { value: 'sales',       label: 'Продажи',       icon: '💼' },
-  { value: 'production',  label: 'Производство',  icon: '🏭' },
-  { value: 'other',       label: 'Другое',         icon: '✨' },
+  { value: 'retail', label: 'Розничная торговля', description: 'Точки продаж, онлайн-заказы, повторные покупки', icon: <Store size={18} /> },
+  { value: 'services', label: 'Услуги', description: 'Запись клиентов, повторные касания, контроль сервиса', icon: <HandCoins size={18} /> },
+  { value: 'sales', label: 'B2B и продажи', description: 'Лиды, переговоры, коммерческие предложения', icon: <BriefcaseBusiness size={18} /> },
+  { value: 'production', label: 'Производство', description: 'Длинный цикл сделки, согласования, контроль этапов', icon: <Factory size={18} /> },
+  { value: 'other', label: 'Другое направление', description: 'Гибкая настройка под ваш процесс без жёсткого шаблона', icon: <Blocks size={18} /> },
 ];
 
 const SIZES = [
@@ -70,22 +71,41 @@ export default function OnboardingPage() {
   const [selectedMode, setMode]   = useState('advanced');
 
   const setupMutation = useMutation({
-    mutationFn: (data: object) => api.patch('/organization/', data),
-    onSuccess: (updated: any) => {
+    mutationFn: ({ nextPath, ...data }: { nextPath: string; mode: string; industry: string; company_size: string; onboarding_completed: boolean }) =>
+      api.patch('/organization/', data),
+    onSuccess: (updated: any, variables) => {
       setOrg({ onboarding_completed: true, ...(updated ?? {}) });
+      const modeLabel = MODES.find((m) => m.mode === selectedMode)?.title ?? 'Ваш режим';
+      const businessLabel = BUSINESS_TYPES.find((b) => b.value === industry)?.label ?? 'ваш бизнес';
+      const nextPath = variables?.nextPath ?? '/';
+      const handoffMap: Record<string, string> = {
+        '/': `Онбординг завершён · ${modeLabel} для направления «${businessLabel}» уже собран в Kort Home. Сначала проверьте входящий поток, затем создайте первую рабочую сущность.`,
+        '/customers': 'Онбординг завершён · начните с клиентов, чтобы быстро превратить контекст бизнеса в рабочую базу.',
+        '/deals': 'Онбординг завершён · переходите к первой сделке, пока логика продаж ещё свежа после настройки.',
+        '/imports': 'Онбординг завершён · загрузите базу и сразу перенесите запуск в живой операционный контур.',
+      };
+      localStorage.setItem('kort:product-moment', handoffMap[nextPath] ?? handoffMap['/']);
       toast.success('Настройки сохранены');
-      navigate('/');
+      navigate(nextPath, { replace: true });
     },
   });
 
   const canNext   = step === 0 ? (industry !== '' && companySize !== '') : true;
   const cardClass = step === 1 ? s.cardWide : s.cardNarrow;
 
-  function handleFinish() {
-    setupMutation.mutate({ mode: selectedMode, industry, company_size: companySize, onboarding_completed: true });
+  function handleFinish(nextPath = '/') {
+    setupMutation.mutate({
+      nextPath,
+      mode: selectedMode,
+      industry,
+      company_size: companySize,
+      onboarding_completed: true,
+    });
   }
 
-  function handleQuickLink(path: string) { handleFinish(); navigate(path); }
+  function handleQuickLink(path: string) {
+    handleFinish(path);
+  }
 
   /* ── Step dot helpers ────────────────────────────────────────── */
   function dotClass(idx: number)   { return idx < step ? s.done   : idx === step ? s.active  : s.pending; }
@@ -128,11 +148,22 @@ export default function OnboardingPage() {
         animate={{ opacity: 1, x: 0 }}
         exit={{ opacity: 0, x: -20 }}
       >
+        <div className={s.scenarioRail}>
+          <div className={s.scenarioCopy}>
+            <span className={s.scenarioEyebrow}><Sparkles size={12} /> Сценарий запуска</span>
+            <div className={s.scenarioText}>Заполняем контекст бизнеса, выбираем режим и сразу ведём в первый полезный шаг без пустых экранов.</div>
+          </div>
+          <div className={s.scenarioChips}>
+            <span className={s.scenarioChip}>Контекст</span>
+            <span className={s.scenarioChip}>Режим</span>
+            <span className={s.scenarioChip}>Первое действие</span>
+          </div>
+        </div>
         {/* ── Step 0: business info ────────────────────────── */}
         {step === 0 && (
           <>
             <h2 className={s.sectionTitle}>Расскажите о вашем бизнесе</h2>
-            <p className={s.sectionDesc}>Это поможет нам настроить Kort под ваши задачи</p>
+            <p className={s.sectionDesc}>Мы не будем привязывать интерфейс к одному сценарию. Нужен только стартовый контекст, чтобы Kort собрал для вас правильный рабочий контур.</p>
 
             <p className={s.subLabel}>Тип бизнеса</p>
             <div className={s.industryGrid}>
@@ -144,9 +175,10 @@ export default function OnboardingPage() {
                   onClick={() => setIndustry(bt.value)}
                   className={`${s.industryBtn} ${industry === bt.value ? s.selected : ''}`}
                 >
-                  <span className={s.industryEmoji}>{bt.icon}</span>
-                  <span className={`${s.industryLabel} ${industry === bt.value ? s.selected : s.default}`}>
-                    {bt.label}
+                  <span className={s.industryIcon}>{bt.icon}</span>
+                  <span className={s.industryMeta}>
+                    <span className={`${s.industryLabel} ${industry === bt.value ? s.selected : s.default}`}>{bt.label}</span>
+                    <span className={s.industryDesc}>{bt.description}</span>
                   </span>
                 </motion.button>
               ))}
@@ -213,10 +245,17 @@ export default function OnboardingPage() {
         {/* ── Step 2: quick start ──────────────────────────── */}
         {step === 2 && (
           <>
-            <div className={s.successStep}>
+            <motion.div className={s.successStep} variants={successBurst} initial="hidden" animate="visible">
               <div className={s.successEmoji}>🎉</div>
               <h2 className={s.successTitle}>Вы готовы к работе!</h2>
               <p className={s.successDesc}>Привет, {user?.full_name?.split(' ')[0]}! Kort настроена и готова.</p>
+            </motion.div>
+
+            <div className={s.completionActions}>
+              <Button variant="secondary" size="sm" icon={<LayoutDashboard size={14} />} onClick={() => handleFinish('/')}>
+                Открыть Kort Home
+              </Button>
+              <span className={s.completionHint}>Или сразу перейдите в первый рабочий сценарий:</span>
             </div>
 
             <div className={s.quickLinks}>
@@ -253,14 +292,16 @@ export default function OnboardingPage() {
 
           {step < STEPS.length - 1
             ? <Button disabled={!canNext} iconRight={<ChevronRight size={14} />} onClick={() => setStep(step + 1)}>Продолжить</Button>
-            : <Button loading={setupMutation.isPending} onClick={handleFinish}>Начать работу</Button>
+            : <Button loading={setupMutation.isPending} onClick={() => handleFinish('/')}>Начать работу</Button>
           }
         </div>
       </motion.div>
 
-      <button className={s.skipLink} onClick={() => navigate('/')}>
-        Пропустить настройку →
-      </button>
+      {step === STEPS.length - 1 && (
+        <button className={s.skipLink} onClick={() => handleFinish('/')}>
+          Завершить настройку и открыть Kort Home →
+        </button>
+      )}
     </div>
   );
 }

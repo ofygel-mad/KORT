@@ -377,3 +377,47 @@
 .teamTable tr { transition: background var(--motion-fast) var(--motion-ease); }
 .emptyPipeline { padding: clamp(30px, 6vw, 54px) var(--space-card-padding); border: 1px dashed var(--border-default); border-radius: var(--radius-lg); background: var(--bg-surface-inset); }
 .emptyHint { line-height: 1.55; }
+
+
+.appearanceStack { display: grid; gap: var(--space-section-gap); }
+.appearanceBlock { display: flex; flex-direction: column; gap: 12px; }
+.appearanceLabel { font-size: 12px; font-weight: 700; letter-spacing: 0.03em; color: var(--text-secondary); text-transform: uppercase; }
+.themeModeRow { display: flex; flex-wrap: wrap; gap: 8px; }
+.themeModeBtn { min-height: 38px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--border-subtle); background: var(--bg-surface); color: var(--text-secondary); display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 600; transition: transform var(--motion-fast) var(--motion-ease), border-color var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease), background var(--motion-fast) var(--motion-ease), box-shadow var(--motion-fast) var(--motion-ease); }
+.themeModeBtn:hover { transform: var(--feedback-raise-hover); color: var(--text-primary); background: var(--bg-hover); }
+.themeModeBtnActive { color: var(--text-primary); border-color: var(--fill-accent); box-shadow: var(--brand-focus-ring); background: color-mix(in srgb, var(--fill-accent-subtle) 66%, var(--bg-surface)); }
+.themeGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.themeTile { border: 1px solid var(--brand-panel-border); background: var(--brand-surface-3); border-radius: 18px; overflow: hidden; cursor: pointer; text-align: left; transition: transform var(--motion-fast) var(--motion-ease), border-color var(--motion-fast) var(--motion-ease), box-shadow var(--motion-fast) var(--motion-ease), background var(--motion-fast) var(--motion-ease); }
+.themeTile:hover { transform: var(--feedback-raise-hover); box-shadow: var(--brand-panel-shadow); }
+.themeTileActive { border-color: var(--fill-accent); box-shadow: var(--brand-focus-ring), var(--brand-panel-shadow); }
+.themeTilePreview { position: relative; height: 122px; background: linear-gradient(180deg, color-mix(in srgb, var(--bg-surface) 88%, white 12%) 0%, color-mix(in srgb, var(--bg-canvas) 96%, transparent) 100%); }
+.themeTilePreview::after { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, color-mix(in srgb, var(--theme-preview-accent) 18%, transparent) 0%, transparent 62%); }
+.themePreviewTopbar,.themePreviewSidebar,.themePreviewSurfaceLg,.themePreviewSurfaceSm,.themePreviewChip { position: absolute; z-index: 1; }
+.themePreviewTopbar { top: 10px; left: 10px; right: 10px; height: 14px; border-radius: 999px; background: color-mix(in srgb, var(--bg-surface) 84%, var(--theme-preview-accent)); border: 1px solid color-mix(in srgb, var(--theme-preview-accent) 26%, transparent); }
+.themePreviewSidebar { top: 32px; left: 10px; bottom: 10px; width: 48px; border-radius: 14px; background: color-mix(in srgb, var(--bg-surface-elevated) 88%, var(--theme-preview-accent)); border: 1px solid color-mix(in srgb, var(--theme-preview-accent) 18%, transparent); }
+.themePreviewSurfaceLg { top: 36px; left: 68px; right: 12px; height: 42px; border-radius: 14px; background: var(--bg-surface); box-shadow: var(--shadow-sm); }
+.themePreviewSurfaceSm { left: 68px; right: 54px; bottom: 12px; height: 24px; border-radius: 10px; background: color-mix(in srgb, var(--bg-surface) 84%, var(--theme-preview-accent)); }
+.themePreviewChip { right: 12px; bottom: 14px; width: 34px; height: 20px; border-radius: 999px; background: var(--theme-preview-accent); }
+.themeTileBody { padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+.themeTileHead { display: flex; justify-content: space-between; gap: 10px; }
+.themeTileTitle { font-size: 14px; font-weight: 700; color: var(--text-primary); }
+.themeTileSub { margin-top: 3px; font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
+.themeTileCheck { width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: var(--fill-accent); color: var(--text-inverse); flex-shrink: 0; }
+.themeTileMeta { display: flex; flex-wrap: wrap; gap: 8px; }
+.themeMetaChip { display: inline-flex; align-items: center; gap: 6px; min-height: 28px; padding: 0 10px; border-radius: 999px; background: var(--journey-chip-bg); border: 1px solid var(--journey-chip-border); color: var(--text-secondary); font-size: 11px; font-weight: 700; }
+.appearanceAside { display: flex; }
+.appearanceHintCard { width: 100%; padding: 16px; border-radius: 16px; border: 1px solid var(--brand-panel-border); background: color-mix(in srgb, var(--brand-surface-2) 90%, transparent); box-shadow: var(--surface-shadow-rest); }
+.appearanceHintTitle { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--text-primary); }
+.appearanceHintList { margin: 12px 0 0 18px; color: var(--text-secondary); display: grid; gap: 6px; }
+.appearanceHintText { margin-top: 12px; font-size: 12px; line-height: 1.6; color: var(--text-tertiary); }
+@media (max-width: 820px) { .themeGrid { grid-template-columns: 1fr; } }
+
+
+/* ── Theme pack final pass ───────────────────────────────────────────────── */
+.sectionCard, .themeCard, .teamCard, .integrationsCard, .fieldMapCard { background: var(--rc-detail-surface-bg); border-color: var(--rc-detail-surface-border); box-shadow: var(--brand-panel-shadow); }
+.stageRow:hover { border-color: var(--fill-accent); box-shadow: var(--shadow-sm); }
+.iconBtn:focus-visible { box-shadow: var(--rc-focus-ring); outline: none; }
+
+.adminGateCard { display:grid; grid-template-columns:auto 1fr auto; gap:14px; align-items:center; padding:18px; border-radius:18px; border:1px solid color-mix(in srgb, var(--fill-warning-text) 24%, var(--border-default)); background: color-mix(in srgb, var(--fill-warning-soft) 62%, var(--bg-surface)); }
+.adminGateTitle { font-size:14px; font-weight:700; color:var(--text-primary); margin-bottom:4px; }
+.adminGateText { font-size:13px; line-height:1.5; color:var(--text-secondary); }

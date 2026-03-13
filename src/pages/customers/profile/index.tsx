@@ -190,6 +190,18 @@ export default function CustomerProfilePage() {
         </div>
 
         {/* Quick facts */}
+        <div className={styles.scenarioRail}>
+          <div className={styles.scenarioCopy}>
+            <span className={styles.scenarioEyebrow}>Customer flow</span>
+            <div className={styles.scenarioText}>Карточка клиента должна вести к действию: связаться, двинуть в сделку или закрепить следующий follow-up, а не просто хранить поля.</div>
+          </div>
+          <div className={styles.scenarioChips}>
+            <span className={styles.scenarioChip}>Contact</span>
+            <span className={styles.scenarioChip}>Deal</span>
+            <span className={styles.scenarioChip}>Follow-up</span>
+          </div>
+        </div>
+
         <div className={styles.quickFacts}>
           <div className={styles.quickFact}>
             <span className={styles.quickFactLabel}>Источник</span>
@@ -214,6 +226,18 @@ export default function CustomerProfilePage() {
           <div className={styles.quickFact}>
             <span className={styles.quickFactLabel}>Сделок</span>
             <span className={styles.quickFactValue}>{activeDeals.length} активных</span>
+          </div>
+        </div>
+
+        <div className={styles.nextActionSurface}>
+          <div className={styles.nextActionCopy}>
+            <span className={styles.nextActionEyebrow}>Next best action</span>
+            <strong className={styles.nextActionTitle}>Не оставляйте клиента просто карточкой</strong>
+            <span className={styles.nextActionText}>Свяжитесь, переведите в сделку или сформулируйте следующий шаг через Kort Copilot, пока контекст ещё живой.</span>
+          </div>
+          <div className={styles.nextActionButtons}>
+            <button className={styles.nextActionBtn} onClick={() => { localStorage.setItem('kort:product-moment', `Клиент «${customer.full_name}» открыт. Следующий логичный шаг - создать сделку или закрепить follow-up.`); window.dispatchEvent(new CustomEvent('kort:new-deal')); }}>Создать сделку</button>
+            <button className={styles.nextActionBtn} onClick={() => window.dispatchEvent(new CustomEvent('kort:assistant-prompt', { detail: `Какой следующий шаг по клиенту ${customer.full_name}?` }))}>Спросить Copilot</button>
           </div>
         </div>
       </div>

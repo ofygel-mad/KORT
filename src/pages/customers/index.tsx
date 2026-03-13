@@ -130,6 +130,7 @@ export default function CustomersPage() {
 
   const customers = data?.results ?? [];
   const hasSelection = selected.size > 0;
+  const hasActiveFilters = Boolean(search.trim() || status);
 
   return (
     <div className={styles.page}>
@@ -157,6 +158,18 @@ export default function CustomersPage() {
           >
             Добавить
           </Button>
+        </div>
+      </div>
+
+      <div className={styles.scenarioRail}>
+        <div className={styles.scenarioCopy}>
+          <span className={styles.scenarioEyebrow}>List pattern</span>
+          <div className={styles.scenarioText}>Поиск, фильтр, выбор и переход в карточку клиента собраны в один ритм без лишних ответвлений.</div>
+        </div>
+        <div className={styles.scenarioChips}>
+          <span className={styles.scenarioChip}>Поиск</span>
+          <span className={styles.scenarioChip}>Фильтр</span>
+          <span className={styles.scenarioChip}>Открыть профиль</span>
         </div>
       </div>
 
@@ -235,13 +248,23 @@ export default function CustomersPage() {
           <div className={styles.tableEmpty}>
             <EmptyState
               icon={<Users size={24} />}
-              title={search ? 'Ничего не найдено' : 'Клиентов пока нет'}
-              description={search ? 'Попробуйте другой запрос' : 'Добавьте первого клиента или импортируйте базу'}
-              action={!search ? {
+              title={hasActiveFilters ? 'Ничего не найдено' : 'Клиентов пока нет'}
+              description={hasActiveFilters ? 'Сузили выбор слишком сильно. Сбросьте фильтры или вернитесь к полному списку.' : 'Добавьте первого клиента или импортируйте базу'}
+              action={!hasActiveFilters ? {
                 label: 'Добавить клиента',
                 onClick: () => window.dispatchEvent(new CustomEvent('kort:new-customer')),
               } : undefined}
             />
+            {hasActiveFilters && (
+              <div className={styles.emptyRecoveryRail}>
+                <button className={styles.emptyRecoveryBtn} onClick={() => { setSearch(''); setStatus(''); setPage(1); }}>
+                  Сбросить поиск и фильтры
+                </button>
+                <button className={styles.emptyRecoveryBtn} onClick={() => navigate('/imports')}>
+                  Импортировать клиентов
+                </button>
+              </div>
+            )}
           </div>
         ) : (
           <>
