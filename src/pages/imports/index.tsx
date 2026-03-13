@@ -11,6 +11,7 @@ import { Skeleton } from '../../shared/ui/Skeleton';
 import { toast } from 'sonner';
 import { useDocumentTitle } from '../../shared/hooks/useDocumentTitle';
 import { SpreadsheetReview } from '../../widgets/spreadsheet-review/SpreadsheetReview';
+import { setProductMoment } from '../../shared/utils/productMoment';
 import s from './Imports.module.css';
 
 /* ── Types & constants ───────────────────────────────────────── */
@@ -138,12 +139,12 @@ export default function ImportsPage() {
       <div className={s.scenarioRail}>
         <div className={s.scenarioCopy}>
           <span className={s.scenarioEyebrow}>Сценарий данных</span>
-          <div className={s.scenarioText}>Загрузка → сопоставление → импорт → следующий рабочий шаг без провала в пустоту.</div>
+          <div className={s.scenarioText}>Импорт должен закончиться действием, а не красивым тупиком после кнопки «Готово».</div>
         </div>
         <div className={s.scenarioChips}>
-          <span className={s.scenarioChip}>Upload</span>
-          <span className={s.scenarioChip}>Map</span>
-          <span className={s.scenarioChip}>Use in Kort</span>
+          <span className={s.scenarioChip}>Загрузить</span>
+          <span className={s.scenarioChip}>Сопоставить</span>
+          <span className={s.scenarioChip}>Начать работу</span>
         </div>
       </div>
 
@@ -274,15 +275,15 @@ export default function ImportsPage() {
                   </div>
                   <div className={s.resultActions}>
                     <Button className={s.resultNewImport} onClick={resetWizard}>Новый импорт</Button>
-                    <Button variant="secondary" onClick={() => { localStorage.setItem('kort:product-moment', 'Импорт завершён · сначала проверьте карточки клиентов, чтобы быстро превратить свежие данные в живой контур команды.'); navigate('/customers'); }}>Открыть клиентов</Button>
-                    <Button variant="secondary" onClick={() => { localStorage.setItem('kort:product-moment', 'Импорт завершён · Kort Home уже собран как следующий контур действий: проверить базу, создать сделки и распределить задачи.'); navigate('/'); }}>Перейти в Kort Home</Button>
+                    <Button variant="secondary" onClick={() => { setProductMoment('Импорт завершён · сначала проверьте карточки клиентов, чтобы быстро превратить свежие данные в живой контур команды.'); navigate('/customers'); }}>Открыть клиентов</Button>
+                    <Button variant="secondary" onClick={() => { setProductMoment('Импорт завершён · Kort Home уже собран как следующий контур действий: проверить базу, создать сделки и распределить задачи.'); navigate('/'); }}>Перейти в Kort Home</Button>
                   </div>
                   <div className={s.nextActionRail}>
                     <div className={s.nextActionTitle}>Что делать дальше</div>
                     <div className={s.nextActionGrid}>
-                      <button className={s.nextActionCard} onClick={() => { localStorage.setItem('kort:product-moment', 'Импорт завершён. Проверяйте клиентов сразу после загрузки, пока контекст ещё горячий.'); navigate('/customers'); }}>Проверить карточки клиентов</button>
-                      <button className={s.nextActionCard} onClick={() => { localStorage.setItem('kort:product-moment', 'Импорт завершён · переходите к сделкам, пока свежие клиенты ещё не остыли в системе.'); navigate('/deals'); }}>Создать первую сделку</button>
-                      <button className={s.nextActionCard} onClick={() => { localStorage.setItem('kort:product-moment', 'Импорт завершён. Возвращайтесь в обзор команды, чтобы увидеть, что требует следующего действия прямо сейчас.'); navigate('/'); }}>Вернуться в обзор команды</button>
+                      <button className={s.nextActionCard} onClick={() => { setProductMoment('Импорт завершён. Проверяйте клиентов сразу после загрузки, пока контекст ещё горячий.'); navigate('/customers'); }}>Проверить карточки клиентов</button>
+                      <button className={s.nextActionCard} onClick={() => { setProductMoment('Импорт завершён · переходите к сделкам, пока свежие клиенты ещё не остыли в системе.'); navigate('/deals'); }}>Создать первую сделку</button>
+                      <button className={s.nextActionCard} onClick={() => { setProductMoment('Импорт завершён. Возвращайтесь в обзор команды, чтобы увидеть, что требует следующего действия прямо сейчас.'); navigate('/'); }}>Вернуться в обзор команды</button>
                     </div>
                   </div>
                 </motion.div>

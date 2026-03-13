@@ -56,7 +56,7 @@ apiClient.interceptors.response.use(
 
       if (!refreshToken) {
         useAuthStore.getState().clearAuth();
-        window.location.href = '/auth/login';
+        redirectTo('/auth/login');
         return Promise.reject(error);
       }
 
@@ -87,7 +87,7 @@ apiClient.interceptors.response.use(
       } catch (refreshErr) {
         processQueue(refreshErr, null);
         useAuthStore.getState().clearAuth();
-        window.location.href = '/auth/login';
+        redirectTo('/auth/login');
         return Promise.reject(refreshErr);
       } finally {
         isRefreshing = false;

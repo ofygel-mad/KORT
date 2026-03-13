@@ -1,9 +1,10 @@
-import { createBrowserRouter, Navigate, RouterProvider, Outlet } from 'react-router-dom';
+import { createBrowserRouter, Navigate, RouterProvider, Outlet, useLocation } from 'react-router-dom';
 import { lazy, Suspense, type ComponentType } from 'react';
 import { AppShell } from '../layout/AppShell';
 import { AuthShell } from '../layout/AuthShell';
 import { PageLoader } from '../../shared/ui/PageLoader';
 import { useAuthStore } from '../../shared/stores/auth';
+import { useCapabilities } from '../../shared/hooks/useCapabilities';
 import { ErrorBoundary } from '../../shared/ui/ErrorBoundary';
 
 function makePage(imp: () => Promise<{ default: ComponentType }>) {
@@ -22,11 +23,20 @@ function makePage(imp: () => Promise<{ default: ComponentType }>) {
 function RequireAuth() {
   const token = useAuthStore((s) => s.token);
   const org = useAuthStore((s) => s.org);
-  const { pathname } = window.location;
+  const { pathname } = useLocation();
   if (!token) return <Navigate to="/auth/login" replace />;
   if (org && !org.onboarding_completed && pathname !== '/onboarding') {
     return <Navigate to="/onboarding" replace />;
   }
+  return <Outlet />;
+}
+
+
+function RequireCapability({ capability, redirectTo = '/' }: { capability: string; redirectTo?: string }) {
+  const token = useAuthStore((s) => s.token);
+  const { can } = useCapabilities();
+  if (!token) return <Navigate to="/auth/login" replace />;
+  if (!can(capability)) return <Navigate to={redirectTo} replace />;
   return <Outlet />;
 }
 
@@ -80,6 +90,7 @@ const router = createBrowserRouter([
         element: <AppShell />,
         children: [
           { index: true, element: <AdminPage /> },
+          { path: ':section', element: <AdminPage /> },
         ],
       },
     ],
@@ -99,9 +110,18 @@ const router = createBrowserRouter([
           { path: 'feed', element: <FeedPage /> },
           { path: 'tasks', element: <TasksPage /> },
           { path: 'reports', element: <ReportsPage /> },
-          { path: 'automations', element: <AutomationsPage /> },
-          { path: 'imports', element: <ImportsPage /> },
-          { path: 'audit', element: <AuditPage /> },
+          {
+            element: <RequireCapability capability="customers.import" />,
+            children: [{ path: 'imports', element: <ImportsPage /> }],
+          },
+          {
+            element: <RequireCapability capability="automations.manage" />,
+            children: [{ path: 'automations', element: <AutomationsPage /> }],
+          },
+          {
+            element: <RequireCapability capability="audit.read" />,
+            children: [{ path: 'audit', element: <AuditPage /> }],
+          },
           { path: 'settings', element: <SettingsPage /> },
           { path: 'settings/:section', element: <SettingsPage /> },
         ],

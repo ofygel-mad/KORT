@@ -8,6 +8,7 @@ import {
   Users,
 } from 'lucide-react';
 import { api } from '../../shared/api/client';
+import { useUIStore } from '../../shared/stores/ui';
 import { Button } from '../../shared/ui/Button';
 import { Badge } from '../../shared/ui/Badge';
 import { Skeleton } from '../../shared/ui/Skeleton';
@@ -65,8 +66,10 @@ function initials(name: string): string {
 }
 
 export default function CustomersPage() {
-  const navigate  = useNavigate();
-  const isMobile  = useIsMobile();
+  const navigate = useNavigate();
+  const isMobile = useIsMobile();
+  const openCreateCustomer = useUIStore(s => s.openCreateCustomer);
+  const { can } = useCapabilities();
 
   const [search,    setSearch]    = useState('');
   const [status,    setStatus]    = useState('');
@@ -151,24 +154,26 @@ export default function CustomersPage() {
               Экспорт
             </Button>
           )}
-          <Button
-            size="sm"
-            icon={<Plus size={13} />}
-            onClick={() => window.dispatchEvent(new CustomEvent('kort:new-customer'))}
-          >
-            Добавить
-          </Button>
+          {can('customers:write') && (
+            <Button
+              size="sm"
+              icon={<Plus size={13} />}
+              onClick={openCreateCustomer}
+            >
+              Добавить
+            </Button>
+          )}
         </div>
       </div>
 
       <div className={styles.scenarioRail}>
         <div className={styles.scenarioCopy}>
-          <span className={styles.scenarioEyebrow}>List pattern</span>
-          <div className={styles.scenarioText}>Поиск, фильтр, выбор и переход в карточку клиента собраны в один ритм без лишних ответвлений.</div>
+          <span className={styles.scenarioEyebrow}>Рабочий контур</span>
+          <div className={styles.scenarioText}>Здесь должно быть просто: найти клиента, открыть карточку и не утонуть в декоративных объяснениях.</div>
         </div>
         <div className={styles.scenarioChips}>
-          <span className={styles.scenarioChip}>Поиск</span>
-          <span className={styles.scenarioChip}>Фильтр</span>
+          <span className={styles.scenarioChip}>Найти</span>
+          <span className={styles.scenarioChip}>Отобрать</span>
           <span className={styles.scenarioChip}>Открыть профиль</span>
         </div>
       </div>
@@ -250,9 +255,10 @@ export default function CustomersPage() {
               icon={<Users size={24} />}
               title={hasActiveFilters ? 'Ничего не найдено' : 'Клиентов пока нет'}
               description={hasActiveFilters ? 'Сузили выбор слишком сильно. Сбросьте фильтры или вернитесь к полному списку.' : 'Добавьте первого клиента или импортируйте базу'}
-              action={!hasActiveFilters ? {
+
+              action={!hasActiveFilters && can('customers:write') ? {
                 label: 'Добавить клиента',
-                onClick: () => window.dispatchEvent(new CustomEvent('kort:new-customer')),
+                onClick: openCreateCustomer,
               } : undefined}
             />
             {hasActiveFilters && (
@@ -260,9 +266,11 @@ export default function CustomersPage() {
                 <button className={styles.emptyRecoveryBtn} onClick={() => { setSearch(''); setStatus(''); setPage(1); }}>
                   Сбросить поиск и фильтры
                 </button>
-                <button className={styles.emptyRecoveryBtn} onClick={() => navigate('/imports')}>
-                  Импортировать клиентов
-                </button>
+                {can('customers.import') && (
+                  <button className={styles.emptyRecoveryBtn} onClick={() => navigate('/imports')}>
+                    Импортировать клиентов
+                  </button>
+                )}
               </div>
             )}
           </div>

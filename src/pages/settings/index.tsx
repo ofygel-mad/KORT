@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   DndContext, closestCorners, PointerSensor, useSensor, useSensors,
@@ -20,8 +20,11 @@ import { Skeleton } from '../../shared/ui/Skeleton';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { useRole } from '../../shared/hooks/useRole';
+import { useCapabilities } from '../../shared/hooks/useCapabilities';
 import { useDocumentTitle } from '../../shared/hooks/useDocumentTitle';
 import { useUIStore, type ThemePack } from '../../shared/stores/ui';
+import { useNavigate, useParams } from 'react-router-dom';
+import { copyToClipboard } from '../../shared/lib/browser';
 import s from './Settings.module.css';
 
 /* ── Types ──────────────────────────────────────────────────── */
@@ -32,16 +35,27 @@ interface UserItem { id: string; full_name: string; email: string; status: strin
 
 /* ── Section nav ─────────────────────────────────────────────── */
 const SECTIONS = [
-  { key: 'organization', label: 'Организация',        icon: <Building2 size={15} /> },
-  { key: 'team',         label: 'Команда',             icon: <Users size={15} /> },
-  { key: 'pipelines',   label: 'Воронки',              icon: <GitBranch size={15} /> },
-  { key: 'appearance',  label: 'Темы и вид',           icon: <MonitorCog size={15} /> },
-  { key: 'mode',        label: 'Режим Kort',           icon: <Shield size={15} /> },
-  { key: 'integrations',label: 'Интеграции',           icon: <Globe size={15} /> },
-  { key: 'webhooks',    label: 'Webhooks',             icon: <Zap size={15} /> },
-  { key: 'templates',   label: 'Шаблоны сообщений',   icon: <MessageSquare size={15} /> },
-  { key: 'api',         label: 'API токены',           icon: <Key size={15} /> },
-];
+  { key: 'organization', label: 'Организация', icon: <Building2 size={15} /> },
+  { key: 'appearance', label: 'Оформление', icon: <MonitorCog size={15} /> },
+  { key: 'pipelines', label: 'Воронки', icon: <GitBranch size={15} /> },
+  { key: 'templates', label: 'Шаблоны сообщений', icon: <MessageSquare size={15} /> },
+  { key: 'team', label: 'Команда', icon: <Users size={15} />, capability: 'team.manage', adminOnly: true },
+  { key: 'mode', label: 'Админ-режим', icon: <Shield size={15} />, capability: 'admin.mode', adminOnly: true },
+  { key: 'integrations', label: 'Интеграции', icon: <Globe size={15} />, capability: 'integrations.manage', adminOnly: true },
+  { key: 'webhooks', label: 'Webhooks', icon: <Zap size={15} />, capability: 'automations.manage', adminOnly: true },
+  { key: 'api', label: 'API токены', icon: <Key size={15} />, capability: 'admin.mode', adminOnly: true },
+] as const;
+
+const SECTION_FALLBACK = 'organization';
+
+const SECTION_LOCK_REASON: Record<string, string> = {
+  team: 'team.manage',
+  mode: 'admin.mode',
+  integrations: 'integrations.manage',
+  webhooks: 'automations.manage',
+  api: 'admin.mode',
+};
+
 
 const THEME_PACKS: Array<{ value: ThemePack; title: string; subtitle: string; accent: string; depth: string; density: string; }> = [
   { value: 'neutral', title: 'Neutral Premium', subtitle: 'Тёплый базовый характер Kort', accent: 'linear-gradient(135deg, #FBBF24 0%, #D97706 100%)', depth: 'Мягкая глубина', density: 'Сбалансированный акцент' },
@@ -65,7 +79,7 @@ function OrgSection() {
       <div className={s.sectionHeader}>
         <div>
           <div className={s.sectionTitle}>Данные организации</div>
-          <div className={s.sectionSubtitle}>Основные реквизиты компании</div>
+          <div className={s.sectionSubtitle}>Базовые параметры компании и рабочей среды</div>
         </div>
         <Button size="sm" loading={isSubmitting} onClick={handleSubmit(d => mutation.mutate(d))}>Сохранить</Button>
       </div>
@@ -120,7 +134,7 @@ function TeamSection() {
       <div className={s.sectionHeader}>
         <div>
           <div className={s.sectionTitle}>Участники команды</div>
-          <div className={s.sectionSubtitle}>Управление доступом и ролями</div>
+          <div className={s.sectionSubtitle}>Роли, доступы и приглашения</div>
         </div>
         <Button size="sm" icon={<Plus size={13} />}>Пригласить</Button>
       </div>
@@ -458,24 +472,28 @@ function AppearanceSection() {
 }
 
 /* ── API tokens section ──────────────────────────────────────── */
-function LockedAdminSection() {
+function LockedAdminSection({ title, subtitle, canActivateAdminMode }: { title: string; subtitle: string; canActivateAdminMode: boolean }) {
   const { setAdminMode } = useUIStore();
   return (
     <div className={s.section}>
       <div className={s.sectionHeader}>
         <div>
-          <div className={s.sectionTitle}>Раздел доступен в режиме администратора</div>
-          <div className={s.sectionSubtitle}>Системные настройки, роли и API должны открываться только владельцу или администратору в отдельном контуре управления.</div>
+          <div className={s.sectionTitle}>{title}</div>
+          <div className={s.sectionSubtitle}>{subtitle}</div>
         </div>
       </div>
       <div className={s.sectionBody}>
         <div className={s.adminGateCard}>
           <Shield size={18} />
           <div>
-            <div className={s.adminGateTitle}>Включите режим администратора</div>
-            <div className={s.adminGateText}>Так обычный рабочий интерфейс остаётся лёгким, а критичные функции не лезут в глаза сотрудникам каждый день.</div>
+            <div className={s.adminGateTitle}>{canActivateAdminMode ? 'Включите режим администратора' : 'Недостаточно прав'}</div>
+            <div className={s.adminGateText}>
+              {canActivateAdminMode
+                ? 'Так обычный рабочий интерфейс остаётся лёгким, а критичные функции не лезут в глаза сотрудникам каждый день.'
+                : 'Для этого раздела нужен отдельный уровень доступа. Прятать системные функции за красивыми кнопками без прав - любимый спорт плохих CRM.'}
+            </div>
           </div>
-          <Button size="sm" onClick={() => setAdminMode(true)}>Включить режим</Button>
+          {canActivateAdminMode && <Button size="sm" onClick={() => setAdminMode(true)}>Включить режим</Button>}
         </div>
       </div>
     </div>
@@ -500,7 +518,7 @@ function ApiSection() {
           (keys?.results ?? []).map(k => (
             <div key={k.id} className={s.apiKeyRow}>
               <div className={s.apiKeyField}>{k.key}</div>
-              <Button size="sm" variant="secondary" icon={<Copy size={13} />} onClick={() => { navigator.clipboard.writeText(k.key); toast.success('Скопировано'); }}>
+              <Button size="sm" variant="secondary" icon={<Copy size={13} />} onClick={async () => { const ok = await copyToClipboard(k.key); ok ? toast.success('Скопировано') : toast.error('Не удалось скопировать'); }}>
                 Копировать
               </Button>
             </div>
@@ -534,46 +552,89 @@ function StubSection({ title, subtitle }: { title: string; subtitle: string }) {
 /* ── Main page ───────────────────────────────────────────────── */
 export default function SettingsPage() {
   useDocumentTitle('Настройки');
-  const [section, setSection] = useState('organization');
+  const params = useParams();
+  const navigate = useNavigate();
   const { adminMode } = useUIStore();
-  const sensitiveSections = new Set(['team', 'api', 'mode', 'integrations', 'webhooks']);
-  const visibleSections = SECTIONS.filter((sec) => adminMode || !sensitiveSections.has(sec.key));
-  const sectionLocked = sensitiveSections.has(section) && !adminMode;
+  const { canUseAdminMode, canManageTeam, canManageIntegrations, canRunAutomations, can } = useCapabilities();
+
+  const accessMap: Record<string, boolean> = {
+    'team.manage': canManageTeam,
+    'integrations.manage': canManageIntegrations,
+    'automations.manage': canRunAutomations,
+    'admin.mode': canUseAdminMode,
+  };
+
+  const visibleSections = useMemo(() => (
+    SECTIONS.filter((sec) => !sec.capability || accessMap[sec.capability])
+  ), [accessMap]);
+
+  const requestedSection = params.section ?? SECTION_FALLBACK;
+  const requestedMeta = SECTIONS.find((sec) => sec.key === requestedSection);
+  const defaultSection = visibleSections[0]?.key ?? SECTION_FALLBACK;
+  const section = requestedMeta ? requestedSection : defaultSection;
+  const sectionMeta = SECTIONS.find((sec) => sec.key === section);
+  const sectionCapability = SECTION_LOCK_REASON[section];
+  const hasCapability = sectionCapability ? accessMap[sectionCapability] || can(sectionCapability) : true;
+  const requiresAdminMode = sectionMeta?.adminOnly ?? false;
+  const sectionLocked = Boolean(sectionMeta) && (!hasCapability || (requiresAdminMode && !adminMode));
+
+  useEffect(() => {
+    if (!params.section) return;
+    if (!requestedMeta && defaultSection !== params.section) {
+      navigate(`/settings/${defaultSection}`, { replace: true });
+    }
+  }, [defaultSection, navigate, params.section, requestedMeta]);
+
+  const changeSection = (next: string) => {
+    navigate(next === SECTION_FALLBACK ? '/settings' : `/settings/${next}`);
+  };
 
   return (
     <div className={s.page}>
       <PageHeader title="Настройки" subtitle="Конфигурация организации и инструментов" />
 
-      {/* Nav tabs */}
-      <div className={s.navTabs}>
+      <div className={s.navTabs} role="tablist" aria-label="Разделы настроек">
         {visibleSections.map(sec => (
           <button
             key={sec.key}
-            className={`${s.navTab} ${section === sec.key ? s.active : ''}`}
-            onClick={() => setSection(sec.key)}
+            role="tab"
+            id={`settings-tab-${sec.key}`}
+            aria-selected={section === sec.key}
+            aria-controls={`settings-panel-${sec.key}`}
+            className={`${s.navTab} ${section === sec.key ? s.active : ''} ${sec.adminOnly && !adminMode ? s.lockedTab : ''}`}
+            onClick={() => changeSection(sec.key)}
           >
             {sec.icon}
             {sec.label}
+            {sec.adminOnly && !adminMode && <span className={s.tabMeta}>Требует админ-режим</span>}
           </button>
         ))}
       </div>
 
-      {/* Section content */}
       <AnimatePresence mode="wait">
         <motion.div
           key={section}
+          id={`settings-panel-${section}`}
+          role="tabpanel"
+          aria-labelledby={`settings-tab-${section}`}
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.14 }}
         >
-          {sectionLocked && <LockedAdminSection />}
+          {sectionLocked && (
+            <LockedAdminSection
+              title="Раздел ограничен"
+              subtitle={requiresAdminMode && !adminMode ? 'Раздел есть в структуре, но сейчас закрыт за админ-режимом. Это лучше, чем прятать системные настройки так, будто их вовсе не существует.' : 'У вас нет прав на этот раздел.'}
+              canActivateAdminMode={requiresAdminMode && canUseAdminMode}
+            />
+          )}
           {!sectionLocked && section === 'organization' && <OrgSection />}
           {!sectionLocked && section === 'team'         && <TeamSection />}
           {!sectionLocked && section === 'pipelines'    && <PipelinesSection />}
           {!sectionLocked && section === 'appearance'   && <AppearanceSection />}
           {!sectionLocked && section === 'api'          && <ApiSection />}
-          {!sectionLocked && section === 'mode'         && <StubSection title="Режим Kort" subtitle="Базовый, продвинутый или промышленный режим работы CRM" />}
+          {!sectionLocked && section === 'mode'         && <StubSection title="Админ-режим" subtitle="Базовый, продвинутый или промышленный режим работы CRM" />}
           {!sectionLocked && section === 'integrations' && <StubSection title="Интеграции" subtitle="Подключение внешних сервисов: 1С, WhatsApp, Telegram и другие" />}
           {!sectionLocked && section === 'webhooks'     && <StubSection title="Webhooks" subtitle="Настройка уведомлений по HTTP при событиях в системе" />}
           {!sectionLocked && section === 'templates'    && <StubSection title="Шаблоны сообщений" subtitle="Сохранённые тексты для быстрой коммуникации с клиентами" />}

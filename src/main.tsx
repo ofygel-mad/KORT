@@ -5,6 +5,7 @@ import { toast, Toaster } from 'sonner';
 import * as Sentry from '@sentry/react';
 import { AppRouter } from './app/router';
 import './shared/design/globals.css';
+import { getNavigator, getWindow, isBrowser } from './shared/lib/browser';
 
 const SENTRY_DSN = import.meta.env.VITE_SENTRY_DSN;
 if (SENTRY_DSN) {
@@ -44,8 +45,10 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 );
 
 
-if ('serviceWorker' in navigator && import.meta.env.PROD) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(() => {});
+const nav = getNavigator();
+const win = getWindow();
+if (isBrowser && nav && 'serviceWorker' in nav && import.meta.env.PROD && win) {
+  win.addEventListener('load', () => {
+    nav.serviceWorker.register('/sw.js').catch(() => {});
   });
 }

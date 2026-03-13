@@ -421,3 +421,6 @@
 .adminGateCard { display:grid; grid-template-columns:auto 1fr auto; gap:14px; align-items:center; padding:18px; border-radius:18px; border:1px solid color-mix(in srgb, var(--fill-warning-text) 24%, var(--border-default)); background: color-mix(in srgb, var(--fill-warning-soft) 62%, var(--bg-surface)); }
 .adminGateTitle { font-size:14px; font-weight:700; color:var(--text-primary); margin-bottom:4px; }
 .adminGateText { font-size:13px; line-height:1.5; color:var(--text-secondary); }
+
+.lockedTab { opacity: 0.88; border-style: dashed; }
+.tabMeta { margin-left: 8px; font-size: 11px; color: var(--text-tertiary); }

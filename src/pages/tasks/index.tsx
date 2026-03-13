@@ -1,3 +1,4 @@
+import { addDocumentListener } from '../../shared/lib/browser';
 import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -16,6 +17,7 @@ import { getDateLocale } from '../../shared/utils/locale';
 import { useIsMobile } from '../../shared/hooks/useIsMobile';
 import { useForm } from 'react-hook-form';
 import { useDocumentTitle } from '../../shared/hooks/useDocumentTitle';
+import { useUIStore } from '../../shared/stores/ui';
 import { listContainer, listItem } from '../../shared/motion/presets';
 import s from './Tasks.module.css';
 
@@ -57,6 +59,8 @@ export default function TasksPage() {
   const [filter, setFilter] = useState<string>('mine');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const isMobile = useIsMobile();
+  const taskRequest = useUIStore(s => s.createTaskRequest);
+  const openAssistantPrompt = useUIStore(s => s.openAssistantPrompt);
 
   const { register, handleSubmit, reset, setValue, formState: { isSubmitting } } = useForm<TaskForm>({
     defaultValues: { priority: 'medium' },
@@ -103,15 +107,12 @@ export default function TasksPage() {
   });
 
   useEffect(() => {
-    const handler = (e: Event) => {
-      const detail = (e as CustomEvent).detail ?? {};
-      setDrawerOpen(true);
-      if (detail.title) reset({ priority: 'medium', title: detail.title });
-      if (detail.customerId) setValue('customer_id', detail.customerId);
-    };
-    window.addEventListener('kort:new-task', handler);
-    return () => window.removeEventListener('kort:new-task', handler);
-  }, [reset, setValue]);
+    if (!taskRequest.nonce) return;
+    const detail = taskRequest.payload ?? {};
+    setDrawerOpen(true);
+    reset({ priority: 'medium', title: detail.title ?? '' });
+    if (detail.customerId) setValue('customer_id', detail.customerId);
+  }, [taskRequest, reset, setValue]);
 
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
@@ -119,8 +120,7 @@ export default function TasksPage() {
         e.preventDefault(); handleSubmit(d => createMutation.mutate(d))();
       }
     };
-    document.addEventListener('keydown', h);
-    return () => document.removeEventListener('keydown', h);
+    return addDocumentListener('keydown', h);
   }, [drawerOpen, handleSubmit, createMutation]);
 
   return (
@@ -174,7 +174,7 @@ export default function TasksPage() {
           {(filter === 'overdue' || filter === 'due_today' || filter === 'mine') && (
             <div className={s.emptyRecoveryRail}>
               {filter !== '' && <button className={s.emptyRecoveryBtn} onClick={() => setFilter('')}>Показать все задачи</button>}
-              <button className={s.emptyRecoveryBtn} onClick={() => window.dispatchEvent(new CustomEvent('kort:assistant-prompt', { detail: 'Какой следующий шаг по задачам сегодня?' }))}>Спросить Copilot</button>
+              <button className={s.emptyRecoveryBtn} onClick={() => openAssistantPrompt('Какой следующий шаг по задачам сегодня?')}>Спросить Copilot</button>
             </div>
           )}
         </div>

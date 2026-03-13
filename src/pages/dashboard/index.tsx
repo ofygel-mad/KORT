@@ -1,463 +1,393 @@
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { routeHandoff, successBurst } from '../../shared/motion/presets';
-import type { CSSProperties } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
-  Users, Briefcase, CheckSquare, TrendingUp,
-  Plus, ArrowRight, AlertTriangle, Clock, Sparkles, Radar, BellRing,
+  Users, Briefcase, CheckSquare, TrendingUp, Plus, ArrowRight,
+  AlertTriangle, BellOff, ClipboardList, CircleAlert, Sparkles,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useEffect, useState } from 'react';
 import { api } from '../../shared/api/client';
 import { useAuthStore } from '../../shared/stores/auth';
+import { useUIStore } from '../../shared/stores/ui';
 import { formatNumber, formatMoney } from '../../shared/utils/format';
 import { Button } from '../../shared/ui/Button';
 import { Badge } from '../../shared/ui/Badge';
 import { Skeleton } from '../../shared/ui/Skeleton';
+import { InlineErrorState } from '../../shared/ui/InlineErrorState';
 import { useIsMobile } from '../../shared/hooks/useIsMobile';
-import { DailyFocus } from '../../widgets/daily-focus/DailyFocus';
+import { useCapabilities } from '../../shared/hooks/useCapabilities';
+import { getProductMoment, clearProductMoment } from '../../shared/utils/productMoment';
 import styles from './Dashboard.module.css';
 
 interface DashboardData {
-  customers_count:    number;
-  customers_delta:    number;
+  customers_count: number;
+  customers_delta: number;
   active_deals_count: number;
-  revenue_month:      number;
-  tasks_today:        number;
-  overdue_tasks:      number;
+  revenue_month: number;
+  tasks_today: number;
+  overdue_tasks: number;
   recent_customers: Array<{
-    id: string; full_name: string;
-    company_name: string; status: string; created_at: string;
+    id: string;
+    full_name: string;
+    company_name: string;
+    status: string;
+    created_at: string;
   }>;
   deals_no_activity: number;
   stalled_deals: Array<{
-    id: string; title: string; amount: number; currency: string;
-    stage: string; customer_name: string; customer_id: string;
+    id: string;
+    title: string;
+    amount: number;
+    currency: string;
+    stage: string;
+    customer_name: string;
+    customer_id: string;
     days_silent: number | null;
   }>;
   silent_customers: Array<{
-    id: string; full_name: string; company_name: string;
-    phone: string; days_silent: number | null;
+    id: string;
+    full_name: string;
+    company_name: string;
+    phone: string;
+    days_silent: number | null;
   }>;
   today_tasks: Array<{
-    id: string; title: string; priority: string;
-    due_at: string | null; customer: { id: string; full_name: string } | null;
+    id: string;
+    title: string;
+    priority: string;
+    due_at: string | null;
+    customer: { id: string; full_name: string } | null;
   }>;
 }
 
 const STATUS_MAP: Record<string, { variant: 'success' | 'info' | 'default' | 'warning'; label: string }> = {
-  new:      { variant: 'info',    label: 'Новый' },
-  active:   { variant: 'success', label: 'Активный' },
+  new: { variant: 'info', label: 'Новый' },
+  active: { variant: 'success', label: 'Активный' },
   inactive: { variant: 'default', label: 'Неактивный' },
   archived: { variant: 'default', label: 'Архив' },
 };
 
-const stagger = { hidden: {}, show: { transition: { staggerChildren: 0.055 } } };
-const fadeUp  = {
-  hidden: { opacity: 0, y: 10 },
-  show:   { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 500, damping: 38 } },
+const fadeUp = {
+  hidden: { opacity: 0, y: 12 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.24 } },
 };
 
-function StatCard({ label, value, delta, icon, accentColor, fmt = 'n', loading }: {
-  label: string; value: number; delta?: number; icon: React.ReactNode;
-  accentColor: string; fmt?: 'n' | 'c'; loading?: boolean;
+function MetricCard({
+  label,
+  value,
+  icon,
+  accentColor,
+  subtitle,
+  fmt = 'n',
+  loading,
+}: {
+  label: string;
+  value: number;
+  icon: ReactNode;
+  accentColor: string;
+  subtitle?: string;
+  fmt?: 'n' | 'c';
+  loading?: boolean;
 }) {
-  const orgCurrency = useAuthStore.getState().org?.currency ?? 'KZT';
+  const orgCurrency = useAuthStore(s => s.org?.currency ?? 'KZT');
   const display = fmt === 'c' ? formatMoney(value, orgCurrency) : formatNumber(value);
 
   return (
-    <motion.div variants={fadeUp} className={styles.statCard}>
-      <div className={styles.statHeader}>
-        <div
-          className={styles.statIcon}
-          style={{ '--stat-accent': accentColor, '--stat-accent-soft': `${accentColor}18` } as CSSProperties}
-        >
-          {icon}
-        </div>
-        {delta !== undefined && delta !== 0 && (
-          <span className={`${styles.statDelta} ${delta > 0 ? styles.statDeltaPos : styles.statDeltaNeg}`}>
-            {delta > 0 ? '+' : ''}{delta}
-          </span>
-        )}
+    <motion.div variants={fadeUp} className={styles.metricCard}>
+      <div
+        className={styles.metricIcon}
+        style={{ '--metric-accent': accentColor, '--metric-accent-soft': `${accentColor}18` } as CSSProperties}
+      >
+        {icon}
       </div>
-      {loading
-        ? <div className={styles.statSkeleton}><Skeleton height={24} width={72} /></div>
-        : <div className={styles.statValue}>{display}</div>
-      }
-      <div className={styles.statLabel}>{label}</div>
+      <div className={styles.metricMeta}>
+        <div className={styles.metricLabel}>{label}</div>
+        {loading ? <Skeleton height={24} width={80} /> : <div className={styles.metricValue}>{display}</div>}
+        {subtitle && <div className={styles.metricSubtitle}>{subtitle}</div>}
+      </div>
     </motion.div>
   );
 }
 
-function WatchlistBlock({ data, navigate }: {
-  data: DashboardData;
-  navigate: ReturnType<typeof useNavigate>;
+function TodayFocusCard({ data, onOpenTasks, onOpenDeals, onOpenCustomers, onAskAssistant }: {
+  data?: DashboardData;
+  onOpenTasks: () => void;
+  onOpenDeals: () => void;
+  onOpenCustomers: () => void;
+  onAskAssistant: () => void;
 }) {
-  const stalled    = data.stalled_deals ?? [];
-  const silent     = data.silent_customers ?? [];
-  const todayTasks = data.today_tasks ?? [];
-  if (stalled.length === 0 && silent.length === 0 && todayTasks.length === 0) return null;
+  const overdueTasks = data?.overdue_tasks ?? 0;
+  const stalledDeals = data?.stalled_deals?.length ?? 0;
+  const silentCustomers = data?.silent_customers?.length ?? 0;
+
+  const focus = overdueTasks > 0
+    ? {
+        title: `Разберите ${overdueTasks} просроченных задач`,
+        description: 'Сначала снимите просрочку. Пока она висит, всё остальное выглядит прилично только в отчётах.',
+        primary: { label: 'Открыть задачи', action: onOpenTasks },
+        secondary: { label: 'Спросить ассистента', action: onAskAssistant },
+      }
+    : stalledDeals > 0
+      ? {
+          title: `Верните в движение ${stalledDeals} сделок`,
+          description: 'Сделки без движения уже сказали всё, что хотели. Теперь надо, чтобы кто-то сделал ход.',
+          primary: { label: 'Открыть сделки', action: onOpenDeals },
+          secondary: { label: 'Следующий шаг', action: onAskAssistant },
+        }
+      : silentCustomers > 0
+        ? {
+            title: `Свяжитесь с ${silentCustomers} молчащими клиентами`,
+            description: 'Тишина редко считается стратегией. Обычно это просто потеря темпа.',
+            primary: { label: 'Открыть клиентов', action: onOpenCustomers },
+            secondary: { label: 'Спросить ассистента', action: onAskAssistant },
+          }
+        : {
+            title: 'День выглядит спокойно',
+            description: 'Критических сигналов нет. Значит, можно вести базу вперёд, а не тушить пожары.',
+            primary: { label: 'Создать задачу', action: onOpenTasks },
+            secondary: { label: 'Открыть сделки', action: onOpenDeals },
+          };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.18, duration: 0.3 }}
-      className={styles.watchlist}
-    >
-      {stalled.length > 0 && (
-        <div className={`${styles.watchPanel} ${styles.watchPanelDanger}`}>
-          <div className={styles.watchPanelHeader}>
-            <div className={styles.watchPanelTitle}>
-              <span className={styles.watchPanelEmoji}>⚠️</span>
-              Сделки без движения
-            </div>
-            <span className={styles.panelCount}>{stalled.length}</span>
-          </div>
-          {stalled.map((d) => (
-            <div key={d.id} className={styles.watchRow} onClick={() => navigate(`/deals/${d.id}`)}>
-              <div className={styles.watchRowTitle}>{d.title}</div>
-              <div className={styles.watchRowMeta}>
-                <span className={styles.watchRowSub}>{d.customer_name} · {d.stage}</span>
-                {d.days_silent != null && (
-                  <span className={`${styles.staleBadge} ${d.days_silent >= 10 ? styles.staleBadgeDanger : styles.staleBadgeWarning}`}>
-                    {d.days_silent}д
-                  </span>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+    <section className={styles.focusCard} aria-labelledby="dashboard-focus-title">
+      <div className={styles.focusBadge}><Sparkles size={13} /> Фокус на сегодня</div>
+      <h2 id="dashboard-focus-title" className={styles.focusTitle}>{focus.title}</h2>
+      <p className={styles.focusDescription}>{focus.description}</p>
+      <div className={styles.focusActions}>
+        <Button size="sm" onClick={focus.primary.action}>{focus.primary.label}</Button>
+        <Button variant="secondary" size="sm" onClick={focus.secondary.action}>{focus.secondary.label}</Button>
+      </div>
+    </section>
+  );
+}
 
-      {silent.length > 0 && (
-        <div className={`${styles.watchPanel} ${styles.watchPanelWarning}`}>
-          <div className={styles.watchPanelHeader}>
-            <div className={styles.watchPanelTitle}>
-              <span className={styles.watchPanelEmoji}>🔕</span>
-              Молчат клиенты
-            </div>
-            <span className={styles.panelCount}>{silent.length}</span>
-          </div>
-          {silent.map((c) => (
-            <div key={c.id} className={styles.watchRow} onClick={() => navigate(`/customers/${c.id}`)}>
-              <div className={styles.watchRowTitle}>{c.full_name}</div>
-              <div className={styles.watchRowMeta}>
-                <span className={styles.watchRowSub}>{c.company_name || c.phone}</span>
-                {c.days_silent != null && (
-                  <span className={`${styles.staleBadge} ${styles.staleBadgeWarning}`}>
-                    {c.days_silent}д
-                  </span>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+function CriticalQueue({ data, navigate }: { data: DashboardData; navigate: ReturnType<typeof useNavigate> }) {
+  const items = useMemo(() => {
+    const stalled = (data.stalled_deals ?? []).slice(0, 3).map((deal) => ({
+      id: `deal-${deal.id}`,
+      title: deal.title,
+      sub: `${deal.customer_name} · ${deal.stage}`,
+      badge: deal.days_silent != null ? `${deal.days_silent}д` : undefined,
+      icon: <AlertTriangle size={14} />,
+      critical: true,
+      onClick: () => navigate(`/deals/${deal.id}`),
+    }));
 
-      {todayTasks.length > 0 && (
-        <div className={styles.watchPanel}>
-          <div className={styles.watchPanelHeader}>
-            <div className={styles.watchPanelTitle}>
-              <span className={styles.watchPanelEmoji}>📋</span>
-              На сегодня
-            </div>
-            <button className={styles.panelLink} onClick={() => navigate('/tasks')}>
-              Все <ArrowRight size={11} />
-            </button>
-          </div>
-          {todayTasks.map((t) => {
-            const dotClass = t.priority === 'high'
-              ? styles.taskDotHigh
-              : t.priority === 'medium'
-              ? styles.taskDotMedium
-              : styles.taskDotLow;
-            return (
-              <div key={t.id} className={styles.taskRow} onClick={() => navigate('/tasks')}>
-                <div className={`${styles.taskDot} ${dotClass}`} />
-                <div className={styles.taskRowContent}>
-                  <div className={styles.taskRowTitle}>{t.title}</div>
-                  {t.customer && <div className={styles.taskRowSub}>{t.customer.full_name}</div>}
-                </div>
-              </div>
-            );
-          })}
+    const silent = (data.silent_customers ?? []).slice(0, 3).map((customer) => ({
+      id: `customer-${customer.id}`,
+      title: customer.full_name,
+      sub: customer.company_name || customer.phone,
+      badge: customer.days_silent != null ? `${customer.days_silent}д` : undefined,
+      icon: <BellOff size={14} />,
+      critical: false,
+      onClick: () => navigate(`/customers/${customer.id}`),
+    }));
+
+    const today = (data.today_tasks ?? []).slice(0, 3).map((task) => ({
+      id: `task-${task.id}`,
+      title: task.title,
+      sub: task.customer?.full_name ?? 'Без клиента',
+      badge: task.priority === 'high' ? 'Важно' : undefined,
+      icon: <ClipboardList size={14} />,
+      critical: false,
+      onClick: () => navigate('/tasks'),
+    }));
+
+    return [...stalled, ...silent, ...today].slice(0, 6);
+  }, [data, navigate]);
+
+  if (items.length === 0) return null;
+
+  return (
+    <section className={styles.section} aria-labelledby="dashboard-queue-title">
+      <div className={styles.sectionHeader}>
+        <div>
+          <div className={styles.sectionEyebrow}>Требуют внимания</div>
+          <h2 id="dashboard-queue-title" className={styles.sectionTitle}>Критическая очередь</h2>
         </div>
-      )}
-    </motion.div>
+        <button className={styles.sectionLink} onClick={() => navigate('/tasks')}>Открыть всё <ArrowRight size={12} /></button>
+      </div>
+      <div className={styles.queueGrid} aria-live="polite">
+        {items.map((item) => (
+          <button
+            key={item.id}
+            className={`${styles.queueItem} ${item.critical ? styles.queueItemCritical : ''}`}
+            onClick={item.onClick}
+          >
+            <span className={styles.queueIcon}>{item.icon}</span>
+            <span className={styles.queueBody}>
+              <span className={styles.queueTitle}>{item.title}</span>
+              <span className={styles.queueSub}>{item.sub}</span>
+            </span>
+            {item.badge && <span className={styles.queueBadge}>{item.badge}</span>}
+          </button>
+        ))}
+      </div>
+    </section>
   );
 }
 
 export default function DashboardPage() {
-  const navigate  = useNavigate();
-  const user      = useAuthStore(s => s.user);
-  const isMobile  = useIsMobile();
-  const hour      = new Date().getHours();
-  const greeting  = hour < 12 ? 'Доброе утро' : hour < 18 ? 'Добрый день' : 'Добрый вечер';
-  const operationalTone = hour < 12 ? 'Утренний обзор' : hour < 18 ? 'Рабочий контур дня' : 'Вечерняя сверка';
-  const presenceTitle = hour < 12 ? 'Сначала разберите входящий поток и сигналы риска' : hour < 18 ? 'Держите темп: сделки, follow-up и просрочка должны быть видны сразу' : 'Сведите день: что закрыто, что требует handoff на завтра';
+  const navigate = useNavigate();
+  const user = useAuthStore(s => s.user);
+  const org = useAuthStore(s => s.org);
+  const isMobile = useIsMobile();
+  const openCreateCustomer = useUIStore(s => s.openCreateCustomer);
+  const openCreateDeal = useUIStore(s => s.openCreateDeal);
+  const openCreateTask = useUIStore(s => s.openCreateTask);
+  const openAssistantPrompt = useUIStore(s => s.openAssistantPrompt);
+  const { can } = useCapabilities();
+
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Доброе утро' : hour < 18 ? 'Добрый день' : 'Добрый вечер';
   const [productMoment, setProductMoment] = useState<string | null>(null);
 
   useEffect(() => {
-    const moment = localStorage.getItem('kort:product-moment');
+    const moment = getProductMoment();
     if (moment) {
       setProductMoment(moment);
-      localStorage.removeItem('kort:product-moment');
+      clearProductMoment();
     }
   }, []);
 
-  const { data, isLoading } = useQuery<DashboardData>({
+  const { data, isLoading, isError, refetch } = useQuery<DashboardData>({
     queryKey: ['dashboard-summary'],
-    queryFn:  () => api.get('/reports/dashboard'),
+    queryFn: () => api.get('/reports/dashboard'),
   });
 
-  const watchSignals = (data?.stalled_deals?.length ?? 0) + (data?.silent_customers?.length ?? 0) + (data?.today_tasks?.length ?? 0);
-
-  const nextBestActions = [
-    (data?.overdue_tasks ?? 0) > 0
-      ? {
-          eyebrow: 'Recovery',
-          title: 'Разобрать просроченные задачи',
-          text: 'Снимите блокеры и верните темп команды до того, как сделки начнут молчать.',
-          action: () => navigate('/tasks'),
-        }
-      : (data?.recent_customers?.length ?? 0) > 0
-        ? {
-            eyebrow: 'Next best action',
-            title: 'Проверить новых клиентов',
-            text: 'Быстро очистить входящий поток и понять, кого уже можно двигать в сделку.',
-            action: () => navigate('/customers'),
-          }
-        : {
-            eyebrow: 'Bootstrap',
-            title: 'Загрузить новые данные',
-            text: 'Если контур ещё пустой, начните с импорта и соберите рабочую базу без ручной рутины.',
-            action: () => navigate('/imports'),
-          },
-    (data?.stalled_deals?.length ?? 0) > 0
-      ? {
-          eyebrow: 'Deal pressure',
-          title: 'Вернуть сделки в движение',
-          text: 'Откройте воронку и снимите зависания до того, как они превратятся в потерянный доход.',
-          action: () => navigate('/deals'),
-        }
-      : {
-          eyebrow: 'AI cue',
-          title: 'Спросить у Kort Copilot',
-          text: 'Получить следующий шаг по рискам, просрочке и узким местам команды.',
-          action: () => window.dispatchEvent(new CustomEvent('kort:assistant-prompt', { detail: 'Что сейчас требует внимания в Kort?' })),
-        },
-    hour >= 18
-      ? {
-          eyebrow: 'Evening handoff',
-          title: 'Сверить итог дня',
-          text: 'Проверьте сигналы риска, handoff и то, что должно перейти в завтрашний контур.',
-          action: () => navigate('/reports'),
-        }
-      : {
-          eyebrow: 'Flow',
-          title: 'Открыть рабочий контур дня',
-          text: 'Перейти в обзор команды и не терять темп между задачами, сделками и входящим потоком.',
-          action: () => navigate('/tasks'),
-        },
-  ];
+  const watchSignals = (data?.overdue_tasks ?? 0) + (data?.stalled_deals?.length ?? 0) + (data?.silent_customers?.length ?? 0);
 
   return (
     <div className={styles.page}>
-      <DailyFocus />
-
-      {/* ── Header ──────────────────────────────────────────── */}
-      <div className={styles.header}>
-        <div className={styles.headerLeft}>
-          <span className={styles.headerIntro}>Kort home · {operationalTone}</span>
-          <p className={styles.greeting}>{greeting},</p>
-          <h1 className={styles.username}>
-            {user?.full_name?.split(' ')[0] ?? 'пользователь'} 👋
-          </h1>
-          <p className={styles.homeDesc}>Важное, срочное и следующее действие собраны в одном ритме, без CRM-шума и лишнего кликанья.</p>
-          <div className={styles.homeSignals}>
-            <span className={styles.signalChip}><Sparkles size={12} /> Режим: <strong>{operationalTone}</strong></span>
-            <span className={styles.signalChip}><Radar size={12} /> Сигналов: <strong>{watchSignals}</strong></span>
-            <span className={styles.signalChip}><Sparkles size={12} /> Fokus на сегодня: <strong>{data?.tasks_today ?? 0}</strong></span>
-            <span className={styles.signalChip}><BellRing size={12} /> Просрочено: <strong>{data?.overdue_tasks ?? 0}</strong></span>
+      <section className={styles.hero} aria-labelledby="dashboard-title">
+        <div className={styles.heroCopy}>
+          <div className={styles.heroContext}>Главная · План на сегодня</div>
+          <p className={styles.heroGreeting}>{greeting},</p>
+          <h1 id="dashboard-title" className={styles.heroTitle}>{user?.full_name?.split(' ')[0] ?? 'команда'}</h1>
+          <p className={styles.heroDescription}>
+            {org?.name ? `${org.name}. ` : ''}Сначала видно срочное, затем понятен следующий ход. Ничего мистического, просто редкая дисциплина в CRM.
+          </p>
+          <div className={styles.heroSignals} aria-live="polite">
+            <span className={styles.signalChip}><CircleAlert size={12} /> Сигналов: <strong>{watchSignals}</strong></span>
+            <span className={styles.signalChip}><ClipboardList size={12} /> Задач на сегодня: <strong>{data?.tasks_today ?? 0}</strong></span>
+            <span className={styles.signalChip}><AlertTriangle size={12} /> Просрочено: <strong>{data?.overdue_tasks ?? 0}</strong></span>
           </div>
         </div>
+
         {!isMobile && (
-          <div className={styles.headerActions}>
-            <Button variant="secondary" size="sm" icon={<Plus size={13} />}
-              onClick={() => window.dispatchEvent(new CustomEvent('kort:new-customer'))}>
-              Клиент
-            </Button>
-            <Button size="sm" icon={<Plus size={13} />}
-              onClick={() => window.dispatchEvent(new CustomEvent('kort:new-deal'))}>
-              Сделка
-            </Button>
-          </div>
-        )}
-      </div>
-
-      {productMoment && (
-        <motion.div variants={routeHandoff} initial="hidden" animate="visible" exit="exit" className={styles.productMoment}>
-          <div className={styles.productMomentBadge}>Signature moment</div>
-          <div className={styles.productMomentBody}>
-            <div className={styles.productMomentTitle}>Kort продолжает сценарий без обрыва</div>
-            <div className={styles.productMomentText}>{productMoment}</div>
-          </div>
-          <button className={styles.productMomentClose} onClick={() => setProductMoment(null)}>Понятно</button>
-        </motion.div>
-      )}
-
-      {/* ── Attention banner ───────────────────────────────── */}
-      {(data?.overdue_tasks ?? 0) > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: -4 }}
-          animate={{ opacity: 1, y: 0 }}
-          className={styles.attentionBanner}
-        >
-          <AlertTriangle size={14} className={styles.attentionIcon} />
-          <span className={styles.attentionText}>
-            {data!.overdue_tasks} просроченных задач — требуют внимания
-          </span>
-          <button className={styles.attentionLink} onClick={() => navigate('/tasks')}>
-            Открыть →
-          </button>
-        </motion.div>
-      )}
-
-      <div className={styles.sectionIntro}>Operational overview</div>
-
-      {/* ── Stats grid ─────────────────────────────────────── */}
-      <motion.div variants={stagger} initial="hidden" animate="show" className={styles.statsGrid}>
-        <StatCard label="Клиентов"        value={data?.customers_count    ?? 0} delta={data?.customers_delta}
-          icon={<Users size={15} />}        accentColor="#3B82F6"  loading={isLoading} />
-        <StatCard label="Активных сделок" value={data?.active_deals_count ?? 0}
-          icon={<Briefcase size={15} />}    accentColor="#D97706"  loading={isLoading} />
-        <StatCard label="Задач сегодня"   value={data?.tasks_today        ?? 0}
-          icon={<CheckSquare size={15} />}  accentColor="#10B981"  loading={isLoading} />
-        <StatCard label="Выручка / мес"   value={data?.revenue_month      ?? 0} fmt="c"
-          icon={<TrendingUp size={15} />}   accentColor="#8B5CF6"  loading={isLoading} />
-      </motion.div>
-
-      <div className={styles.sectionIntro}>Рабочие панели и быстрые действия</div>
-
-      <div className={styles.presenceSurface}>
-        <div className={styles.presenceEyebrow}>Operational presence</div>
-        <div className={styles.presenceTitle}>{presenceTitle}</div>
-        <div className={styles.presenceText}>Kort подстраивает home под ритм дня, чтобы в центре был не набор карточек, а следующий осмысленный шаг команды.</div>
-      </div>
-
-      <div className={styles.journeyRail}>
-        <div className={styles.journeyCopy}>
-          <div className={styles.journeyTitle}>Продолжить сценарий без лишних переходов</div>
-          <div className={styles.journeySub}>После входа и настройки Kort сразу ведёт в действие: клиент, сделка, задача или импорт.</div>
-        </div>
-        <div className={styles.journeyActions}>
-          <button className={styles.journeyBtn} onClick={() => navigate('/customers')}>Клиенты</button>
-          <button className={styles.journeyBtn} onClick={() => navigate('/deals')}>Сделки</button>
-          <button className={styles.journeyBtn} onClick={() => navigate('/imports')}>Импорт</button>
-        </div>
-        <div className={styles.nextBestGrid}>
-          {nextBestActions.map((item) => (
-            <button key={item.title} className={styles.nextBestCard} onClick={item.action}>
-              <span className={styles.nextBestEyebrow}>{item.eyebrow}</span>
-              <strong>{item.title}</strong>
-              <span>{item.text}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* ── Body grid ──────────────────────────────────────── */}
-      <div className={styles.bodyGrid}>
-        {/* Recent customers */}
-        <div className={styles.panel}>
-          <div className={styles.panelHeader}>
-            <span className={styles.panelTitle}>Последние клиенты</span>
-            <button className={styles.panelLink} onClick={() => navigate('/customers')}>
-              Все <ArrowRight size={11} />
-            </button>
-          </div>
-          {isLoading
-            ? [1, 2, 3, 4].map(i => (
-                <div key={i} className={styles.skeletonRow}>
-                  <div className={styles.customerSkeletonTitle}><Skeleton height={13} width="55%" /></div>
-                  <Skeleton height={11} width="32%" />
-                </div>
-              ))
-            : (data?.recent_customers ?? []).length === 0
-              ? <div className={styles.panelEmpty}>Клиентов пока нет</div>
-              : (data?.recent_customers ?? []).map((c, idx) => {
-                  const sm = STATUS_MAP[c.status] ?? STATUS_MAP.new;
-                  return (
-                    <motion.div
-                      key={c.id}
-                      initial={{ opacity: 0, x: -6 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: idx * 0.04 }}
-                      className={styles.customerRow}
-                      onClick={() => navigate(`/customers/${c.id}`)}
-                    >
-                      <div className={styles.customerContent}>
-                        <div className={styles.customerName}>{c.full_name}</div>
-                        {c.company_name && <div className={styles.customerMeta}>{c.company_name}</div>}
-                      </div>
-                      <Badge variant={sm.variant}>{sm.label}</Badge>
-                    </motion.div>
-                  );
-                })
-          }
-        </div>
-
-        {/* Quick actions */}
-        <div className={styles.panel}>
-          <div className={styles.panelHeader}>
-            <span className={styles.panelTitle}>Быстрые действия</span>
-          </div>
-          <div className={styles.quickActions}>
-            <div className={styles.quickActionsGrid}>
-              {[
-                { label: 'Добавить клиента', icon: <Users size={14} />,
-                  action: () => window.dispatchEvent(new CustomEvent('kort:new-customer')) },
-                { label: 'Создать сделку',   icon: <Briefcase size={14} />,
-                  action: () => window.dispatchEvent(new CustomEvent('kort:new-deal')) },
-                { label: 'Новая задача',     icon: <CheckSquare size={14} />,
-                  action: () => window.dispatchEvent(new CustomEvent('kort:new-task')) },
-                { label: 'Импорт данных',    icon: <TrendingUp size={14} />,
-                  action: () => navigate('/imports') },
-              ].map(a => (
-                <button key={a.label} className={styles.quickAction} onClick={a.action}>
-                  <span className={styles.quickActionIcon}>{a.icon}</span>
-                  <span className={styles.quickActionLabel}>{a.label}</span>
-                </button>
-              ))}
-            </div>
-
-            {!isLoading && (data?.tasks_today ?? 0) > 0 && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.3 }}
-                className={styles.todayHint}
-                onClick={() => navigate('/tasks')}
-                role="button"
-                tabIndex={0}
-              >
-                <Clock size={14} className={styles.todayHintIcon} />
-                <span className={styles.todayHintText}>
-                  Задач на сегодня: <strong>{data!.tasks_today}</strong>
-                </span>
-                <ArrowRight size={11} className={styles.todayHintArrow} />
-              </motion.div>
+          <div className={styles.heroActions}>
+            {can('customers:write') && (
+              <Button variant="secondary" size="sm" icon={<Plus size={13} />} onClick={openCreateCustomer}>
+                Клиент
+              </Button>
+            )}
+            {can('deals:write') && (
+              <Button size="sm" icon={<Plus size={13} />} onClick={() => openCreateDeal()}>
+                Сделка
+              </Button>
             )}
           </div>
+        )}
+      </section>
+
+      {productMoment && (
+        <div className={styles.productMoment} role="status" aria-live="polite">
+          <div className={styles.productMomentCopy}>
+            <div className={styles.productMomentTitle}>Сценарий продолжен</div>
+            <div className={styles.productMomentText}>{productMoment}</div>
+          </div>
+          <button className={styles.productMomentClose} onClick={() => setProductMoment(null)}>Закрыть</button>
         </div>
-      </div>
+      )}
 
-      {!isLoading && data && <div className={styles.sectionIntro}>Watchlist · где нужно вмешательство</div>}
+      {isError && (
+        <InlineErrorState
+          title="Главный экран не загрузился"
+          description="API решил поиграть в молчанку. Обновите блок и продолжайте работу."
+          action={{ label: 'Повторить', onClick: () => void refetch() }}
+        />
+      )}
 
-      {/* ── Watchlist ────────────────────────────────────────── */}
-      {!isLoading && data && (
-        <WatchlistBlock data={data} navigate={navigate} />
+      {!isError && (
+        <>
+          <TodayFocusCard
+            data={data}
+            onOpenTasks={() => can('tasks:write') && openCreateTask()}
+            onOpenDeals={() => navigate('/deals')}
+            onOpenCustomers={() => navigate('/customers')}
+            onAskAssistant={() => openAssistantPrompt('Что сейчас требует внимания в Kort?')}
+          />
+
+          {!isLoading && data && <CriticalQueue data={data} navigate={navigate} />}
+
+          <section className={styles.section} aria-labelledby="dashboard-metrics-title">
+            <div className={styles.sectionHeader}>
+              <div>
+                <div className={styles.sectionEyebrow}>Сводка</div>
+                <h2 id="dashboard-metrics-title" className={styles.sectionTitle}>Коротко по состоянию</h2>
+              </div>
+            </div>
+            <motion.div initial="hidden" animate="show" className={styles.metricsGrid}>
+              <MetricCard label="Клиенты" value={data?.customers_count ?? 0} icon={<Users size={15} />} accentColor="#3B82F6" subtitle={data?.customers_delta ? `${data.customers_delta > 0 ? '+' : ''}${data.customers_delta} за период` : undefined} loading={isLoading} />
+              <MetricCard label="Активные сделки" value={data?.active_deals_count ?? 0} icon={<Briefcase size={15} />} accentColor="#D97706" loading={isLoading} />
+              <MetricCard label="Задачи на сегодня" value={data?.tasks_today ?? 0} icon={<CheckSquare size={15} />} accentColor="#10B981" loading={isLoading} />
+              <MetricCard label="Выручка за месяц" value={data?.revenue_month ?? 0} fmt="c" icon={<TrendingUp size={15} />} accentColor="#8B5CF6" loading={isLoading} />
+            </motion.div>
+          </section>
+
+          <section className={styles.section} aria-labelledby="dashboard-continuation-title">
+            <div className={styles.continuationGrid}>
+              <div className={styles.panel}>
+                <div className={styles.panelHeader}>
+                  <div>
+                    <div className={styles.sectionEyebrow}>Продолжить работу</div>
+                    <h2 id="dashboard-continuation-title" className={styles.panelTitle}>Последние клиенты</h2>
+                  </div>
+                  <button className={styles.sectionLink} onClick={() => navigate('/customers')}>Все <ArrowRight size={12} /></button>
+                </div>
+                {isLoading ? (
+                  [1, 2, 3, 4].map((i) => (
+                    <div key={i} className={styles.skeletonRow}>
+                      <div><Skeleton height={14} width={150} /><div className={styles.skeletonGap} /><Skeleton height={12} width={96} /></div>
+                      <Skeleton height={26} width={84} />
+                    </div>
+                  ))
+                ) : (data?.recent_customers ?? []).length === 0 ? (
+                  <div className={styles.panelEmpty}>Пока пусто. Добавь первого клиента и, внезапно, список оживёт.</div>
+                ) : (
+                  (data?.recent_customers ?? []).map((customer) => {
+                    const status = STATUS_MAP[customer.status] ?? STATUS_MAP.new;
+                    return (
+                      <button key={customer.id} className={styles.customerRow} onClick={() => navigate(`/customers/${customer.id}`)}>
+                        <span className={styles.customerCopy}>
+                          <span className={styles.customerName}>{customer.full_name}</span>
+                          <span className={styles.customerMeta}>{customer.company_name || 'Без компании'}</span>
+                        </span>
+                        <Badge variant={status.variant}>{status.label}</Badge>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+
+              <div className={styles.panel}>
+                <div className={styles.panelHeader}>
+                  <div>
+                    <div className={styles.sectionEyebrow}>Быстрые действия</div>
+                    <h2 className={styles.panelTitle}>Без лишних переходов</h2>
+                  </div>
+                </div>
+                <div className={styles.actionList}>
+                  {can('customers:write') && <button className={styles.actionRow} onClick={openCreateCustomer}><Users size={15} /> Добавить клиента</button>}
+                  {can('deals:write') && <button className={styles.actionRow} onClick={() => openCreateDeal()}><Briefcase size={15} /> Создать сделку</button>}
+                  {can('tasks:write') && <button className={styles.actionRow} onClick={() => openCreateTask()}><CheckSquare size={15} /> Новая задача</button>}
+                  {can('customers.import') && <button className={styles.actionRow} onClick={() => navigate('/imports')}><TrendingUp size={15} /> Импорт данных</button>}
+                </div>
+              </div>
+            </div>
+          </section>
+        </>
       )}
     </div>
   );

@@ -1,6 +1,7 @@
 import { useEffect, useRef, type CSSProperties } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import styles from './ContextMenu.module.css';
+import { addDocumentListener, getWindow } from '../lib/browser';
 
 export interface ContextMenuItem {
   label: string;
@@ -24,16 +25,14 @@ export function ContextMenu({ x, y, items, onClose }: Props) {
   useEffect(() => {
     const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) onClose(); };
     const k = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    document.addEventListener('mousedown', h);
-    document.addEventListener('keydown', k);
-    return () => {
-      document.removeEventListener('mousedown', h);
-      document.removeEventListener('keydown', k);
-    };
+    const removeMouse = addDocumentListener('mousedown', h);
+    const removeKey = addDocumentListener('keydown', k);
+    return () => { removeMouse(); removeKey(); };
   }, [onClose]);
 
-  const vw = window.innerWidth;
-  const vh = window.innerHeight;
+  const win = getWindow();
+  const vw = win?.innerWidth ?? 1280;
+  const vh = win?.innerHeight ?? 800;
   const menuW = 196;
   const menuH = items.length * 36 + 16;
   const cx = x + menuW > vw ? x - menuW : x;

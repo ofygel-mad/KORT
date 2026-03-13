@@ -4,6 +4,8 @@ import { assistantReply, commandInvoke } from '../../shared/motion/presets';
 import { Sparkles, X, Send, Loader2, User, Bot, Trash2, Command, Wand2, CornerDownLeft, CheckCircle2 } from 'lucide-react';
 import { api } from '../../shared/api/client';
 import { useIsMobile } from '../../shared/hooks/useIsMobile';
+import { useUIStore } from '../../shared/stores/ui';
+import { runTimeout } from '../../shared/lib/browser';
 import s from './AiAssistant.module.css';
 
 /* ── Types ──────────────────────────────────────────────────── */
@@ -47,7 +49,9 @@ export function AiAssistant({ customerId, dealId, entityType, entityId }: Props)
   const [history, setHistory] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const [confirmation, setConfirmation] = useState('');
-  const isMobile              = useIsMobile();
+  const isMobile = useIsMobile();
+  const assistantPromptRequest = useUIStore(s => s.assistantPromptRequest);
+  const openCommandPalette = useUIStore(s => s.openCommandPalette);
   const bottomRef             = useRef<HTMLDivElement>(null);
   const inputRef              = useRef<HTMLTextAreaElement>(null);
 
@@ -55,14 +59,10 @@ export function AiAssistant({ customerId, dealId, entityType, entityId }: Props)
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [history, loading]);
 
   useEffect(() => {
-    const handlePrompt = (event: Event) => {
-      const custom = event as CustomEvent<string>;
-      setOpen(true);
-      setInput(custom.detail ?? 'Какой следующий шаг?');
-    };
-    window.addEventListener('kort:assistant-prompt', handlePrompt as EventListener);
-    return () => window.removeEventListener('kort:assistant-prompt', handlePrompt as EventListener);
-  }, []);
+    if (!assistantPromptRequest.nonce) return;
+    setOpen(true);
+    setInput(assistantPromptRequest.payload ?? 'Какой следующий шаг?');
+  }, [assistantPromptRequest]);
 
   const send = useCallback(async (text?: string) => {
     const msg = (text ?? input).trim();
@@ -76,7 +76,6 @@ export function AiAssistant({ customerId, dealId, entityType, entityId }: Props)
       }) as any;
       setHistory(h => [...h, { role: 'assistant', content: res.reply }]);
       setConfirmation('Ответ готов · можно уточнить, выполнить действие или передать следующий ход в palette.');
-      window.dispatchEvent(new CustomEvent('kort:assistant-confirmed-action', { detail: msg }));
     } catch {
       setHistory(h => [...h, { role: 'assistant', content: 'Не удалось получить ответ. Попробуйте уточнить запрос или повторить чуть позже.' }]);
       setConfirmation('Не получилось ответить с первого раза · уточните запрос или отправьте его через palette.');
@@ -87,8 +86,7 @@ export function AiAssistant({ customerId, dealId, entityType, entityId }: Props)
 
   useEffect(() => {
     if (!confirmation) return;
-    const t = window.setTimeout(() => setConfirmation(''), 2800);
-    return () => window.clearTimeout(t);
+    return runTimeout(() => setConfirmation(''), 2800);
   }, [confirmation]);
 
   const handleKey = (e: React.KeyboardEvent) => {
@@ -211,7 +209,7 @@ export function AiAssistant({ customerId, dealId, entityType, entityId }: Props)
               <motion.div className={s.confirmationRail} variants={assistantReply} initial="hidden" animate="visible">
                 <CheckCircle2 size={12} />
                 <span>{confirmation}</span>
-                <button className={s.confirmationAction} onClick={() => window.dispatchEvent(new CustomEvent('kort:toggle-command-palette'))}>Открыть palette</button>
+                <button className={s.confirmationAction} onClick={openCommandPalette}>Открыть palette</button>
               </motion.div>
             )}
 

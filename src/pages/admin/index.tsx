@@ -1,4 +1,4 @@
-import { useState, type CSSProperties, type ReactNode } from 'react';
+import { useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -14,6 +14,9 @@ import { Skeleton } from '../../shared/ui/Skeleton';
 import { useAuthStore } from '../../shared/stores/auth';
 import { useRole } from '../../shared/hooks/useRole';
 import { toast } from 'sonner';
+import { useNavigate, useParams } from 'react-router-dom';
+import { reloadWindow } from '../../shared/lib/browser';
+import { useCapabilities } from '../../shared/hooks/useCapabilities';
 import styles from './Admin.module.css';
 
 interface TeamMember { id: string; full_name: string; email: string; status: string; role?: string; }
@@ -47,8 +50,10 @@ function cx(...parts: Array<string | false | null | undefined>) {
 export default function AdminPage() {
   const qc = useQueryClient();
   const { isOwner } = useRole();
+  const { canManageTeam, canViewAudit, canManageBilling } = useCapabilities();
+  const params = useParams<{ section?: string }>();
+  const navigate = useNavigate();
   const org = useAuthStore((s) => s.org);
-  const [tab, setTab] = useState<Tab>('overview');
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState('manager');
   const [inviting, setInviting] = useState(false);
@@ -57,19 +62,19 @@ export default function AdminPage() {
   const { data: stats, isLoading: statsLoading } = useQuery<DashboardStats>({
     queryKey: ['admin-stats'],
     queryFn: () => api.get('/reports/dashboard/'),
-    enabled: tab === 'overview',
+    enabled: ((params.section as Tab | undefined) ?? 'overview') === 'overview',
   });
 
   const { data: team, isLoading: teamLoading } = useQuery<{ results: TeamMember[]; count: number }>({
     queryKey: ['team'],
     queryFn: () => api.get('/users/team/'),
-    enabled: tab === 'team',
+    enabled: ((params.section as Tab | undefined) ?? 'overview') === 'team',
   });
 
   const { data: auditData, isLoading: auditLoading } = useQuery<{ results: AuditEntry[] }>({
     queryKey: ['audit'],
     queryFn: () => api.get('/audit/?page_size=50'),
-    enabled: tab === 'audit',
+    enabled: ((params.section as Tab | undefined) ?? 'overview') === 'audit',
   });
 
   const setRoleMutation = useMutation({
@@ -93,7 +98,7 @@ export default function AdminPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['organization'] });
       toast.success('Режим Kort обновлён');
-      window.location.reload();
+      reloadWindow();
     },
     onError: (e: any) => toast.error(e?.response?.data?.detail ?? 'Ошибка'),
   });
@@ -114,12 +119,15 @@ export default function AdminPage() {
     }
   };
 
-  const TABS: { key: Tab; label: string; icon: ReactNode }[] = [
-    { key: 'overview', label: 'Обзор', icon: <BarChart2 size={15} /> },
-    { key: 'team', label: 'Команда', icon: <Users size={15} /> },
-    { key: 'audit', label: 'Аудит', icon: <Activity size={15} /> },
-    { key: 'settings', label: 'Настройки плана', icon: <Settings2 size={15} /> },
+  const TABS: Array<{ key: Tab; label: string; icon: ReactNode; visible: boolean }> = [
+    { key: 'overview', label: 'Обзор', icon: <BarChart2 size={15} />, visible: true },
+    { key: 'team', label: 'Команда', icon: <Users size={15} />, visible: canManageTeam },
+    { key: 'audit', label: 'Аудит', icon: <Activity size={15} />, visible: canViewAudit },
+    { key: 'settings', label: 'Тариф и режим', icon: <Settings2 size={15} />, visible: canManageBilling || isOwner },
   ];
+  const visibleTabs = useMemo(() => TABS.filter((tab) => tab.visible), [TABS]);
+  const requestedTab = (params.section as Tab | undefined) ?? 'overview';
+  const activeTab = visibleTabs.some((tab) => tab.key === requestedTab) ? requestedTab : (visibleTabs[0]?.key ?? 'overview');
 
   const overviewCards = [
     { label: 'Клиентов всего', value: statsLoading ? null : stats?.customers_count, icon: <Users size={20} />, color: '#3B82F6' },
@@ -138,16 +146,18 @@ export default function AdminPage() {
     <div className={styles.page}>
       <PageHeader
         title="Панель управления"
-        subtitle={`Организация: ${org?.name ?? '—'} · Режим: ${MODE_LABELS[org?.mode ?? 'basic']}`}
+        subtitle={`Организация: ${org?.name ?? '—'} · Режим работы: ${MODE_LABELS[org?.mode ?? 'basic']}`}
       />
 
-      <div className={styles.tabs}>
-        {TABS.map((t) => (
+      <div className={styles.tabs} role="tablist" aria-label="Разделы панели управления">
+        {visibleTabs.map((t) => (
           <button
             key={t.key}
             type="button"
-            onClick={() => setTab(t.key)}
-            className={cx(styles.tabButton, tab === t.key && styles.active)}
+            onClick={() => navigate(t.key === 'overview' ? '/admin' : `/admin/${t.key}`)}
+            role="tab"
+            aria-selected={activeTab === t.key}
+            className={cx(styles.tabButton, activeTab === t.key && styles.active)}
           >
             {t.icon} {t.label}
           </button>
@@ -155,7 +165,7 @@ export default function AdminPage() {
       </div>
 
       <AnimatePresence mode="wait">
-        {tab === 'overview' && (
+        {activeTab === 'overview' && (
           <motion.div key="overview" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
             <div className={styles.panelGrid}>
               {overviewCards.map((card) => (
@@ -175,7 +185,7 @@ export default function AdminPage() {
                   {MODE_LABELS[org?.mode ?? 'basic']}
                 </span>
                 {isOwner && org?.mode !== 'industrial' && (
-                  <button type="button" onClick={() => setTab('settings')} className={styles.modeLink}>
+                  <button type="button" onClick={() => navigate('/admin/settings')} className={styles.modeLink}>
                     Повысить план →
                   </button>
                 )}
@@ -184,7 +194,7 @@ export default function AdminPage() {
           </motion.div>
         )}
 
-        {tab === 'team' && (
+        {activeTab === 'team' && (
           <motion.div key="team" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
             <div className={styles.teamHeader}>
               <span className={styles.memberCount}>{team?.count ?? 0} сотрудников</span>
@@ -269,7 +279,7 @@ export default function AdminPage() {
           </motion.div>
         )}
 
-        {tab === 'audit' && (
+        {activeTab === 'audit' && (
           <motion.div key="audit" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
             <div className={styles.auditCard}>
               <div className={styles.auditHead}>
@@ -306,7 +316,7 @@ export default function AdminPage() {
           </motion.div>
         )}
 
-        {tab === 'settings' && (
+        {activeTab === 'settings' && (
           <motion.div key="settings" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
             {!isOwner && (
               <div className={styles.warningBanner}>

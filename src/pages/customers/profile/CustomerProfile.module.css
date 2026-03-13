@@ -565,3 +565,5 @@
 
 
 .nextActionSurface, .scenarioRail, .panel { background: var(--rc-detail-surface-bg); border-color: var(--rc-detail-surface-border); }
+
+.drawerFooter { display:flex; justify-content:flex-end; gap:10px; }

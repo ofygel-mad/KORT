@@ -20,4 +20,9 @@ export default defineConfig({
   preview: {
     allowedHosts: true,
   },
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    setupFiles: './src/test/setup.ts',
+  },
 });

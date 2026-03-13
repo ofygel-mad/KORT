@@ -1,3 +1,4 @@
+import { setProductMoment } from '../../shared/utils/productMoment';
 import { useState, type ReactNode, type CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -84,7 +85,7 @@ export default function OnboardingPage() {
         '/deals': 'Онбординг завершён · переходите к первой сделке, пока логика продаж ещё свежа после настройки.',
         '/imports': 'Онбординг завершён · загрузите базу и сразу перенесите запуск в живой операционный контур.',
       };
-      localStorage.setItem('kort:product-moment', handoffMap[nextPath] ?? handoffMap['/']);
+      setProductMoment(handoffMap[nextPath] ?? handoffMap['/']);
       toast.success('Настройки сохранены');
       navigate(nextPath, { replace: true });
     },

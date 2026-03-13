@@ -8,12 +8,14 @@ import {
 } from 'lucide-react';
 import { api } from '../../shared/api/client';
 import { useAuthStore } from '../../shared/stores/auth';
+import { useUIStore } from '../../shared/stores/ui';
 import { formatMoney, formatNumber } from '../../shared/utils/format';
 import { Button } from '../../shared/ui/Button';
 import { Badge } from '../../shared/ui/Badge';
 import { Skeleton } from '../../shared/ui/Skeleton';
 import { EmptyState } from '../../shared/ui/EmptyState';
 import { format, differenceInDays } from 'date-fns';
+import { setProductMoment } from '../../shared/utils/productMoment';
 import { ru } from 'date-fns/locale';
 import styles from './Deals.module.css';
 
@@ -48,7 +50,10 @@ function daysSince(date: string): number {
 
 export default function DealsPage() {
   const navigate = useNavigate();
-  const orgCurrency = useAuthStore.getState().org?.currency ?? 'KZT';
+  const orgCurrency = useAuthStore(s => s.org?.currency ?? 'KZT');
+  const openCreateDeal = useUIStore(s => s.openCreateDeal);
+  const openAssistantPrompt = useUIStore(s => s.openAssistantPrompt);
+  const { can } = useCapabilities();
   const [view, setView] = useState<ViewMode>('board');
 
   const { data, isLoading } = useQuery<PipelineData>({
@@ -74,25 +79,27 @@ export default function DealsPage() {
           <p className={styles.subtitle}>Управляйте воронкой продаж</p>
         </div>
         <div className={styles.headerActions}>
-          <Button
-            size="sm"
-            icon={<Plus size={13} />}
-            onClick={() => window.dispatchEvent(new CustomEvent('kort:new-deal'))}
-          >
-            Добавить
-          </Button>
+          {can('deals:write') && (
+            <Button
+              size="sm"
+              icon={<Plus size={13} />}
+              onClick={() => openCreateDeal()}
+            >
+              Добавить
+            </Button>
+          )}
         </div>
       </div>
 
       <div className={styles.scenarioRail}>
         <div className={styles.scenarioCopy}>
-          <span className={styles.scenarioEyebrow}>Deal pattern</span>
-          <div className={styles.scenarioText}>Список и доска ведут к одному и тому же действию: быстро понять статус, открыть сделку и двинуть её дальше без потери контекста.</div>
+          <span className={styles.scenarioEyebrow}>Воронка продаж</span>
+          <div className={styles.scenarioText}>Доска и список нужны только для одного: быстро понять, где зависла выручка, и двинуть сделку дальше.</div>
         </div>
         <div className={styles.scenarioChips}>
-          <span className={styles.scenarioChip}>Board</span>
-          <span className={styles.scenarioChip}>List</span>
-          <span className={styles.scenarioChip}>Move stage</span>
+          <span className={styles.scenarioChip}>Доска</span>
+          <span className={styles.scenarioChip}>Список</span>
+          <span className={styles.scenarioChip}>Следующий шаг</span>
         </div>
       </div>
 
@@ -166,7 +173,7 @@ export default function DealsPage() {
               />
               <div className={styles.emptyRecoveryRail}>
                 <button className={styles.emptyRecoveryBtn} onClick={() => navigate('/settings')}>Открыть настройки</button>
-                <button className={styles.emptyRecoveryBtn} onClick={() => window.dispatchEvent(new CustomEvent('kort:new-deal'))}>Создать тестовую сделку</button>
+                {can('deals:write') && <button className={styles.emptyRecoveryBtn} onClick={() => openCreateDeal()}>Создать тестовую сделку</button>}
               </div>
             </div>
           ) : (
@@ -218,7 +225,7 @@ export default function DealsPage() {
                                 isOverdue ? styles.dealCardOverdue :
                                 isStale   ? styles.dealCardStale   : '',
                               ].filter(Boolean).join(' ')}
-                              onClick={() => { localStorage.setItem('kort:product-moment', `Вы открыли сделку «${deal.title}». Следующий шаг должен быть ближе, чем просто чтение карточки.`); navigate(`/deals/${deal.id}`); }}
+                              onClick={() => { setProductMoment(`Вы открыли сделку «${deal.title}». Следующий шаг должен быть ближе, чем просто чтение карточки.`); navigate(`/deals/${deal.id}`); }}
                               initial={{ opacity: 0, scale: 0.97 }}
                               animate={{ opacity: 1, scale: 1 }}
                               transition={{ delay: di * 0.04, duration: 0.2 }}
@@ -250,7 +257,7 @@ export default function DealsPage() {
 
                       <button
                         className={styles.addDealBtn}
-                        onClick={() => window.dispatchEvent(new CustomEvent('kort:new-deal'))}
+                        onClick={() => openCreateDeal()}
                       >
                         <Plus size={12} />
                         Добавить
@@ -286,12 +293,12 @@ export default function DealsPage() {
                 description="Создайте первую сделку"
                 action={{
                   label: 'Создать сделку',
-                  onClick: () => window.dispatchEvent(new CustomEvent('kort:new-deal')),
+                  onClick: () => openCreateDeal(),
                 }}
               />
               <div className={styles.emptyRecoveryRail}>
-                <button className={styles.emptyRecoveryBtn} onClick={() => navigate('/imports')}>Импортировать базу</button>
-                <button className={styles.emptyRecoveryBtn} onClick={() => window.dispatchEvent(new CustomEvent('kort:assistant-prompt', { detail: 'С чего начать в воронке сделок прямо сейчас?' }))}>Спросить Copilot</button>
+                {can('customers.import') && <button className={styles.emptyRecoveryBtn} onClick={() => navigate('/imports')}>Импортировать базу</button>}
+                <button className={styles.emptyRecoveryBtn} onClick={() => openAssistantPrompt('С чего начать в воронке сделок прямо сейчас?')}>Спросить Copilot</button>
               </div>
             </div>
           ) : (
@@ -311,7 +318,7 @@ export default function DealsPage() {
                   <motion.tr
                     key={deal.id}
                     className={styles.tr}
-                    onClick={() => { localStorage.setItem('kort:product-moment', `Вы открыли сделку «${deal.title}». Следующий шаг должен быть ближе, чем просто чтение карточки.`); navigate(`/deals/${deal.id}`); }}
+                    onClick={() => { setProductMoment(`Вы открыли сделку «${deal.title}». Следующий шаг должен быть ближе, чем просто чтение карточки.`); navigate(`/deals/${deal.id}`); }}
                     initial={{ opacity: 0, y: 4 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: idx * 0.025, duration: 0.2 }}

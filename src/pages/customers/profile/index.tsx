@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
@@ -13,6 +13,8 @@ import { Badge } from '../../../shared/ui/Badge';
 import { PageLoader } from '../../../shared/ui/PageLoader';
 import { EmptyState } from '../../../shared/ui/EmptyState';
 import { Drawer } from '../../../shared/ui/Drawer';
+import { FormErrorSummary } from '../../../shared/ui/FormErrorSummary';
+import { Input, Textarea } from '../../../shared/ui/Input';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { format, formatDistanceToNow } from 'date-fns';
@@ -20,7 +22,11 @@ import { ru } from 'date-fns/locale';
 import { formatMoney } from '../../../shared/utils/format';
 import { AiAssistant } from '../../../widgets/ai-assistant/AiAssistant';
 import { useDocumentTitle } from '../../../shared/hooks/useDocumentTitle';
+import { useUIStore } from '../../../shared/stores/ui';
 import styles from './CustomerProfile.module.css';
+import { setProductMoment } from '../../../shared/utils/productMoment';
+import { openExternal } from '../../../shared/lib/browser';
+import { useCapabilities } from '../../../shared/hooks/useCapabilities';
 
 interface CustomerDetail {
   id: string; full_name: string; company_name: string;
@@ -62,7 +68,7 @@ const STATUS_MAP: Record<string, { variant: 'success' | 'info' | 'default' | 'wa
   archived: { variant: 'default', label: 'Архив' },
 };
 
-const ACTIVITY_ICONS: Record<string, React.ReactNode> = {
+const ACTIVITY_ICONS: Record<string, ReactNode> = {
   call:       <PhoneCall size={13} />,
   message:    <MessageCircle size={13} />,
   email:      <Mail size={13} />,
@@ -76,8 +82,15 @@ function initials(name: string) {
 
 export default function CustomerProfilePage() {
   const { id }     = useParams<{ id: string }>();
-  const navigate   = useNavigate();
-  const qc         = useQueryClient();
+  const navigate = useNavigate();
+  const qc = useQueryClient();
+  const openCreateDeal = useUIStore(s => s.openCreateDeal);
+  const openCreateTask = useUIStore(s => s.openCreateTask);
+  const openAssistantPrompt = useUIStore(s => s.openAssistantPrompt);
+  const { can } = useCapabilities();
+  const canEditCustomer = can('customers:write');
+  const canCreateDeal = can('deals:write');
+  const canCreateTask = can('tasks:write');
   const [tab, setTab]         = useState('overview');
   const [editDrawer, setEditDrawer] = useState(false);
 
@@ -103,7 +116,7 @@ export default function CustomerProfilePage() {
     enabled:  tab === 'tasks',
   });
 
-  const { register, handleSubmit, reset: resetEdit, formState: { isSubmitting: editSubmitting } } =
+  const { register, handleSubmit, reset: resetEdit, formState: { isSubmitting: editSubmitting, errors } } =
     useForm<Partial<CustomerDetail>>();
 
   const updateMutation = useMutation({
@@ -166,22 +179,24 @@ export default function CustomerProfilePage() {
 
           <div className={styles.profileActions}>
             <Badge variant={sm.variant}>{sm.label}</Badge>
-            <Button
-              variant="secondary"
-              size="sm"
-              icon={<Edit3 size={13} />}
-              onClick={() => {
-                resetEdit(customer);
-                setEditDrawer(true);
-              }}
-            >
-              Изменить
-            </Button>
+            {canEditCustomer && (
+              <Button
+                variant="secondary"
+                size="sm"
+                icon={<Edit3 size={13} />}
+                onClick={() => {
+                  resetEdit(customer);
+                  setEditDrawer(true);
+                }}
+              >
+                Изменить
+              </Button>
+            )}
             {customer.phone && (
               <Button
                 size="sm"
                 icon={<MessageSquare size={13} />}
-                onClick={() => window.open(`https://wa.me/${customer.phone.replace(/\D/g, '')}`, '_blank')}
+                onClick={() => openExternal(`https://wa.me/${customer.phone.replace(/\D/g, '')}`)}
               >
                 WhatsApp
               </Button>
@@ -192,12 +207,12 @@ export default function CustomerProfilePage() {
         {/* Quick facts */}
         <div className={styles.scenarioRail}>
           <div className={styles.scenarioCopy}>
-            <span className={styles.scenarioEyebrow}>Customer flow</span>
-            <div className={styles.scenarioText}>Карточка клиента должна вести к действию: связаться, двинуть в сделку или закрепить следующий follow-up, а не просто хранить поля.</div>
+            <span className={styles.scenarioEyebrow}>Работа с клиентом</span>
+            <div className={styles.scenarioText}>Здесь должны быть под рукой контакт, сделка и следующий шаг. Карточка нужна для работы, а не для красивого хранения полей.</div>
           </div>
           <div className={styles.scenarioChips}>
-            <span className={styles.scenarioChip}>Contact</span>
-            <span className={styles.scenarioChip}>Deal</span>
+            <span className={styles.scenarioChip}>Контакт</span>
+            <span className={styles.scenarioChip}>Сделка</span>
             <span className={styles.scenarioChip}>Follow-up</span>
           </div>
         </div>
@@ -231,13 +246,13 @@ export default function CustomerProfilePage() {
 
         <div className={styles.nextActionSurface}>
           <div className={styles.nextActionCopy}>
-            <span className={styles.nextActionEyebrow}>Next best action</span>
+            <span className={styles.nextActionEyebrow}>Дальше по клиенту</span>
             <strong className={styles.nextActionTitle}>Не оставляйте клиента просто карточкой</strong>
-            <span className={styles.nextActionText}>Свяжитесь, переведите в сделку или сформулируйте следующий шаг через Kort Copilot, пока контекст ещё живой.</span>
+            <span className={styles.nextActionText}>Свяжитесь, поставьте задачу или создайте сделку, пока по клиенту ещё понятен следующий шаг.</span>
           </div>
           <div className={styles.nextActionButtons}>
-            <button className={styles.nextActionBtn} onClick={() => { localStorage.setItem('kort:product-moment', `Клиент «${customer.full_name}» открыт. Следующий логичный шаг - создать сделку или закрепить follow-up.`); window.dispatchEvent(new CustomEvent('kort:new-deal')); }}>Создать сделку</button>
-            <button className={styles.nextActionBtn} onClick={() => window.dispatchEvent(new CustomEvent('kort:assistant-prompt', { detail: `Какой следующий шаг по клиенту ${customer.full_name}?` }))}>Спросить Copilot</button>
+            {can('deals:write') && <button className={styles.nextActionBtn} onClick={() => { setProductMoment(`Клиент «${customer.full_name}» открыт. Следующий логичный шаг - создать сделку или закрепить follow-up.`); openCreateDeal({ customerId: customer.id }); }}>Создать сделку</button>}
+            <button className={styles.nextActionBtn} onClick={() => openAssistantPrompt(`Какой следующий шаг по клиенту ${customer.full_name}?`)}>Подсказать следующий шаг</button>
           </div>
         </div>
       </div>
@@ -382,9 +397,9 @@ export default function CustomerProfilePage() {
             <div className={styles.panel}>
               <div className={styles.panelHeader}>
                 <span className={styles.panelTitle}>Сделки</span>
-                <button className={styles.panelAction} onClick={() => window.dispatchEvent(new CustomEvent('kort:new-deal'))}>
+                {can('deals:write') && <button className={styles.panelAction} onClick={() => openCreateDeal({ customerId: customer.id })}>
                   + Создать
-                </button>
+                </button>}
               </div>
               {(deals?.results ?? []).length === 0
                 ? <div className={styles.panelEmpty}>Сделок нет. Создайте первую.</div>
@@ -408,9 +423,9 @@ export default function CustomerProfilePage() {
             <div className={styles.panel}>
               <div className={styles.panelHeader}>
                 <span className={styles.panelTitle}>Задачи</span>
-                <button className={styles.panelAction} onClick={() => window.dispatchEvent(new CustomEvent('kort:new-task'))}>
+                {can('tasks:write') && <button className={styles.panelAction} onClick={() => openCreateTask({ customerId: customer.id })}>
                   + Добавить
-                </button>
+                </button>}
               </div>
               {(tasks?.results ?? []).length === 0
                 ? <div className={styles.panelEmpty}>Задач нет</div>
@@ -463,38 +478,23 @@ export default function CustomerProfilePage() {
         open={editDrawer}
         onClose={() => setEditDrawer(false)}
         title="Редактировать клиента"
+        subtitle="Исправьте ключевые данные контакта, чтобы карточка оставалась пригодной для работы."
         size="sm"
-      >
-        <form onSubmit={handleSubmit(data => updateMutation.mutate(data))}
-          className={styles.editForm}>
-          {[
-            { name: 'full_name',    label: 'Имя' },
-            { name: 'company_name', label: 'Компания' },
-            { name: 'phone',        label: 'Телефон' },
-            { name: 'email',        label: 'Email' },
-            { name: 'source',       label: 'Источник' },
-          ].map(f => (
-            <div key={f.name}>
-              <label className={styles.editFieldLabel}>
-                {f.label}
-              </label>
-              <input
-                {...register(f.name as keyof CustomerDetail)}
-                className="kort-input"
-              />
-            </div>
-          ))}
-          <div>
-            <label className={styles.editFieldLabel}>
-              Заметки
-            </label>
-            <textarea
-              {...register('notes')}
-              className="kort-textarea"
-              rows={3}
-            />
+        footer={
+          <div className={styles.drawerFooter}>
+            <Button type="button" variant="secondary" onClick={() => setEditDrawer(false)}>Отмена</Button>
+            <Button type="submit" form="customer-edit-form" loading={editSubmitting || updateMutation.isPending}>Сохранить</Button>
           </div>
-          <Button type="submit" loading={editSubmitting}>Сохранить</Button>
+        }
+      >
+        <form id="customer-edit-form" onSubmit={handleSubmit(data => updateMutation.mutate(data))} className={styles.editForm} noValidate>
+          <FormErrorSummary errors={errors} title="Проверьте поля клиента" />
+          <Input label="Имя и фамилия" required defaultValue={customer.full_name} error={errors.full_name?.message} {...register('full_name', { required: 'Укажите имя клиента', validate: (v) => (String(v ?? '').trim().length >= 2) || 'Имя слишком короткое' })} />
+          <Input label="Компания" defaultValue={customer.company_name} error={errors.company_name?.message} {...register('company_name', { validate: (v) => !v || String(v).trim().length >= 2 || 'Название компании слишком короткое' })} />
+          <Input label="Телефон" defaultValue={customer.phone} error={errors.phone?.message} {...register('phone', { validate: (v) => !v || String(v).replace(/\D/g, '').length >= 10 || 'Введите корректный телефон' })} />
+          <Input label="Email" type="email" defaultValue={customer.email} error={errors.email?.message} {...register('email', { validate: (v) => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v)) || 'Введите корректный email' })} />
+          <Input label="Источник" defaultValue={customer.source} {...register('source')} />
+          <Textarea label="Заметки" rows={4} defaultValue={customer.notes} {...register('notes')} />
         </form>
       </Drawer>
     </motion.div>

@@ -2,6 +2,7 @@ import * as Sentry from '@sentry/react';
 import { Component, type ReactNode } from 'react';
 import { Button } from './Button';
 import styles from './ErrorBoundary.module.css';
+import { redirectTo } from '../lib/browser';
 
 interface Props {
   children: ReactNode;
@@ -44,7 +45,7 @@ export class ErrorBoundary extends Component<Props, State> {
           variant="secondary"
           onClick={() => {
             this.setState({ hasError: false, error: undefined });
-            window.location.href = '/';
+            redirectTo('/');
           }}
         >
           На главную

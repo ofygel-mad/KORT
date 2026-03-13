@@ -14,6 +14,9 @@ import {
 } from './mock-data';
 
 let mockSessionOrg = { ...MOCK_AUTH_RESPONSE.org };
+let mockCustomers = [...MOCK_CUSTOMERS];
+let mockDeals = [...MOCK_DEALS];
+let mockTasks = [...MOCK_TASKS];
 
 function delay(ms = 180) {
   return new Promise(r => setTimeout(r, ms));
@@ -51,7 +54,7 @@ export function installMockAdapter(client: AxiosInstance) {
     // ── CUSTOMERS ─────────────────────────────────────────────────────────
     else if (url === '/customers/' || url === '/customers') {
       if (method === 'get') {
-        let list = [...MOCK_CUSTOMERS];
+        let list = [...mockCustomers];
         if (params.search) {
           const q = (params.search as string).toLowerCase();
           list = list.filter(c =>
@@ -64,29 +67,72 @@ export function installMockAdapter(client: AxiosInstance) {
         responseData = paginate(list, params);
       } else {
         // POST — create
-        const newC = { id: `c-${Date.now()}`, ...JSON.parse(config.data ?? '{}'), status: 'new', created_at: new Date().toISOString(), health: { score: 50, band: 'at_risk' } };
+        const newC = { id: `c-${Date.now()}`, ...JSON.parse(config.data ?? '{}'), status: 'new', created_at: new Date().toISOString(), health: { score: 50, band: 'at_risk' }, notes: '', tags: [] };
+        mockCustomers = [newC, ...mockCustomers];
         responseData = newC;
       }
     }
     else if (url.match(/\/customers\/[^/]+\//) && !url.includes('bulk')) {
       const id = url.split('/')[2];
-      responseData = MOCK_CUSTOMERS.find(c => c.id === id) ?? MOCK_CUSTOMERS[0];
+      if (method === 'patch' || method === 'put') {
+        const payload = JSON.parse(config.data ?? '{}');
+        mockCustomers = mockCustomers.map(c => c.id === id ? { ...c, ...payload } : c);
+      }
+      responseData = mockCustomers.find(c => c.id === id) ?? mockCustomers[0];
     }
     else if (url.includes('/customers/bulk/')) {
       responseData = { affected: 1 };
     }
 
     // ── DEALS ─────────────────────────────────────────────────────────────
+    else if (url === '/deals/board/' || url === '/deals/board') {
+      responseData = {
+        pipeline: {
+          id: MOCK_PIPELINE.id,
+          name: MOCK_PIPELINE.name,
+          stages: MOCK_PIPELINE.stages.map((stage, index) => ({
+            id: stage.id,
+            name: stage.name,
+            order: stage.position,
+            type: index === MOCK_PIPELINE.stages.length - 1 ? 'won' : 'open',
+            color: ['#4F8CFF', '#7C3AED', '#D97706', '#16A34A'][index] ?? '#6B7280',
+          })),
+        },
+        deals: mockDeals.map((deal) => ({
+          ...deal,
+          stage: {
+            id: deal.stage_id,
+            name: deal.stage,
+            order: 1,
+            type: 'open',
+            color: '#6B7280',
+          },
+          owner: MOCK_AUTH_RESPONSE.user,
+          pipeline: { id: MOCK_PIPELINE.id, name: MOCK_PIPELINE.name, stages: [] },
+        })),
+        total_open: mockDeals.filter((deal) => deal.status === 'open').length,
+        total_amount: mockDeals.reduce((sum, deal) => sum + (deal.amount ?? 0), 0),
+      };
+    }
     else if (url === '/deals/' || url === '/deals') {
       if (method === 'get') {
-        responseData = paginate(MOCK_DEALS, params);
+        responseData = paginate(mockDeals, params);
       } else {
-        responseData = { id: `d-${Date.now()}`, ...JSON.parse(config.data ?? '{}'), status: 'open', created_at: new Date().toISOString() };
+        const payload = JSON.parse(config.data ?? '{}');
+        const stage = MOCK_PIPELINE.stages.find((item) => item.id === payload.stage_id);
+        const customer = mockCustomers.find((item) => item.id === payload.customer_id);
+        const created = { id: `d-${Date.now()}`, ...payload, stage: stage?.name ?? 'Квалификация', customer, customer_name: customer?.full_name ?? '', status: 'open', created_at: new Date().toISOString(), updated_at: new Date().toISOString(), days_silent: 0, pipeline_id: MOCK_PIPELINE.id };
+        mockDeals = [created, ...mockDeals];
+        responseData = created;
       }
     }
     else if (url.match(/\/deals\/[^/]+\//)) {
       const id = url.split('/')[2];
-      responseData = MOCK_DEALS.find(d => d.id === id) ?? MOCK_DEALS[0];
+      if (method === 'patch' || method === 'put') {
+        const payload = JSON.parse(config.data ?? '{}');
+        mockDeals = mockDeals.map(d => d.id === id ? { ...d, ...payload, updated_at: new Date().toISOString() } : d);
+      }
+      responseData = mockDeals.find(d => d.id === id) ?? mockDeals[0];
     }
 
     // ── PIPELINES ─────────────────────────────────────────────────────────
@@ -97,9 +143,11 @@ export function installMockAdapter(client: AxiosInstance) {
     // ── TASKS ─────────────────────────────────────────────────────────────
     else if (url === '/tasks/' || url === '/tasks') {
       if (method === 'get') {
-        responseData = paginate(MOCK_TASKS, params);
+        responseData = paginate(mockTasks, params);
       } else {
-        responseData = { id: `t-${Date.now()}`, ...JSON.parse(config.data ?? '{}'), status: 'pending', created_at: new Date().toISOString() };
+        const created = { id: `t-${Date.now()}`, ...JSON.parse(config.data ?? '{}'), status: 'pending', created_at: new Date().toISOString() };
+        mockTasks = [created, ...mockTasks];
+        responseData = created;
       }
     }
 

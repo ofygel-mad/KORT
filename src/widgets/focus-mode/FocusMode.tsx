@@ -6,6 +6,7 @@ import { useUIStore } from '../../shared/stores/ui';
 import { api } from '../../shared/api/client';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+import { addDocumentListener } from '../../shared/lib/browser';
 import s from './FocusMode.module.css';
 
 /* ── Pomodoro hook ───────────────────────────────────────────── */
@@ -90,8 +91,7 @@ export function FocusMode() {
       if (tag === 'INPUT' || tag === 'TEXTAREA') return;
       if (e.key === 'Escape' && focusMode) toggleFocusMode();
     };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
+    return addDocumentListener('keydown', onKey);
   }, [focusMode, toggleFocusMode]);
 
   const list = tasksData?.results ?? [];

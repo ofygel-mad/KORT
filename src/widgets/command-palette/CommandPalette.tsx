@@ -8,7 +8,10 @@ import {
   ArrowRight, Plus, Activity, MessageSquare, Sparkles, Command, Wand2, CornerDownLeft,
 } from 'lucide-react';
 import { useCommandPalette } from '../../shared/stores/commandPalette';
+import { useUIStore } from '../../shared/stores/ui';
 import { api } from '../../shared/api/client';
+import { readStorage, writeStorage } from '../../shared/lib/browser';
+import { useCapabilities } from '../../shared/hooks/useCapabilities';
 import styles from './CommandPalette.module.css';
 
 interface Result {
@@ -36,20 +39,12 @@ const NAV_COMMANDS = [
   { id: 'go-audit', label: 'Аудит', sub: 'Перейти', icon: <Shield size={14} />, path: '/audit' },
 ];
 
-const ACTION_COMMANDS = [
-  { id: 'new-customer', label: 'Новый клиент', icon: <Plus size={14} />, color: 'var(--fill-info-text)', event: 'kort:new-customer' },
-  { id: 'new-deal', label: 'Новая сделка', icon: <Plus size={14} />, color: 'var(--fill-warning-text)', event: 'kort:new-deal' },
-  { id: 'new-task', label: 'Новая задача', icon: <Plus size={14} />, color: 'var(--text-accent)', event: 'kort:new-task' },
-  { id: 'new-followup', label: 'Запланировать follow-up', icon: <Plus size={14} />, color: 'var(--fill-positive-text)', event: 'kort:new-followup' },
-  { id: 'new-import', label: 'Импорт таблицы', icon: <Upload size={14} />, color: 'var(--text-secondary)', event: 'kort:go-import' },
-];
-
 const RECENT_KEY = 'kort:recent-items';
 const MAX_RECENT = 5;
 
 function getRecent(): Result[] {
   try {
-    return JSON.parse(localStorage.getItem(RECENT_KEY) ?? '[]');
+    return JSON.parse(readStorage(RECENT_KEY) ?? '[]');
   } catch {
     return [];
   }
@@ -57,7 +52,7 @@ function getRecent(): Result[] {
 
 function pushRecent(item: Omit<Result, 'action'>) {
   const prev = getRecent().filter((r) => r.id !== item.id);
-  localStorage.setItem(RECENT_KEY, JSON.stringify([item, ...prev].slice(0, MAX_RECENT)));
+  writeStorage(RECENT_KEY, JSON.stringify([item, ...prev].slice(0, MAX_RECENT)));
 }
 
 function useDebounce<T>(value: T, ms: number): T {
@@ -84,17 +79,25 @@ function resultIconVars(type: Result['type'], color?: string): CSSProperties {
 }
 
 export function CommandPalette() {
-  const { close, toggle } = useCommandPalette();
+  const { close } = useCommandPalette();
+  const ui = useUIStore();
   const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement>(null);
+  const { canManageTeam, canUseAdminMode, canViewAudit, canRunAutomations, can } = useCapabilities();
 
   const [query, setQuery] = useState('');
   const [apiRes, setApiRes] = useState<Result[]>([]);
   const [searching, setSearching] = useState(false);
   const [activeIdx, setActiveIdx] = useState(0);
-  const [assistantHint, setAssistantHint] = useState('');
 
   const dq = useDebounce(query.trim(), 200);
+
+  const actionCommands = useMemo(() => ([
+    { id: 'new-customer', label: 'Новый клиент', icon: <Plus size={14} />, color: 'var(--fill-info-text)', visible: can('customers:write'), action: () => ui.openCreateCustomer() },
+    { id: 'new-deal', label: 'Новая сделка', icon: <Plus size={14} />, color: 'var(--fill-warning-text)', visible: can('deals:write'), action: () => ui.openCreateDeal() },
+    { id: 'new-task', label: 'Новая задача', icon: <Plus size={14} />, color: 'var(--text-accent)', visible: can('tasks:write'), action: () => ui.openCreateTask() },
+    { id: 'open-import', label: 'Открыть импорт', icon: <Upload size={14} />, color: 'var(--text-secondary)', visible: can('customers.import'), action: () => navigate('/imports') },
+  ].filter((item) => item.visible)), [can, navigate, ui]);
 
   const { cleanQuery, filterType } = useMemo(() => {
     const prefixMatch = query.match(/^@(customer|deal|task)\s*(.*)/i);
@@ -105,29 +108,17 @@ export function CommandPalette() {
   useEffect(() => { inputRef.current?.focus(); }, []);
 
   useEffect(() => {
-    const handleAssistantConfirmation = (event: Event) => {
-      const custom = event as CustomEvent<string>;
-      setAssistantHint(custom.detail ? `AI уже обработал: ${custom.detail}` : 'AI уже подготовил следующий шаг.');
-    };
-    window.addEventListener('kort:assistant-confirmed-action', handleAssistantConfirmation as EventListener);
-    return () => window.removeEventListener('kort:assistant-confirmed-action', handleAssistantConfirmation as EventListener);
-  }, []);
-
-  useEffect(() => {
     const h = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
     document.addEventListener('keydown', h);
     return () => document.removeEventListener('keydown', h);
   }, [close]);
 
   useEffect(() => {
-    const handleToggle = () => toggle();
-    window.addEventListener('kort:toggle-command-palette', handleToggle);
-    return () => window.removeEventListener('kort:toggle-command-palette', handleToggle);
-  }, [toggle]);
-
-  useEffect(() => {
     const effectiveQ = cleanQuery.trim();
-    if (!effectiveQ || effectiveQ.length < 2 || query.startsWith('/')) { setApiRes([]); return; }
+    if (!effectiveQ || effectiveQ.length < 2 || query.startsWith('/')) {
+      setApiRes([]);
+      return;
+    }
     let cancelled = false;
     setSearching(true);
     api.get('/search/', {
@@ -144,12 +135,8 @@ export function CommandPalette() {
           sub: r.sublabel,
           path: r.path,
           meta: r.meta,
-          icon: r.type === 'customer' ? <Users size={14} />
-            : r.type === 'deal' ? <Briefcase size={14} />
-              : <CheckSquare size={14} />,
-          color: r.type === 'customer' ? 'var(--fill-info-text)'
-            : r.type === 'deal' ? 'var(--fill-warning-text)'
-              : 'var(--text-accent)',
+          icon: r.type === 'customer' ? <Users size={14} /> : r.type === 'deal' ? <Briefcase size={14} /> : <CheckSquare size={14} />,
+          color: r.type === 'customer' ? 'var(--fill-info-text)' : r.type === 'deal' ? 'var(--fill-warning-text)' : 'var(--text-accent)',
           action: () => {
             pushRecent({
               id: `api-${r.type}-${r.id}`,
@@ -172,16 +159,15 @@ export function CommandPalette() {
   }, [dq, cleanQuery, query, filterType, navigate]);
 
   const results: (Result & { _section?: string })[] = [];
-
   const isSlash = query.startsWith('/');
   const slashMatch = isSlash ? query.slice(1).toLowerCase() : '';
-  const SLASH_MAP = [
-    { keys: ['клиент', 'client', 'customer', 'new-customer', 'к'], label: 'Создать клиента', color: 'var(--fill-info-text)', event: 'kort:new-customer' },
-    { keys: ['сделка', 'deal', 'new-deal', 'с'], label: 'Создать сделку', color: 'var(--fill-warning-text)', event: 'kort:new-deal' },
-    { keys: ['задача', 'task', 'new-task', 'з'], label: 'Создать задачу', color: 'var(--text-accent)', event: 'kort:new-task' },
-    { keys: ['импорт', 'import', 'и'], label: 'Открыть импорт', color: 'var(--text-secondary)', event: 'kort:go-import' },
-    { keys: ['followup', 'follow', 'фол', 'ф'], label: 'Запланировать follow-up', color: 'var(--fill-positive-text)', event: 'kort:new-followup' },
-  ];
+  const slashMap = [
+    { keys: ['клиент', 'client', 'customer', 'new-customer', 'к'], visible: can('customers:write'), label: 'Создать клиента', color: 'var(--fill-info-text)', action: () => ui.openCreateCustomer() },
+    { keys: ['сделка', 'deal', 'new-deal', 'с'], visible: can('deals:write'), label: 'Создать сделку', color: 'var(--fill-warning-text)', action: () => ui.openCreateDeal() },
+    { keys: ['задача', 'task', 'new-task', 'з'], visible: can('tasks:write'), label: 'Создать задачу', color: 'var(--text-accent)', action: () => ui.openCreateTask() },
+    { keys: ['импорт', 'import', 'и'], visible: can('customers.import'), label: 'Открыть импорт', color: 'var(--text-secondary)', action: () => navigate('/imports') },
+    { keys: ['copilot', 'ai', 'ассистент'], visible: true, label: 'Спросить ассистента', color: 'var(--fill-positive-text)', action: () => ui.openAssistantPrompt('Какой следующий шаг по текущему контексту?') },
+  ].filter((item) => item.visible);
 
   if (!query) {
     const recent = getRecent();
@@ -194,17 +180,22 @@ export function CommandPalette() {
       }));
     }
 
-    ACTION_COMMANDS.forEach((a, i) => results.push({
+    actionCommands.forEach((a, i) => results.push({
       id: a.id,
       type: 'action',
       label: a.label,
       icon: a.icon,
       color: a.color,
       _section: i === 0 ? 'Действия' : undefined,
-      action: () => { window.dispatchEvent(new CustomEvent(a.event)); close(); },
+      action: () => { a.action(); close(); },
     }));
 
-    NAV_COMMANDS.forEach((n, i) => results.push({
+    NAV_COMMANDS.filter((n) => {
+      if (n.path === '/automations') return canRunAutomations;
+      if (n.path === '/imports') return can('customers.import');
+      if (n.path === '/audit') return canViewAudit;
+      return true;
+    }).forEach((n, i) => results.push({
       id: n.id,
       type: 'nav',
       label: n.label,
@@ -214,22 +205,26 @@ export function CommandPalette() {
       action: () => { navigate(n.path); close(); },
     }));
   } else if (isSlash) {
-    const matched = SLASH_MAP.filter((s) => s.keys.some((k) => k.startsWith(slashMatch) || slashMatch === ''));
-    matched.forEach((m, i) => results.push({
-      id: `slash-${m.event}`,
+    const matched = slashMap.filter((entry) => entry.keys.some((key) => key.startsWith(slashMatch) || slashMatch === ''));
+    matched.forEach((entry, i) => results.push({
+      id: `slash-${entry.keys[0]}`,
       type: 'action',
-      label: m.label,
-      sub: `/${m.keys[0]}`,
+      label: entry.label,
+      sub: `/${entry.keys[0]}`,
       icon: <Zap size={14} />,
-      color: m.color,
+      color: entry.color,
       _section: i === 0 ? 'Быстрые команды' : undefined,
-      action: () => { window.dispatchEvent(new CustomEvent(m.event)); close(); },
+      action: () => { entry.action(); close(); },
     }));
   } else {
     apiRes.forEach((r, i) => results.push({ ...r, _section: i === 0 ? 'Результаты' : undefined }));
 
-    const navFiltered = NAV_COMMANDS.filter((n) => n.label.toLowerCase().includes(query.toLowerCase()));
-    navFiltered.forEach((n, i) => results.push({
+    NAV_COMMANDS.filter((n) => n.label.toLowerCase().includes(query.toLowerCase())).filter((n) => {
+      if (n.path === '/automations') return canRunAutomations;
+      if (n.path === '/imports') return can('customers.import');
+      if (n.path === '/audit') return canViewAudit;
+      return true;
+    }).forEach((n, i) => results.push({
       id: n.id,
       type: 'nav',
       label: n.label,
@@ -239,24 +234,32 @@ export function CommandPalette() {
       action: () => { navigate(n.path); close(); },
     }));
 
-    const actFiltered = ACTION_COMMANDS.filter((a) => a.label.toLowerCase().includes(query.toLowerCase()));
-    actFiltered.forEach((a, i) => results.push({
+    actionCommands.filter((a) => a.label.toLowerCase().includes(query.toLowerCase())).forEach((a, i) => results.push({
       id: a.id,
       type: 'action',
       label: a.label,
       icon: a.icon,
       color: a.color,
-      _section: apiRes.length === 0 && navFiltered.length === 0 && i === 0 ? 'Действия' : undefined,
-      action: () => { window.dispatchEvent(new CustomEvent(a.event)); close(); },
+      _section: apiRes.length === 0 && i === 0 ? 'Действия' : undefined,
+      action: () => { a.action(); close(); },
     }));
   }
 
   useEffect(() => { setActiveIdx(0); }, [results.length, query]);
 
   const handleKey = useCallback((e: ReactKeyboardEvent) => {
-    if (e.key === 'ArrowDown') { e.preventDefault(); setActiveIdx((i) => Math.min(i + 1, results.length - 1)); }
-    if (e.key === 'ArrowUp') { e.preventDefault(); setActiveIdx((i) => Math.max(i - 1, 0)); }
-    if (e.key === 'Enter' && results[activeIdx]) { results[activeIdx].action(); close(); }
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setActiveIdx((i) => Math.min(i + 1, results.length - 1));
+    }
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setActiveIdx((i) => Math.max(i - 1, 0));
+    }
+    if (e.key === 'Enter' && results[activeIdx]) {
+      results[activeIdx].action();
+      close();
+    }
   }, [results, activeIdx, close]);
 
   return (
@@ -268,7 +271,6 @@ export function CommandPalette() {
           <div className={styles.heroTitle}>Навигация, команды и поиск в одном контуре</div>
           <div className={styles.heroSub}>Используйте @ для типа сущности, / для команды и Enter для мгновенного действия.</div>
           <div className={styles.heroMeta}>Palette ведёт к действию, ассистент помогает выбрать следующий лучший ход.</div>
-          {assistantHint && <div className={styles.heroAssistMeta}>{assistantHint}</div>}
           <div className={styles.heroChips}>
             {[
               { label: '@customer', value: '@customer ' },
@@ -276,29 +278,27 @@ export function CommandPalette() {
               { label: '@task', value: '@task ' },
               { label: '/клиент', value: '/клиент' },
               { label: 'AI next step', value: 'assistant:next-step' },
-            ].map((h) => (
+            ].map((hint) => (
               <button
-                key={h.label}
+                key={hint.label}
                 onClick={() => {
-                  if (h.value === 'assistant:next-step') {
-                    window.dispatchEvent(new CustomEvent('kort:assistant-prompt', { detail: 'Какой следующий шаг по текущему контексту?' }));
+                  if (hint.value === 'assistant:next-step') {
+                    ui.openAssistantPrompt('Какой следующий шаг по текущему контексту?');
                     close();
                     return;
                   }
-                  setQuery(h.value);
+                  setQuery(hint.value);
                 }}
                 className={styles.heroChip}
               >
-                <Wand2 size={12} /> {h.label}
+                <Wand2 size={12} /> {hint.label}
               </button>
             ))}
           </div>
         </div>
 
         <div className={styles.inputWrap}>
-          {searching
-            ? <Loader2 size={15} className={styles.spinnerIcon} />
-            : <Search size={15} className={styles.searchIcon} />}
+          {searching ? <Loader2 size={15} className={styles.spinnerIcon} /> : <Search size={15} className={styles.searchIcon} />}
           <input ref={inputRef} className={styles.input} value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={handleKey} placeholder="Поиск · @ для фильтра · / для команд" />
           {filterType && (
             <span className={styles.filterChip} style={filterChipVars(filterType)}>
@@ -324,14 +324,15 @@ export function CommandPalette() {
               <div className={styles.emptySub}>Попробуйте сменить тип через @ или выполните действие через /команду.</div>
               <div className={styles.emptyMeta}>Retry path · смените контекст и Kort предложит следующий ход.</div>
               <div className={styles.emptyActions}>
-                <button className={styles.emptyActionBtn} onClick={() => { window.dispatchEvent(new CustomEvent('kort:assistant-prompt', { detail: `Помоги найти следующий ход по запросу: ${query}` })); close(); }}>Спросить Copilot</button>
+                <button className={styles.emptyActionBtn} onClick={() => { ui.openAssistantPrompt(`Помоги найти следующий ход по запросу: ${query}`); close(); }}>Спросить Copilot</button>
                 <button className={styles.emptyAction} onClick={() => setQuery('/клиент')}>/клиент</button>
                 <button className={styles.emptyAction} onClick={() => setQuery('@deal ')}>@deal</button>
-                <button className={styles.emptyAction} onClick={() => { window.dispatchEvent(new CustomEvent('kort:assistant-prompt', { detail: `Помоги найти следующий шаг по запросу: ${query}` })); close(); }}>Спросить AI</button>
+                <button className={styles.emptyAction} onClick={() => { ui.openAssistantPrompt(`Помоги найти следующий шаг по запросу: ${query}`); close(); }}>Спросить AI</button>
                 <button className={styles.emptyAction} onClick={() => setQuery('')}>Сбросить</button>
               </div>
             </div>
           )}
+
           {results.map((r, idx) => (
             <div key={r.id}>
               {r._section && <div className={styles.sectionLabel}>{r._section}</div>}

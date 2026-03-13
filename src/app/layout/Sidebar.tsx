@@ -49,7 +49,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ onNavigate }: SidebarProps = {}) {
-  const { can } = useCapabilities();
+  const { can, canUseAdminMode } = useCapabilities();
   const { isAdmin } = useRole();
   const { sidebarCollapsed, toggleSidebar, adminMode, toggleAdminMode } = useUIStore();
   const user = useAuthStore(s => s.user);
@@ -81,6 +81,7 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
             end={to === '/'}
             onClick={onNavigate}
             title={collapsed ? lbl : undefined}
+            aria-label={lbl}
             className={navItemClass}
           >
             <span className={styles.navIcon}>
@@ -102,6 +103,7 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
                 to={to}
                 onClick={onNavigate}
                 title={collapsed ? lbl : undefined}
+                aria-label={lbl}
                 className={navItemClass}
               >
                 <span className={styles.navIcon}>
@@ -116,18 +118,19 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
 
       {/* Bottom: admin + settings + collapse */}
       <div className={styles.bottom}>
-        {isAdmin && !collapsed && (
+        {canUseAdminMode && !collapsed && (
           <button className={`${styles.modeSwitch} ${adminMode ? styles.modeSwitchActive : ''}`} onClick={toggleAdminMode}>
             <Shield size={15} strokeWidth={1.75} />
             <span>{adminMode ? 'Режим администратора' : 'Рабочий режим команды'}</span>
           </button>
         )}
 
-        {isAdmin && adminMode && (
+        {canUseAdminMode && adminMode && (
           <NavLink
             to="/admin"
             onClick={onNavigate}
             title={collapsed ? 'Управление' : undefined}
+            aria-label="Управление"
             className={navItemClass}
           >
             <span className={styles.navIcon}>
@@ -141,6 +144,7 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
           to="/settings"
           onClick={onNavigate}
           title={collapsed ? 'Настройки' : undefined}
+          aria-label="Настройки"
           className={navItemClass}
         >
           <span className={styles.navIcon}>
@@ -167,6 +171,7 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
           className={styles.collapseBtn}
           onClick={toggleSidebar}
           title={collapsed ? 'Развернуть' : 'Свернуть'}
+          aria-label={collapsed ? 'Развернуть боковую панель' : 'Свернуть боковую панель'}
         >
           <motion.div
             animate={{ rotate: collapsed ? 180 : 0 }}

@@ -1,3 +1,4 @@
+import { addDocumentListener } from '../../shared/lib/browser';
 import { useLocation, useNavigate, useMatch } from 'react-router-dom';
 import { Search, ChevronRight, Bell, Sun, Moon, Monitor, ArrowLeft, Shield, ShieldCheck } from 'lucide-react';
 import { useCommandPalette } from '../../shared/stores/commandPalette';
@@ -8,7 +9,7 @@ import { api } from '../../shared/api/client';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useSSE } from '../../shared/hooks/useSSE';
 import { useUIStore } from '../../shared/stores/ui';
-import { useRole } from '../../shared/hooks/useRole';
+import { useCapabilities } from '../../shared/hooks/useCapabilities';
 import { useIsMobile } from '../../shared/hooks/useIsMobile';
 import { useT } from '../../shared/i18n';
 import { popoverVariants, overlayVariants, t } from '../../shared/motion/presets';
@@ -42,8 +43,7 @@ function NotificationBell() {
     const h = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     };
-    document.addEventListener('mousedown', h);
-    return () => document.removeEventListener('mousedown', h);
+    return addDocumentListener('mousedown', h);
   }, []);
 
   return (
@@ -163,7 +163,7 @@ export function Topbar() {
   const { theme, setTheme, adminMode, setAdminMode } = useUIStore();
   const isMobile   = useIsMobile();
   const { locale, setLocale } = useT();
-  const { isAdmin } = useRole();
+  const { canUseAdminMode } = useCapabilities();
   const dynamic    = useDynamicCrumb();
   const crumb      = BREADCRUMBS[location.pathname] ?? location.pathname.slice(1);
   const showBack = location.pathname !== '/' && location.pathname !== '/onboarding';
@@ -211,7 +211,7 @@ export function Topbar() {
 
         <NotificationBell />
 
-        {isAdmin && (
+        {canUseAdminMode && (
           <button
             className={`${styles.adminModeBtn} ${adminMode ? styles.adminModeBtnActive : ''}`}
             onClick={() => setAdminMode(!adminMode)}
@@ -219,7 +219,7 @@ export function Topbar() {
             title={adminMode ? 'Режим администратора активен' : 'Включить режим администратора'}
           >
             {adminMode ? <ShieldCheck size={14} /> : <Shield size={14} />}
-            {!isMobile && <span>{adminMode ? 'Admin mode' : 'Рабочий режим'}</span>}
+            {!isMobile && <span>{adminMode ? 'Режим администратора' : 'Рабочий режим'}</span>}
           </button>
         )}
 

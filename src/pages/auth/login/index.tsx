@@ -1,3 +1,4 @@
+import { setProductMoment } from '../../../shared/utils/productMoment';
 import { useForm } from 'react-hook-form';
 import { useNavigate, Link } from 'react-router-dom';
 import { api } from '../../../shared/api/client';
@@ -26,7 +27,7 @@ export default function LoginPage() {
       });
       setAuth(res.user, res.org, res.access, res.refresh, res.capabilities ?? [], res.role ?? 'viewer');
       const onboardingCompleted = resolveOnboardingCompleted(res, res.org?.onboarding_completed ?? false);
-      localStorage.setItem('kort:product-moment', onboardingCompleted
+      setProductMoment(onboardingCompleted
         ? 'С возвращением. Home уже собран вокруг следующего полезного действия, а не просто открывает ещё один экран.'
         : 'Вы внутри. Осталось быстро зафиксировать контекст компании, и Kort сразу переведёт вас в рабочий контур.');
       navigate(onboardingCompleted ? '/' : '/onboarding', { replace: true });

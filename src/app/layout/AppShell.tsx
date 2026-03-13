@@ -1,3 +1,4 @@
+import { addDocumentListener } from '../../shared/lib/browser';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
@@ -18,16 +19,20 @@ import { api } from '../../shared/api/client';
 import { MobileFab } from '../../shared/ui/MobileFab';
 import { AiAssistant } from '../../widgets/ai-assistant/AiAssistant';
 import { resolveOnboardingCompleted } from '../../shared/lib/auth';
+import { CreateCustomerDrawer } from '../../features/quick-actions/CreateCustomerDrawer';
+import { CreateDealDrawer } from '../../features/quick-actions/CreateDealDrawer';
+import { useCapabilities } from '../../shared/hooks/useCapabilities';
 import styles from './AppShell.module.css';
 
 export function AppShell() {
   const { isOpen, toggle } = useCommandPalette();
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
-  const { sidebarCollapsed, toggleFocusMode } = useUIStore();
+  const { sidebarCollapsed, toggleFocusMode, openCreateCustomer, openCreateDeal, openCreateTask } = useUIStore();
+  const { can } = useCapabilities();
   const isMobile = useIsMobile();
   const location = useLocation();
   const navigate = useNavigate();
-  const { setAuth, clearAuth, org: currentOrg } = useAuthStore();
+  const { setAuth, clearAuth, org: currentOrg, token, refreshToken } = useAuthStore();
 
   useEffect(() => {
     api.get<any>('/auth/me')
@@ -36,25 +41,23 @@ export function AppShell() {
         setAuth(
           data.user,
           { ...data.org, onboarding_completed: onboardingCompleted },
-          useAuthStore.getState().token!,
-          useAuthStore.getState().refreshToken!,
+          token!,
+          refreshToken!,
           data.capabilities ?? [],
           data.role ?? 'viewer',
         );
-        if (!onboardingCompleted && location.pathname !== '/onboarding') {
-          navigate('/onboarding', { replace: true });
-        }
+        if (!onboardingCompleted && location.pathname !== '/onboarding') navigate('/onboarding', { replace: true });
       })
       .catch(() => {
         clearAuth();
         navigate('/auth/login', { replace: true });
       });
-  }, [clearAuth, currentOrg?.onboarding_completed, location.pathname, navigate, setAuth]);
+  }, [clearAuth, currentOrg?.onboarding_completed, location.pathname, navigate, refreshToken, setAuth, token]);
 
   useKeyboardShortcuts({
-    n: () => window.dispatchEvent(new CustomEvent('kort:new-customer')),
-    d: () => window.dispatchEvent(new CustomEvent('kort:new-deal')),
-    t: () => window.dispatchEvent(new CustomEvent('kort:new-task')),
+    ...(can('customers:write') ? { n: () => openCreateCustomer() } : {}),
+    ...(can('deals:write') ? { d: () => openCreateDeal() } : {}),
+    ...(can('tasks:write') ? { t: () => openCreateTask() } : {}),
     f: () => toggleFocusMode(),
     '/': () => toggle(),
     '?': () => setShortcutsOpen(true),
@@ -67,27 +70,15 @@ export function AppShell() {
         toggle();
       }
     };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
+    return addDocumentListener('keydown', onKey);
   }, [toggle]);
-
-
-  useEffect(() => {
-    const goImport = () => navigate('/imports');
-    window.addEventListener('kort:go-import', goImport);
-    return () => window.removeEventListener('kort:go-import', goImport);
-  }, [navigate]);
 
   const sidebarW = isMobile ? 0 : sidebarCollapsed ? 64 : 220;
 
   return (
     <div className={styles.root}>
       {!isMobile && (
-        <motion.div
-          className={styles.sidebarRail}
-          animate={{ width: sidebarW }}
-          transition={{ type: 'spring', stiffness: 320, damping: 32 }}
-        >
+        <motion.div className={styles.sidebarRail} animate={{ width: sidebarW }} transition={{ type: 'spring', stiffness: 320, damping: 32 }}>
           <Sidebar />
         </motion.div>
       )}
@@ -96,14 +87,7 @@ export function AppShell() {
         <Topbar />
         <main className={styles.main}>
           <AnimatePresence mode="wait" initial={false}>
-            <motion.div
-              key={location.pathname}
-              initial={pageTransition.initial}
-              animate={pageTransition.animate}
-              exit={pageTransition.exit}
-              transition={pageTransition.transition}
-              className={styles.routeViewport}
-            >
+            <motion.div key={location.pathname} initial={pageTransition.initial} animate={pageTransition.animate} exit={pageTransition.exit} transition={pageTransition.transition} className={styles.routeViewport}>
               <Outlet />
             </motion.div>
           </AnimatePresence>
@@ -111,13 +95,14 @@ export function AppShell() {
       </div>
 
       {isMobile && <MobileNav />}
-      <MobileFab />
-      <AiAssistant />
-
-      <AnimatePresence>{isOpen && <CommandPalette />}</AnimatePresence>
-      <ShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
+      {isMobile && <MobileFab />}
+      <CreateCustomerDrawer />
+      <CreateDealDrawer />
       <FocusMode />
       <SmartSuggestions />
+      <AiAssistant />
+      {isOpen && <CommandPalette />}
+      <ShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
     </div>
   );
 }

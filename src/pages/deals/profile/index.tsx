@@ -11,6 +11,8 @@ import { Button } from '../../../shared/ui/Button';
 import { PageLoader } from '../../../shared/ui/PageLoader';
 import { EmptyState } from '../../../shared/ui/EmptyState';
 import { Drawer } from '../../../shared/ui/Drawer';
+import { FormErrorSummary } from '../../../shared/ui/FormErrorSummary';
+import { Input } from '../../../shared/ui/Input';
 import { Badge } from '../../../shared/ui/Badge';
 import { currencySymbol, formatMoney } from '../../../shared/utils/format';
 import { useForm } from 'react-hook-form';
@@ -19,8 +21,11 @@ import { format, formatDistanceToNow, differenceInDays } from 'date-fns';
 import { getDateLocale } from '../../../shared/utils/locale';
 import { useConvert } from '../../../shared/hooks/useExchangeRates';
 import { useDocumentTitle } from '../../../shared/hooks/useDocumentTitle';
+import { useUIStore } from '../../../shared/stores/ui';
 import { fadeUp } from '../../../shared/motion/presets';
 import s from './DealProfile.module.css';
+import { setProductMoment } from '../../../shared/utils/productMoment';
+import { useCapabilities } from '../../../shared/hooks/useCapabilities';
 
 /* ── Types ──────────────────────────────────────────────────── */
 interface Stage { id: string; name: string; position: number; type: string; color?: string; }
@@ -66,8 +71,12 @@ export default function DealProfilePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const [tab, setTab]           = useState<Tab>('notes');
+  const [tab, setTab] = useState<Tab>('notes');
   const [editDrawer, setEditDrawer] = useState(false);
+  const openAssistantPrompt = useUIStore(s => s.openAssistantPrompt);
+  const { can } = useCapabilities();
+  const canEditDeal = can('deals:write');
+  const canWriteTasks = can('tasks:write');
   const [newTask, setNewTask]   = useState(false);
   const [noteText, setNoteText] = useState('');
   const convert = useConvert();
@@ -92,7 +101,7 @@ export default function DealProfilePage() {
 
   useDocumentTitle(deal?.title ?? 'Сделка');
 
-  const { register, handleSubmit, formState: { isSubmitting } } = useForm<{
+  const { register, handleSubmit, formState: { isSubmitting, errors } } = useForm<{
     title: string; amount: number | null; expected_close_date: string;
   }>({ values: deal ? { title: deal.title, amount: deal.amount, expected_close_date: deal.expected_close_date ?? '' } : undefined });
 
@@ -154,33 +163,33 @@ export default function DealProfilePage() {
           </div>
         </div>
         <div className={s.headerActions}>
-          <Button variant="secondary" size="sm" icon={<Edit3 size={14} />} onClick={() => setEditDrawer(true)}>
+          {canEditDeal && <Button variant="secondary" size="sm" icon={<Edit3 size={14} />} onClick={() => setEditDrawer(true)}>
             Редактировать
-          </Button>
+          </Button>}
         </div>
       </div>
 
       <div className={s.scenarioRail}>
         <div className={s.scenarioCopy}>
-          <span className={s.scenarioEyebrow}>Deal flow</span>
-          <div className={s.scenarioText}>Движение по этапу, заметки и задачи находятся рядом, чтобы сделка вела к следующему действию, а не терялась в CRM-шуме.</div>
+          <span className={s.scenarioEyebrow}>Работа со сделкой</span>
+          <div className={s.scenarioText}>Этап, заметки и задачи собраны рядом, чтобы по сделке можно было двигаться вперёд без лишнего шума вокруг карточки.</div>
         </div>
         <div className={s.scenarioChips}>
-          <span className={s.scenarioChip}>Stage</span>
-          <span className={s.scenarioChip}>Note</span>
-          <span className={s.scenarioChip}>Task</span>
+          <span className={s.scenarioChip}>Этап</span>
+          <span className={s.scenarioChip}>Заметка</span>
+          <span className={s.scenarioChip}>Задача</span>
         </div>
       </div>
       <div className={s.nextActionSurface}>
         <div className={s.nextActionCopy}>
-          <span className={s.nextActionEyebrow}>Next best action</span>
-          <strong className={s.nextActionTitle}>Закройте следующий шаг, а не просто прочитайте карточку сделки</strong>
-          <span className={s.nextActionText}>Сдвиньте этап, оставьте заметку или зафиксируйте задачу, пока сделка ещё находится в рабочем фокусе команды.</span>
+          <span className={s.nextActionEyebrow}>Дальше по сделке</span>
+          <strong className={s.nextActionTitle}>Оставьте следующий шаг, пока контекст сделки ещё живой</strong>
+          <span className={s.nextActionText}>Сдвиньте этап, оставьте заметку или поставьте задачу, пока сделка ещё находится в рабочем контексте команды.</span>
         </div>
         <div className={s.nextActionButtons}>
-          <button className={s.nextActionBtn} onClick={() => { localStorage.setItem('kort:product-moment', `Сделка «${deal.title}» в фокусе. Зафиксируйте следующий шаг, пока контекст не остыл.`); setTab('notes'); }}>Открыть заметки</button>
-          <button className={s.nextActionBtn} onClick={() => setTab('tasks')}>Открыть задачи</button>
-          <button className={s.nextActionBtn} onClick={() => window.dispatchEvent(new CustomEvent('kort:assistant-prompt', { detail: `Что сейчас лучший следующий шаг по сделке ${deal.title}?` }))}>Спросить Copilot</button>
+          <button className={s.nextActionBtn} onClick={() => { setProductMoment(`Сделка «${deal.title}» в фокусе. Зафиксируйте следующий шаг, пока контекст не остыл.`); setTab('notes'); }}>Открыть заметки</button>
+          {canWriteTasks && <button className={s.nextActionBtn} onClick={() => setTab('tasks')}>Открыть задачи</button>}
+          <button className={s.nextActionBtn} onClick={() => openAssistantPrompt(`Что сейчас лучший следующий шаг по сделке ${deal.title}?`)}>Подсказать следующий шаг</button>
         </div>
       </div>
 
@@ -192,8 +201,8 @@ export default function DealProfilePage() {
             <div
               key={stage.id}
               className={`${s.stageStep} ${idx === curIdx ? s.active : idx < curIdx ? s.past : ''}`}
-              onClick={() => idx !== curIdx && stageChange.mutate(stage.id)}
-              title={stage.name}
+              onClick={() => canEditDeal && idx !== curIdx && stageChange.mutate(stage.id)}
+              title={canEditDeal ? `${stage.name} - сменить этап` : stage.name}
             >
               <div className={`${s.stageBar} ${idx < curIdx ? s.past : idx === curIdx ? s.active : ''}`} />
               <span className={s.stageStepLabel}>{stage.name}</span>
@@ -271,9 +280,9 @@ export default function DealProfilePage() {
                   <>
                     <div className={s.taskHeader}>
                       <span className={s.taskHeaderTitle}>Задачи</span>
-                      <Button size="sm" variant="secondary" icon={<Plus size={13} />} onClick={() => setNewTask(true)}>
+                      {can('tasks:write') && <Button size="sm" variant="secondary" icon={<Plus size={13} />} onClick={() => setNewTask(true)}>
                         Добавить
-                      </Button>
+                      </Button>}
                     </div>
                     {(tasks?.results ?? []).length === 0 ? (
                       <EmptyState icon={<CheckSquare size={18} />} title="Задач нет" subtitle="Добавьте задачу к этой сделке" />
@@ -407,27 +416,20 @@ export default function DealProfilePage() {
         open={editDrawer}
         onClose={() => setEditDrawer(false)}
         title="Редактировать сделку"
+        subtitle="Исправьте базовые данные сделки, чтобы команда видела корректную сумму и ожидаемую дату."
         footer={
           <div className={s.drawerFooter}>
-            <Button variant="secondary" onClick={() => setEditDrawer(false)}>Отмена</Button>
-            <Button loading={isSubmitting} onClick={handleSubmit(d => updateDeal.mutate(d))}>Сохранить</Button>
+            <Button type="button" variant="secondary" onClick={() => setEditDrawer(false)}>Отмена</Button>
+            <Button type="submit" form="deal-edit-form" loading={isSubmitting || updateDeal.isPending}>Сохранить</Button>
           </div>
         }
       >
-        <div className={s.formFields}>
-          <div className={s.field}>
-            <label className={s.fieldLabel}>Название *</label>
-            <input {...register('title')} className="kort-input" />
-          </div>
-          <div className={s.field}>
-            <label className={s.fieldLabel}>Сумма</label>
-            <input {...register('amount')} type="number" className="kort-input" />
-          </div>
-          <div className={s.field}>
-            <label className={s.fieldLabel}>Дата закрытия</label>
-            <input {...register('expected_close_date')} type="date" className="kort-input" />
-          </div>
-        </div>
+        <form id="deal-edit-form" className={s.formFields} onSubmit={handleSubmit(d => updateDeal.mutate(d))} noValidate>
+          <FormErrorSummary errors={errors} title="Проверьте данные сделки" />
+          <Input label="Название" required error={errors.title?.message} {...register('title', { required: 'Укажите название', validate: (v) => String(v ?? '').trim().length >= 3 || 'Название слишком короткое' })} />
+          <Input label="Сумма" type="number" error={errors.amount?.message as string | undefined} {...register('amount', { validate: (v) => !v || Number(v) >= 0 || 'Сумма не может быть отрицательной' })} />
+          <Input label="Дата закрытия" type="date" {...register('expected_close_date')} />
+        </form>
       </Drawer>
     </motion.div>
   );
