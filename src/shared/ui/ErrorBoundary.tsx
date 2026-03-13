@@ -1,6 +1,7 @@
 import * as Sentry from '@sentry/react';
 import { Component, type ReactNode } from 'react';
 import { Button } from './Button';
+import styles from './ErrorBoundary.module.css';
 
 interface Props {
   children: ReactNode;
@@ -30,34 +31,12 @@ export class ErrorBoundary extends Component<Props, State> {
     if (this.props.fallback) return this.props.fallback;
 
     return (
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          minHeight: 320,
-          gap: 12,
-          padding: 32,
-          textAlign: 'center',
-        }}
-      >
-        <div style={{ fontSize: 36 }}>⚠️</div>
-        <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text-primary)' }}>
+      <div className={styles.root}>
+        <div className={styles.icon}>⚠️</div>
+        <div className={styles.title}>
           Что-то пошло не так
         </div>
-        <div
-          style={{
-            fontSize: 12,
-            color: 'var(--color-text-muted)',
-            maxWidth: 360,
-            fontFamily: 'var(--font-mono)',
-            background: 'var(--color-bg-muted)',
-            padding: '8px 12px',
-            borderRadius: 'var(--radius-md)',
-            wordBreak: 'break-word',
-          }}
-        >
+        <div className={styles.message}>
           {this.state.error?.message}
         </div>
         <Button

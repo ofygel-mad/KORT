@@ -1,0 +1,114 @@
+/* Page Templates — shared layout primitives */
+
+.listPage {
+  width: min(100%, var(--space-page-max));
+  margin: 0 auto;
+  padding: var(--space-page-y) var(--space-page-x);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-section-gap);
+}
+
+.listHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-block-gap);
+  flex-wrap: wrap;
+}
+
+.listTitle {
+  font-family: var(--font-display);
+  font-size: var(--text-size-2xl);
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+  margin: 0 0 4px;
+  line-height: 1.14;
+}
+
+.listCount {
+  font-size: var(--text-size-base);
+  color: var(--text-tertiary);
+  font-weight: 400;
+  font-family: var(--font-body);
+  margin-left: 8px;
+}
+
+.listSubtitle {
+  font-size: var(--text-size-base);
+  color: var(--text-tertiary);
+  margin: 0;
+  max-width: 680px;
+  line-height: 1.5;
+}
+
+.listActions, .listToolbar, .listBulkBar, .listContent, .listFooter { min-width: 0; }
+
+.listActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.detailPage {
+  width: min(100%, 1060px);
+  margin: 0 auto;
+  padding: var(--space-page-y) var(--space-page-x);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-section-gap);
+}
+
+.detailBack, .detailHeader, .detailTabs { margin: 0; }
+
+.detailBody {
+  display: grid;
+  grid-template-columns: 1fr;
+}
+
+.detailBodyWithSidebar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: var(--space-section-gap);
+  align-items: start;
+}
+
+.detailMain, .settingsContent { min-width: 0; }
+
+.detailSidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.settingsPage {
+  width: min(100%, var(--space-page-max));
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: var(--space-section-gap-lg);
+  padding: var(--space-page-y) var(--space-page-x);
+}
+
+.settingsNav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+@media (max-width: 1024px) {
+  .detailBodyWithSidebar { grid-template-columns: 1fr; }
+  .detailSidebar { display: none; }
+}
+
+@media (max-width: 768px) {
+  .settingsPage { grid-template-columns: 1fr; }
+  .settingsNav {
+    flex-direction: row;
+    overflow-x: auto;
+    padding-bottom: 2px;
+  }
+}

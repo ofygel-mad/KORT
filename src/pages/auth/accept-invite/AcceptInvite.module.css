@@ -1,0 +1,120 @@
+/* ═══════════════════════════════════════════════════════════════
+   ACCEPT INVITE PAGE — CSS Module
+   Живёт внутри AuthShell (центрированный контейнер).
+   ═══════════════════════════════════════════════════════════════ */
+
+.card {
+  width: 380px;
+  padding: 40px 36px;
+  background: var(--bg-surface-elevated);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-lg);
+}
+
+/* ── Header ──────────────────────────────────────────────────── */
+.header {
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+.logoWrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.title {
+  font-size: 20px;
+  font-weight: 700;
+  font-family: var(--font-display);
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.subtitle {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  margin-top: 6px;
+}
+
+/* ── Error state (bad token) ─────────────────────────────────── */
+.errorState {
+  padding: 32px;
+  text-align: center;
+  border-radius: calc(var(--surface-radius-tight) - 2px);
+  background: color-mix(in srgb, var(--state-danger-bg) 52%, transparent);
+  border: 1px solid color-mix(in srgb, var(--fill-negative) 24%, var(--border-subtle));
+}
+
+.errorText {
+  color: var(--fill-negative);
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+
+/* ── Form ────────────────────────────────────────────────────── */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.inputWrap {
+  position: relative;
+}
+
+.passwordInput {
+  padding-right: 40px !important;
+}
+
+.pwdToggle {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-tertiary);
+  display: flex;
+  padding: 2px;
+  border-radius: var(--radius-sm);
+  transition: color var(--motion-duration-fast) var(--motion-ease-standard);
+}
+
+.pwdToggle:hover { color: var(--text-secondary); }
+
+.submitBtn {
+  box-shadow: var(--shadow-accent);
+  height: 42px;
+  background: var(--fill-accent);
+  border: none;
+  border-radius: var(--radius-md);
+  color: var(--text-inverse);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font-body);
+  transition: opacity var(--motion-duration-fast) var(--motion-ease-standard);
+}
+
+.submitBtn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.submitBtn:hover:not(:disabled) { transform: var(--feedback-raise-hover); }
+.submitBtn:active:not(:disabled) { transform: var(--feedback-soft-press); }

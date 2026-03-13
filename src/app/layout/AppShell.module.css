@@ -1,0 +1,39 @@
+.root {
+  display: flex;
+  min-height: 100vh;
+  background: radial-gradient(circle at top right, var(--brand-accent-glow) 0%, transparent 26%), var(--bg-canvas);
+}
+
+.sidebarRail {
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+}
+
+.content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.main {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.routeViewport {
+  height: 100%;
+}
+
+.main {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--fill-accent) 2%, transparent) 0%, transparent 24%),
+    var(--bg-canvas);
+}
+
+.routeViewport {
+  min-height: 100%;
+}

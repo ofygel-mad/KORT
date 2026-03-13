@@ -1,28 +1,21 @@
 import { Search } from 'lucide-react';
+import s from './SearchInput.module.css';
 
 interface Props {
-  value:    string;
+  value: string;
   onChange: (v: string) => void;
   placeholder?: string;
 }
 
 export function SearchInput({ value, onChange, placeholder='Поиск...' }: Props) {
   return (
-    <div style={{ position:'relative', display:'flex', alignItems:'center' }}>
-      <Search size={14} style={{ position:'absolute', left:10, color:'var(--color-text-muted)', pointerEvents:'none' }} />
+    <div className={s.root}>
+      <Search size={14} className={s.icon} />
       <input
         value={value}
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
-        style={{
-          paddingLeft:32, paddingRight:12, height:36, width:280,
-          border:'1px solid var(--color-border)',
-          borderRadius:'var(--radius-md)',
-          background:'var(--color-bg-elevated)',
-          color:'var(--color-text-primary)',
-          fontSize:13, outline:'none',
-          fontFamily:'var(--font-body)',
-        }}
+        className={s.input}
       />
     </div>
   );

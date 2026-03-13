@@ -1,0 +1,466 @@
+.page {
+  padding: var(--space-page-y) var(--space-page-x);
+  width: min(100%, var(--space-page-max));
+  margin: 0 auto;
+  min-height: 100%;
+}
+
+.tabs {
+  display: flex;
+  gap: 2px;
+  width: fit-content;
+  padding: 3px;
+  margin-bottom: var(--space-section-gap);
+  background: var(--bg-surface-inset);
+  border: 1px solid var(--border-subtle);
+  border-radius: calc(var(--surface-radius-tight) - 2px);
+  position: sticky;
+  top: 12px;
+  z-index: 4;
+  backdrop-filter: blur(10px);
+}
+
+.tabButton {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border: none;
+  border-radius: calc(var(--radius-md) - 2px);
+  background: transparent;
+  color: var(--text-tertiary);
+  font-size: 13px;
+  font-weight: 500;
+  font-family: var(--font-body);
+  cursor: pointer;
+  transition:
+    background var(--motion-duration-fast) var(--motion-ease-standard),
+    color var(--motion-duration-fast) var(--motion-ease-standard),
+    box-shadow var(--motion-duration-fast) var(--motion-ease-standard);
+}
+
+.tabButton:hover {
+  color: var(--text-primary);
+}
+
+.active {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-xs);
+}
+
+.tabButton.active {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-xs);
+}
+
+.panelGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: var(--space-section-gap);
+}
+
+.statCard,
+.surfaceCard,
+.teamCard,
+.auditCard,
+.planCard,
+.inviteCard,
+.warningBanner {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--surface-radius);
+  box-shadow: var(--surface-shadow-rest);
+}
+
+.statCard,
+.surfaceCard,
+.planCard,
+.warningBanner {
+  padding: 20px 24px;
+}
+
+.statIcon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+  color: var(--card-color, var(--fill-accent));
+  background: color-mix(in srgb, var(--card-color, var(--fill-accent)) 12%, transparent);
+}
+
+.statValue {
+  margin-bottom: 4px;
+  font-size: 26px;
+  font-weight: 800;
+  font-family: var(--font-display);
+  color: var(--text-primary);
+}
+
+.statLabel,
+.helperText,
+.auditTime,
+.memberEmail,
+.memberCount,
+.planFeature,
+.modeDescription,
+.warningText {
+  color: var(--text-secondary);
+}
+
+.statLabel,
+.memberCount,
+.helperText,
+.modeDescription,
+.planFeature { font-size: 12px; }
+.memberEmail,
+.auditTime { font-size: 11px; }
+
+.surfaceTitle {
+  margin: 0 0 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.modeRow,
+.teamHeader,
+.memberRow,
+.memberIdentity,
+.memberActions,
+.inviteForm,
+.auditHead,
+.auditRow,
+.warningBanner {
+  display: flex;
+  align-items: center;
+  background: var(--state-warning-bg);
+}
+
+.modeRow {
+  gap: 12px;
+}
+
+.modeDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--mode-color, var(--fill-accent));
+}
+
+.modeValue {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--mode-color, var(--fill-accent));
+}
+
+.modeLink {
+  margin-left: auto;
+  border: none;
+  background: none;
+  color: var(--fill-accent);
+  font-size: 12px;
+  font-weight: 500;
+  font-family: var(--font-body);
+  cursor: pointer;
+}
+
+.teamHeader {
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: var(--space-section-gap);
+}
+
+.inviteWrap {
+  overflow: hidden;
+  margin-bottom: var(--space-section-gap);
+}
+
+.inviteCard {
+  padding: 14px 16px;
+}
+
+.inviteForm {
+  gap: 8px;
+}
+
+.teamCard,
+.auditCard {
+  overflow: hidden;
+}
+
+.memberRow,
+.auditHead,
+.auditRow,
+.skeletonRow {
+  padding: 14px 20px;
+}
+
+.memberRow,
+.auditHead,
+.auditRow {
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.memberRow:last-child,
+.auditRow:last-child,
+.skeletonRow:last-child,
+.auditHead:last-child {
+  border-bottom: none;
+}
+
+.memberRow {
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.memberIdentity {
+  gap: 12px;
+  min-width: 0;
+}
+
+.memberAvatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--member-color, var(--fill-accent));
+  background: color-mix(in srgb, var(--member-color, var(--fill-accent)) 14%, transparent);
+}
+
+.memberName {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.memberActions {
+  gap: 10px;
+}
+
+.memberStatus {
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.activeStatus { color: var(--fill-positive); }
+.inactiveStatus { color: var(--text-tertiary); }
+
+.memberStatus.active { color: var(--fill-positive); }
+.memberStatus.inactive { color: var(--text-tertiary); }
+
+.inlineSelect {
+  height: 30px;
+  padding: 0 6px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-family: var(--font-body);
+  outline: none;
+  cursor: pointer;
+}
+
+.inviteSelect {
+  height: 36px;
+  padding: 0 8px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-family: var(--font-body);
+  outline: none;
+}
+
+.iconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  cursor: pointer;
+  color: var(--icon-color, var(--text-tertiary));
+}
+
+.auditGrid,
+.auditHead,
+.auditRow {
+  display: grid;
+  grid-template-columns: 140px 140px 1fr 160px 120px;
+  gap: 8px;
+  align-items: center;
+}
+
+.auditHead {
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
+.auditHeading {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-tertiary);
+}
+
+.auditAction {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--action-color, var(--text-primary));
+}
+
+.auditEntity,
+.auditActor {
+  font-size: 12px;
+}
+
+.auditEntity { color: var(--text-secondary); }
+.auditActor { color: var(--text-primary); }
+.auditLabel {
+  font-size: 12px;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.emptyAudit {
+  padding: 40px 20px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.emptyAuditIcon {
+  margin: 0 auto 8px;
+  opacity: 0.3;
+}
+
+.warningBanner {
+  gap: 8px;
+  margin-bottom: var(--space-section-gap);
+  color: var(--fill-negative-text);
+  background: var(--fill-negative-soft);
+  border-color: color-mix(in srgb, var(--fill-negative) 24%, transparent);
+}
+
+.warningText {
+  font-size: 13px;
+  color: var(--fill-negative-text);
+}
+
+.modeDescription {
+  margin: 0 0 20px;
+  font-size: 14px;
+}
+
+.planGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.planCard {
+  border: 2px solid var(--border-subtle);
+  box-shadow: none;
+}
+
+.planCurrent {
+  border-color: var(--plan-color, var(--fill-accent));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--plan-color, var(--fill-accent)) 14%, transparent);
+}
+
+.planTitle {
+  margin-bottom: 6px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--plan-color, var(--fill-accent));
+}
+
+.planFeatureRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+  color: var(--text-secondary);
+}
+
+.planCurrentBadge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--plan-color, var(--fill-accent));
+}
+
+.planButton {
+  margin-top: 14px;
+  width: 100%;
+}
+
+@media (max-width: 980px) {
+  .panelGrid,
+  .planGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .auditGrid,
+  .auditHead,
+  .auditRow {
+    grid-template-columns: 120px 120px 1fr 140px 100px;
+  }
+}
+
+@media (max-width: 768px) {
+  .page {
+    padding: 20px 16px;
+  }
+
+  .tabs,
+  .memberRow,
+  .memberActions,
+  .teamHeader,
+  .inviteForm {
+    flex-wrap: wrap;
+  }
+
+  .panelGrid,
+  .planGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .auditHead {
+    display: none;
+  }
+
+  .auditRow {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+}
+
+
+.tabs { border: 1px solid var(--border-subtle); }
+.tabButton { transition: background var(--motion-duration-fast) var(--motion-ease-standard), color var(--motion-duration-fast) var(--motion-ease-standard), box-shadow var(--motion-duration-fast) var(--motion-ease-standard), transform var(--motion-duration-fast) var(--motion-ease-standard); }
+.tabButton:hover { transform: translateY(-1px); }
+.tabButton:active { transform: var(--feedback-soft-press); }
+.statCard, .surfaceCard, .teamCard, .auditCard, .planCard, .inviteCard, .warningBanner { box-shadow: var(--surface-shadow-rest); }
+.memberRow, .auditRow { transition: background var(--motion-fast) var(--motion-ease), transform var(--motion-fast) var(--motion-ease); }
+.memberRow:hover, .auditRow:hover { background: var(--bg-hover); transform: translateY(-1px); }

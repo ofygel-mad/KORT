@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -17,6 +17,7 @@ import { Drawer } from '../../shared/ui/Drawer';
 import { toast } from 'sonner';
 import { useCapabilities } from '../../shared/hooks/useCapabilities';
 import { useDocumentTitle } from '../../shared/hooks/useDocumentTitle';
+import styles from './Automations.module.css';
 
 interface Condition {
   field_path: string;
@@ -127,6 +128,10 @@ const STATUS_CFG: Record<string, { label: string; bg: string; color: string }> =
   archived: { label: 'Архив', bg: '#F3F4F6', color: '#6B7280' },
 };
 
+function cx(...parts: Array<string | false | null | undefined>) {
+  return parts.filter(Boolean).join(' ');
+}
+
 function emptyCondition(): Condition {
   return { field_path: '', operator: 'eq', value_json: '' };
 }
@@ -139,37 +144,24 @@ function emptyAction(type: string): RuleAction {
 
 function TriggerSelector({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+    <div className={styles.triggerGrid}>
       {TRIGGERS.map((t) => {
         const Icon = t.icon;
         const active = value === t.value;
         return (
           <motion.button
             key={t.value}
+            type="button"
             onClick={() => onChange(t.value)}
-            whileHover={{ x: 2 }}
             whileTap={{ scale: 0.98 }}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px',
-              borderRadius: 'var(--radius-md)', border: `1.5px solid ${active ? t.color : 'var(--color-border)'}`,
-              background: active ? `${t.color}12` : 'var(--color-bg-elevated)',
-              cursor: 'pointer', textAlign: 'left',
-              transition: 'all var(--transition-fast)',
-            }}
+            className={cx(styles.selectorButton, active && styles.selectorButtonActive)}
+            style={{ '--trigger-color': t.color } as CSSProperties}
           >
-            <div style={{
-              width: 28, height: 28, borderRadius: 8, background: `${t.color}18`,
-              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-            }}>
-              <Icon size={14} style={{ color: t.color }} />
+            <div className={styles.selectorIcon}>
+              <Icon size={14} />
             </div>
-            <span style={{
-              fontSize: 13, fontWeight: active ? 600 : 400,
-              color: active ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
-            }}>
-              {t.label}
-            </span>
-            {active && <ChevronRight size={13} style={{ marginLeft: 'auto', color: t.color }} />}
+            <span className={styles.selectorText}>{t.label}</span>
+            {active && <ChevronRight size={13} className={styles.selectorChevron} />}
           </motion.button>
         );
       })}
@@ -188,11 +180,11 @@ function ConditionRow({
   const ops = OPERATORS_BY_TYPE[field?.type ?? 'text'];
 
   return (
-    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+    <div className={styles.conditionRow}>
       <select
         value={condition.field_path}
         onChange={(e) => onChange({ ...condition, field_path: e.target.value, operator: 'eq', value_json: '' })}
-        className="kort-input" style={{ flex: 2, fontSize: 12 }}
+        className={cx('kort-input', styles.compactInput, styles.flex2)}
       >
         <option value="">Выберите поле...</option>
         {fields.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
@@ -200,7 +192,7 @@ function ConditionRow({
       <select
         value={condition.operator}
         onChange={(e) => onChange({ ...condition, operator: e.target.value })}
-        className="kort-input" style={{ flex: 1, fontSize: 12 }}
+        className={cx('kort-input', styles.compactInput, styles.flex1)}
       >
         {ops.map((o) => <option key={o.v} value={o.v}>{o.l}</option>)}
       </select>
@@ -209,17 +201,11 @@ function ConditionRow({
           value={String(condition.value_json ?? '')}
           onChange={(e) => onChange({ ...condition, value_json: e.target.value })}
           placeholder="Значение"
-          className="kort-input" style={{ flex: 2, fontSize: 12 }}
+          className={cx('kort-input', styles.compactInput, styles.flex2)}
         />
       )}
       {canRemove && (
-        <button
-          onClick={onRemove}
-          style={{
-            background: 'none', border: 'none', cursor: 'pointer',
-            color: 'var(--color-text-muted)', padding: 4, borderRadius: 4,
-          }}
-        >
+        <button type="button" onClick={onRemove} className={styles.removeButton}>
           <X size={13} />
         </button>
       )}
@@ -239,41 +225,35 @@ function ConditionBuilder({
   const addGroup = () => onChange([...groups, emptyGroup()]);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+    <div className={styles.builderBody}>
       {groups.map((group, gi) => (
         <motion.div
           key={gi}
           initial={{ opacity: 0, y: 4 }}
           animate={{ opacity: 1, y: 0 }}
-          style={{ border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: 12 }}
+          className={styles.groupCard}
         >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-            <div style={{ display: 'flex', gap: 4 }}>
+          <div className={styles.groupHeader}>
+            <div className={styles.groupLogic}>
               {(['AND', 'OR'] as const).map((op) => (
                 <button
                   key={op}
+                  type="button"
                   onClick={() => updateGroup(gi, { ...group, operator: op })}
-                  style={{
-                    padding: '2px 10px', borderRadius: 'var(--radius-sm)', border: '1px solid',
-                    fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-body)',
-                    borderColor: group.operator === op ? 'var(--color-amber)' : 'var(--color-border)',
-                    background: group.operator === op ? 'var(--color-amber-light)' : 'transparent',
-                    color: group.operator === op ? 'var(--color-amber)' : 'var(--color-text-muted)',
-                  }}
-                >{op}</button>
+                  className={cx(styles.logicButton, group.operator === op && styles.logicButtonActive)}
+                >
+                  {op}
+                </button>
               ))}
             </div>
             {groups.length > 1 && (
-              <button
-                onClick={() => removeGroup(gi)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)' }}
-              >
+              <button type="button" onClick={() => removeGroup(gi)} className={styles.iconButton}>
                 <Trash2 size={13} />
               </button>
             )}
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div className={styles.conditionList}>
             {group.conditions.map((cond, ci) => (
               <ConditionRow
                 key={ci}
@@ -293,25 +273,16 @@ function ConditionBuilder({
           </div>
 
           <button
+            type="button"
             onClick={() => updateGroup(gi, { ...group, conditions: [...group.conditions, emptyCondition()] })}
-            style={{
-              marginTop: 8, fontSize: 12, color: 'var(--color-amber)', background: 'none',
-              border: 'none', cursor: 'pointer', fontFamily: 'var(--font-body)', padding: 0,
-            }}
+            className={styles.addConditionButton}
           >
             + Добавить условие
           </button>
         </motion.div>
       ))}
 
-      <button
-        onClick={addGroup}
-        style={{
-          fontSize: 12, color: 'var(--color-text-muted)', background: 'none',
-          border: '1px dashed var(--color-border)', borderRadius: 'var(--radius-md)',
-          cursor: 'pointer', padding: '8px', fontFamily: 'var(--font-body)',
-        }}
-      >
+      <button type="button" onClick={addGroup} className={styles.addGroupButton}>
         + Добавить группу условий (OR)
       </button>
     </div>
@@ -336,61 +307,31 @@ function ActionCard({
       initial={{ opacity: 0, scale: 0.96 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.94 }}
-      style={{
-        border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)',
-        overflow: 'hidden', background: 'var(--color-bg-elevated)',
-      }}
+      className={styles.actionCard}
     >
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
-        borderBottom: '1px solid var(--color-border)', background: 'var(--color-bg-muted)',
-      }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <button
-            onClick={onMoveUp}
-            disabled={isFirst}
-            style={{
-              background: 'none', border: 'none',
-              cursor: isFirst ? 'default' : 'pointer', color: isFirst ? 'var(--color-border)' : 'var(--color-text-muted)',
-              padding: 0, lineHeight: 1,
-            }}
-          >▲</button>
-          <button
-            onClick={onMoveDown}
-            disabled={isLast}
-            style={{
-              background: 'none', border: 'none',
-              cursor: isLast ? 'default' : 'pointer', color: isLast ? 'var(--color-border)' : 'var(--color-text-muted)',
-              padding: 0, lineHeight: 1,
-            }}
-          >▼</button>
+      <div className={styles.actionHeader}>
+        <div className={styles.actionMove}>
+          <button type="button" onClick={onMoveUp} disabled={isFirst} className={styles.moveButton}>▲</button>
+          <button type="button" onClick={onMoveDown} disabled={isLast} className={styles.moveButton}>▼</button>
         </div>
-        <div style={{
-          width: 26, height: 26, borderRadius: 6, background: `${cfg.color}18`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-        }}>
-          <Icon size={13} style={{ color: cfg.color }} />
+        <div className={styles.actionIconWrap} style={{ '--action-color': cfg.color } as CSSProperties}>
+          <Icon size={13} />
         </div>
-        <span style={{ fontSize: 13, fontWeight: 600, flex: 1 }}>{index + 1}. {cfg.label}</span>
-        <button
-          onClick={onRemove}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)', padding: 2 }}
-        >
+        <span className={styles.actionOrder}>{index + 1}. {cfg.label}</span>
+        <button type="button" onClick={onRemove} className={styles.iconButton}>
           <Trash2 size={13} />
         </button>
       </div>
-      <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div className={styles.actionFields}>
         {cfg.fields.map((f) => (
           <div key={f.key}>
-            <label style={{ fontSize: 11, color: 'var(--color-text-muted)', display: 'block', marginBottom: 3 }}>
-              {f.label}
-            </label>
+            <label className={styles.fieldLabel}>{f.label}</label>
             <input
               value={String(action.config_json[f.key] ?? '')}
               onChange={(e) => onChange({ ...action, config_json: { ...action.config_json, [f.key]: e.target.value } })}
               placeholder={f.placeholder}
               type={f.type === 'number' ? 'number' : 'text'}
-              className="kort-input" style={{ fontSize: 12, width: '100%', boxSizing: 'border-box' }}
+              className={cx('kort-input', styles.compactInput)}
             />
           </div>
         ))}
@@ -416,7 +357,7 @@ function ActionBuilder({
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+    <div className={styles.builderBody}>
       <AnimatePresence>
         {actions.map((a, i) => (
           <ActionCard
@@ -436,40 +377,28 @@ function ActionBuilder({
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            style={{ border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', overflow: 'hidden' }}
+            className={styles.addActionMenu}
           >
-            <div style={{
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              padding: '8px 12px', borderBottom: '1px solid var(--color-border)', background: 'var(--color-bg-muted)',
-            }}>
-              <span style={{ fontSize: 12, fontWeight: 600 }}>Выберите действие</span>
-              <button
-                onClick={() => setAddOpen(false)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)' }}
-              ><X size={13} /></button>
+            <div className={styles.addActionHeader}>
+              <span className={styles.sectionTitle}>Выберите действие</span>
+              <button type="button" onClick={() => setAddOpen(false)} className={styles.chooseActionClose}><X size={13} /></button>
             </div>
-            <div style={{ padding: 10, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+            <div className={styles.actionTypeGrid}>
               {ACTION_TYPES.map((t) => {
                 const Icon = t.icon;
                 return (
                   <motion.button
                     key={t.value}
+                    type="button"
                     onClick={() => { onChange([...actions, emptyAction(t.value)]); setAddOpen(false); }}
-                    whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.97 }}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px',
-                      border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)',
-                      background: 'var(--color-bg-elevated)', cursor: 'pointer', textAlign: 'left',
-                    }}
+                    className={styles.actionPickerButton}
+                    style={{ '--action-color': t.color } as CSSProperties}
                   >
-                    <div style={{
-                      width: 22, height: 22, borderRadius: 6, background: `${t.color}18`,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}>
-                      <Icon size={12} style={{ color: t.color }} />
+                    <div className={styles.actionPickerIcon}>
+                      <Icon size={12} />
                     </div>
-                    <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--color-text-primary)' }}>{t.label}</span>
+                    <span className={styles.actionTitle}>{t.label}</span>
                   </motion.button>
                 );
               })}
@@ -479,14 +408,7 @@ function ActionBuilder({
       </AnimatePresence>
 
       {!addOpen && (
-        <button
-          onClick={() => setAddOpen(true)}
-          style={{
-            fontSize: 12, color: 'var(--color-amber)', background: 'var(--color-amber-subtle)',
-            border: '1px dashed var(--color-amber)', borderRadius: 'var(--radius-md)',
-            cursor: 'pointer', padding: '9px', fontFamily: 'var(--font-body)', fontWeight: 500,
-          }}
-        >
+        <button type="button" onClick={() => setAddOpen(true)} className={styles.addActionButton}>
           + Добавить действие
         </button>
       )}
@@ -505,31 +427,16 @@ function LivePreview({ triggerType, groups, actions }: {
       initial={{ opacity: 0, height: 0 }}
       animate={{ opacity: 1, height: 'auto' }}
       exit={{ opacity: 0, height: 0 }}
-      style={{
-        background: 'var(--color-bg-muted)', border: '1px solid var(--color-border)',
-        borderRadius: 'var(--radius-md)', padding: 14, fontSize: 13,
-        color: 'var(--color-text-secondary)', lineHeight: 1.7,
-      }}
+      className={styles.preview}
     >
-      <div style={{
-        fontSize: 11, fontWeight: 600, color: 'var(--color-text-muted)',
-        textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6,
-      }}>
-        Предпросмотр правила
-      </div>
+      <div className={styles.previewTitle}>Предпросмотр правила</div>
       {!triggerType ? (
-        <span style={{ color: 'var(--color-text-muted)' }}>Выберите триггер...</span>
+        <span className={styles.previewMuted}>Выберите триггер...</span>
       ) : (
         <>
           <span>Когда </span>
-          <span style={{ color: 'var(--color-amber)', fontWeight: 600 }}>
-            {trigger?.label ?? triggerType}
-          </span>
-          {hasConditions && (
-            <>
-              <span> и выполняются условия</span>
-            </>
-          )}
+          <span className={styles.previewHighlight}>{trigger?.label ?? triggerType}</span>
+          {hasConditions && <span> и выполняются условия</span>}
           {actions.length > 0 && (
             <>
               <span>, то: </span>
@@ -537,10 +444,8 @@ function LivePreview({ triggerType, groups, actions }: {
                 const cfg = ACTION_TYPES.find((t) => t.value === a.action_type);
                 return (
                   <span key={i}>
-                    <span style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>
-                      {cfg?.label}
-                    </span>
-                    {i < actions.length - 1 && <span style={{ color: 'var(--color-text-muted)' }}>, </span>}
+                    <span className={styles.previewTextStrong}>{cfg?.label}</span>
+                    {i < actions.length - 1 && <span className={styles.previewMuted}>, </span>}
                   </span>
                 );
               })}
@@ -611,17 +516,11 @@ function BuilderDrawer({
       title="Конструктор автоматизации"
       width={560}
       footer={
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <button
-            onClick={() => setShowPreview((v) => !v)}
-            style={{
-              fontSize: 12, color: 'var(--color-text-muted)', background: 'none',
-              border: 'none', cursor: 'pointer', fontFamily: 'var(--font-body)',
-            }}
-          >
+        <div className={styles.footerActions}>
+          <button type="button" onClick={() => setShowPreview((v) => !v)} className={styles.previewToggle}>
             {showPreview ? 'Скрыть' : 'Предпросмотр'}
           </button>
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div className={styles.footerButtons}>
             {step !== 'trigger' && (
               <Button
                 variant="secondary"
@@ -648,19 +547,15 @@ function BuilderDrawer({
         </div>
       }
     >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <div className={styles.builderBody}>
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Название правила..."
-          className="kort-input"
-          style={{ fontSize: 15, fontWeight: 500 }}
+          className={cx('kort-input', styles.nameInput)}
         />
 
-        <div style={{
-          display: 'flex', gap: 2, padding: 3, background: 'var(--color-bg-muted)',
-          borderRadius: 'var(--radius-md)',
-        }}>
+        <div className={styles.steps}>
           {STEPS.map((s, i) => {
             const Icon = s.icon;
             const active = step === s.id;
@@ -668,17 +563,11 @@ function BuilderDrawer({
             return (
               <button
                 key={s.id}
+                type="button"
                 onClick={() => setStep(s.id)}
-                style={{
-                  flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-                  padding: '6px 10px', border: 'none', cursor: 'pointer', borderRadius: 7,
-                  fontSize: 12, fontWeight: active ? 600 : 400, fontFamily: 'var(--font-body)',
-                  background: active ? 'var(--color-bg-elevated)' : 'transparent',
-                  color: active ? 'var(--color-amber)' : done ? 'var(--color-success)' : 'var(--color-text-muted)',
-                  boxShadow: active ? 'var(--shadow-sm)' : 'none',
-                }}
+                className={cx(styles.stepButton, active && styles.stepButtonActive, done && styles.stepButtonDone)}
               >
-                <Icon size={13} />{s.label}
+                <span className={styles.stepButtonInner}><Icon size={13} />{s.label}</span>
               </button>
             );
           })}
@@ -692,22 +581,16 @@ function BuilderDrawer({
             exit={{ opacity: 0, x: -12 }}
             transition={{ duration: 0.15 }}
           >
-            {step === 'trigger' && (
-              <TriggerSelector value={triggerType} onChange={setTriggerType} />
-            )}
+            {step === 'trigger' && <TriggerSelector value={triggerType} onChange={setTriggerType} />}
             {step === 'conditions' && (
               <div>
-                <p style={{ fontSize: 12, color: 'var(--color-text-muted)', marginBottom: 12, marginTop: 0 }}>
-                  Условия опциональны. Если не добавлять — правило срабатывает всегда.
-                </p>
+                <p className={styles.conditionIntro}>Условия опциональны. Если не добавлять - правило срабатывает всегда.</p>
                 <ConditionBuilder groups={groups} triggerType={triggerType} onChange={setGroups} />
               </div>
             )}
             {step === 'actions' && (
               <div>
-                <p style={{ fontSize: 12, color: 'var(--color-text-muted)', marginBottom: 12, marginTop: 0 }}>
-                  Добавьте одно или несколько действий. Выполняются по порядку.
-                </p>
+                <p className={styles.actionsIntro}>Добавьте одно или несколько действий. Выполняются по порядку.</p>
                 <ActionBuilder actions={actions} onChange={setActions} />
               </div>
             )}
@@ -715,9 +598,7 @@ function BuilderDrawer({
         </AnimatePresence>
 
         <AnimatePresence>
-          {showPreview && (
-            <LivePreview triggerType={triggerType} groups={groups} actions={actions} />
-          )}
+          {showPreview && <LivePreview triggerType={triggerType} groups={groups} actions={actions} />}
         </AnimatePresence>
       </div>
     </Drawer>
@@ -753,7 +634,7 @@ export default function AutomationsPage() {
 
   if (!can('automations.manage')) {
     return (
-      <div style={{ padding: '24px 28px' }}>
+      <div className={styles.accessDenied}>
         <EmptyState
           icon={<Zap size={22} />}
           title="Автоматизации недоступны"
@@ -766,7 +647,7 @@ export default function AutomationsPage() {
   const rules: AutomationRule[] = (data?.results as AutomationRule[]) ?? [];
 
   return (
-    <div style={{ padding: '24px 28px', maxWidth: 900 }}>
+    <div className={styles.page}>
       <PageHeader
         title="Автоматизации"
         subtitle={`${rules.length} правил · ${rules.filter((r) => r.status === 'active').length} активных`}
@@ -777,13 +658,10 @@ export default function AutomationsPage() {
         }
       />
 
-      <div style={{
-        background: 'var(--color-bg-elevated)', border: '1px solid var(--color-border)',
-        borderRadius: 'var(--radius-xl)', overflow: 'hidden', marginBottom: 20,
-      }}>
+      <div className={styles.rulesCard}>
         {isLoading ? (
           [1, 2, 3].map((i) => (
-            <div key={i} style={{ padding: '14px 18px', borderBottom: '1px solid var(--color-border)' }}>
+            <div key={i} className={cx(styles.skeletonRow, i < 3 && styles.skeletonDivider)}>
               <Skeleton height={14} width="40%" />
             </div>
           ))
@@ -805,47 +683,35 @@ export default function AutomationsPage() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: idx * 0.04 }}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 14, padding: '14px 18px',
-                  borderBottom: idx < rules.length - 1 ? '1px solid var(--color-border)' : 'none',
-                }}
+                className={cx(styles.ruleRow, idx < rules.length - 1 && styles.ruleDivider)}
               >
-                <div style={{
-                  width: 36, height: 36, borderRadius: 'var(--radius-md)', flexShrink: 0,
-                  background: rule.status === 'active' ? `${trigger?.color ?? '#10B981'}15` : 'var(--color-bg-muted)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
-                  <TIcon size={16} style={{ color: rule.status === 'active' ? (trigger?.color ?? '#10B981') : 'var(--color-text-muted)' }} />
+                <div
+                  className={cx(styles.ruleIcon, rule.status === 'active' && styles.ruleIconActive)}
+                  style={{ '--trigger-color': trigger?.color ?? 'var(--fill-positive)' } as CSSProperties}
+                >
+                  <TIcon size={16} />
                 </div>
 
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 2 }}>{rule.name}</div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>
-                      {trigger?.label ?? rule.trigger_type}
-                    </span>
+                <div className={styles.ruleContent}>
+                  <div className={styles.ruleTitle}>{rule.name}</div>
+                  <div className={styles.ruleMeta}>
+                    <span className={styles.ruleMetaText}>{trigger?.label ?? rule.trigger_type}</span>
                     {rule.condition_groups.length > 0 && (
                       <>
-                        <span style={{ color: 'var(--color-border)' }}>·</span>
-                        <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>
-                          {rule.condition_groups.reduce((s, g) => s + g.conditions.length, 0)} условий
-                        </span>
+                        <span className={styles.separatorDot}>·</span>
+                        <span className={styles.ruleMetaText}>{rule.condition_groups.reduce((s, g) => s + g.conditions.length, 0)} условий</span>
                       </>
                     )}
                     {rule.actions.length > 0 && (
                       <>
-                        <span style={{ color: 'var(--color-border)' }}>·</span>
-                        <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>
-                          {rule.actions.length} действий
-                        </span>
+                        <span className={styles.separatorDot}>·</span>
+                        <span className={styles.ruleMetaText}>{rule.actions.length} действий</span>
                       </>
                     )}
                     {rule.executions_count > 0 && (
                       <>
-                        <span style={{ color: 'var(--color-border)' }}>·</span>
-                        <span style={{ fontSize: 11, color: 'var(--color-success)' }}>
-                          {rule.executions_count} выполнений
-                        </span>
+                        <span className={styles.separatorDot}>·</span>
+                        <span className={cx(styles.ruleMetaText, styles.ruleMetaSuccess)}>{rule.executions_count} выполнений</span>
                       </>
                     )}
                   </div>
@@ -853,21 +719,20 @@ export default function AutomationsPage() {
 
                 <Badge bg={st.bg} color={st.color}>{st.label}</Badge>
 
-                <div style={{ display: 'flex', gap: 4 }}>
+                <div className={styles.ruleActions}>
                   <Button
-                    variant="ghost" size="xs"
+                    variant="ghost"
+                    size="xs"
                     icon={rule.status === 'active' ? <Pause size={12} /> : <Play size={12} />}
                     onClick={() => toggleMutation.mutate(rule.id)}
                   >
                     {rule.status === 'active' ? 'Пауза' : 'Старт'}
                   </Button>
                   <motion.button
-                    whileHover={{ color: 'var(--color-danger)' }}
+                    type="button"
+                    whileHover={{ scale: 1.02 }}
                     onClick={() => { if (confirm('Удалить правило?')) deleteMutation.mutate(rule.id); }}
-                    style={{
-                      background: 'none', border: 'none', cursor: 'pointer',
-                      color: 'var(--color-text-muted)', padding: '4px', borderRadius: 4,
-                    }}
+                    className={cx(styles.iconButton, styles.dangerButton)}
                   >
                     <Trash2 size={13} />
                   </motion.button>
@@ -879,31 +744,18 @@ export default function AutomationsPage() {
       </div>
 
       {executions && executions.length > 0 && (
-        <div>
-          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10, color: 'var(--color-text-secondary)' }}>
-            Последние выполнения
-          </div>
-          <div style={{
-            background: 'var(--color-bg-elevated)', border: '1px solid var(--color-border)',
-            borderRadius: 'var(--radius-lg)', overflow: 'hidden',
-          }}>
+        <div className={styles.executionsWrapper}>
+          <div className={styles.executionsTitle}>Последние выполнения</div>
+          <div className={styles.executionsCard}>
             {executions.slice(0, 10).map((ex: any, idx: number) => (
-              <div
-                key={ex.id}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px',
-                  borderBottom: idx < 9 ? '1px solid var(--color-border)' : 'none',
-                }}
-              >
-                <div style={{
-                  width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
-                  background: ex.status === 'completed' ? 'var(--color-success)'
-                    : ex.status === 'failed' ? 'var(--color-danger)' : 'var(--color-warning)',
-                }} />
-                <span style={{ fontSize: 12, flex: 1, color: 'var(--color-text-primary)' }}>{ex.rule_name}</span>
-                <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>
-                  {ex.entity_type} · {ex.status}
-                </span>
+              <div key={ex.id} className={cx(styles.executionRow, idx < Math.min(10, executions.length) - 1 && styles.executionDivider)}>
+                <div className={cx(
+                  styles.executionDot,
+                  ex.status === 'completed' && styles.executionDotCompleted,
+                  ex.status === 'failed' && styles.executionDotFailed,
+                )} />
+                <span className={styles.executionName}>{ex.rule_name}</span>
+                <span className={styles.executionMeta}>{ex.entity_type} · {ex.status}</span>
               </div>
             ))}
           </div>

@@ -1,6 +1,9 @@
+import type { CSSProperties } from 'react';
+import styles from './KortLogo.module.css';
+
 interface KortLogoProps {
   size?: number;
-  style?: React.CSSProperties;
+  style?: CSSProperties;
 }
 
 export function KortLogo({ size = 32, style }: KortLogoProps) {
@@ -10,12 +13,8 @@ export function KortLogo({ size = 32, style }: KortLogoProps) {
       alt="Kort"
       width={size}
       height={size}
-      style={{
-        borderRadius: 8,
-        display: 'block',
-        objectFit: 'cover',
-        ...style,
-      }}
+      className={styles.logo}
+      style={{ '--logo-size': `${size}px`, ...style } as CSSProperties}
     />
   );
 }

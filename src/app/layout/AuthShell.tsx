@@ -3,6 +3,8 @@ import { motion } from 'framer-motion';
 import { useAuthStore } from '../../shared/stores/auth';
 import { TrendingUp, Users, CheckSquare, Zap, Shield, Globe } from 'lucide-react';
 import { KortLogo } from '../../shared/ui/KortLogo';
+import styles from './AuthShell.module.css';
+import { pageTransition, fadeUp } from '../../shared/motion/presets';
 
 const STATS = [
   { icon: <Users size={14} />, value: '2 400+', label: 'клиентов под управлением' },
@@ -11,9 +13,9 @@ const STATS = [
 ];
 
 const FEATURES = [
-  { icon: <Zap size={15} />, title: 'Скорость', desc: 'Поиск за 200мс. Действие в один клик.' },
-  { icon: <Shield size={15} />, title: 'Надёжность', desc: 'Аудит, роли, права. Данные под контролем.' },
-  { icon: <Globe size={15} />, title: 'Локально', desc: '₸, WhatsApp, БИН/ИИН. Сделано для Казахстана.' },
+  { icon: <Zap size={15} />,    title: 'Скорость',    desc: 'Поиск за 200мс. Действие в один клик.' },
+  { icon: <Shield size={15} />, title: 'Надёжность',  desc: 'Аудит, роли, права. Данные под контролем.' },
+  { icon: <Globe size={15} />,  title: 'Локально',    desc: '₸, WhatsApp, БИН/ИИН. Сделано для Казахстана.' },
 ];
 
 export function AuthShell() {
@@ -21,123 +23,47 @@ export function AuthShell() {
   if (token) return <Navigate to="/" replace />;
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', background: 'var(--color-bg-base)' }}>
-      <motion.div
-        initial={{ opacity: 0, x: -20 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-        style={{
-          flex: '1 1 55%',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          padding: '60px 64px',
-          background: 'linear-gradient(150deg, #0C0E14 0%, #13161E 60%, #1A1E2A 100%)',
-          position: 'relative',
-          overflow: 'hidden',
-        }}
-      >
-        <div
-          style={{
-            position: 'absolute',
-            top: -120,
-            right: -80,
-            width: 400,
-            height: 400,
-            borderRadius: '50%',
-            background: 'rgba(217,119,6,0.12)',
-            filter: 'blur(80px)',
-            pointerEvents: 'none',
-          }}
-        />
-        <div
-          style={{
-            position: 'absolute',
-            bottom: -60,
-            left: -40,
-            width: 260,
-            height: 260,
-            borderRadius: '50%',
-            background: 'rgba(59,130,246,0.07)',
-            filter: 'blur(60px)',
-            pointerEvents: 'none',
-          }}
-        />
+    <div className={styles.shell}>
+      {/* ── Brand panel ──────────────────────────────────── */}
+      <motion.div className={styles.brand} {...pageTransition}>
+        <div className={styles.brandGlow1} />
+        <div className={styles.brandGlow2} />
 
-        <div style={{ position: 'relative', zIndex: 1, maxWidth: 480 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 52 }}>
+        <div className={styles.brandContent}>
+          <div className={styles.brandLogo}>
             <KortLogo size={40} />
-            <span style={{ fontSize: 20, fontWeight: 700, color: '#F0F2F5', fontFamily: 'var(--font-display)' }}>
-              Kort
-            </span>
+            <span className={styles.brandLogoName}>Kort</span>
           </div>
 
-          <h1
-            style={{
-              fontSize: 38,
-              fontWeight: 800,
-              color: '#F0F2F5',
-              fontFamily: 'var(--font-display)',
-              lineHeight: 1.15,
-              letterSpacing: '-0.02em',
-              margin: '0 0 16px',
-            }}
-          >
+          <h1 className={styles.brandHeadline}>
             Операционный центр
             <br />
-            <span style={{ color: '#F59E0B' }}>вашего бизнеса</span>
+            <span className={styles.brandAccent}>вашего бизнеса</span>
           </h1>
-          <p style={{ fontSize: 16, color: '#9AA4B8', lineHeight: 1.6, margin: '0 0 40px' }}>
-            Клиенты, сделки, задачи и коммуникации&nbsp;—
-            <br />
+          <p className={styles.brandSubtitle}>
+            Клиенты, сделки, задачи и коммуникации&nbsp;—<br />
             в одной системе. Без хаоса Excel и мессенджеров.
           </p>
 
-          <div
-            style={{
-              display: 'flex',
-              gap: 20,
-              marginBottom: 44,
-              padding: '16px 20px',
-              background: 'rgba(255,255,255,0.04)',
-              border: '1px solid rgba(255,255,255,0.08)',
-              borderRadius: 12,
-            }}
-          >
+          <div className={styles.statsStrip}>
             {STATS.map((s) => (
-              <div key={s.label} style={{ flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#F59E0B', marginBottom: 4 }}>
-                  {s.icon}
-                  <span style={{ fontSize: 18, fontWeight: 700, color: '#F0F2F5', fontFamily: 'var(--font-display)' }}>
-                    {s.value}
-                  </span>
+              <div key={s.label} className={styles.statItem}>
+                <div className={styles.statItemValue}>
+                  <span className={styles.statItemIcon}>{s.icon}</span>
+                  <span className={styles.statItemNumber}>{s.value}</span>
                 </div>
-                <div style={{ fontSize: 11, color: '#5D6780' }}>{s.label}</div>
+                <div className={styles.statItemLabel}>{s.label}</div>
               </div>
             ))}
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div className={styles.features}>
             {FEATURES.map((f) => (
-              <div key={f.title} style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                <div
-                  style={{
-                    width: 30,
-                    height: 30,
-                    borderRadius: 8,
-                    flexShrink: 0,
-                    background: 'rgba(217,119,6,0.12)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#F59E0B',
-                  }}
-                >
-                  {f.icon}
-                </div>
+              <div key={f.title} className={styles.featureItem}>
+                <div className={styles.featureIcon}>{f.icon}</div>
                 <div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: '#F0F2F5', marginBottom: 2 }}>{f.title}</div>
-                  <div style={{ fontSize: 12, color: '#5D6780' }}>{f.desc}</div>
+                  <div className={styles.featureTitle}>{f.title}</div>
+                  <div className={styles.featureDesc}>{f.desc}</div>
                 </div>
               </div>
             ))}
@@ -145,25 +71,12 @@ export function AuthShell() {
         </div>
       </motion.div>
 
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.4, delay: 0.15 }}
-        style={{
-          flex: '0 0 420px',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '40px 40px',
-          background: 'var(--color-bg-elevated)',
-          borderLeft: '1px solid var(--color-border)',
-        }}
-      >
-        <div style={{ width: '100%', maxWidth: 340 }}>
+      {/* ── Form panel ───────────────────────────────────── */}
+      <motion.div className={styles.formPanel} variants={fadeUp} initial="hidden" animate="show">
+        <div className={styles.formInner}>
           <Outlet />
         </div>
-        <div style={{ marginTop: 32, fontSize: 11, color: 'var(--color-text-muted)', textAlign: 'center' }}>
+        <div className={styles.formFooter}>
           © 2025 Kort · Казахстан · Все права защищены
         </div>
       </motion.div>

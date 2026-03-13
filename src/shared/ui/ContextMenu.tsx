@@ -1,5 +1,6 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, type CSSProperties } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import styles from './ContextMenu.module.css';
 
 export interface ContextMenuItem {
   label: string;
@@ -46,31 +47,19 @@ export function ContextMenu({ x, y, items, onClose }: Props) {
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.94 }}
         transition={{ duration: 0.1 }}
-        style={{
-          position: 'fixed', top: cy, left: cx, zIndex: 300,
-          width: menuW, background: 'var(--color-bg-elevated)',
-          border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.14)', padding: '4px',
-          transformOrigin: 'top left',
-        }}
+        className={styles.menu}
+        style={{ top: cy, left: cx }}
       >
         {items.map((item, i) => item.divider
-          ? <div key={i} style={{ height: 1, background: 'var(--color-border)', margin: '3px 8px' }} />
+          ? <div key={i} className={styles.divider} />
           : (
             <button
               key={i}
               onClick={() => { item.onClick(); onClose(); }}
-              style={{
-                width: '100%', display: 'flex', alignItems: 'center', gap: 9,
-                padding: '7px 10px', border: 'none', borderRadius: 'var(--radius-md)',
-                background: 'transparent', cursor: 'pointer', textAlign: 'left',
-                fontSize: 13, color: item.danger ? '#EF4444' : (item.color ?? 'var(--color-text-primary)'),
-                fontFamily: 'var(--font-body)',
-              }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = item.danger ? '#FEE2E2' : 'var(--color-bg-muted)'; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+              className={[styles.item, item.danger ? styles.itemDanger : ''].join(' ')}
+              style={item.color && !item.danger ? ({ ['--menu-item-color' as '--menu-item-color']: item.color } as CSSProperties) : undefined}
             >
-              {item.icon && <span style={{ opacity: 0.75, flexShrink: 0 }}>{item.icon}</span>}
+              {item.icon && <span className={styles.icon}>{item.icon}</span>}
               {item.label}
             </button>
           ))}

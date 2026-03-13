@@ -1,0 +1,432 @@
+/* ═══════════════════════════════════════════════════════════════
+   ONBOARDING PAGE — CSS Module
+   Полноэкранный wizard с логотипом, шагами, карточкой.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Page shell ──────────────────────────────────────────────── */
+.page {
+  min-height: 100vh;
+  /* Статичный light-themed gradient — дизайн-решение, не runtime */
+  background: radial-gradient(circle at top center, color-mix(in srgb, var(--fill-accent) 12%, transparent) 0%, transparent 28%), linear-gradient(135deg, color-mix(in srgb, var(--bg-canvas) 92%, white 8%) 0%, var(--bg-canvas) 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+/* ── Logo row ────────────────────────────────────────────────── */
+.logoRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 32px;
+}
+
+.logoLabel {
+  font-size: 20px;
+  font-weight: 700;
+  font-family: var(--font-display);
+  color: var(--text-primary);
+}
+
+/* ── Step indicator ──────────────────────────────────────────── */
+.steps {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 32px;
+}
+
+.stepItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stepDotWrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Dot color changes per state — dynamic value via CSS class */
+.stepDot {
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--motion-duration-base) var(--motion-ease-standard);
+  flex-shrink: 0;
+}
+
+.stepDot.pending  { background: var(--border-subtle); }
+.stepDot.active   { background: var(--fill-accent); }
+.stepDot.done     { background: var(--fill-positive); }
+
+.stepDotNum {
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.stepDotNum.pending { color: var(--text-tertiary); }
+.stepDotNum.active  { color: var(--text-inverse); }
+
+.stepLabel {
+  font-size: 12px;
+  transition: color var(--motion-duration-fast) var(--motion-ease-standard);
+}
+
+.stepLabel.active { font-weight: 600; color: var(--text-primary); }
+.stepLabel.other  { font-weight: 400; color: var(--text-tertiary); }
+
+.stepConnector {
+  width: 24px;
+  height: 1px;
+  transition: background var(--motion-duration-base) var(--motion-ease-standard);
+}
+
+.stepConnector.done    { background: var(--fill-positive); }
+.stepConnector.pending { background: var(--border-subtle); }
+
+/* ── Content card ────────────────────────────────────────────── */
+.card {
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--surface-radius);
+  padding: clamp(24px, 4vw, 40px);
+  width: 100%;
+  box-shadow: var(--brand-panel-shadow-strong);
+}
+
+.cardNarrow  { max-width: 540px; }
+.cardWide    { max-width: 760px; }
+
+/* ── Section heading ─────────────────────────────────────────── */
+.sectionTitle {
+  font-size: 22px;
+  font-weight: 700;
+  font-family: var(--font-display);
+  color: var(--text-primary);
+  margin: 0 0 6px;
+}
+
+.sectionDesc {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin: 0 0 28px;
+}
+
+/* ── Sub-label ───────────────────────────────────────────────── */
+.subLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+  background: color-mix(in srgb, var(--plan-color) 16%, transparent);
+  color: var(--plan-color);
+}
+
+
+/* ── Industry grid ───────────────────────────────────────────── */
+.industryGrid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.industryBtn {
+  padding: 12px 8px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-body);
+  border: 2px solid var(--border-default);
+  background: var(--bg-surface);
+  transition:
+    border-color var(--motion-duration-fast) var(--motion-ease-standard),
+    background   var(--motion-duration-fast) var(--motion-ease-standard);
+}
+
+.industryBtn.selected {
+  border-color: var(--fill-accent);
+  background: var(--fill-accent-soft);
+}
+
+.industryEmoji { font-size: 22px; line-height: 1; }
+
+.industryLabel {
+  font-size: 12px;
+  font-weight: 500;
+  transition: color var(--motion-duration-fast) var(--motion-ease-standard);
+}
+
+.industryLabel.selected { color: var(--fill-accent-dark, var(--fill-accent)); }
+.industryLabel.default  { color: var(--text-primary); }
+
+/* ── Size grid ───────────────────────────────────────────────── */
+.sizeGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.sizeBtn {
+  padding: 10px;
+  border-radius: var(--radius-md);
+  border: 2px solid var(--border-default);
+  background: var(--bg-surface);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: var(--font-body);
+  transition:
+    border-color var(--motion-duration-fast) var(--motion-ease-standard),
+    background   var(--motion-duration-fast) var(--motion-ease-standard),
+    color        var(--motion-duration-fast) var(--motion-ease-standard);
+}
+
+.sizeBtn.selected {
+  border-color: var(--fill-accent);
+  background: var(--fill-accent-soft);
+  color: var(--fill-accent-dark, var(--fill-accent));
+}
+
+.sizeBtn.default { color: var(--text-primary); }
+
+/* ── Plan grid ───────────────────────────────────────────────── */
+.planGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+/* Plan card — border/background/shadow are dynamic per plan color → inline */
+.planCard {
+  --plan-color: var(--fill-accent);
+  --plan-card-border: var(--border-default);
+  --plan-card-bg: var(--bg-surface);
+  --plan-card-ring: none;
+  padding: 20px 16px;
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--font-body);
+  border: 2px solid var(--plan-card-border);
+  background: var(--plan-card-bg);
+  box-shadow: var(--plan-card-ring);
+  transition: box-shadow var(--motion-duration-fast) var(--motion-ease-standard);
+}
+
+/* Plan icon — background/color per plan → inline */
+.planIcon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+  background: color-mix(in srgb, var(--plan-color) 16%, transparent);
+  color: var(--plan-color);
+}
+
+
+.planTitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.planSubtitle {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  margin-bottom: 12px;
+  background: color-mix(in srgb, var(--plan-color) 16%, transparent);
+  color: var(--plan-color);
+}
+
+
+.planFeatures {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.planFeature {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+/* Feature check bullet — background per plan color → inline */
+.planFeatureDot {
+  width: 14px;
+  height: 14px;
+  border-radius: var(--radius-full);
+  background: var(--plan-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* ── Success / quick-start step ──────────────────────────────── */
+.successStep {
+  padding: clamp(28px, 5vw, 42px);
+  border-radius: calc(var(--surface-radius-tight) - 2px);
+  background: color-mix(in srgb, var(--state-success-bg) 48%, transparent);
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+.successEmoji { font-size: 44px; margin-bottom: 12px; }
+
+.successTitle {
+  font-size: 22px;
+  font-weight: 700;
+  font-family: var(--font-display);
+  color: var(--text-primary);
+  margin: 0 0 8px;
+}
+
+.successDesc {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.quickLinks {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.quickLinkBtn {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  background: var(--bg-surface-inset);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--font-body);
+  transition:
+    background      var(--motion-duration-fast) var(--motion-ease-standard),
+    border-color    var(--motion-duration-fast) var(--motion-ease-standard);
+}
+
+.quickLinkBtn:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-default);
+}
+
+.quickLinkEmoji { font-size: 24px; line-height: 1; }
+
+.quickLinkBody { flex: 1; }
+
+.quickLinkTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.quickLinkDesc {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  margin-top: 1px;
+}
+
+.quickLinkChevron {
+  margin-left: auto;
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+/* ── Nav footer ──────────────────────────────────────────────── */
+.navRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 24px;
+}
+
+/* ── Skip link ───────────────────────────────────────────────── */
+.skipLink {
+  margin-top: 16px;
+  font-size: 12px;
+  color: var(--text-tertiary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-body);
+  transition: color var(--motion-duration-fast) var(--motion-ease-standard);
+}
+
+.skipLink:hover { color: var(--text-secondary); }
+
+/* ── Mobile ──────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .page { padding: 16px; }
+  .card { padding: 24px 20px; }
+  .industryGrid { grid-template-columns: repeat(3, 1fr); }
+  .planGrid { grid-template-columns: 1fr; }
+  .steps { gap: 4px; }
+  .stepLabel { display: none; }
+}
+
+.navBackHidden {
+  visibility: hidden;
+}
+
+.industryBtn:hover, .sizeBtn:hover, .planCard:hover { transform: var(--feedback-raise-hover); box-shadow: var(--shadow-sm); }
+.industryBtn:active, .sizeBtn:active, .planCard:active { transform: var(--feedback-soft-press); }
+
+.card {
+  position: relative;
+  overflow: hidden;
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, color-mix(in srgb, white 10%, transparent) 0%, transparent 22%);
+}
+
+.logoRow,
+.steps,
+.card {
+  position: relative;
+  z-index: 1;
+}
+
+.industryBtn:hover,
+.sizeBtn:hover,
+.planCard:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.industryBtn,
+.sizeBtn,
+.planCard {
+  transition:
+    transform var(--motion-duration-fast) var(--motion-ease-standard),
+    box-shadow var(--motion-duration-fast) var(--motion-ease-standard),
+    border-color var(--motion-duration-fast) var(--motion-ease-standard),
+    background var(--motion-duration-fast) var(--motion-ease-standard),
+    color var(--motion-duration-fast) var(--motion-ease-standard);
+}

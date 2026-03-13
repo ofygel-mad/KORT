@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo, type CSSProperties, type ReactNode, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { motion } from 'framer-motion';
+import { overlayVariants, popoverVariants } from '../../shared/motion/presets';
 import { useNavigate } from 'react-router-dom';
 import {
   Search, Users, Briefcase, CheckSquare, Settings,
@@ -16,7 +17,7 @@ interface Result {
   label: string;
   sub?: string;
   path?: string;
-  icon: React.ReactNode;
+  icon: ReactNode;
   color?: string;
   meta?: any;
   action: () => void;
@@ -222,7 +223,7 @@ export function CommandPalette() {
 
   useEffect(() => { setActiveIdx(0); }, [results.length, query]);
 
-  const handleKey = useCallback((e: React.KeyboardEvent) => {
+  const handleKey = useCallback((e: ReactKeyboardEvent) => {
     if (e.key === 'ArrowDown') { e.preventDefault(); setActiveIdx((i) => Math.min(i + 1, results.length - 1)); }
     if (e.key === 'ArrowUp') { e.preventDefault(); setActiveIdx((i) => Math.max(i - 1, 0)); }
     if (e.key === 'Enter' && results[activeIdx]) { results[activeIdx].action(); close(); }
@@ -230,31 +231,31 @@ export function CommandPalette() {
 
   return (
     <>
-      <motion.div className={styles.backdrop} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={close} />
-      <motion.div className={styles.palette} initial={{ opacity: 0, scale: 0.96, y: -8 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: -8 }} transition={{ type: 'spring', stiffness: 420, damping: 30 }}>
+      <motion.div className={styles.backdrop} variants={overlayVariants} initial="hidden" animate="visible" exit="exit" onClick={close} />
+      <motion.div className={styles.palette} variants={popoverVariants} initial="hidden" animate="visible" exit="exit">
         <div className={styles.inputWrap}>
           {searching
-            ? <Loader2 size={15} style={{ color: 'var(--color-amber)', animation: 'cp-spin 0.6s linear infinite', flexShrink: 0 }} />
-            : <Search size={15} style={{ color: 'var(--color-text-muted)', flexShrink: 0 }} />}
+            ? <Loader2 size={15} className={styles.spinnerIcon} />
+            : <Search size={15} className={styles.searchIcon} />}
           <input ref={inputRef} className={styles.input} value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={handleKey} placeholder="Поиск · @ для фильтра · / для команд" />
           {filterType && (
-            <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 'var(--radius-full)', flexShrink: 0, background: filterType === 'customer' ? '#DBEAFE' : filterType === 'deal' ? '#FEF3C7' : '#EDE9FE', color: filterType === 'customer' ? '#1D4ED8' : filterType === 'deal' ? '#92400E' : '#5B21B6' }}>
+            <span className={styles.filterChip} style={{ '--chip-bg': filterType === 'customer' ? '#DBEAFE' : filterType === 'deal' ? '#FEF3C7' : '#EDE9FE', '--chip-color': filterType === 'customer' ? '#1D4ED8' : filterType === 'deal' ? '#92400E' : '#5B21B6' } as CSSProperties}>
               {filterType === 'customer' ? 'Клиенты' : filterType === 'deal' ? 'Сделки' : 'Задачи'}
-              <span onClick={() => setQuery('')} style={{ cursor: 'pointer', marginLeft: 4 }}>✕</span>
+              <span onClick={() => setQuery('')} className={styles.filterChipClear}>✕</span>
             </span>
           )}
           {query && <button className={styles.clearBtn} onClick={() => setQuery('')}>✕</button>}
         </div>
 
         {!query && (
-          <div style={{ display: 'flex', gap: 12, padding: '6px 14px', borderBottom: '1px solid var(--color-border)', background: 'var(--color-bg-muted)' }}>
+          <div className={styles.hintRow}>
             {[
               { label: '@customer', hint: 'клиенты' },
               { label: '@deal', hint: 'сделки' },
               { label: '@task', hint: 'задачи' },
               { label: '/', hint: 'команды' },
             ].map((h) => (
-              <button key={h.label} onClick={() => setQuery(h.label)} style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--color-text-muted)', background: 'var(--color-bg-elevated)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)', padding: '1px 7px', cursor: 'pointer' }}>
+              <button key={h.label} onClick={() => setQuery(h.label)} className={styles.hintButton}>
                 {h.label}
               </button>
             ))}
@@ -267,14 +268,14 @@ export function CommandPalette() {
             <div key={r.id}>
               {r._section && <div className={styles.sectionLabel}>{r._section}</div>}
               <button className={[styles.resultItem, idx === activeIdx ? styles.resultItemActive : ''].join(' ')} onMouseEnter={() => setActiveIdx(idx)} onClick={() => { r.action(); close(); }}>
-                <span className={styles.resultIcon} style={{ background: r.color ? `${r.color}18` : 'var(--color-bg-muted)', color: r.color ?? 'var(--color-text-muted)' }}>{r.icon}</span>
+                <span className={styles.resultIcon} style={{ background: r.color ? `${r.color}18` : 'var(--bg-surface-inset)', color: r.color ?? 'var(--text-tertiary)' }}>{r.icon}</span>
                 <span className={styles.resultText}>
                   <span className={styles.resultLabel}>{r.label}</span>
                   {r.sub && <span className={styles.resultSub}>{r.sub}</span>}
                 </span>
-                {(r as any).meta?.follow_up_due_at && <span style={{ fontSize: 10, color: '#D97706', background: '#FEF3C7', padding: '1px 6px', borderRadius: 99, flexShrink: 0 }}>follow-up</span>}
-                {(r as any).meta?.amount != null && (r as any).meta.amount > 0 && <span style={{ fontSize: 11, color: 'var(--color-text-muted)', flexShrink: 0 }}>{Number((r as any).meta.amount).toLocaleString('ru')} {(r as any).meta.currency || '₸'}</span>}
-                {(r as any).meta?.priority === 'high' && <span style={{ fontSize: 10, color: '#EF4444', background: '#FEE2E2', padding: '1px 6px', borderRadius: 99, flexShrink: 0 }}>high</span>}
+                {(r as any).meta?.follow_up_due_at && <span className={[styles.metaPill, styles.metaPillFollowup].join(' ')}>follow-up</span>}
+                {(r as any).meta?.amount != null && (r as any).meta.amount > 0 && <span className={styles.metaAmount}>{Number((r as any).meta.amount).toLocaleString('ru')} {(r as any).meta.currency || '₸'}</span>}
+                {(r as any).meta?.priority === 'high' && <span className={[styles.metaPill, styles.metaPillHigh].join(' ')}>high</span>}
                 <ArrowRight size={12} className={styles.resultArrow} />
               </button>
             </div>

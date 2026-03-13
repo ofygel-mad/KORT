@@ -1,12 +1,17 @@
-import { useState } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { useForm } from 'react-hook-form';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, Link } from 'react-router-dom';
 import { api } from '../../../shared/api/client';
 import { useAuthStore } from '../../../shared/stores/auth';
 import { toast } from 'sonner';
-import { CheckCircle2, Users, Zap, Factory, ChevronRight, ArrowLeft, Eye, EyeOff } from 'lucide-react';
+import {
+  CheckCircle2, Users, Zap, Factory,
+  ChevronRight, ArrowLeft, Eye, EyeOff, Check,
+} from 'lucide-react';
+import s from './Register.module.css';
 
+/* ── Types ──────────────────────────────────────────────────── */
 interface RegisterForm {
   organization_name: string;
   full_name: string;
@@ -15,6 +20,7 @@ interface RegisterForm {
   password: string;
 }
 
+/* ── Plan config ─────────────────────────────────────────────── */
 const MODES = [
   {
     mode: 'basic',
@@ -43,23 +49,20 @@ const MODES = [
   },
 ];
 
-const inputStyle = (error?: boolean): React.CSSProperties => ({
-  width: '100%', height: 40, padding: '0 12px',
-  border: `1px solid ${error ? '#EF4444' : 'var(--color-border)'}`,
-  borderRadius: 'var(--radius-md)', fontSize: 13,
-  fontFamily: 'var(--font-body)', outline: 'none',
-  background: 'var(--color-bg-elevated)', boxSizing: 'border-box',
-});
-
 const STEPS = ['Аккаунт', 'Выбор плана'];
 
+/* ── Page ────────────────────────────────────────────────────── */
 export default function RegisterPage() {
-  const navigate = useNavigate();
-  const setAuth = useAuthStore((s) => s.setAuth);
-  const [step, setStep] = useState(0);
-  const [selectedMode, setSelectedMode] = useState('advanced');
-  const [showPwd, setShowPwd] = useState(false);
-  const { register, handleSubmit, getValues, formState: { isSubmitting, errors } } = useForm<RegisterForm>();
+  const navigate     = useNavigate();
+  const setAuth      = useAuthStore((s) => s.setAuth);
+  const [step, setStep]           = useState(0);
+  const [selectedMode, setMode]   = useState('advanced');
+  const [showPwd, setShowPwd]     = useState(false);
+
+  const {
+    register, handleSubmit, getValues,
+    formState: { isSubmitting, errors },
+  } = useForm<RegisterForm>();
 
   const onSubmit = async (data: RegisterForm) => {
     try {
@@ -68,12 +71,7 @@ export default function RegisterPage() {
         email: data.email.trim().toLowerCase(),
         mode: selectedMode,
       });
-      setAuth(
-        res.user, res.org,
-        res.access, res.refresh,
-        res.capabilities ?? [],
-        res.role ?? 'owner',
-      );
+      setAuth(res.user, res.org, res.access, res.refresh, res.capabilities ?? [], res.role ?? 'owner');
       navigate('/onboarding', { replace: true });
     } catch (e: any) {
       toast.error(e?.response?.data?.detail ?? 'Ошибка регистрации');
@@ -81,114 +79,88 @@ export default function RegisterPage() {
     }
   };
 
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      style={{
-        width: step === 1 ? 680 : 420,
-        padding: '40px 36px',
-        background: 'var(--color-bg-elevated)',
-        borderRadius: 'var(--radius-xl)',
-        border: '1px solid var(--color-border)',
-        boxShadow: 'var(--shadow-lg)',
-        transition: 'width 0.3s ease',
-      }}
-    >
-      <div style={{ marginBottom: 20 }}>
-        <h2 style={{ fontSize: 20, fontWeight: 700, fontFamily: 'var(--font-display)', margin: '0 0 4px' }}>
-          Создать аккаунт
-        </h2>
-        <p style={{ fontSize: 13, color: 'var(--color-text-muted)', margin: 0 }}>
-          Бесплатно. Без карты. Готово за 2 минуты.
-        </p>
-      </div>
+  const goToStep1 = () => {
+    const v = getValues();
+    if (!v.organization_name || !v.full_name || !v.email || !v.password) {
+      toast.error('Заполните все обязательные поля');
+      return;
+    }
+    if (v.password.length < 8) {
+      toast.error('Пароль минимум 8 символов');
+      return;
+    }
+    setStep(1);
+  };
 
-      <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginBottom: 28 }}>
-        {STEPS.map((s, idx) => (
-          <div key={s} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <div style={{
-                width: 24, height: 24, borderRadius: '50%',
-                background: idx < step ? '#10B981' : idx === step ? 'var(--color-amber)' : 'var(--color-border)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-                {idx < step
-                  ? <CheckCircle2 size={13} color="#fff" />
-                  : <span style={{ fontSize: 11, fontWeight: 700, color: idx === step ? '#fff' : 'var(--color-text-muted)' }}>{idx + 1}</span>
-                }
-              </div>
-              <span style={{ fontSize: 12, fontWeight: idx === step ? 600 : 400, color: idx === step ? 'var(--color-text-primary)' : 'var(--color-text-muted)' }}>
-                {s}
-              </span>
+  return (
+    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
+      {/* Step indicator */}
+      <div className={s.steps}>
+        {STEPS.map((label, i) => (
+          <div key={i} className={s.stepItem}>
+            <div className={`${s.stepDot} ${i === step ? s.active : i < step ? s.done : ''}`}>
+              {i < step ? <Check size={12} /> : i + 1}
             </div>
-            {idx < STEPS.length - 1 && (
-              <div style={{ width: 20, height: 1, background: idx < step ? '#10B981' : 'var(--color-border)' }} />
-            )}
+            <span className={`${s.stepLabel} ${i === step ? s.active : ''}`}>{label}</span>
+            {i < STEPS.length - 1 && <div className={s.stepConnector} />}
           </div>
         ))}
       </div>
 
       <AnimatePresence mode="wait">
+        {/* Step 0 — account details */}
         {step === 0 && (
-          <motion.div key="step0" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              {[
-                { field: 'organization_name' as const, label: 'Название компании *', placeholder: 'ТОО Моя Компания', required: true },
-                { field: 'full_name' as const, label: 'Ваше имя *', placeholder: 'Иван Иванов', required: true },
-                { field: 'email' as const, label: 'Email *', placeholder: 'ivan@company.kz', type: 'email', required: true },
-                { field: 'phone' as const, label: 'Телефон', placeholder: '+7 700 000 00 00', required: false },
-              ].map(({ field, label, placeholder, type, required }) => (
-                <div key={field}>
-                  <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--color-text-secondary)', display: 'block', marginBottom: 6 }}>
-                    {label}
-                  </label>
-                  <input
-                    {...register(field, { required })}
-                    type={type ?? 'text'}
-                    placeholder={placeholder}
-                    style={inputStyle(!!errors[field])}
-                  />
-                </div>
-              ))}
-              <div>
-                <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--color-text-secondary)', display: 'block', marginBottom: 6 }}>
-                  Пароль * (минимум 8 символов)
-                </label>
-                <div style={{ position: 'relative' }}>
+          <motion.div key="step0"
+            initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}>
+            <div className={s.form}>
+              <div className={s.field}>
+                <label className={s.label}>Название организации *</label>
+                <input
+                  {...register('organization_name', { required: true })}
+                  placeholder="ООО Ромашка"
+                  className={`kort-input ${errors.organization_name ? s.inputError : ''}`}
+                />
+              </div>
+              <div className={s.field}>
+                <label className={s.label}>Ваше имя *</label>
+                <input
+                  {...register('full_name', { required: true })}
+                  placeholder="Имя Фамилия"
+                  className={`kort-input ${errors.full_name ? s.inputError : ''}`}
+                />
+              </div>
+              <div className={s.field}>
+                <label className={s.label}>Email *</label>
+                <input
+                  {...register('email', { required: true })}
+                  type="email"
+                  placeholder="you@company.com"
+                  className={`kort-input ${errors.email ? s.inputError : ''}`}
+                />
+              </div>
+              <div className={s.field}>
+                <label className={s.label}>Телефон</label>
+                <input {...register('phone')} type="tel" placeholder="+7 (000) 000-00-00" className="kort-input" />
+              </div>
+              <div className={s.field}>
+                <label className={s.label}>Пароль *</label>
+                <div className={s.inputWrap}>
                   <input
                     {...register('password', { required: true, minLength: 8 })}
                     type={showPwd ? 'text' : 'password'}
                     placeholder="Минимум 8 символов"
-                    style={{ ...inputStyle(!!errors.password), paddingRight: 40 }}
+                    className={`kort-input ${s.passwordInput} ${errors.password ? s.inputError : ''}`}
                   />
-                  <button type="button" onClick={() => setShowPwd(!showPwd)}
-                    style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)', display: 'flex', padding: 2 }}>
+                  <button type="button" className={s.pwdToggle} onClick={() => setShowPwd(v => !v)}>
                     {showPwd ? <EyeOff size={15} /> : <Eye size={15} />}
                   </button>
                 </div>
               </div>
               <motion.button
-                whileTap={{ scale: 0.98 }} type="button"
-                onClick={() => {
-                  const v = getValues();
-                  if (!v.organization_name || !v.full_name || !v.email || !v.password) {
-                    toast.error('Заполните все обязательные поля');
-                    return;
-                  }
-                  if (v.password.length < 8) {
-                    toast.error('Пароль минимум 8 символов');
-                    return;
-                  }
-                  setStep(1);
-                }}
-                style={{
-                  height: 42, background: 'var(--color-amber)', border: 'none',
-                  borderRadius: 'var(--radius-md)', color: 'white',
-                  fontSize: 14, fontWeight: 600, cursor: 'pointer',
-                  fontFamily: 'var(--font-body)', marginTop: 4,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                }}
+                whileTap={{ scale: 0.98 }}
+                type="button"
+                onClick={goToStep1}
+                className={s.ctaBtn}
               >
                 Продолжить <ChevronRight size={16} />
               </motion.button>
@@ -196,44 +168,39 @@ export default function RegisterPage() {
           </motion.div>
         )}
 
+        {/* Step 1 — plan selection */}
         {step === 1 && (
-          <motion.form key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
+          <motion.form key="step1"
+            initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
             onSubmit={handleSubmit(onSubmit)}>
-            <p style={{ fontSize: 14, color: 'var(--color-text-secondary)', marginBottom: 16, textAlign: 'center' }}>
-              Выберите режим Kort. Вы сможете изменить его позже.
-            </p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 20 }}>
+            <p className={s.planHint}>Выберите режим Kort. Вы сможете изменить его позже.</p>
+
+            <div className={s.planGrid}>
               {MODES.map((m) => (
-                <motion.button key={m.mode} type="button"
-                  whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                  onClick={() => setSelectedMode(m.mode)}
+                <motion.button
+                  key={m.mode}
+                  type="button"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => setMode(m.mode)}
+                  className={s.planCard}
                   style={{
-                    padding: '18px 14px', borderRadius: 'var(--radius-lg)',
-                    border: `2px solid ${selectedMode === m.mode ? m.color : 'var(--color-border)'}`,
-                    background: selectedMode === m.mode ? `${m.color}0D` : 'var(--color-bg-elevated)',
-                    cursor: 'pointer', textAlign: 'left',
-                    fontFamily: 'var(--font-body)', position: 'relative',
-                    boxShadow: selectedMode === m.mode ? `0 0 0 3px ${m.color}22` : 'none',
-                    transition: 'all 0.15s',
-                  }}>
+                    '--plan-color': m.color,
+                    '--plan-card-border': selectedMode === m.mode ? m.color : 'var(--border-default)',
+                    '--plan-card-bg': selectedMode === m.mode ? `${m.color}0D` : 'var(--bg-surface)',
+                    '--plan-card-ring': selectedMode === m.mode ? `0 0 0 3px ${m.color}22` : 'none',
+                  } as CSSProperties}
+                >
                   {m.recommended && (
-                    <div style={{
-                      position: 'absolute', top: -10, right: 12,
-                      background: m.color, color: '#fff',
-                      fontSize: 10, fontWeight: 700, padding: '2px 8px',
-                      borderRadius: 99,
-                    }}>Рекомендуем</div>
+                    <div className={s.planBadge}>Рекомендуем</div>
                   )}
-                  <div style={{
-                    width: 36, height: 36, borderRadius: 'var(--radius-md)',
-                    background: `${m.color}1A`, display: 'flex',
-                    alignItems: 'center', justifyContent: 'center',
-                    color: m.color, marginBottom: 10,
-                  }}>{m.icon}</div>
-                  <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 2 }}>{m.title}</div>
-                  <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginBottom: 10 }}>{m.subtitle}</div>
+                  <div className={s.planIcon}>
+                    {m.icon}
+                  </div>
+                  <div className={s.planTitle}>{m.title}</div>
+                  <div className={s.planSubtitle}>{m.subtitle}</div>
                   {m.features.map((f) => (
-                    <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--color-text-secondary)', marginBottom: 3 }}>
+                    <div key={f} className={s.planFeature}>
                       <CheckCircle2 size={11} color={m.color} />
                       {f}
                     </div>
@@ -241,26 +208,17 @@ export default function RegisterPage() {
                 </motion.button>
               ))}
             </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button type="button" onClick={() => setStep(0)}
-                style={{
-                  height: 42, padding: '0 16px', background: 'none',
-                  border: '1px solid var(--color-border)',
-                  borderRadius: 'var(--radius-md)', cursor: 'pointer',
-                  fontSize: 13, fontFamily: 'var(--font-body)',
-                  display: 'flex', alignItems: 'center', gap: 6,
-                }}>
+
+            <div className={s.btnRow}>
+              <button type="button" onClick={() => setStep(0)} className={s.backBtn}>
                 <ArrowLeft size={14} /> Назад
               </button>
-              <motion.button whileTap={{ scale: 0.98 }} type="submit" disabled={isSubmitting}
-                style={{
-                  flex: 1, height: 42, background: 'var(--color-amber)',
-                  border: 'none', borderRadius: 'var(--radius-md)',
-                  color: 'white', fontSize: 14, fontWeight: 600,
-                  cursor: isSubmitting ? 'not-allowed' : 'pointer',
-                  fontFamily: 'var(--font-body)',
-                  opacity: isSubmitting ? 0.75 : 1,
-                }}>
+              <motion.button
+                whileTap={{ scale: 0.98 }}
+                type="submit"
+                disabled={isSubmitting}
+                className={`${s.ctaBtn} ${s.btnRowFlex}`}
+              >
                 {isSubmitting ? 'Создаём аккаунт...' : 'Начать работу →'}
               </motion.button>
             </div>
@@ -268,11 +226,9 @@ export default function RegisterPage() {
         )}
       </AnimatePresence>
 
-      <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--color-text-muted)', marginTop: 20 }}>
+      <p className={s.footerLink}>
         Уже есть аккаунт?{' '}
-        <Link to="/auth/login" style={{ color: 'var(--color-amber)', fontWeight: 500, textDecoration: 'none' }}>
-          Войти
-        </Link>
+        <Link to="/auth/login">Войти</Link>
       </p>
     </motion.div>
   );

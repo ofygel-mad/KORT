@@ -16,6 +16,7 @@ import { useAuthStore } from '../../shared/stores/auth';
 import { api } from '../../shared/api/client';
 import { MobileFab } from '../../shared/ui/MobileFab';
 import { AiAssistant } from '../../widgets/ai-assistant/AiAssistant';
+import styles from './AppShell.module.css';
 
 export function AppShell() {
   const { isOpen, toggle } = useCommandPalette();
@@ -77,10 +78,10 @@ export function AppShell() {
   const sidebarW = isMobile ? 0 : sidebarCollapsed ? 64 : 220;
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--color-bg-base)' }}>
+    <div className={styles.root}>
       {!isMobile && (
         <motion.div
-          style={{ flexShrink: 0, position: 'sticky', top: 0, height: '100vh' }}
+          className={styles.sidebarRail}
           animate={{ width: sidebarW }}
           transition={{ type: 'spring', stiffness: 320, damping: 32 }}
         >
@@ -88,9 +89,9 @@ export function AppShell() {
         </motion.div>
       )}
 
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+      <div className={styles.content}>
         <Topbar />
-        <main style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
+        <main className={styles.main}>
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
               key={location.pathname}
@@ -98,7 +99,7 @@ export function AppShell() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -6 }}
               transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
-              style={{ height: '100%' }}
+              className={styles.routeViewport}
             >
               <Outlet />
             </motion.div>

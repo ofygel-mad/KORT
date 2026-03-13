@@ -1,0 +1,379 @@
+/* ═══════════════════════════════════════════════════════════════
+   SETTINGS PAGE — CSS Module
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Page layout ─────────────────────────────────────────────── */
+.page {
+  padding: var(--space-page-y) var(--space-page-x);
+  min-height: 100%;
+}
+
+/* ── Section tabs ────────────────────────────────────────────── */
+.navTabs {
+  position: sticky;
+  top: 12px;
+  z-index: 4;
+  backdrop-filter: blur(10px);
+  display: flex;
+  gap: 2px;
+  margin-bottom: var(--space-section-gap);
+  border-bottom: 1px solid var(--border-subtle);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.navTabs::-webkit-scrollbar { display: none; }
+
+.navTab {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: var(--font-body);
+  color: var(--text-secondary);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  margin-bottom: -1px;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  transition:
+    color var(--motion-duration-fast) var(--motion-ease-standard),
+    border-color var(--motion-duration-fast) var(--motion-ease-standard);
+}
+
+.navTab:hover { color: var(--text-primary); }
+
+.navTab.active {
+  color: var(--fill-accent);
+  border-bottom-color: var(--fill-accent);
+  font-weight: 600;
+}
+
+.navTab svg { color: var(--text-tertiary); }
+.navTab.active svg { color: var(--fill-accent); }
+
+/* ── Section card ────────────────────────────────────────────── */
+.section {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--surface-radius);
+  overflow: hidden;
+  margin-bottom: var(--space-section-gap);
+  box-shadow: var(--surface-shadow-rest);
+}
+
+.sectionHeader {
+  padding: var(--space-card-padding-compact) var(--space-card-padding);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-block-gap);
+}
+
+.sectionTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.sectionSubtitle {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.sectionBody {
+  padding: var(--space-card-padding);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-section-gap);
+}
+
+/* ── Form fields ─────────────────────────────────────────────── */
+.fieldGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-block-gap);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.fieldFull {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  grid-column: 1 / -1;
+}
+
+.fieldLabel {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.fieldHint {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  margin-top: 3px;
+}
+
+/* ── Pipeline stages ─────────────────────────────────────────── */
+.stageList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.stageRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  transition:
+    background var(--motion-duration-fast) var(--motion-ease-standard),
+    box-shadow  var(--motion-duration-fast) var(--motion-ease-standard);
+}
+
+.stageRow.dragging {
+  background: var(--bg-surface-elevated);
+  box-shadow: var(--shadow-md);
+  opacity: 0.5;
+}
+
+.dragHandle {
+  cursor: grab;
+  color: var(--text-tertiary);
+  display: flex;
+  align-items: center;
+  padding: 2px;
+  flex-shrink: 0;
+}
+
+.dragHandle:active { cursor: grabbing; }
+
+.stageDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--stage-color, var(--fill-accent));
+}
+
+.stageName {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.stageType {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-weight: 500;
+}
+
+.stageActions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.iconBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  color: var(--text-tertiary);
+  transition:
+    background var(--motion-duration-fast) var(--motion-ease-standard),
+    color      var(--motion-duration-fast) var(--motion-ease-standard);
+}
+
+.iconBtn:hover { background: var(--bg-hover); color: var(--text-secondary); }
+.iconBtn.danger:hover { background: var(--fill-negative-soft); color: var(--fill-negative); }
+
+/* ── Team table ──────────────────────────────────────────────── */
+.teamTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.teamTable th {
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-tertiary);
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.teamTable td {
+  padding: 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 13px;
+  color: var(--text-primary);
+  vertical-align: middle;
+}
+
+.teamTable tr:last-child td { border-bottom: none; }
+
+.teamTable tr:hover td { background: var(--bg-hover); }
+
+.memberCell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.memberAvatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--fill-accent-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--fill-accent);
+  flex-shrink: 0;
+}
+
+.memberName {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.memberEmail {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 1px;
+}
+
+/* ── API key ─────────────────────────────────────────────────── */
+.apiKeyRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.apiKeyField {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  background: var(--bg-surface-inset);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Danger zone ─────────────────────────────────────────────── */
+.dangerZone {
+  border-color: var(--fill-negative);
+}
+
+.dangerZone .sectionHeader {
+  background: var(--fill-negative-soft);
+}
+
+.dangerZone .sectionTitle { color: var(--fill-negative-text); }
+
+/* ── Empty pipeline state ────────────────────────────────────── */
+.emptyPipeline {
+  padding: 32px 20px;
+  text-align: center;
+  color: var(--text-tertiary);
+  font-size: 13px;
+}
+
+/* ── Mobile ──────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .page { padding: 14px 16px; }
+  .fieldGrid { grid-template-columns: 1fr; }
+  .teamTable th:nth-child(3),
+  .teamTable td:nth-child(3) { display: none; }
+}
+
+
+.teamTableWrap { overflow-x: auto; }
+.roleSelect { font-size: 12px; padding: 3px 8px; width: auto; }
+.roleText { font-size: 12px; color: var(--text-secondary); }
+.pipelineTabs { display: flex; gap: 6px; margin-bottom: 4px; flex-wrap: wrap; }
+.pipelineTab {
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  background: var(--bg-surface-inset);
+  border: 1px solid transparent;
+  color: var(--text-secondary);
+}
+.pipelineTabActive {
+  background: var(--fill-accent-soft);
+  color: var(--fill-accent);
+}
+.pipelineStar { margin-left: 4px; font-size: 10px; }
+.addStageRow { display: flex; gap: 8px; margin-top: 8px; }
+.stageInput { flex: 1; }
+.addStageBtn { margin-top: 8px; }
+.editStagePanel {
+  padding: var(--space-card-padding-compact) var(--space-card-padding);
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-block-gap);
+}
+.colorPalette { display: flex; gap: 6px; }
+.colorSwatch {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--swatch-color);
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+}
+.colorSwatchActive { border-color: var(--text-primary); }
+.editStageActions { display: flex; gap: 8px; justify-content: flex-end; }
+.emptyHint { font-size: 13px; color: var(--text-tertiary); }
+
+
+.stubText {
+  font-size: 13px;
+  color: var(--text-tertiary);
+}
+
+
+.navTab { transition: color var(--motion-duration-fast) var(--motion-ease-standard), border-color var(--motion-duration-fast) var(--motion-ease-standard), background var(--motion-duration-fast) var(--motion-ease-standard), transform var(--motion-duration-fast) var(--motion-ease-standard); }
+.navTab:hover { background: var(--bg-hover); transform: translateY(-1px); }
+.navTab:active { transform: var(--feedback-soft-press); }
+.section { box-shadow: var(--surface-shadow-rest); }
+.teamTable tr { transition: background var(--motion-fast) var(--motion-ease); }
+.emptyPipeline { padding: clamp(30px, 6vw, 54px) var(--space-card-padding); border: 1px dashed var(--border-default); border-radius: var(--radius-lg); background: var(--bg-surface-inset); }
+.emptyHint { line-height: 1.55; }

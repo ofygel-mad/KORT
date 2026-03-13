@@ -1,0 +1,380 @@
+/* ═══════════════════════════════════════════════════════════════
+   IMPORTS PAGE — CSS Module
+   Wizard: Upload → Mapping → Result  +  History list.
+   ═══════════════════════════════════════════════════════════════ */
+
+.page { max-width: 900px; }
+
+/* ── Wizard card ─────────────────────────────────────────────── */
+.wizardCard {
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--surface-radius);
+  padding: clamp(22px, 3vw, 28px);
+  margin-bottom: 24px;
+  box-shadow: var(--surface-shadow-rest);
+}
+
+/* ── Steps row ───────────────────────────────────────────────── */
+.steps {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+  justify-content: center;
+}
+
+.stepItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stepDot {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--motion-duration-base) var(--motion-ease-standard);
+  flex-shrink: 0;
+}
+
+.stepDot.pending { background: var(--border-subtle); }
+.stepDot.active  { background: var(--fill-accent); }
+.stepDot.done    { background: var(--fill-positive); }
+
+.stepNum {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.stepNum.pending { color: var(--text-tertiary); }
+.stepNum.active  { color: var(--text-inverse); }
+
+.stepLabel {
+  font-size: 13px;
+  transition: color var(--motion-duration-fast) var(--motion-ease-standard);
+}
+
+.stepLabel.active { font-weight: 600; color: var(--text-primary); }
+.stepLabel.other  { color: var(--text-tertiary); }
+
+.stepConnector {
+  width: 32px;
+  height: 1px;
+  transition: background var(--motion-duration-base) var(--motion-ease-standard);
+}
+
+.stepConnector.done    { background: var(--fill-positive); }
+.stepConnector.pending { background: var(--border-subtle); }
+
+/* ── Drop zone ───────────────────────────────────────────────── */
+.dropZone {
+  border: 2px dashed var(--border-default);
+  border-radius: var(--radius-lg);
+  padding: 48px 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color var(--motion-duration-fast) var(--motion-ease-standard);
+}
+
+.dropZone:hover { border-color: var(--fill-accent); }
+.dropZone.uploading { background: var(--fill-accent-soft); }
+
+.dropIcon { margin: 0 auto 12px; display: block; }
+
+.dropTitle {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+
+.dropDesc {
+  font-size: 13px;
+  color: var(--text-tertiary);
+}
+
+/* ── Upload spinner ──────────────────────────────────────────── */
+.spinnerWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--fill-accent);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.spinnerLabel {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+/* ── Mapping step ────────────────────────────────────────────── */
+.mappingHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-section-gap);
+}
+
+.mappingTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.mappingCount {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}
+
+.mappingActions {
+  display: flex;
+  gap: 8px;
+}
+
+.mappingGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: var(--space-section-gap);
+}
+
+.mappingRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--bg-surface-inset);
+  border-radius: var(--radius-md);
+}
+
+.mappingColName {
+  font-size: 12px;
+  flex: 1;
+  font-weight: 500;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mappingArrow { flex-shrink: 0; color: var(--text-tertiary); }
+
+.mappingSelect {
+  width: 160px;
+  flex-shrink: 0;
+}
+
+/* ── Preview table ───────────────────────────────────────────── */
+.previewLabel {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  margin-bottom: 8px;
+}
+
+.previewTableWrap {
+  overflow-x: auto;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.previewTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.previewTh {
+  padding: 8px 12px;
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-surface-inset);
+  white-space: nowrap;
+}
+
+.previewTd {
+  padding: 7px 12px;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-subtle);
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.previewTd:last-child, .previewTh:last-child { border-bottom: none; }
+
+/* ── Result step ─────────────────────────────────────────────── */
+.resultCenter {
+  text-align: center;
+  padding: clamp(28px, 5vw, 40px);
+  border-radius: calc(var(--surface-radius-tight) - 2px);
+  background: color-mix(in srgb, var(--state-success-bg) 44%, transparent);
+}
+
+.resultSpinner {
+  width: 48px;
+  height: 48px;
+  border: 3px solid var(--fill-accent);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  margin: 0 auto 16px;
+}
+
+.resultProcessingTitle {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.resultProcessingDesc {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  margin-top: 4px;
+}
+
+.resultSuccessTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 12px 0 4px;
+}
+
+.statsRow {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.statItem { text-align: center; }
+
+/* stat color is dynamic (success/warn/error) → inline */
+.statValue {
+  font-size: 28px;
+  font-weight: 800;
+  font-family: var(--font-display);
+  line-height: 1;
+}
+
+.statLabel {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}
+
+.resultNewImport { margin-top: 20px; }
+
+.resultError {
+  text-align: center;
+  padding: 32px;
+  color: var(--fill-negative);
+  font-size: 14px;
+}
+
+.resultErrorIcon { margin: 0 auto 12px; display: block; }
+
+/* ── History card ────────────────────────────────────────────── */
+.historyCard {
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.historyTitle {
+  padding: var(--space-card-padding-compact) 18px;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.historySkeletonRow {
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.historyEmpty {
+  padding: 24px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+.historyRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--border-subtle);
+  transition: background var(--motion-duration-fast) var(--motion-ease-standard);
+}
+
+.historyRow:last-child { border-bottom: none; }
+.historyRow:hover { background: var(--bg-hover); }
+
+.historyRowLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.historyIcon { color: var(--fill-accent); }
+
+.historyJobName {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.historyJobDate {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  margin-top: 1px;
+}
+
+/* Status badge — bg/color are runtime from STATUS_COLORS map → inline */
+.statusBadge {
+  font-size: 12px;
+  padding: 2px 10px;
+  border-radius: var(--radius-full);
+  font-weight: 500;
+}
+
+.hiddenInput {
+  display: none;
+}
+
+.resultSuccessIcon {
+  display: block;
+  margin: 0 auto;
+}
+
+.statValue {
+  color: var(--stat-color, var(--text-primary));
+}
+
+.statusBadge {
+  background: var(--status-bg, var(--bg-surface-inset));
+  color: var(--status-color, var(--text-secondary));
+}
+
+.previewTableWrap, .dropZone { transition: border-color var(--motion-fast) var(--motion-ease), box-shadow var(--motion-fast) var(--motion-ease), background var(--motion-fast) var(--motion-ease); }
+.dropZone:hover { box-shadow: var(--shadow-sm); }

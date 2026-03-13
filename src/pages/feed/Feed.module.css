@@ -1,0 +1,123 @@
+/* ═══════════════════════════════════════════════════════════════
+   FEED PAGE — CSS Module
+   ═══════════════════════════════════════════════════════════════ */
+
+.page {
+  padding: 24px 28px;
+  max-width: 760px;
+}
+
+/* ── Feed item ───────────────────────────────────────────────── */
+.feedItem {
+  display: flex;
+  gap: 12px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.feedItem:last-child { border-bottom: none; }
+
+/* ── Icon dot ────────────────────────────────────────────────── */
+.iconDot {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--feed-icon-bg, var(--bg-surface-inset));
+  color: var(--feed-icon-color, var(--text-tertiary));
+}
+
+.iconSvg {
+  color: inherit;
+}
+
+/* ── Feed body ───────────────────────────────────────────────── */
+.feedBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.feedText {
+  font-size: 13px;
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+
+.feedActor {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.feedType {
+  color: var(--text-secondary);
+}
+
+/* Entity link buttons within feed text */
+.feedLink {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--fill-accent);
+  text-decoration: none;
+  transition: opacity var(--motion-duration-fast) var(--motion-ease-standard);
+}
+
+.feedLink:hover { opacity: 0.75; text-decoration: underline; }
+
+.feedPreview {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  margin-top: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.feedTime {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  margin-top: 4px;
+}
+
+/* ── Skeleton ────────────────────────────────────────────────── */
+.skeletonList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.skeletonItem {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.skeletonDot {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--bg-surface-inset);
+  flex-shrink: 0;
+}
+
+.skeletonBody { flex: 1; }
+
+/* ── Mobile ──────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .page { padding: 14px 16px; }
+}
+
+.skeletonTitle {
+  margin-bottom: 6px;
+}
+
+.feedList {
+  margin-top: 8px;
+}

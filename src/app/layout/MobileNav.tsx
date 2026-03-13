@@ -3,6 +3,7 @@ import { LayoutDashboard, Users, Briefcase, CheckSquare, MoreHorizontal, Smartph
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { usePwaInstall } from '../../shared/hooks/usePwaInstall';
+import styles from './MobileNav.module.css';
 
 const PRIMARY_NAV = [
   { to: '/', icon: LayoutDashboard, label: 'Главная' },
@@ -33,39 +34,20 @@ export function MobileNav() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setMoreOpen(false)}
-              style={{ position: 'fixed', inset: 0, zIndex: 98 }}
+              className={styles.backdrop}
             />
             <motion.div
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 8 }}
-              style={{
-                position: 'fixed',
-                bottom: 68,
-                right: 12,
-                zIndex: 99,
-                background: 'var(--color-bg-elevated)',
-                border: '1px solid var(--color-border)',
-                borderRadius: 'var(--radius-lg)',
-                boxShadow: 'var(--shadow-lg)',
-                overflow: 'hidden',
-                minWidth: 160,
-              }}
+              className={styles.moreMenu}
             >
               {Object.keys(MORE_LABELS).map((to) => (
                 <NavLink
                   key={to}
                   to={to}
                   onClick={() => setMoreOpen(false)}
-                  style={{
-                    display: 'block',
-                    padding: '11px 16px',
-                    fontSize: 13,
-                    fontWeight: 500,
-                    color: 'var(--color-text-primary)',
-                    textDecoration: 'none',
-                    borderBottom: '1px solid var(--color-border)',
-                  }}
+                  className={styles.moreLink}
                 >
                   {MORE_LABELS[to]}
                 </NavLink>
@@ -86,7 +68,7 @@ export function MobileNav() {
           <span>Ещё</span>
         </button>
       </nav>
-      {canInstall && <button onClick={install} style={{ position: 'fixed', right: 16, bottom: 80, zIndex: 50 }}><Smartphone size={18} /> Установить</button>}
+      {canInstall && <button className={styles.installButton} onClick={install}><Smartphone size={18} /> Установить</button>}
     </>
   );
 }

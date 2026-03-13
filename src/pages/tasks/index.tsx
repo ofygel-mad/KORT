@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { motion } from 'framer-motion';
-import { CheckSquare, Plus, Clock, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  CheckSquare, Plus, Clock, AlertCircle, CheckCircle2, Trash2, User,
+} from 'lucide-react';
 import { api } from '../../shared/api/client';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { Button } from '../../shared/ui/Button';
 import { Badge } from '../../shared/ui/Badge';
 import { EmptyState } from '../../shared/ui/EmptyState';
-import { Skeleton } from '../../shared/ui/Skeleton';
 import { Drawer } from '../../shared/ui/Drawer';
 import { toast } from 'sonner';
 import { format, isPast, isToday } from 'date-fns';
@@ -15,47 +16,39 @@ import { getDateLocale } from '../../shared/utils/locale';
 import { useIsMobile } from '../../shared/hooks/useIsMobile';
 import { useForm } from 'react-hook-form';
 import { useDocumentTitle } from '../../shared/hooks/useDocumentTitle';
+import { listContainer, listItem } from '../../shared/motion/presets';
+import s from './Tasks.module.css';
 
 interface TaskForm {
   title: string;
   description?: string;
   priority: 'low' | 'medium' | 'high';
   due_at?: string;
-  assigned_to_id?: string;
   customer_id?: string;
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-      <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--color-text-secondary)' }}>{label}</label>
-      {children}
-    </div>
-  );
-}
-
 interface Task {
-  id:string; title:string; description:string;
-  priority:'low'|'medium'|'high'; status:'open'|'done'|'cancelled';
-  due_at:string|null; completed_at:string|null;
-  assigned_to:{ id:string; full_name:string } | null;
-  customer:{ id:string; full_name:string } | null;
-  deal:{ id:string; title:string } | null;
-  created_at:string;
+  id: string; title: string; description: string;
+  priority: 'low' | 'medium' | 'high'; status: 'open' | 'done' | 'cancelled';
+  due_at: string | null; completed_at: string | null;
+  assigned_to: { id: string; full_name: string } | null;
+  customer: { id: string; full_name: string } | null;
+  deal: { id: string; title: string } | null;
+  created_at: string;
 }
 
-const PRIORITY_COLORS = {
-  low:    { bg:'#F3F4F6', color:'#6B7280' },
-  medium: { bg:'#FEF3C7', color:'#D97706' },
-  high:   { bg:'#FEE2E2', color:'#DC2626' },
+const PRIORITY_LABEL: Record<string, string> = { low: 'Низкий', medium: 'Средний', high: 'Высокий' };
+const PRIORITY_BADGE: Record<string, { bg: string; color: string }> = {
+  low:    { bg: 'var(--bg-surface-inset)',   color: 'var(--text-tertiary)' },
+  medium: { bg: 'var(--fill-warning-soft)',  color: 'var(--fill-warning-text)' },
+  high:   { bg: 'var(--fill-negative-soft)', color: 'var(--fill-negative-text)' },
 };
-const PRIORITY_LABELS = { low:'Низкий', medium:'Средний', high:'Высокий' };
 
 const FILTERS = [
-  { key:'mine',       label:'Мои' },
-  { key:'due_today',  label:'Сегодня' },
-  { key:'overdue',    label:'Просрочено' },
-  { key:'',           label:'Все' },
+  { key: 'mine',      label: 'Мои' },
+  { key: 'due_today', label: 'Сегодня' },
+  { key: 'overdue',   label: 'Просрочено' },
+  { key: '',          label: 'Все' },
 ];
 
 export default function TasksPage() {
@@ -69,22 +62,51 @@ export default function TasksPage() {
     defaultValues: { priority: 'medium' },
   });
 
+  const params: Record<string, string> = {};
+  if (filter === 'mine')      params.mine      = '1';
+  if (filter === 'due_today') params.due_today = '1';
+  if (filter === 'overdue')   params.overdue   = '1';
+
+  const { data, isLoading } = useQuery<{ results: Task[] }>({
+    queryKey: ['tasks', filter],
+    queryFn: () => api.get('/tasks/', params),
+  });
+  const tasks = data?.results ?? [];
+
+  const { data: allData } = useQuery<{ results: Task[] }>({
+    queryKey: ['tasks', 'all'],
+    queryFn: () => api.get('/tasks/', {}),
+  });
+  const allTasks = allData?.results ?? [];
+  const overdueCount = allTasks.filter(t => t.due_at && isPast(new Date(t.due_at)) && t.status !== 'done').length;
+  const todayCount   = allTasks.filter(t => t.due_at && isToday(new Date(t.due_at)) && t.status !== 'done').length;
+  const doneCount    = allTasks.filter(t => t.status === 'done').length;
+
   const createMutation = useMutation({
     mutationFn: (data: TaskForm) => api.post('/tasks/', data),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['tasks'] });
-      toast.success('Задача создана');
-      setDrawerOpen(false);
-      reset();
-    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['tasks'] }); toast.success('Задача создана'); setDrawerOpen(false); reset(); },
     onError: () => toast.error('Не удалось создать задачу'),
+  });
+
+  const completeMutation = useMutation({
+    mutationFn: (id: string) => api.post(`/tasks/${id}/complete/`),
+    onMutate: async (id: string) => {
+      await qc.cancelQueries({ queryKey: ['tasks', filter] });
+      const prev = qc.getQueryData<{ results: Task[] }>(['tasks', filter]);
+      qc.setQueryData(['tasks', filter], (old: any) => ({
+        ...old, results: (old?.results ?? []).map((t: Task) => t.id === id ? { ...t, status: 'done' } : t),
+      }));
+      return { prev };
+    },
+    onError: (_err, _id, ctx) => { if (ctx?.prev) qc.setQueryData(['tasks', filter], ctx.prev); toast.error('Ошибка'); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['tasks'] }); toast.success('Задача выполнена ✓'); },
   });
 
   useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent).detail ?? {};
       setDrawerOpen(true);
-      if (detail.title) reset({ ...{ priority: 'medium' }, title: detail.title });
+      if (detail.title) reset({ priority: 'medium', title: detail.title });
       if (detail.customerId) setValue('customer_id', detail.customerId);
     };
     window.addEventListener('kort:new-task', handler);
@@ -94,172 +116,152 @@ export default function TasksPage() {
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's' && drawerOpen) {
-        e.preventDefault();
-        handleSubmit((d) => createMutation.mutate(d))();
+        e.preventDefault(); handleSubmit(d => createMutation.mutate(d))();
       }
     };
     document.addEventListener('keydown', h);
     return () => document.removeEventListener('keydown', h);
   }, [drawerOpen, handleSubmit, createMutation]);
 
-  const params: Record<string, string> = {};
-  if (filter === 'mine')      params.mine      = '1';
-  if (filter === 'due_today') params.due_today = '1';
-  if (filter === 'overdue')   params.overdue   = '1';
-
-  const { data, isLoading } = useQuery<{ results:Task[] }>({
-    queryKey: ['tasks', filter],
-    queryFn:  () => api.get('/tasks/', params),
-  });
-
-  const completeMutation = useMutation({
-    mutationFn: (id:string) => api.post(`/tasks/${id}/complete/`),
-    onMutate: async (id: string) => {
-      await qc.cancelQueries({ queryKey: ['tasks', filter] });
-      const prev = qc.getQueryData<{ results: Task[] }>(['tasks', filter]);
-      qc.setQueryData(['tasks', filter], (old: any) => ({
-        ...old,
-        results: (old?.results ?? []).map((t: Task) => (t.id === id ? { ...t, status: 'done' } : t)),
-      }));
-      return { prev };
-    },
-    onError: (_err, _id, ctx) => {
-      if (ctx?.prev) qc.setQueryData(['tasks', filter], ctx.prev);
-      toast.error('Не удалось обновить задачу');
-    },
-    onSuccess: () => { qc.invalidateQueries({ queryKey:['tasks'] }); toast.success('Задача выполнена ✓'); },
-  });
-
   return (
-    <div style={{ padding: isMobile ? '14px 16px' : '24px 28px' }}>
+    <div className={s.page}>
       <PageHeader
         title="Задачи"
-        subtitle={data ? `${data.results?.length ?? 0} задач` : undefined}
-        actions={<Button icon={<Plus size={15}/>} size="sm" onClick={() => setDrawerOpen(true)}>Новая задача</Button>}
+        subtitle={isLoading ? undefined : `${tasks.length} задач`}
+        actions={<Button icon={<Plus size={15} />} size="sm" onClick={() => setDrawerOpen(true)}>Новая задача</Button>}
       />
 
-      <div className="tasks-filter-tabs" style={{
-        display:'flex', gap:4, marginBottom:20, padding:'4px',
-        background:'var(--color-bg-muted)', borderRadius:'var(--radius-md)',
-        width: isMobile ? '100%' : 'fit-content',
-        overflowX: isMobile ? 'auto' : 'visible',
-      }}>
+      {!isMobile && (
+        <div className={s.statsStrip}>
+          {overdueCount > 0 && <div className={`${s.statPill} ${s.danger}`}><AlertCircle size={12} />Просрочено: {overdueCount}</div>}
+          {todayCount   > 0 && <div className={`${s.statPill} ${s.warning}`}><Clock size={12} />Сегодня: {todayCount}</div>}
+          {doneCount    > 0 && <div className={`${s.statPill} ${s.success}`}><CheckCircle2 size={12} />Выполнено: {doneCount}</div>}
+        </div>
+      )}
+
+      <div className={s.filterBar}>
         {FILTERS.map(f => (
-          <button
-            key={f.key}
-            onClick={() => setFilter(f.key)}
-            style={{
-              padding:'6px 14px', fontSize:13, fontWeight:500, borderRadius:'var(--radius-sm)',
-              background: filter===f.key ? 'var(--color-bg-elevated)' : 'transparent',
-              color:      filter===f.key ? 'var(--color-text-primary)' : 'var(--color-text-muted)',
-              border:     filter===f.key ? '1px solid var(--color-border)' : '1px solid transparent',
-              cursor:'pointer', transition:'all var(--transition-fast)',
-              fontFamily:'var(--font-body)',
-              boxShadow: filter===f.key ? 'var(--shadow-xs)' : 'none',
-            }}
-          >
+          <button key={f.key} onClick={() => setFilter(f.key)} className={`${s.filterTab} ${filter === f.key ? s.active : ''}`}>
             {f.label}
           </button>
         ))}
       </div>
 
-      <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-        {isLoading
-          ? [1,2,3,4].map(i => (
-              <div key={i} style={{ background:'var(--color-bg-elevated)', borderRadius:'var(--radius-md)', padding:'14px 16px', border:'1px solid var(--color-border)' }}>
-                <Skeleton height={14} width="60%" style={{ marginBottom:8 }} />
-                <Skeleton height={12} width="30%" />
+      {isLoading ? (
+        <div className={s.taskList}>
+          {[1,2,3,4].map(i => (
+            <div key={i} className={s.taskItem}>
+              <div className={s.skeletonCheck} />
+              <div className={s.taskBody}>
+                <div className={s.skeletonTitle} />
+                <div className={s.skeletonMeta} />
               </div>
-            ))
-          : data?.results?.length === 0
-            ? <EmptyState icon={<CheckSquare size={22}/>} title="Задач нет" subtitle="Задачи появятся, когда вы их создадите или вам их назначат" />
-            : data?.results?.map((task, idx) => {
-                const pc      = PRIORITY_COLORS[task.priority];
-                const isDone  = task.status === 'done';
-                const dueDate = task.due_at ? new Date(task.due_at) : null;
-                const isOver  = dueDate && isPast(dueDate) && !isDone;
-                const isDue   = dueDate && isToday(dueDate) && !isDone;
-
-                return (
-                  <motion.div
-                    key={task.id}
-                    initial={{ opacity:0, y:6 }} animate={{ opacity:1, y:0 }}
-                    transition={{ delay:idx*0.03 }}
-                    style={{
-                      background:'var(--color-bg-elevated)',
-                      border:     `1px solid ${isOver?'#FCA5A5':isDue?'#FDE68A':'var(--color-border)'}`,
-                      borderRadius:'var(--radius-md)',
-                      padding:'14px 16px',
-                      display:'flex', alignItems:'flex-start', gap:12,
-                      opacity: isDone ? 0.5 : 1,
-                    }}
+            </div>
+          ))}
+        </div>
+      ) : tasks.length === 0 ? (
+        <EmptyState
+          icon={<CheckSquare size={22} />}
+          title="Задач нет"
+          subtitle={
+            filter === 'overdue' ? 'Просроченных задач нет 🎉' :
+            filter === 'due_today' ? 'На сегодня задач нет' :
+            'Создайте первую задачу'
+          }
+          action={{ label: 'Создать задачу', onClick: () => setDrawerOpen(true) }}
+        />
+      ) : (
+        <motion.div className={s.taskList} variants={listContainer} initial="hidden" animate="visible">
+          <AnimatePresence>
+            {tasks.map(task => {
+              const isDone  = task.status === 'done';
+              const dueDate = task.due_at ? new Date(task.due_at) : null;
+              const isOver  = dueDate && isPast(dueDate) && !isDone;
+              const isDueT  = dueDate && isToday(dueDate) && !isDone;
+              const pb      = PRIORITY_BADGE[task.priority];
+              return (
+                <motion.div
+                  key={task.id}
+                  variants={listItem}
+                  exit={{ opacity: 0, height: 0 }}
+                  className={[s.taskItem, isDone && s.done, isOver && s.overdue, isDueT && s.dueToday].filter(Boolean).join(' ')}
+                >
+                  <button
+                    className={`${s.checkBtn} ${isDone ? s.checked : ''}`}
+                    onClick={() => !isDone && completeMutation.mutate(task.id)}
+                    disabled={isDone}
+                    aria-label={isDone ? 'Выполнено' : 'Отметить выполненным'}
                   >
-                    <button
-                      onClick={() => !isDone && completeMutation.mutate(task.id)}
-                      style={{ flexShrink:0, background:'none', border:'none', cursor:isDone?'default':'pointer', color: isDone?'#10B981':'var(--color-text-muted)', marginTop:1 }}
-                    >
-                      {isDone ? <CheckCircle2 size={18} /> : <CheckSquare size={18} />}
-                    </button>
+                    {isDone ? <CheckCircle2 size={18} /> : <CheckSquare size={18} />}
+                  </button>
 
-                    <div style={{ flex:1 }}>
-                      <div style={{
-                        fontSize:13, fontWeight:500,
-                        textDecoration: isDone ? 'line-through' : 'none',
-                        color: isDone ? 'var(--color-text-muted)' : 'var(--color-text-primary)',
-                        marginBottom:4,
-                      }}>
-                        {task.title}
-                      </div>
-                      <div style={{ display:'flex', gap:8, flexWrap:'wrap', alignItems:'center' }}>
-                        <Badge bg={pc.bg} color={pc.color}>{PRIORITY_LABELS[task.priority]}</Badge>
-                        {task.customer && (
-                          <span style={{ fontSize:11, color:'var(--color-text-muted)' }}>
-                            👤 {task.customer.full_name}
-                          </span>
-                        )}
-                        {dueDate && (
-                          <span style={{ fontSize:11, display:'flex', alignItems:'center', gap:3, color:isOver?'#DC2626':isDue?'#D97706':'var(--color-text-muted)' }}>
-                            {isOver ? <AlertCircle size={11}/> : <Clock size={11}/>}
-                            {format(dueDate, 'd MMM', { locale: getDateLocale() })}
-                          </span>
-                        )}
-                      </div>
+                  <div className={s.taskBody}>
+                    <div className={`${s.taskTitle} ${isDone ? s.done : ''}`}>{task.title}</div>
+                    <div className={s.taskMeta}>
+                      <Badge bg={pb.bg} color={pb.color}>
+                        <span className={`${s.priorityDot} ${s[task.priority]}`} />
+                        {PRIORITY_LABEL[task.priority]}
+                      </Badge>
+                      {task.customer && (
+                        <span className={s.metaChip}><User size={10} />{task.customer.full_name}</span>
+                      )}
+                      {dueDate && (
+                        <span className={`${s.metaChip} ${isOver ? s.overdue : isDueT ? s.dueToday : ''}`}>
+                          {isOver ? <AlertCircle size={10} /> : <Clock size={10} />}
+                          {format(dueDate, 'd MMM', { locale: getDateLocale() })}
+                        </span>
+                      )}
                     </div>
-                  </motion.div>
-                );
-              })}
-      </div>
+                  </div>
+
+                  <div className={s.taskActions}>
+                    <button className={`${s.actionBtn} ${s.danger}`} onClick={() => toast.info('Удаление задачи')} aria-label="Удалить">
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
+        </motion.div>
+      )}
 
       <Drawer
         open={drawerOpen}
         onClose={() => { setDrawerOpen(false); reset(); }}
         title="Новая задача"
         footer={
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+          <div className={s.drawerFooter}>
             <Button variant="secondary" onClick={() => { setDrawerOpen(false); reset(); }}>Отмена</Button>
-            <Button loading={isSubmitting} onClick={handleSubmit((d) => createMutation.mutate(d))}>
-              Создать <kbd style={{ fontSize: 10, opacity: 0.7, marginLeft: 4 }}>⌘S</kbd>
+            <Button loading={isSubmitting || createMutation.isPending} onClick={handleSubmit(d => createMutation.mutate(d))}>
+              Создать <kbd className={s.shortcutKey}>⌘S</kbd>
             </Button>
           </div>
         }
       >
-        <form style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <Field label="Заголовок *">
-            <input {...register('title', { required: true })} placeholder="Что нужно сделать?" className="kort-input" />
-          </Field>
-          <Field label="Описание">
-            <textarea {...register('description')} placeholder="Детали задачи..." className="kort-textarea" style={{ minHeight: 72 }} />
-          </Field>
-          <Field label="Приоритет">
-            <select {...register('priority')} className="kort-input">
-              <option value="low">Низкий</option>
-              <option value="medium">Средний</option>
-              <option value="high">Высокий</option>
-            </select>
-          </Field>
-          <Field label="Срок выполнения">
-            <input type="datetime-local" {...register('due_at')} className="kort-input" />
-          </Field>
+        <form className={s.form} onSubmit={e => e.preventDefault()}>
+          <div className={s.field}>
+            <label className={s.fieldLabel}>Заголовок *</label>
+            <input {...register('title', { required: true })} placeholder="Что нужно сделать?" className="kort-input" autoFocus />
+          </div>
+          <div className={s.field}>
+            <label className={s.fieldLabel}>Описание</label>
+            <textarea {...register('description')} placeholder="Детали задачи..." className={`kort-textarea ${s.textarea}`} />
+          </div>
+          <div className={s.fieldRow}>
+            <div className={s.field}>
+              <label className={s.fieldLabel}>Приоритет</label>
+              <select {...register('priority')} className="kort-input">
+                <option value="low">Низкий</option>
+                <option value="medium">Средний</option>
+                <option value="high">Высокий</option>
+              </select>
+            </div>
+            <div className={s.field}>
+              <label className={s.fieldLabel}>Срок выполнения</label>
+              <input type="datetime-local" {...register('due_at')} className="kort-input" />
+            </div>
+          </div>
         </form>
       </Drawer>
     </div>

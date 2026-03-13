@@ -1,157 +1,173 @@
 import { NavLink } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  LayoutDashboard,
-  Users,
-  Briefcase,
-  CheckSquare,
-  BarChart2,
-  Settings,
-  Shield,
-  Zap,
-  Upload,
-  ChevronLeft,
-  Crown,
-  Activity,
+  LayoutDashboard, Users, Briefcase, CheckSquare, BarChart2,
+  Settings, Shield, Zap, Upload, ChevronLeft, Crown, Activity, Inbox,
 } from 'lucide-react';
 import { useCapabilities } from '../../shared/hooks/useCapabilities';
 import { useRole } from '../../shared/hooks/useRole';
 import { useUIStore } from '../../shared/stores/ui';
+import { useAuthStore } from '../../shared/stores/auth';
 import { KortLogo } from '../../shared/ui/KortLogo';
 import styles from './Sidebar.module.css';
+import { t } from '../../shared/motion/presets';
 
-const NAV = [
-  { to: '/', icon: LayoutDashboard, label: 'Главная', always: true },
-  { to: '/feed', icon: Activity, label: 'Лента', always: true },
-  { to: '/customers', icon: Users, label: 'Клиенты', always: true },
-  { to: '/deals', icon: Briefcase, label: 'Сделки', always: true },
-  { to: '/tasks', icon: CheckSquare, label: 'Задачи', always: true },
-  { to: '/reports', icon: BarChart2, label: 'Отчёты', cap: 'reports.basic' },
-  { to: '/imports', icon: Upload, label: 'Импорт', cap: 'customers.import' },
-  { to: '/automations', icon: Zap, label: 'Автоматизации', cap: 'automations.manage' },
-  { to: '/audit', icon: Shield, label: 'Аудит', cap: 'audit.read' },
+// ─── Navigation map — product-level IA (Глава 8) ─────────────────────────
+const NAV_MAIN = [
+  { to: '/',          icon: LayoutDashboard, label: 'Главная',          always: true },
+  { to: '/feed',      icon: Inbox,           label: 'Лента',            always: true },
+  { to: '/customers', icon: Users,           label: 'Клиенты',          always: true },
+  { to: '/deals',     icon: Briefcase,       label: 'Сделки',           always: true },
+  { to: '/tasks',     icon: CheckSquare,     label: 'Задачи',           always: true },
 ];
 
-export function Sidebar({ onNavigate }: { onNavigate?: () => void } = {}) {
+const NAV_SECONDARY = [
+  { to: '/reports',     icon: BarChart2, label: 'Отчёты',        cap: 'reports.basic' },
+  { to: '/imports',     icon: Upload,    label: 'Импорт',        cap: 'customers.import' },
+  { to: '/automations', icon: Zap,       label: 'Автоматизации', cap: 'automations.manage' },
+  { to: '/audit',       icon: Shield,    label: 'Аудит',         cap: 'audit.read' },
+];
+
+const label = (text: string, collapsed: boolean) => (
+  <AnimatePresence initial={false}>
+    {!collapsed && (
+      <motion.span
+        className={styles.navLabel}
+        initial={{ opacity: 0, width: 0 }}
+        animate={{ opacity: 1, width: 'auto' }}
+        exit={{ opacity: 0, width: 0 }}
+        transition={t.fast}
+      >
+        {text}
+      </motion.span>
+    )}
+  </AnimatePresence>
+);
+
+interface SidebarProps {
+  onNavigate?: () => void;
+}
+
+export function Sidebar({ onNavigate }: SidebarProps = {}) {
   const { can } = useCapabilities();
   const { isAdmin } = useRole();
   const { sidebarCollapsed, toggleSidebar } = useUIStore();
-  const visible = NAV.filter((i) => i.always || (i.cap && can(i.cap)));
+  const user = useAuthStore(s => s.user);
+
+  const secondaryVisible = NAV_SECONDARY.filter(i => i.cap && can(i.cap));
+  const collapsed = sidebarCollapsed;
+
+  const navItemClass = ({ isActive }: { isActive: boolean }) =>
+    [styles.navItem, isActive ? styles.navItemActive : ''].join(' ');
 
   return (
     <motion.aside
       className={styles.sidebar}
-      animate={{ width: sidebarCollapsed ? 64 : 220 }}
-      transition={{ type: 'spring', stiffness: 320, damping: 32 }}
+      animate={{ width: collapsed ? 64 : 220 }}
+      transition={{ type: 'spring', stiffness: 340, damping: 34 }}
     >
+      {/* Logo */}
       <div className={styles.logo}>
         <KortLogo size={28} />
-        <AnimatePresence initial={false}>
-          {!sidebarCollapsed && (
-            <motion.span
-              className={styles.logoText}
-              initial={{ opacity: 0, width: 0 }}
-              animate={{ opacity: 1, width: 'auto' }}
-              exit={{ opacity: 0, width: 0 }}
-              transition={{ duration: 0.15 }}
-              style={{ overflow: 'hidden', whiteSpace: 'nowrap' }}
-            >
-              Kort
-            </motion.span>
-          )}
-        </AnimatePresence>
+        {label('Kort', collapsed)}
       </div>
 
+      {/* Primary nav */}
       <nav className={styles.nav}>
-        {visible.map(({ to, icon: Icon, label }) => (
+        {NAV_MAIN.map(({ to, icon: Icon, label: lbl }) => (
           <NavLink
             key={to}
             to={to}
             end={to === '/'}
-            onClick={() => onNavigate?.()}
-            title={sidebarCollapsed ? label : undefined}
-            className={({ isActive }) => [styles.navItem, isActive ? styles.navItemActive : ''].join(' ')}
+            onClick={onNavigate}
+            title={collapsed ? lbl : undefined}
+            className={navItemClass}
           >
-            <Icon size={18} strokeWidth={1.75} style={{ flexShrink: 0 }} />
-            <AnimatePresence initial={false}>
-              {!sidebarCollapsed && (
-                <motion.span
-                  initial={{ opacity: 0, width: 0 }}
-                  animate={{ opacity: 1, width: 'auto' }}
-                  exit={{ opacity: 0, width: 0 }}
-                  transition={{ duration: 0.13 }}
-                  style={{ overflow: 'hidden', whiteSpace: 'nowrap', fontSize: 13 }}
-                >
-                  {label}
-                </motion.span>
-              )}
-            </AnimatePresence>
+            <span className={styles.navIcon}>
+              <Icon size={17} strokeWidth={1.75} />
+            </span>
+            {label(lbl, collapsed)}
           </NavLink>
         ))}
+
+        {/* Secondary section */}
+        {secondaryVisible.length > 0 && (
+          <>
+            {!collapsed && (
+              <div className={styles.navSection}>Инструменты</div>
+            )}
+            {secondaryVisible.map(({ to, icon: Icon, label: lbl }) => (
+              <NavLink
+                key={to}
+                to={to}
+                onClick={onNavigate}
+                title={collapsed ? lbl : undefined}
+                className={navItemClass}
+              >
+                <span className={styles.navIcon}>
+                  <Icon size={17} strokeWidth={1.75} />
+                </span>
+                {label(lbl, collapsed)}
+              </NavLink>
+            ))}
+          </>
+        )}
       </nav>
 
+      {/* Bottom: admin + settings + collapse */}
       <div className={styles.bottom}>
         {isAdmin && (
           <NavLink
             to="/admin"
-            onClick={() => onNavigate?.()}
-            title={sidebarCollapsed ? 'Управление' : undefined}
-            className={({ isActive }) => [styles.navItem, isActive ? styles.navItemActive : ''].join(' ')}
+            onClick={onNavigate}
+            title={collapsed ? 'Управление' : undefined}
+            className={navItemClass}
           >
-            <Crown size={18} strokeWidth={1.75} style={{ flexShrink: 0 }} />
-            <AnimatePresence initial={false}>
-              {!sidebarCollapsed && (
-                <motion.span
-                  initial={{ opacity: 0, width: 0 }}
-                  animate={{ opacity: 1, width: 'auto' }}
-                  exit={{ opacity: 0, width: 0 }}
-                  transition={{ duration: 0.13 }}
-                  style={{ overflow: 'hidden', whiteSpace: 'nowrap', fontSize: 13 }}
-                >
-                  Управление
-                </motion.span>
-              )}
-            </AnimatePresence>
+            <span className={styles.navIcon}>
+              <Crown size={17} strokeWidth={1.75} />
+            </span>
+            {label('Управление', collapsed)}
           </NavLink>
         )}
 
         <NavLink
           to="/settings"
-          onClick={() => onNavigate?.()}
-          title={sidebarCollapsed ? 'Настройки' : undefined}
-          className={({ isActive }) => [styles.navItem, isActive ? styles.navItemActive : ''].join(' ')}
+          onClick={onNavigate}
+          title={collapsed ? 'Настройки' : undefined}
+          className={navItemClass}
         >
-          <Settings size={18} strokeWidth={1.75} style={{ flexShrink: 0 }} />
-          <AnimatePresence initial={false}>
-            {!sidebarCollapsed && (
-              <motion.span
-                initial={{ opacity: 0, width: 0 }}
-                animate={{ opacity: 1, width: 'auto' }}
-                exit={{ opacity: 0, width: 0 }}
-                transition={{ duration: 0.13 }}
-                style={{ overflow: 'hidden', whiteSpace: 'nowrap', fontSize: 13 }}
-              >
-                Настройки
-              </motion.span>
-            )}
-          </AnimatePresence>
+          <span className={styles.navIcon}>
+            <Settings size={17} strokeWidth={1.75} />
+          </span>
+          {label('Настройки', collapsed)}
         </NavLink>
 
-        <motion.button
+        {/* User indicator */}
+        {user && !collapsed && (
+          <div className={styles.userSection}>
+            <div className={styles.avatar}>
+              {user.full_name?.[0]?.toUpperCase() ?? 'U'}
+            </div>
+            <div className={styles.userInfo}>
+              <div className={styles.userName}>{user.full_name}</div>
+              <div className={styles.userRole}>{user.email}</div>
+            </div>
+          </div>
+        )}
+
+        {/* Collapse toggle */}
+        <button
           className={styles.collapseBtn}
           onClick={toggleSidebar}
-          whileHover={{ scale: 1.08 }}
-          whileTap={{ scale: 0.93 }}
-          title={sidebarCollapsed ? 'Развернуть' : 'Свернуть'}
-          style={{ color: 'var(--color-text-muted)', width: '100%' }}
+          title={collapsed ? 'Развернуть' : 'Свернуть'}
         >
           <motion.div
-            animate={{ rotate: sidebarCollapsed ? 180 : 0 }}
+            animate={{ rotate: collapsed ? 180 : 0 }}
             transition={{ type: 'spring', stiffness: 300, damping: 25 }}
           >
             <ChevronLeft size={15} />
           </motion.div>
-        </motion.button>
+        </button>
       </div>
     </motion.aside>
   );

@@ -4,13 +4,16 @@ import { api } from '../../../shared/api/client';
 import { useAuthStore } from '../../../shared/stores/auth';
 import { toast } from 'sonner';
 import { useState } from 'react';
-import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
+import { Button } from '../../../shared/ui/Button';
+import { motion } from 'framer-motion';
+import styles from './Login.module.css';
 
 interface LoginForm { email: string; password: string; }
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const setAuth = useAuthStore((s) => s.setAuth);
+  const setAuth  = useAuthStore((s) => s.setAuth);
   const [showPwd, setShowPwd] = useState(false);
   const { register, handleSubmit, formState: { isSubmitting, errors } } = useForm<LoginForm>();
 
@@ -35,105 +38,75 @@ export default function LoginPage() {
   };
 
   return (
-    <div>
-      <div style={{ marginBottom: 28 }}>
-        <h2 style={{ fontSize: 22, fontWeight: 700, fontFamily: 'var(--font-display)', margin: '0 0 6px' }}>
-          Добро пожаловать
-        </h2>
-        <p style={{ fontSize: 13, color: 'var(--color-text-muted)', margin: 0 }}>
-          Войдите, чтобы продолжить работу
-        </p>
+    <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+      <div className={styles.header}>
+        <h2 className={styles.title}>Добро пожаловать</h2>
+        <p className={styles.subtitle}>Войдите, чтобы продолжить работу</p>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        <div>
-          <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--color-text-secondary)', display: 'block', marginBottom: 6 }}>
-            Email
-          </label>
+      <form onSubmit={handleSubmit(onSubmit)} className={styles.form} noValidate>
+        {/* Email */}
+        <div className={styles.field}>
+          <label className={styles.label} htmlFor="login-email">Email</label>
           <input
+            id="login-email"
             {...register('email', { required: true })}
             type="email"
             placeholder="you@company.kz"
             autoComplete="email"
             autoFocus
-            className="kort-input"
-            style={{
-              width: '100%',
-              boxSizing: 'border-box',
-              borderColor: errors.email ? 'var(--color-danger)' : undefined,
-            }}
+            className={`${styles.inputBase}${errors.email ? ' ' + styles.error : ''}`}
           />
+          {errors.email && (
+            <span className={styles.fieldError}>Введите email</span>
+          )}
         </div>
-        <div>
-          <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--color-text-secondary)', display: 'block', marginBottom: 6 }}>
-            Пароль
-          </label>
-          <div style={{ position: 'relative' }}>
+
+        {/* Password */}
+        <div className={styles.field}>
+          <label className={styles.label} htmlFor="login-password">Пароль</label>
+          <div className={styles.inputWrap}>
             <input
+              id="login-password"
               {...register('password', { required: true })}
               type={showPwd ? 'text' : 'password'}
               placeholder="••••••••"
               autoComplete="current-password"
-              className="kort-input"
-              style={{
-                width: '100%',
-                boxSizing: 'border-box',
-                paddingRight: 40,
-                borderColor: errors.password ? 'var(--color-danger)' : undefined,
-              }}
+              className={`${styles.inputBase} ${styles.inputWithToggle}${errors.password ? ' ' + styles.error : ''}`}
             />
             <button
               type="button"
+              className={styles.toggleBtn}
               onClick={() => setShowPwd(!showPwd)}
-              style={{
-                position: 'absolute',
-                right: 10,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                color: 'var(--color-text-muted)',
-                display: 'flex',
-                padding: 2,
-              }}
+              aria-label={showPwd ? 'Скрыть пароль' : 'Показать пароль'}
             >
               {showPwd ? <EyeOff size={15} /> : <Eye size={15} />}
             </button>
           </div>
+          {errors.password && (
+            <span className={styles.fieldError}>Введите пароль</span>
+          )}
         </div>
 
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          style={{
-            height: 44,
-            background: isSubmitting ? 'var(--color-amber-dark)' : 'var(--color-amber)',
-            border: 'none',
-            borderRadius: 'var(--radius-md)',
-            color: '#fff',
-            fontSize: 14,
-            fontWeight: 600,
-            cursor: isSubmitting ? 'not-allowed' : 'pointer',
-            fontFamily: 'var(--font-body)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 8,
-            transition: 'background 0.15s',
-            boxShadow: 'var(--shadow-amber)',
-          }}
-        >
-          {isSubmitting ? <><Loader2 size={15} style={{ animation: 'spin 0.8s linear infinite' }} /> Входим...</> : 'Войти'}
-        </button>
+        {/* Forgot link */}
+        <Link to="/auth/forgot" className={styles.forgotLink}>
+          Забыли пароль?
+        </Link>
+
+        {/* Submit */}
+        <div className={styles.submitBtn}>
+          <Button type="submit" loading={isSubmitting} fullWidth>
+            Войти
+          </Button>
+        </div>
       </form>
 
-      <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--color-text-muted)', marginTop: 24 }}>
+      <div className={styles.footer}>
         Нет аккаунта?{' '}
-        <Link to="/auth/register" style={{ color: 'var(--color-amber)', fontWeight: 500, textDecoration: 'none' }}>
-          Зарегистрировать компанию
+        <Link to="/auth/register" className={styles.footerLink}>
+          Зарегистрироваться
         </Link>
-      </p>
-    </div>
+      </div>
+    </motion.div>
   );
 }
