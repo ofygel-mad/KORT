@@ -137,6 +137,10 @@
   appearance: none;
   color-scheme: dark;
 }
+.addSelect option {
+  background: #1c1915;
+  color: rgba(255,255,255,0.88);
+}
 
 .addActions {
   display: flex;

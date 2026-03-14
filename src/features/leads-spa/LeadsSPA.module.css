@@ -93,6 +93,10 @@
   color-scheme: dark;
 }
 .addSelect:focus { border-color: rgba(160,104,56,0.45); }
+.addSelect option {
+  background: #1c1915;
+  color: rgba(255,255,255,0.88);
+}
 
 .addActions {
   display: flex; align-items: center; justify-content: flex-end; gap: 8px;
