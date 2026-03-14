@@ -11,6 +11,7 @@ const DEFAULT_TILE_SIZE: Record<WorkspaceWidgetKind, { width: number; height: nu
   tasks:     { width: 260, height: 170 },
   reports:   { width: 240, height: 155 },
   imports:   { width: 240, height: 155 },
+  draft:     { width: 260, height: 170 },
 };
 
 const TITLES: Record<WorkspaceWidgetKind, string> = {
@@ -19,6 +20,7 @@ const TITLES: Record<WorkspaceWidgetKind, string> = {
   tasks:     'Задачи',
   reports:   'Сводка',
   imports:   'Импорт',
+  draft:     'Черновик',
 };
 
 interface WorkspaceStore {

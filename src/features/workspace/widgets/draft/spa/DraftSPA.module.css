@@ -1,0 +1,26 @@
+.root { height:100%; display:flex; flex-direction:column; background:linear-gradient(180deg,#0e0c10,#0a0810); color:var(--text-primary); overflow:hidden; font-size:14px; }
+.toolbar { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; padding:14px 18px 12px; border-bottom:1px solid rgba(255,255,255,0.06); flex-shrink:0; }
+.title { font-size:16px; font-weight:800; display:block; }
+.sub { font-size:12px; color:rgba(255,255,255,0.3); display:block; margin-top:2px; }
+.addBtn { display:inline-flex; align-items:center; gap:6px; height:34px; padding:0 14px; border-radius:10px; border:1px solid rgba(160,104,56,0.4); background:rgba(160,104,56,0.14); color:rgba(210,160,90,0.9); font-size:13px; font-weight:600; cursor:pointer; flex-shrink:0; }
+.addBtn:hover { background:rgba(160,104,56,0.22); }
+.picker { display:flex; gap:8px; padding:12px 18px; border-bottom:1px solid rgba(255,255,255,0.06); flex-shrink:0; }
+.pickerCard { display:flex; align-items:center; gap:10px; flex:1; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,0.08); background:rgba(255,255,255,0.04); cursor:pointer; text-align:left; transition:all 140ms; }
+.pickerCard:hover { border-color:rgba(160,104,56,0.4); background:rgba(160,104,56,0.08); }
+.pickerIcon { color:rgba(210,160,90,0.7); flex-shrink:0; }
+.pickerLabel { font-size:13px; font-weight:600; }
+.pickerDesc { font-size:11px; color:rgba(255,255,255,0.35); margin-top:2px; }
+.canvas { flex:1; overflow-y:auto; padding:14px 18px; display:flex; flex-direction:column; gap:12px; }
+.empty { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; color:rgba(255,255,255,0.2); text-align:center; font-size:14px; }
+.emptyIcon { opacity:0.4; }
+.emptyBtn { height:36px; padding:0 20px; border-radius:10px; border:1px solid rgba(160,104,56,0.4); background:rgba(160,104,56,0.14); color:rgba(210,160,90,0.9); font-size:13px; font-weight:600; cursor:pointer; }
+.block { border-radius:14px; border:1px solid rgba(255,255,255,0.07); background:rgba(255,255,255,0.03); overflow:hidden; flex-shrink:0; }
+.blockHeader { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; border-bottom:1px solid rgba(255,255,255,0.06); }
+.blockTitle { font-size:13px; font-weight:700; color:rgba(255,255,255,0.7); }
+.blockRemove { width:24px; height:24px; border-radius:6px; border:none; background:transparent; color:rgba(255,255,255,0.2); cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 120ms; }
+.blockRemove:hover { background:rgba(239,68,68,0.15); color:#fca5a5; }
+.noteArea { width:100%; min-height:100px; padding:12px 14px; background:transparent; border:none; color:var(--text-primary); font-size:13px; line-height:1.6; resize:vertical; outline:none; font-family:inherit; }
+.noteArea::placeholder { color:rgba(255,255,255,0.2); }
+.tablePlaceholder, .chartPlaceholder { padding:24px; display:flex; flex-direction:column; align-items:center; gap:10px; color:rgba(255,255,255,0.2); font-size:12px; min-height:80px; justify-content:center; }
+.chartBars { display:flex; align-items:flex-end; gap:4px; height:50px; }
+.chartBar { width:16px; border-radius:4px 4px 0 0; background:rgba(160,104,56,0.5); }

@@ -207,8 +207,8 @@
 .tileModalBackdrop {
   position: fixed;
   inset: 0;
-  background: rgba(2,3,7,0.74);
-  backdrop-filter: blur(12px) saturate(70%);
+  background: rgba(4, 3, 8, 0.65);
+  backdrop-filter: blur(14px) saturate(80%);
   z-index: 200;
   cursor: default;
   border: none;
@@ -229,16 +229,16 @@
   pointer-events: all;
   position: relative;
   display: grid;
-  grid-template-rows: auto minmax(0,1fr) auto;
-  gap: 12px;
-  padding: 18px;
-  border-radius: 22px;
-  border: 1px solid rgba(255,255,255,0.1);
-  background: linear-gradient(158deg, rgba(22,17,12,0.98) 0%, rgba(9,7,5,0.99) 100%);
+  grid-template-rows: auto minmax(0,1fr);
+  gap: 0;
+  border-radius: 20px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: linear-gradient(160deg, #1c1812 0%, #130f0a 100%);
   box-shadow:
-    0 0 0 1px rgba(125,78,37,0.14),
-    0 40px 100px rgba(0,0,0,0.6);
-  backdrop-filter: blur(30px);
+    0 0 0 1px rgba(160,104,56,0.18),
+    0 0 80px rgba(0,0,0,0.5),
+    0 50px 120px rgba(0,0,0,0.55);
+  overflow: hidden;
 }
 
 .tileModalDefault {
@@ -256,34 +256,95 @@
   height: min(92vh, 900px);
 }
 
-.tileModalHeader,
-.tileModalFooter {
+/* Header — glass strip */
+.tileModalHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  padding: 14px 16px 13px;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  background: rgba(255,255,255,0.025);
+  backdrop-filter: blur(8px);
   flex-shrink: 0;
 }
 
 .tileModalTitle {
-  font-size: 20px;
-  font-weight: 800;
+  font-size: 16px;
+  font-weight: 700;
   color: var(--text-primary);
-  line-height: 1.1;
+  line-height: 1.15;
 }
 
 .tileModalSubtitle {
-  margin-top: 3px;
+  margin-top: 2px;
   color: var(--text-tertiary);
-  font-size: 12px;
+  font-size: 11px;
+  max-width: 480px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
+/* Header right-side action buttons */
+.tileModalActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.tileModalAction {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  border: 1px solid rgba(255,255,255,0.07);
+  background: rgba(255,255,255,0.04);
+  color: rgba(255,255,255,0.45);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 140ms, border-color 140ms, color 140ms;
+}
+
+.tileModalAction:hover {
+  background: rgba(255,255,255,0.09);
+  border-color: rgba(255,255,255,0.13);
+  color: rgba(255,255,255,0.8);
+}
+
+.tileModalActionActive {
+  background: rgba(160,104,56,0.18) !important;
+  border-color: rgba(160,104,56,0.45) !important;
+  color: rgba(210,160,90,0.9) !important;
+}
+
+.tileModalActionClose:hover {
+  background: rgba(239,68,68,0.12) !important;
+  border-color: rgba(239,68,68,0.3) !important;
+  color: #fca5a5 !important;
+}
+
+/* SPA content — full remaining space, no inner border */
+.tileModalMonitor {
+  min-height: 0;
+  overflow: hidden;
+  background: transparent;
+}
+
+/* Legacy — kept for backward compat */
+.tileModalContent {
+  height: 100%;
+}
+
+/* Legacy close btn (used nowhere now but keep for safety) */
 .tileModalClose,
 .tileSettingsButton,
 .menuClose {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
   border: 1px solid rgba(255,255,255,0.07);
   background: rgba(255,255,255,0.04);
   color: var(--text-secondary);
@@ -302,32 +363,20 @@
   color: var(--text-primary);
 }
 
-.tileModalMonitor {
-  min-height: 0;
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,0.06);
-  overflow: hidden;
-  background: rgba(5,6,9,0.98);
-}
-
-.tileModalContent {
-  height: 100%;
-}
-
 /* ── Settings popover ─────────────────────── */
 .tileSettingsPopover {
   position: absolute;
-  left: 18px;
-  bottom: 68px;
-  width: min(310px, calc(100vw - 48px));
+  right: 16px;
+  top: 58px;
+  width: min(300px, calc(100vw - 48px));
   padding: 14px;
-  border-radius: 18px;
-  border: 1px solid rgba(255,255,255,0.09);
-  background: linear-gradient(158deg, rgba(26,20,14,0.99), rgba(13,10,7,0.99));
-  box-shadow: 0 24px 64px rgba(0,0,0,0.55);
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: linear-gradient(158deg, rgba(28,22,14,0.99), rgba(14,10,7,0.99));
+  box-shadow: 0 20px 56px rgba(0,0,0,0.6), 0 0 0 1px rgba(160,104,56,0.1);
   display: grid;
   gap: 10px;
-  z-index: 2;
+  z-index: 10;
 }
 
 .tileSettingsHeader {

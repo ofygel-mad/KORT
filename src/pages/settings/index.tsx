@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import { WorkspaceThemeModal } from '../../features/workspace/components/WorkspaceThemeModal';
+import { useLeadsRbac } from '../../features/leads-spa/model/rbac.store';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   DndContext, closestCorners, PointerSensor, useSensor, useSensors,
@@ -142,12 +143,23 @@ function TeamSection() {
     mutationFn: ({ userId, role }: { userId: string; role: string }) => api.patch(`/users/${userId}/role/`, { role }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['team'] }); toast.success('Роль обновлена'); },
   });
+
+  // Leads-SPA RBAC roles — stored locally, no backend needed yet
+  const { roleMap, setUserRole } = useLeadsRbac();
+
+  const LEADS_ROLES: Array<{ value: string; label: string }> = [
+    { value: 'general',   label: 'Общая' },
+    { value: 'qualifier', label: 'Квалификатор (Колл-центр / Пресейл)' },
+    { value: 'closer',    label: 'Клоузер (Офис-менеджер)' },
+    { value: 'manager',   label: 'Руководитель (РОП)' },
+  ];
+
   return (
     <div className={s.section}>
       <div className={s.sectionHeader}>
         <div>
           <div className={s.sectionTitle}>Участники команды</div>
-          <div className={s.sectionSubtitle}>Роли, доступы и приглашения</div>
+          <div className={s.sectionSubtitle}>Роли, доступы и назначения в воронке лидов</div>
         </div>
         <Button size="sm" icon={<Plus size={13} />}>Пригласить</Button>
       </div>
@@ -157,13 +169,14 @@ function TeamSection() {
             <tr>
               <th>Пользователь</th>
               <th>Статус</th>
-              <th>Роль</th>
+              <th>Системная роль</th>
+              <th>Роль в воронке лидов</th>
             </tr>
           </thead>
           <tbody>
             {isLoading
               ? [1,2,3].map(i => (
-                  <tr key={i}><td colSpan={3}><Skeleton height={14} width="50%" /></td></tr>
+                  <tr key={i}><td colSpan={4}><Skeleton height={14} width="50%" /></td></tr>
                 ))
               : (team?.results ?? []).map(member => (
                   <tr key={member.id}>
@@ -197,6 +210,23 @@ function TeamSection() {
                         </select>
                       ) : (
                         <span className={s.roleText}>{member.role ?? 'viewer'}</span>
+                      )}
+                    </td>
+                    <td>
+                      {isAdmin ? (
+                        <select
+                          value={roleMap[member.id] ?? 'general'}
+                          onChange={e => setUserRole(member.id, e.target.value as any)}
+                          className={`kort-input ${s.roleSelect}`}
+                        >
+                          {LEADS_ROLES.map(r => (
+                            <option key={r.value} value={r.value}>{r.label}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <span className={s.roleText}>
+                          {LEADS_ROLES.find(r => r.value === (roleMap[member.id] ?? 'general'))?.label ?? 'Общая'}
+                        </span>
                       )}
                     </td>
                   </tr>

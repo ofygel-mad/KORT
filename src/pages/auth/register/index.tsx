@@ -55,6 +55,7 @@ const STEPS = ['Аккаунт', 'Выбор плана'];
 export default function RegisterPage() {
   const navigate     = useNavigate();
   const setAuth      = useAuthStore((s) => s.setAuth);
+  const [regMode, setRegMode]     = useState<'company' | 'employee' | null>(null);
   const [step, setStep]           = useState(0);
   const [selectedMode, setMode]   = useState('advanced');
   const [showPwd, setShowPwd]     = useState(false);
@@ -92,8 +93,104 @@ export default function RegisterPage() {
     setStep(1);
   };
 
+  // ── Registration type selector ───────────────────────────────
+  if (!regMode) {
+    return (
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.22 }}>
+        <div style={{ textAlign:'center', marginBottom: 28 }}>
+          <div style={{ fontSize: 24, fontWeight: 800, color:'var(--text-primary)', marginBottom: 8 }}>
+            Добро пожаловать в Kort
+          </div>
+          <div style={{ fontSize: 14, color:'var(--text-secondary)' }}>
+            Выберите, как вы будете использовать платформу
+          </div>
+        </div>
+        <div style={{ display:'grid', gap: 12 }}>
+          <button
+            onClick={() => setRegMode('company')}
+            style={{
+              display:'flex', alignItems:'center', gap: 16, padding:'18px 20px',
+              borderRadius: 16, border:'1px solid rgba(255,255,255,0.1)',
+              background:'rgba(255,255,255,0.04)', cursor:'pointer', textAlign:'left',
+              transition:'all 160ms',
+            }}
+            onMouseOver={e => (e.currentTarget.style.borderColor = 'rgba(160,104,56,0.5)')}
+            onMouseOut={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)')}
+          >
+            <div style={{ width:44, height:44, borderRadius:12, background:'rgba(160,104,56,0.2)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+              <Factory size={20} color="rgba(210,160,90,0.9)" />
+            </div>
+            <div>
+              <div style={{ fontSize:15, fontWeight:700, color:'var(--text-primary)' }}>Создать компанию</div>
+              <div style={{ fontSize:13, color:'var(--text-secondary)', marginTop:3 }}>
+                Регистрируете организацию и настраиваете CRM под себя
+              </div>
+            </div>
+          </button>
+
+          <button
+            onClick={() => setRegMode('employee')}
+            style={{
+              display:'flex', alignItems:'center', gap: 16, padding:'18px 20px',
+              borderRadius: 16, border:'1px solid rgba(255,255,255,0.1)',
+              background:'rgba(255,255,255,0.04)', cursor:'pointer', textAlign:'left',
+              transition:'all 160ms',
+            }}
+            onMouseOver={e => (e.currentTarget.style.borderColor = 'rgba(59,130,246,0.5)')}
+            onMouseOut={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)')}
+          >
+            <div style={{ width:44, height:44, borderRadius:12, background:'rgba(59,130,246,0.15)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+              <Users size={20} color="rgba(147,197,253,0.9)" />
+            </div>
+            <div>
+              <div style={{ fontSize:15, fontWeight:700, color:'var(--text-primary)' }}>Зарегистрироваться как сотрудник</div>
+              <div style={{ fontSize:13, color:'var(--text-secondary)', marginTop:3 }}>
+                Присоединяетесь к существующей компании по приглашению
+              </div>
+            </div>
+          </button>
+        </div>
+
+        <div style={{ textAlign:'center', marginTop:20, fontSize:13, color:'var(--text-tertiary)' }}>
+          Уже есть аккаунт? <Link to="/auth/login" style={{ color:'rgba(210,160,90,0.8)', fontWeight:600 }}>Войти</Link>
+        </div>
+      </motion.div>
+    );
+  }
+
+  // ── Employee registration — simple join flow ─────────────────
+  if (regMode === 'employee') {
+    return (
+      <motion.div initial={{ opacity:0, y:12 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.22 }}>
+        <button
+          onClick={() => setRegMode(null)}
+          style={{ display:'flex', alignItems:'center', gap:6, marginBottom:20, background:'none', border:'none', color:'var(--text-tertiary)', cursor:'pointer', fontSize:13 }}
+        >
+          <ArrowLeft size={14} /> Назад
+        </button>
+        <div style={{ fontSize:22, fontWeight:800, color:'var(--text-primary)', marginBottom:6 }}>Вход как сотрудник</div>
+        <div style={{ fontSize:13, color:'var(--text-secondary)', marginBottom:22 }}>
+          Для подключения к компании вам нужна ссылка-приглашение от администратора.
+          Она отправляется из раздела «Настройки → Команда».
+        </div>
+        <div style={{ padding:'16px', borderRadius:14, border:'1px solid rgba(245,158,11,0.25)', background:'rgba(245,158,11,0.07)', fontSize:13, color:'rgba(253,211,77,0.85)', lineHeight:1.6 }}>
+          Попросите руководителя отправить вам приглашение на email. После перехода по ссылке ваш аккаунт будет создан автоматически.
+        </div>
+        <div style={{ textAlign:'center', marginTop:20, fontSize:13, color:'var(--text-tertiary)' }}>
+          <Link to="/auth/login" style={{ color:'rgba(210,160,90,0.8)', fontWeight:600 }}>Войти в существующий аккаунт</Link>
+        </div>
+      </motion.div>
+    );
+  }
+
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
+      <button
+        onClick={() => setRegMode(null)}
+        style={{ display:'flex', alignItems:'center', gap:6, marginBottom:20, background:'none', border:'none', color:'var(--text-tertiary)', cursor:'pointer', fontSize:13 }}
+      >
+        <ArrowLeft size={14} /> Назад
+      </button>
       {/* Step indicator */}
       <div className={s.steps}>
         {STEPS.map((label, i) => (
