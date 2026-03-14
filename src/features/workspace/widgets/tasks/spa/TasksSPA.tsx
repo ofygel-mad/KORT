@@ -12,7 +12,7 @@ import {
 import { useTasksStore }  from '../../../../tasks-spa/model/tasks.store';
 import { useTileTasksUI } from '../../../../tasks-spa/model/tile-ui.store';
 import { PRIORITY_META_MAP, TASK_TYPE_LABEL, TASK_TYPE_ICON } from './tasksMeta';
-import type { TaskType, TaskPriority } from '../../../../tasks-spa/api/types';
+import type { Task, TaskType, TaskPriority } from '../../../../tasks-spa/api/types';
 import s from './TasksSPA.module.css';
 
 function formatCountdown(deadline: string): { label: string; overdue: boolean } {
@@ -227,6 +227,28 @@ export function TasksSPA({ tileId }: Props) {
   const notifiedRef = useRef<Set<string>>(new Set());
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      const requests = useSharedBus.getState().consumeTaskRequests();
+      for (const req of requests) {
+        openCreateModal({
+          linkedEntity: req.linkedEntityId
+            ? {
+                type: req.linkedEntityType ?? 'standalone',
+                id: req.linkedEntityId,
+                title: req.linkedEntityTitle ?? '',
+              }
+            : undefined,
+          title: req.suggestedTitle ?? '',
+          assignedName: req.suggestedAssignee,
+          dueAt: req.suggestedDueAt,
+          priority: req.priority ?? 'medium',
+        });
+      }
+    }, 2000);
+    return () => clearInterval(id);
+  }, [openCreateModal]);
 
   useEffect(() => {
     const interval = setInterval(() => {

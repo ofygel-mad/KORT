@@ -43,7 +43,6 @@ export const useTasksStore = create<TasksState>((set, get) => ({
     set({ loading: true });
     const tasks = await tasksApi.getTasks();
     set({ tasks, loading: false });
-    get().processInboundEvents();
     get().publishSnapshot();
   },
 
