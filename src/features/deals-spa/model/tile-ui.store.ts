@@ -10,6 +10,7 @@ export interface TileDealsUIState {
   wonModalId: string | null;
   deleteConfirmId: string | null;
   currentTab: NavTab;
+  createPanelOpen: boolean;
 
   openDrawer: (id: string) => void;
   closeDrawer: () => void;
@@ -20,6 +21,7 @@ export interface TileDealsUIState {
   openDeleteConfirm: (id: string) => void;
   closeDeleteConfirm: () => void;
   setTab: (tab: NavTab) => void;
+  setCreatePanelOpen: (open: boolean) => void;
 }
 
 const cache = new Map<string, StoreApi<TileDealsUIState>>();
@@ -32,6 +34,7 @@ function createTileDealsUI(): StoreApi<TileDealsUIState> {
     wonModalId: null,
     deleteConfirmId: null,
     currentTab: 'pipeline',
+    createPanelOpen: false,
 
     openDrawer: (id) => set({ activeId: id, drawerOpen: true }),
     closeDrawer: () => set({ drawerOpen: false, activeId: null }),
@@ -42,6 +45,7 @@ function createTileDealsUI(): StoreApi<TileDealsUIState> {
     openDeleteConfirm: (id) => set({ deleteConfirmId: id }),
     closeDeleteConfirm: () => set({ deleteConfirmId: null }),
     setTab: (tab) => set({ currentTab: tab }),
+    setCreatePanelOpen: (open) => set({ createPanelOpen: open }),
   }));
 }
 
@@ -56,4 +60,9 @@ export function useTileDealsUI(tileId: string): TileDealsUIState {
 
 export function clearTileDealsUI(tileId: string): void {
   cache.delete(tileId);
+}
+
+
+export function setTileDealsCreatePanelOpen(tileId: string, open: boolean): void {
+  getTileDealsUI(tileId).setState({ createPanelOpen: open });
 }

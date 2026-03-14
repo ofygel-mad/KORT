@@ -22,8 +22,15 @@ interface Props { tileId: string; }
 
 export function DealsSPA({ tileId }: Props) {
   const { deals, loading, load, createFromLead } = useDealsStore();
-  const { currentTab: tab, setTab, openDrawer, openLostModal, openWonModal } = useTileDealsUI(tileId);
-  const [addOpen,   setAddOpen]   = useState(false);
+  const {
+    currentTab: tab,
+    setTab,
+    openDrawer,
+    openLostModal,
+    openWonModal,
+    createPanelOpen: addOpen,
+    setCreatePanelOpen,
+  } = useTileDealsUI(tileId);
 
   // Add form
   const [newName,     setNewName]     = useState('');
@@ -45,7 +52,7 @@ export function DealsSPA({ tileId }: Props) {
       assignedName: newAssignee,
     });
     setNewName(''); setNewPhone(''); setNewValue('');
-    setAddOpen(false);
+    setCreatePanelOpen(false);
   };
 
   const activeDeals = deals.filter(d => d.stage !== 'won' && d.stage !== 'lost');
@@ -87,7 +94,7 @@ export function DealsSPA({ tileId }: Props) {
             </>
           )}
         </div>
-        <button className={s.addBtn} onClick={() => setAddOpen(v => !v)}>
+        <button className={s.addBtn} onClick={() => setCreatePanelOpen(!addOpen)}>
           <Plus size={13} /> Новая сделка
           <ChevronDown size={11} style={{ opacity: 0.6, transform: addOpen ? 'rotate(180deg)' : '', transition: 'transform 200ms' }} />
         </button>
@@ -127,7 +134,7 @@ export function DealsSPA({ tileId }: Props) {
             </div>
           </div>
           <div className={s.addActions}>
-            <button className={s.addCancel} onClick={() => setAddOpen(false)}><X size={12} /> Отмена</button>
+            <button className={s.addCancel} onClick={() => setCreatePanelOpen(false)}><X size={12} /> Отмена</button>
             <button className={s.addConfirm} onClick={handleAdd} disabled={!newName.trim() || !newPhone.trim()}>
               Создать сделку →
             </button>
