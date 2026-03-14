@@ -453,6 +453,14 @@ button:focus-visible {
     0 8px 22px rgba(0, 0, 0, 0.42);
 }
 
+
+.fabStack {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
 /* Main create-tile FAB */
 .fab {
   display: inline-flex;
