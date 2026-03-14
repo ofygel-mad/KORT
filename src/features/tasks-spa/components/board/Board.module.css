@@ -1,0 +1,221 @@
+/* features/tasks-spa/components/board/Board.module.css */
+
+/* ── Kanban wrapper ─────────────────────────────────────────── */
+.board {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  height: 100%;
+  padding-bottom: 8px;
+}
+
+.board::-webkit-scrollbar { height: 4px; }
+.board::-webkit-scrollbar-track { background: transparent; }
+.board::-webkit-scrollbar-thumb { background: rgba(255,255,255,.12); border-radius: 2px; }
+
+/* ── Column ─────────────────────────────────────────────────── */
+.column {
+  flex: 0 0 240px;
+  display: flex;
+  flex-direction: column;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.columnHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px 10px;
+  border-bottom: 1px solid rgba(255,255,255,.06);
+  gap: 8px;
+}
+
+.columnTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.columnDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.columnTitle {
+  font-size: 12px;
+  font-weight: 600;
+  color: #e5e7eb;
+  letter-spacing: .03em;
+}
+
+.columnCount {
+  font-size: 11px;
+  font-weight: 500;
+  color: #6b7280;
+  background: rgba(255,255,255,.06);
+  padding: 1px 6px;
+  border-radius: 10px;
+}
+
+.columnAddBtn {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: none;
+  background: rgba(255,255,255,.07);
+  color: #9ca3af;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .15s, color .15s;
+  flex-shrink: 0;
+}
+.columnAddBtn:hover { background: rgba(255,255,255,.13); color: #e5e7eb; }
+
+.columnCards {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 80px;
+}
+.columnCards::-webkit-scrollbar { width: 3px; }
+.columnCards::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 2px; }
+
+.columnDrop {
+  outline: 2px dashed rgba(255,255,255,.2);
+  outline-offset: -2px;
+  background: rgba(255,255,255,.04);
+}
+
+/* ── Card ───────────────────────────────────────────────────── */
+.card {
+  position: relative;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+  overflow: hidden;
+  transition: border-color .15s, background .15s, transform .1s;
+  user-select: none;
+}
+.card:hover {
+  border-color: rgba(255,255,255,.18);
+  background: rgba(255,255,255,.09);
+}
+.card:active { transform: scale(.98); }
+
+.cardPriorityStripe {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  border-radius: 10px 0 0 10px;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.cardPriorityBadge {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.cardEntityBadge {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  color: #6b7280;
+}
+
+.cardTitle {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #e5e7eb;
+  line-height: 1.45;
+  margin: 0 0 8px;
+}
+
+.cardTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.cardTag {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--tag-color);
+  background: color-mix(in srgb, var(--tag-color) 15%, transparent);
+  padding: 1px 6px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--tag-color) 30%, transparent);
+}
+
+.cardFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cardFooterLeft {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cardFooterRight {
+  display: flex;
+  align-items: center;
+}
+
+.cardDue {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10.5px;
+  color: #9ca3af;
+}
+.cardDueOverdue { color: #ef4444; }
+
+.cardSubs {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10.5px;
+  color: #9ca3af;
+}
+.cardSubsDone { color: #22c55e; }
+
+.cardAvatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(59,130,246,.25);
+  color: #93c5fd;
+  font-size: 9px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(59,130,246,.3);
+}

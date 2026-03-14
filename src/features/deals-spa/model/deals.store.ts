@@ -8,6 +8,50 @@ import { useSharedBus } from '../../shared-bus';
 import type { Deal, DealStage, DealActivity, DealTask, ActivityType } from '../api/types';
 import { STAGE_PROBABILITY, STAGE_LABEL } from '../api/types';
 
+// ── Snapshot publisher (called after any state change) ────────
+function _publishDealsSnapshot(deals: Deal[]) {
+  const now = new Date().toISOString();
+  const startOfMonth = new Date();
+  startOfMonth.setDate(1);
+  startOfMonth.setHours(0, 0, 0, 0);
+
+  const active = deals.filter(d => d.stage !== 'won' && d.stage !== 'lost');
+  const won    = deals.filter(d => d.stage === 'won');
+  const lost   = deals.filter(d => d.stage === 'lost');
+
+  const wonThisMonth  = won.filter(d => d.wonAt  && new Date(d.wonAt)  >= startOfMonth);
+  const lostThisMonth = lost.filter(d => d.lostAt && new Date(d.lostAt) >= startOfMonth);
+
+  const byStage: Record<string, { count: number; value: number }> = {};
+  for (const d of active) {
+    if (!byStage[d.stage]) byStage[d.stage] = { count: 0, value: 0 };
+    byStage[d.stage].count++;
+    byStage[d.stage].value += d.value;
+  }
+
+  const lostReasonBreakdown: Record<string, number> = {};
+  for (const d of lost) {
+    if (d.lostReason) {
+      lostReasonBreakdown[d.lostReason] = (lostReasonBreakdown[d.lostReason] ?? 0) + 1;
+    }
+  }
+
+  useSharedBus.getState().publishSnapshot({
+    source: 'deals',
+    totalActive:        active.length,
+    totalWon:           won.length,
+    totalLost:          lost.length,
+    pipelineValue:      active.reduce((a, d) => a + d.value, 0),
+    weightedValue:      active.reduce((a, d) => a + d.value * (d.probability / 100), 0),
+    wonValueThisMonth:  wonThisMonth.reduce((a, d) => a + d.value, 0),
+    wonCountThisMonth:  wonThisMonth.length,
+    lostCountThisMonth: lostThisMonth.length,
+    byStage,
+    lostReasonBreakdown,
+    snapshotAt: now,
+  });
+}
+
 interface DealsState {
   deals: Deal[];
   loading: boolean;
@@ -61,6 +105,8 @@ export const useDealsStore = create<DealsState>((set, get) => ({
     set({ deals, loading: false });
     // Process any events that arrived before we mounted
     get().processInboundEvents();
+    // Publish snapshot for Summary SPA
+    _publishDealsSnapshot(deals);
   },
 
   processInboundEvents: () => {
@@ -216,6 +262,17 @@ export const useDealsStore = create<DealsState>((set, get) => ({
         returnedAt: now,
       });
     }
+
+    // Always notify Summary about lost deal
+    useSharedBus.getState().publishDealLost({
+      dealId: id,
+      leadId: deal.leadId,
+      fullName: deal.fullName,
+      value: deal.value,
+      reason,
+      lostAt: now,
+    });
+    _publishDealsSnapshot(get().deals);
   },
 
   markWon: async (id, finalValue) => {
@@ -243,6 +300,7 @@ export const useDealsStore = create<DealsState>((set, get) => ({
         fullName: deal.fullName, value: finalValue, wonAt: now,
       });
     }
+    _publishDealsSnapshot(get().deals);
   },
 
   deleteDeal: async (id) => {
