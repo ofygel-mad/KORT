@@ -19,14 +19,14 @@
   --p-gray-900:  #1A1918;
   --p-gray-950:  #111110;
 
-  --p-accent-50:  #FFFBEB;
-  --p-accent-100: #FEF3C7;
-  --p-accent-200: #FDE68A;
-  --p-accent-400: #FBBF24;
-  --p-accent-500: #F59E0B;
-  --p-accent-600: #D97706;
-  --p-accent-700: #B45309;
-  --p-accent-800: #92400E;
+  --p-accent-50:  #FAF5F0;
+  --p-accent-100: #F0E4D6;
+  --p-accent-200: #DBBFA3;
+  --p-accent-400: #C09060;
+  --p-accent-500: #A06838;
+  --p-accent-600: #7D4E25;
+  --p-accent-700: #5E3516;
+  --p-accent-800: #3E200B;
 
   --p-success-50:  #ECFDF5;
   --p-success-100: #D1FAE5;
@@ -52,29 +52,29 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
-   Layer 2: Semantic Tokens — LIGHT THEME
+   Layer 2: Semantic Tokens — LIGHT THEME (warm cream, not blinding white)
    ═══════════════════════════════════════════════════════════════════════ */
 :root {
-  --bg-canvas:           var(--p-gray-100);
-  --bg-surface:          var(--p-gray-0);
-  --bg-surface-elevated: var(--p-gray-0);
-  --bg-surface-inset:    var(--p-gray-150);
-  --bg-muted:            var(--p-gray-50);
-  --bg-hover:            var(--p-gray-150);
-  --bg-active:           var(--p-gray-200);
-  --bg-overlay:          rgba(17,24,39,0.45);
+  --bg-canvas:           #F0EDE8;
+  --bg-surface:          #F8F5F1;
+  --bg-surface-elevated: #FFFFFF;
+  --bg-surface-inset:    #E8E4DE;
+  --bg-muted:            #EDE9E3;
+  --bg-hover:            #E4DFD8;
+  --bg-active:           #D9D3CB;
+  --bg-overlay:          rgba(30, 20, 10, 0.45);
 
-  --text-primary:     var(--p-gray-900);
-  --text-secondary:   var(--p-gray-600);
-  --text-tertiary:    var(--p-gray-400);
-  --text-placeholder: var(--p-gray-300);
-  --text-inverse:     var(--p-gray-0);
-  --text-on-accent:   var(--p-gray-0);
+  --text-primary:     #1C1610;
+  --text-secondary:   #5A4E42;
+  --text-tertiary:    #8C7D6E;
+  --text-placeholder: #B8A898;
+  --text-inverse:     #FFFFFF;
+  --text-on-accent:   #FFFFFF;
   --text-accent:      var(--p-accent-700);
 
-  --border-subtle:  var(--p-gray-150);
-  --border-default: var(--p-gray-200);
-  --border-strong:  var(--p-gray-300);
+  --border-subtle:  #DDD7CF;
+  --border-default: #CCC6BC;
+  --border-strong:  #B8B0A4;
   --border-focus:   var(--p-accent-500);
 
   --fill-accent:          var(--p-accent-600);
@@ -103,8 +103,8 @@
   --shadow-md:     0 4px 8px -2px rgba(0,0,0,0.07), 0 2px 4px -2px rgba(0,0,0,0.04);
   --shadow-lg:     0 12px 24px -6px rgba(0,0,0,0.08), 0 4px 8px -4px rgba(0,0,0,0.04);
   --shadow-xl:     0 24px 40px -8px rgba(0,0,0,0.10), 0 8px 16px -6px rgba(0,0,0,0.05);
-  --shadow-focus:  0 0 0 3px rgba(217,119,6,0.18);
-  --shadow-accent: 0 4px 14px rgba(217,119,6,0.22);
+  --shadow-focus:  0 0 0 3px rgba(125,78,37,0.18);
+  --shadow-accent: 0 4px 14px rgba(125,78,37,0.22);
   --space-page-x: 28px;
   --space-page-y: 24px;
   --space-page-max: 1160px;
@@ -180,29 +180,29 @@
    Layer 2: Semantic Tokens — DARK THEME
    ═══════════════════════════════════════════════════════════════════════ */
 [data-theme="dark"] {
-  --bg-canvas:           #0C0E14;
-  --bg-surface:          #13161E;
-  --bg-surface-elevated: #1A1F2C;
-  --bg-surface-inset:    #0C0E14;
-  --bg-muted:            #1A1F2C;
-  --bg-hover:            #21273A;
-  --bg-active:           #282F44;
-  --bg-overlay:          rgba(2,6,23,0.75);
-  --text-primary:        #EFF1F5;
-  --text-secondary:      #8B95A9;
-  --text-tertiary:       #5A6273;
-  --text-placeholder:    #3E4559;
+  --bg-canvas:           #100E0B;
+  --bg-surface:          #171410;
+  --bg-surface-elevated: #1E1A14;
+  --bg-surface-inset:    #100E0B;
+  --bg-muted:            #1E1A14;
+  --bg-hover:            #252018;
+  --bg-active:           #2E2820;
+  --bg-overlay:          rgba(8,4,2,0.76);
+  --text-primary:        #F0EDE8;
+  --text-secondary:      #9A9088;
+  --text-tertiary:       #635A50;
+  --text-placeholder:    #4A4038;
   --text-accent:         var(--p-accent-400);
-  --border-subtle:       #1E2435;
-  --border-default:      #252B3D;
-  --border-strong:       #313B54;
+  --border-subtle:       #1C1A18;
+  --border-default:      #242118;
+  --border-strong:       #302C24;
   --border-focus:        var(--p-accent-400);
   --fill-accent:         var(--p-accent-500);
-  --fill-accent-soft:    rgba(245,158,11,0.14);
-  --fill-accent-subtle:  rgba(245,158,11,0.07);
+  --fill-accent-soft:    rgba(160,104,56,0.16);
+  --fill-accent-subtle:  rgba(160,104,56,0.08);
   --fill-positive-soft:  rgba(16,185,129,0.12);
   --fill-positive-text:  var(--p-success-200);
-  --fill-warning-soft:   rgba(245,158,11,0.12);
+  --fill-warning-soft:   rgba(160,104,56,0.14);
   --fill-warning-text:   var(--p-accent-200);
   --fill-negative-soft:  rgba(239,68,68,0.12);
   --fill-negative-text:  var(--p-danger-200);
@@ -212,8 +212,8 @@
   --shadow-sm:     0 1px 3px rgba(0,0,0,0.5);
   --shadow-md:     0 4px 8px -2px rgba(0,0,0,0.6);
   --shadow-lg:     0 12px 24px -6px rgba(0,0,0,0.7);
-  --shadow-focus:  0 0 0 3px rgba(245,158,11,0.22);
-  --shadow-accent: 0 4px 14px rgba(245,158,11,0.28);
+  --shadow-focus:  0 0 0 3px rgba(160,104,56,0.24);
+  --shadow-accent: 0 4px 14px rgba(125,78,37,0.30);
   --space-page-x: 28px;
   --space-page-y: 24px;
   --space-page-max: 1160px;
@@ -228,7 +228,7 @@
   --surface-shadow-rest: var(--shadow-xs);
   --surface-shadow-hover: var(--shadow-md);
   --feedback-success-ring: 0 0 0 3px rgba(16,185,129,0.20);
-  --feedback-warning-ring: 0 0 0 3px rgba(245,158,11,0.22);
+  --feedback-warning-ring: 0 0 0 3px rgba(160,104,56,0.24);
   --feedback-danger-ring: 0 0 0 3px rgba(239,68,68,0.22);
   --feedback-soft-press: scale(0.985);
   --feedback-raise-hover: translateY(-1px);
@@ -252,7 +252,7 @@
   --brand-panel-shadow-strong: 0 30px 64px -28px color-mix(in srgb, black 70%, var(--fill-accent) 30%);
   --brand-topbar-bg: color-mix(in srgb, var(--bg-surface) 74%, transparent);
   --brand-sidebar-bg: linear-gradient(180deg, color-mix(in srgb, var(--bg-surface) 98%, white 2%) 0%, color-mix(in srgb, var(--bg-surface-inset) 98%, transparent) 100%);
-  --brand-auth-bg: radial-gradient(circle at top right, color-mix(in srgb, var(--fill-accent) 22%, transparent) 0%, transparent 40%), radial-gradient(circle at bottom left, color-mix(in srgb, var(--fill-info) 10%, transparent) 0%, transparent 34%), linear-gradient(160deg, #090c13 0%, #0f1421 48%, #161d2c 100%);
+  --brand-auth-bg: radial-gradient(circle at top right, color-mix(in srgb, var(--fill-accent) 22%, transparent) 0%, transparent 40%), radial-gradient(circle at bottom left, rgba(60,30,8,0.18) 0%, transparent 34%), linear-gradient(160deg, #0e0b07 0%, #141008 48%, #1a1408 100%);
   --brand-auth-card-bg: color-mix(in srgb, var(--bg-surface-elevated) 80%, rgba(255,255,255,0.02));
   --brand-auth-card-border: color-mix(in srgb, white 9%, transparent);
   --brand-auth-text-soft: color-mix(in srgb, var(--text-inverse) 56%, transparent);

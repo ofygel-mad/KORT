@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
+import { WorkspaceThemeModal } from '../../features/workspace/components/WorkspaceThemeModal';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   DndContext, closestCorners, PointerSensor, useSensor, useSensors,
@@ -411,13 +412,14 @@ function PipelinesSection() {
 
 function AppearanceSection() {
   const { theme, setTheme, themePack, setThemePack } = useUIStore();
+  const [wsThemeOpen, setWsThemeOpen] = useState(false);
 
   return (
     <div className={s.section}>
       <div className={s.sectionHeader}>
         <div>
           <div className={s.sectionTitle}>Темы и характер интерфейса</div>
-          <div className={s.sectionSubtitle}>Mode отвечает за свет и тьму, theme pack - за surface, глубину и плотность акцента.</div>
+          <div className={s.sectionSubtitle}>Mode отвечает за свет и тьму, theme pack — за surface, глубину и плотность акцента.</div>
         </div>
       </div>
       <div className={s.sectionBody}>
@@ -466,6 +468,28 @@ function AppearanceSection() {
               ))}
             </div>
           </div>
+
+          {/* ── Workspace theme block ── */}
+          <div className={s.appearanceBlock}>
+            <div className={s.appearanceLabel}>Тема рабочего окружения</div>
+            <div className={s.appearanceHintCard} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+              <div>
+                <div className={s.appearanceHintTitle}><Layers3 size={14} /> Фон рабочего пространства</div>
+                <p className={s.appearanceHintText} style={{ margin: '4px 0 0' }}>
+                  Выберите из 8 вариантов: сетка или анимированный видеофон.
+                </p>
+              </div>
+              <button
+                className={s.themeModeBtnActive}
+                style={{ flexShrink: 0, whiteSpace: 'nowrap', padding: '0 16px', height: 36, borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 7, border: '1px solid rgba(160,104,56,0.45)', background: 'rgba(160,104,56,0.12)', color: 'rgba(210,160,90,0.95)' }}
+                onClick={() => setWsThemeOpen(true)}
+              >
+                <Palette size={14} />
+                Выбрать фон
+              </button>
+            </div>
+          </div>
+
           <div className={s.appearanceAside}>
             <div className={s.appearanceHintCard}>
               <div className={s.appearanceHintTitle}><Palette size={14} /> Что меняет pack</div>
@@ -479,11 +503,13 @@ function AppearanceSection() {
           </div>
         </div>
       </div>
+
+      <WorkspaceThemeModal open={wsThemeOpen} onClose={() => setWsThemeOpen(false)} />
     </div>
   );
 }
 
-/* ── API tokens section ──────────────────────────────────────── */
+/* ── Locked admin section ────────────────────────────────────── */
 function LockedAdminSection({ title, subtitle, canActivateAdminMode }: { title: string; subtitle: string; canActivateAdminMode: boolean }) {
   const { setAdminMode } = useUIStore();
   return (

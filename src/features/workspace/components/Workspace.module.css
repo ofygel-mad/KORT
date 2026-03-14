@@ -1,154 +1,571 @@
-.workspaceShell {
-  width: 100%;
-  min-height: calc(100vh - var(--topbar-height) - 20px);
-  display: grid;
-  gap: 14px;
-  padding: 14px 10px 12px;
-}
-
-.workspaceToolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.workspaceEyebrow {
-  font-size: 13px;
-  line-height: 1.2;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--text-tertiary);
-}
-
+/* ═══════════════════════════════════════════════
+   VIEWPORT — fills full page below topbar
+   Sharp edges, no border-radius
+   ═══════════════════════════════════════════════ */
 .workspaceViewport {
-  position: relative;
-  min-height: calc(100vh - var(--topbar-height) - 116px);
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   overflow: hidden;
-  border-radius: 30px;
-  border: 1px solid color-mix(in srgb, var(--border-subtle) 86%, rgba(245, 158, 11, 0.16));
+  border: none;
   background:
-    radial-gradient(circle at 50% 0%, rgba(110, 77, 255, 0.1), transparent 28%),
-    linear-gradient(180deg, color-mix(in srgb, var(--bg-surface-elevated) 92%, rgba(10, 12, 26, 0.72)), color-mix(in srgb, var(--bg-surface) 94%, rgba(4, 8, 20, 0.96)));
-  box-shadow:
-    inset 0 1px 0 color-mix(in srgb, white 8%, transparent),
-    0 18px 44px rgba(0, 0, 0, 0.22);
+    radial-gradient(ellipse at 50% 0%, rgba(140, 90, 40, 0.08) 0%, transparent 55%),
+    linear-gradient(180deg, #161820 0%, #12141b 100%);
   cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .workspaceViewport:active {
   cursor: grabbing;
 }
 
-.workspaceWorld {
+/* When video bg is active, darken canvas slightly so tiles pop */
+.workspaceViewportVideo {
+  background: transparent;
+}
+
+/* ═══════════════════════════════════════════════
+   VIDEO BG LAYER — behind world canvas
+   ═══════════════════════════════════════════════ */
+.workspaceBgLayer {
   position: absolute;
   inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+}
+
+.workspaceBgVideo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center center;
+  opacity: 0.6;
+  display: block;
+}
+
+/* ═══════════════════════════════════════════════
+   WORLD — 300% scrollable canvas
+   ═══════════════════════════════════════════════ */
+.workspaceWorld {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 300%;
   height: 300%;
   will-change: transform;
+  z-index: 1;
 }
 
+/* Dot grid — more visible now */
 .workspaceGrid {
   position: absolute;
   inset: 0;
-  background-image:
-    radial-gradient(circle, color-mix(in srgb, var(--fill-accent) 22%, transparent) 1px, transparent 1.4px),
-    linear-gradient(color-mix(in srgb, var(--fill-accent) 10%, transparent) 1px, transparent 1px),
-    linear-gradient(90deg, color-mix(in srgb, var(--fill-accent) 10%, transparent) 1px, transparent 1px);
-  background-size: 32px 32px, 96px 96px, 96px 96px;
-  background-position: center;
-  opacity: 0.5;
+  background-image: radial-gradient(circle, rgba(255,255,255,0.22) 1px, transparent 1px);
+  background-size: 26px 26px;
+  opacity: 0.55;
   pointer-events: none;
 }
 
+/* ═══════════════════════════════════════════════
+   TILE — compact glass card
+   ═══════════════════════════════════════════════ */
 .tile {
   position: absolute;
-  left: 0;
   top: 0;
+  left: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 10px;
-  border-radius: 22px;
-  border: 1px solid color-mix(in srgb, rgba(255, 255, 255, 0.16) 76%, var(--border-subtle));
-  background: linear-gradient(180deg, rgba(24, 28, 48, 0.68), rgba(12, 14, 26, 0.72));
-  backdrop-filter: blur(18px) saturate(118%);
+  gap: 6px;
+  padding: 8px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.09);
+  background: linear-gradient(158deg, rgba(28,22,16,0.88) 0%, rgba(12,10,8,0.94) 100%);
+  backdrop-filter: blur(20px) saturate(120%);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.06),
-    0 12px 26px rgba(0, 0, 0, 0.22);
-  cursor: pointer;
-  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+    inset 0 1px 0 rgba(255,255,255,0.05),
+    0 6px 20px rgba(0,0,0,0.4);
+  cursor: grab;
+  touch-action: none;
+  transition: border-color 180ms ease, box-shadow 180ms ease;
+  will-change: transform;
 }
 
 .tile:hover {
-  border-color: color-mix(in srgb, rgba(255, 255, 255, 0.22) 82%, var(--fill-accent));
+  border-color: rgba(160,100,50,0.28);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    0 16px 36px rgba(0, 0, 0, 0.26);
+    inset 0 1px 0 rgba(255,255,255,0.07),
+    0 10px 28px rgba(0,0,0,0.46);
 }
 
+/* ── Freshly created tile glows green→navy ─── */
+@keyframes newTileGlow {
+  0%   { box-shadow: 0 0 0 2px rgba(34,197,94,0.7),  0 6px 20px rgba(0,0,0,0.4); border-color: rgba(34,197,94,0.55); }
+  40%  { box-shadow: 0 0 0 2px rgba(34,197,94,0.4),  0 6px 20px rgba(0,0,0,0.4); border-color: rgba(34,197,94,0.3); }
+  70%  { box-shadow: 0 0 0 2px rgba(29,78,216,0.5),  0 6px 20px rgba(0,0,0,0.4); border-color: rgba(29,78,216,0.35); }
+  100% { box-shadow: 0 0 0 0px rgba(29,78,216,0),    0 6px 20px rgba(0,0,0,0.4); border-color: rgba(255,255,255,0.09); }
+}
+
+.tileNew {
+  animation: newTileGlow 3s ease-out forwards;
+}
+
+/* ── Tile inner parts ─────────────────────── */
 .tileHeader {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  cursor: grab;
-}
-
-.tileHeader:active {
-  cursor: grabbing;
+  gap: 8px;
+  pointer-events: none;
 }
 
 .tileIdentity {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   min-width: 0;
 }
 
-.tileIcon,
-.menuCardIcon {
-  width: 32px;
-  height: 32px;
+.tileIcon {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(160,104,56,0.18);
+  color: rgba(210,160,90,0.9);
+  flex-shrink: 0;
+}
+
+.tileIconLg {
+  width: 38px;
+  height: 38px;
   border-radius: 12px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: color-mix(in srgb, var(--fill-accent) 20%, rgba(255, 255, 255, 0.04));
-  color: var(--text-primary);
+  background: rgba(160,104,56,0.18);
+  color: rgba(210,160,90,0.9);
   flex-shrink: 0;
 }
 
 .tileTitle {
-  font-size: 13px;
-  font-weight: 800;
+  font-size: 11px;
+  font-weight: 700;
   color: var(--text-primary);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .tileSubtitle {
   margin-top: 1px;
-  font-size: 11px;
+  font-size: 10px;
   color: var(--text-tertiary);
 }
 
+/* Mini-monitor inside tile */
 .tileMonitor {
   flex: 1;
   min-height: 0;
-  border-radius: 16px;
-  border: 1px solid color-mix(in srgb, rgba(255, 255, 255, 0.08) 82%, var(--border-subtle));
-  background: linear-gradient(180deg, rgba(7, 10, 20, 0.96), rgba(16, 20, 34, 0.88));
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.05);
+  background: rgba(5,6,8,0.96);
   overflow: hidden;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  pointer-events: none;
 }
 
 .tileMonitorViewport {
   height: 100%;
-  transform: scale(0.68);
+  transform: scale(0.6);
   transform-origin: top left;
-  width: 147%;
+  width: 166.5%;
   pointer-events: none;
 }
 
+/* ═══════════════════════════════════════════════
+   MODAL — portal to <body>, truly full-screen
+   ═══════════════════════════════════════════════ */
+.tileModalBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(2,3,7,0.74);
+  backdrop-filter: blur(12px) saturate(70%);
+  z-index: 200;
+  cursor: default;
+  border: none;
+}
+
+/* Flex centering shell */
+.tileModalShell {
+  position: fixed;
+  inset: 0;
+  z-index: 201;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.tileModal {
+  pointer-events: all;
+  position: relative;
+  display: grid;
+  grid-template-rows: auto minmax(0,1fr) auto;
+  gap: 12px;
+  padding: 18px;
+  border-radius: 22px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: linear-gradient(158deg, rgba(22,17,12,0.98) 0%, rgba(9,7,5,0.99) 100%);
+  box-shadow:
+    0 0 0 1px rgba(125,78,37,0.14),
+    0 40px 100px rgba(0,0,0,0.6);
+  backdrop-filter: blur(30px);
+}
+
+.tileModalDefault {
+  width:  min(88vw, 1200px);
+  height: min(86vh, 820px);
+}
+
+.tileModalCompact {
+  width:  min(70vw, 940px);
+  height: min(76vh, 660px);
+}
+
+.tileModalWide {
+  width:  min(96vw, 1460px);
+  height: min(92vh, 900px);
+}
+
+.tileModalHeader,
+.tileModalFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.tileModalTitle {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1.1;
+}
+
+.tileModalSubtitle {
+  margin-top: 3px;
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+
+.tileModalClose,
+.tileSettingsButton,
+.menuClose {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.07);
+  background: rgba(255,255,255,0.04);
+  color: var(--text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 140ms, border-color 140ms, color 140ms;
+}
+
+.tileModalClose:hover,
+.tileSettingsButton:hover,
+.menuClose:hover {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.13);
+  color: var(--text-primary);
+}
+
+.tileModalMonitor {
+  min-height: 0;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.06);
+  overflow: hidden;
+  background: rgba(5,6,9,0.98);
+}
+
+.tileModalContent {
+  height: 100%;
+}
+
+/* ── Settings popover ─────────────────────── */
+.tileSettingsPopover {
+  position: absolute;
+  left: 18px;
+  bottom: 68px;
+  width: min(310px, calc(100vw - 48px));
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,0.09);
+  background: linear-gradient(158deg, rgba(26,20,14,0.99), rgba(13,10,7,0.99));
+  box-shadow: 0 24px 64px rgba(0,0,0,0.55);
+  display: grid;
+  gap: 10px;
+  z-index: 2;
+}
+
+.tileSettingsHeader {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.tileSettingsField {
+  display: grid;
+  gap: 6px;
+}
+
+.tileSettingsField > span {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.tileSettingsField input {
+  width: 100%;
+  height: 38px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.07);
+  background: rgba(255,255,255,0.04);
+  color: var(--text-primary);
+  font-size: 14px;
+  outline: none;
+  transition: border-color 140ms;
+}
+
+.tileSettingsField input:focus {
+  border-color: rgba(160,104,56,0.5);
+}
+
+.tileSettingsSegmented {
+  display: flex;
+  gap: 6px;
+}
+
+.tileSettingsSegment {
+  flex: 1;
+  min-height: 34px;
+  padding: 0 6px;
+  border-radius: 9px;
+  border: 1px solid rgba(255,255,255,0.06);
+  background: rgba(255,255,255,0.03);
+  color: var(--text-tertiary);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 140ms;
+}
+
+.tileSettingsSegment:hover {
+  background: rgba(255,255,255,0.06);
+  color: var(--text-secondary);
+}
+
+.tileSettingsSegmentActive {
+  border-color: rgba(160,104,56,0.55);
+  color: rgba(210,160,90,0.9);
+  background: rgba(160,104,56,0.12);
+}
+
+.tileSettingsAction {
+  min-height: 38px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.06);
+  background: rgba(255,255,255,0.03);
+  color: var(--text-secondary);
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  transition: background 140ms, color 140ms;
+}
+
+.tileSettingsAction:hover {
+  background: rgba(255,255,255,0.06);
+  color: var(--text-primary);
+}
+
+.tileSettingsDanger {
+  border-color: rgba(239,68,68,0.2);
+  color: rgba(252,165,165,0.75);
+}
+
+.tileSettingsDanger:hover {
+  background: rgba(239,68,68,0.08);
+  border-color: rgba(239,68,68,0.38);
+  color: #fca5a5;
+}
+
+/* ═══════════════════════════════════════════════
+   ADD-TILE MENU — fixed & centered
+   ═══════════════════════════════════════════════ */
+.menuOverlay {
+  position: fixed;
+  inset: 0;
+  border: 0;
+  background: rgba(2,3,7,0.6);
+  backdrop-filter: blur(6px);
+  z-index: 55;
+  cursor: default;
+}
+
+.menuPanel {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
+  width: min(620px, calc(100vw - 24px));
+  border-radius: 22px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: linear-gradient(158deg, rgba(24,18,11,0.99) 0%, rgba(10,8,5,0.99) 100%);
+  backdrop-filter: blur(32px);
+  box-shadow:
+    0 0 0 1px rgba(125,78,37,0.1),
+    0 40px 90px rgba(0,0,0,0.58);
+  z-index: 56;
+  padding: 20px;
+  display: grid;
+  gap: 0;
+}
+
+.menuHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.menuHeaderLeft {
+  display: grid;
+  gap: 4px;
+}
+
+.menuEyebrow {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(180,120,60,0.8);
+  font-weight: 600;
+}
+
+.menuTitle {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.menuDivider {
+  height: 1px;
+  background: rgba(255,255,255,0.06);
+  margin: 14px 0 12px;
+}
+
+.menuGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.menuCard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.06);
+  background: rgba(255,255,255,0.025);
+  text-align: left;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 160ms, background 160ms;
+}
+
+.menuCard:hover {
+  border-color: rgba(160,100,50,0.35);
+  background: rgba(255,255,255,0.04);
+}
+
+.menuCardIconWrap {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(160,104,56,0.16);
+  color: rgba(210,160,90,0.9);
+  flex-shrink: 0;
+  border: 1px solid rgba(160,104,56,0.2);
+}
+
+.menuCardBody {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+}
+
+.menuCardTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: block;
+}
+
+.menuCardDesc {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  line-height: 1.45;
+  display: block;
+}
+
+.menuCardArrow {
+  font-size: 16px;
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 160ms, transform 160ms;
+  transform: translateX(-4px);
+}
+
+.menuCard:hover .menuCardArrow {
+  opacity: 0.55;
+  transform: translateX(0);
+}
+
+.menuFooterHint {
+  margin: 12px 0 0;
+  font-size: 11px;
+  color: var(--text-tertiary);
+  text-align: center;
+  line-height: 1.5;
+}
+
+/* ═══════════════════════════════════════════════
+   PREVIEW WIDGET INTERNALS
+   ═══════════════════════════════════════════════ */
 .previewFrame,
 .importPreview,
 .metricsPreview {
@@ -158,7 +575,7 @@
 .previewHeaderRow,
 .tableRow3 {
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(96px, 0.8fr);
+  grid-template-columns: minmax(0,1.2fr) minmax(0,1fr) minmax(90px,0.8fr);
   gap: 12px;
   align-items: center;
 }
@@ -174,9 +591,7 @@
   color: var(--text-tertiary);
 }
 
-.previewBody {
-  display: grid;
-}
+.previewBody { display: grid; }
 
 .tableRow3 {
   min-height: 48px;
@@ -184,17 +599,12 @@
   border-bottom: 1px solid color-mix(in srgb, var(--border-subtle) 62%, transparent);
 }
 
-.tableRow3 strong,
-.metricMiniCard strong,
-.metricMiniWide strong {
+.tableRow3 strong, .metricMiniCard strong, .metricMiniWide strong {
   color: var(--text-primary);
   font-size: 14px;
 }
 
-.tableRow3 span,
-.previewEmpty,
-.metricMiniCard span,
-.metricMiniWide span {
+.tableRow3 span, .previewEmpty, .metricMiniCard span, .metricMiniWide span {
   color: var(--text-secondary);
   font-size: 13px;
   min-width: 0;
@@ -215,343 +625,49 @@
 
 .metricsPreview {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(2,minmax(0,1fr));
   gap: 12px;
   padding: 16px;
 }
 
-.metricMiniCard,
-.metricMiniWide {
+.metricMiniCard, .metricMiniWide {
   border-radius: 18px;
   border: 1px solid color-mix(in srgb, var(--border-subtle) 88%, transparent);
-  background: color-mix(in srgb, var(--bg-surface-elevated) 74%, rgba(255, 255, 255, 0.03));
+  background: color-mix(in srgb, var(--bg-surface-elevated) 74%, rgba(255,255,255,0.03));
   padding: 14px;
   display: grid;
   gap: 8px;
 }
 
-.metricMiniWide {
-  grid-column: 1 / -1;
-}
+.metricMiniWide { grid-column: 1/-1; }
 
-.importPreview {
-  padding: 18px;
-}
+.importPreview { padding: 18px; }
 
-.importStageList {
-  display: grid;
-  gap: 10px;
-}
+.importStageList { display: grid; gap: 10px; }
 
 .importStageItem {
   min-height: 48px;
   display: grid;
-  grid-template-columns: 40px minmax(0, 1fr);
+  grid-template-columns: 40px minmax(0,1fr);
   align-items: center;
   gap: 12px;
   border-radius: 16px;
   border: 1px solid color-mix(in srgb, var(--border-subtle) 86%, transparent);
-  background: color-mix(in srgb, var(--bg-surface-elevated) 74%, rgba(255, 255, 255, 0.04));
+  background: color-mix(in srgb, var(--bg-surface-elevated) 74%, rgba(255,255,255,0.04));
   padding: 0 14px;
 }
 
-.importStageItem span {
-  color: var(--text-accent);
-  font-size: 12px;
-  font-weight: 700;
-}
+.importStageItem span { color: var(--text-accent); font-size: 12px; font-weight: 700; }
+.importStageItem strong { color: var(--text-primary); font-size: 14px; }
 
-.importStageItem strong {
-  color: var(--text-primary);
-  font-size: 14px;
-}
-
-.emptyState {
-  position: absolute;
-  inset: 50% auto auto 50%;
-  transform: translate(-50%, -50%);
-  width: min(560px, calc(100% - 48px));
-  padding: 28px;
-  border-radius: 28px;
-  border: 1px solid color-mix(in srgb, rgba(255, 255, 255, 0.12) 84%, var(--border-subtle));
-  background: linear-gradient(180deg, rgba(18, 22, 40, 0.82), rgba(11, 13, 24, 0.88));
-  backdrop-filter: blur(18px);
-  text-align: center;
-}
-
-.emptyTitle {
-  font-size: clamp(22px, 2.6vw, 28px);
-  font-weight: 800;
-  color: var(--text-primary);
-}
-
-.emptyText {
-  margin: 12px 0 20px;
-  color: var(--text-secondary);
-  line-height: 1.7;
-}
-
-.menuOverlay {
-  position: fixed;
-  inset: 0;
-  border: 0;
-  background: rgba(3, 6, 18, 0.62);
-  z-index: 40;
-}
-
-.menuPanel {
-  position: fixed;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  width: min(680px, calc(100vw - 32px));
-  border-radius: 30px;
-  border: 1px solid color-mix(in srgb, rgba(255, 255, 255, 0.12) 84%, var(--border-subtle));
-  background: linear-gradient(180deg, rgba(39, 32, 70, 0.94), rgba(21, 22, 34, 0.96));
-  backdrop-filter: blur(28px);
-  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.42);
-  z-index: 41;
-  padding: 20px;
-}
-
-.menuHeader {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.menuEyebrow {
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: color-mix(in srgb, var(--text-tertiary) 92%, #d4b6ff);
-}
-
-.menuTitle {
-  margin: 8px 0 0;
-  color: var(--text-primary);
-  font-size: 28px;
-}
-
-.menuGrid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  margin-top: 18px;
-}
-
-.menuCard {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  min-height: 110px;
-  padding: 16px;
-  border-radius: 22px;
-  border: 1px solid color-mix(in srgb, var(--border-subtle) 86%, rgba(255, 255, 255, 0.08));
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02));
-  text-align: left;
-  cursor: pointer;
-}
-
-.menuCardCopy {
-  display: grid;
-  gap: 8px;
-}
-
-.menuCardCopy strong {
-  color: var(--text-primary);
-  font-size: 16px;
-}
-
-.menuCardCopy span {
-  color: var(--text-secondary);
-  line-height: 1.55;
-  font-size: 13px;
-}
-
-.tileModalBackdrop {
-  position: fixed;
-  inset: 0;
-  border: 0;
-  background: rgba(2, 6, 18, 0.7);
-  backdrop-filter: blur(8px);
-  z-index: 70;
-}
-
-.tileModal {
-  position: fixed;
-  inset: 50% auto auto 50%;
-  transform: translate(-50%, -50%);
-  z-index: 71;
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
-  gap: 14px;
-  padding: 18px;
-  border-radius: 30px;
-  border: 1px solid color-mix(in srgb, rgba(255, 255, 255, 0.16) 78%, var(--border-subtle));
-  background: linear-gradient(180deg, rgba(22, 26, 46, 0.94), rgba(10, 12, 22, 0.96));
-  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.42);
-  backdrop-filter: blur(24px);
-}
-
-.tileModalDefault {
-  width: min(86vw, 1180px);
-  height: min(84vh, 780px);
-}
-
-.tileModalCompact {
-  width: min(72vw, 940px);
-  height: min(76vh, 660px);
-}
-
-.tileModalWide {
-  width: min(94vw, 1400px);
-  height: min(88vh, 860px);
-}
-
-.tileModalHeader,
-.tileModalFooter {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.tileModalTitle {
-  font-size: 22px;
-  font-weight: 800;
-  color: var(--text-primary);
-}
-
-.tileModalSubtitle {
-  margin-top: 4px;
-  color: var(--text-secondary);
-  font-size: 13px;
-}
-
-.tileModalClose,
-.tileSettingsButton,
-.menuClose {
-  width: 40px;
-  height: 40px;
-  border-radius: 14px;
-  border: 1px solid var(--border-subtle);
-  background: color-mix(in srgb, var(--bg-surface-elevated) 82%, transparent);
-  color: var(--text-secondary);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-}
-
-.tileModalMonitor {
-  min-height: 0;
-  border-radius: 24px;
-  border: 1px solid color-mix(in srgb, rgba(255, 255, 255, 0.1) 82%, var(--border-subtle));
-  overflow: hidden;
-  background: linear-gradient(180deg, rgba(7, 10, 20, 0.98), rgba(12, 16, 28, 0.92));
-}
-
-.tileModalContent {
-  height: 100%;
-}
-
-.tileSettingsPopover {
-  position: absolute;
-  left: 18px;
-  bottom: 72px;
-  width: min(360px, calc(100vw - 48px));
-  padding: 14px;
-  border-radius: 22px;
-  border: 1px solid color-mix(in srgb, rgba(255, 255, 255, 0.12) 84%, var(--border-subtle));
-  background: linear-gradient(180deg, rgba(25, 30, 50, 0.96), rgba(12, 16, 28, 0.98));
-  box-shadow: 0 22px 50px rgba(0, 0, 0, 0.34);
-  display: grid;
-  gap: 12px;
-}
-
-.tileSettingsHeader {
-  font-size: 14px;
-  font-weight: 800;
-  color: var(--text-primary);
-}
-
-.tileSettingsField {
-  display: grid;
-  gap: 8px;
-}
-
-.tileSettingsField > span {
-  font-size: 12px;
-  color: var(--text-tertiary);
-}
-
-.tileSettingsField input {
-  width: 100%;
-  height: 42px;
-  padding: 0 12px;
-  border-radius: 14px;
-  border: 1px solid color-mix(in srgb, var(--border-subtle) 88%, rgba(255, 255, 255, 0.08));
-  background: rgba(8, 12, 22, 0.8);
-  color: var(--text-primary);
-  outline: none;
-}
-
-.tileSettingsSegmented {
-  display: grid;
-  gap: 8px;
-}
-
-.tileSettingsSegment {
-  width: 100%;
-  min-height: 40px;
-  padding: 0 12px;
-  border-radius: 14px;
-  border: 1px solid color-mix(in srgb, var(--border-subtle) 88%, rgba(255, 255, 255, 0.08));
-  background: rgba(8, 12, 22, 0.72);
-  color: var(--text-secondary);
-  text-align: left;
-  cursor: pointer;
-}
-
-.tileSettingsSegmentActive {
-  border-color: color-mix(in srgb, var(--fill-accent) 80%, white);
-  color: var(--text-primary);
-  background: color-mix(in srgb, var(--fill-accent) 16%, rgba(8, 12, 22, 0.82));
-}
-
-.tileSettingsAction {
-  min-height: 42px;
-  padding: 0 12px;
-  border-radius: 14px;
-  border: 1px solid color-mix(in srgb, var(--border-subtle) 88%, rgba(255, 255, 255, 0.08));
-  background: rgba(8, 12, 22, 0.72);
-  color: var(--text-primary);
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-}
-
-.tileSettingsDanger {
-  border-color: rgba(239, 68, 68, 0.36);
-  color: #fca5a5;
-}
-
+/* ═══════════════════════════════════════════════
+   RESPONSIVE
+   ═══════════════════════════════════════════════ */
 @media (max-width: 980px) {
-  .workspaceShell {
-    padding: 12px 8px 10px;
-  }
-
-  .menuGrid {
-    grid-template-columns: 1fr;
-  }
-
-  .tileModalDefault,
-  .tileModalCompact,
-  .tileModalWide {
-    width: calc(100vw - 18px);
-    height: calc(100vh - 18px);
+  .menuGrid { grid-template-columns: 1fr; }
+  .tileModalDefault, .tileModalCompact, .tileModalWide {
+    width: calc(100vw - 10px);
+    height: calc(100vh - 10px);
+    border-radius: 16px;
   }
 }

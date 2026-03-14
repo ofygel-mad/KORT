@@ -20,23 +20,20 @@
 
 .main {
   flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .routeViewport {
+  flex: 1;
+  min-height: 0;
   height: 100%;
+  overflow: hidden;
 }
 
-.main {
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--fill-accent) 2%, transparent) 0%, transparent 24%),
-    var(--bg-canvas);
-}
 
-.routeViewport {
-  min-height: 100%;
-}
+
 
 
 .offlineBanner {

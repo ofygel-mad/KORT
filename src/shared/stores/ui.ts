@@ -99,7 +99,15 @@ export const useUIStore = create<UIStore>()(
       })),
       openCommandPalette: () => useCommandPalette.getState().open(),
     }),
-    { name: 'kort-ui' },
+    {
+      name: 'kort-ui',
+      partialize: (state) => ({
+        theme: state.theme,
+        themePack: state.themePack,
+        sidebarCollapsed: state.sidebarCollapsed,
+        focusModeActive: state.focusModeActive,
+      }),
+    },
   ),
 );
 

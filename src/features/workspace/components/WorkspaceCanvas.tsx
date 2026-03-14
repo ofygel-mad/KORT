@@ -1,153 +1,105 @@
 import type { PointerEvent as ReactPointerEvent } from 'react';
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { AnimatePresence } from 'framer-motion';
-import { Plus } from 'lucide-react';
-import { Button } from '../../../shared/ui/Button';
 import { useWorkspaceStore, WORLD_FACTOR } from '../model/store';
 import { useWorkspaceSnapshot } from '../model/useWorkspaceSnapshot';
+import { useWorkspaceTheme } from '../model/workspaceTheme';
 import type { WorkspaceTile as WorkspaceTileType } from '../model/types';
 import { WorkspaceTile } from './WorkspaceTile';
 import { WorkspaceTileModal } from './WorkspaceTileModal';
+import { WorkspaceBgLayer } from './WorkspaceBgLayer';
 import styles from './Workspace.module.css';
 
-interface WorkspaceCanvasProps {
-  onOpenCreateMenu: () => void;
+function clamp(v: number, lo: number, hi: number) {
+  return Math.min(Math.max(v, lo), hi);
 }
 
-function clamp(value: number, min: number, max: number) {
-  return Math.min(Math.max(value, min), max);
-}
-
-export function WorkspaceCanvas({ onOpenCreateMenu }: WorkspaceCanvasProps) {
-  const viewportRef = useRef<HTMLDivElement | null>(null);
-  const viewport = useWorkspaceStore((s) => s.viewport);
-  const tiles = useWorkspaceStore((s) => s.tiles);
-  const activeTileId = useWorkspaceStore((s) => s.activeTileId);
-  const setViewport = useWorkspaceStore((s) => s.setViewport);
-  const setTilePosition = useWorkspaceStore((s) => s.setTilePosition);
+export function WorkspaceCanvas() {
+  const viewportRef        = useRef<HTMLDivElement>(null);
+  const viewport           = useWorkspaceStore((s) => s.viewport);
+  const tiles              = useWorkspaceStore((s) => s.tiles);
+  const activeTileId       = useWorkspaceStore((s) => s.activeTileId);
+  const setViewport        = useWorkspaceStore((s) => s.setViewport);
   const initializeViewport = useWorkspaceStore((s) => s.initializeViewport);
   const { data: snapshot } = useWorkspaceSnapshot();
+  const { activeBg }       = useWorkspaceTheme();
 
-  const activeTile = useMemo(
-    () => tiles.find((tile) => tile.id === activeTileId) ?? null,
-    [activeTileId, tiles],
-  );
+  const activeTile = tiles.find((t) => t.id === activeTileId) ?? null;
+  const hasVideo   = activeBg !== 'grid';
 
   useEffect(() => {
     const node = viewportRef.current;
     if (!node) return;
-
     const update = () => initializeViewport(node.clientWidth, node.clientHeight);
     update();
-
-    const observer = new ResizeObserver(update);
-    observer.observe(node);
-    return () => observer.disconnect();
+    const ro = new ResizeObserver(update);
+    ro.observe(node);
+    return () => ro.disconnect();
   }, [initializeViewport]);
 
-  const startPan = (event: ReactPointerEvent<HTMLDivElement>) => {
-    const target = event.target as HTMLElement | null;
-    if (target?.closest('[data-workspace-tile="true"]')) return;
-    const node = viewportRef.current;
-    if (!node || activeTileId) return;
+  const startPan = (e: ReactPointerEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    if (target.closest('[data-workspace-tile="true"]')) return;
+    if (activeTileId) return;
 
-    const startX = event.clientX;
-    const startY = event.clientY;
-    const origin = { ...viewport };
-    const width = node.clientWidth;
-    const height = node.clientHeight;
+    const node    = viewportRef.current!;
+    const startX  = e.clientX;
+    const startY  = e.clientY;
+    const originX = viewport.x;
+    const originY = viewport.y;
+    const vpW     = node.clientWidth;
+    const vpH     = node.clientHeight;
 
-    node.setPointerCapture(event.pointerId);
-    node.dataset.mode = 'panning';
+    node.setPointerCapture(e.pointerId);
+    node.style.cursor = 'grabbing';
 
-    const handleMove = (moveEvent: PointerEvent) => {
-      const nextX = clamp(origin.x + (moveEvent.clientX - startX), -(width * (WORLD_FACTOR - 1)), 0);
-      const nextY = clamp(origin.y + (moveEvent.clientY - startY), -(height * (WORLD_FACTOR - 1)), 0);
-      setViewport(nextX, nextY);
+    const onMove = (me: PointerEvent) => {
+      setViewport(
+        clamp(originX + (me.clientX - startX), -(vpW * (WORLD_FACTOR - 1)), 0),
+        clamp(originY + (me.clientY - startY), -(vpH * (WORLD_FACTOR - 1)), 0),
+      );
     };
-
-    const handleUp = () => {
-      node.dataset.mode = '';
-      node.removeEventListener('pointermove', handleMove);
-      node.removeEventListener('pointerup', handleUp);
-      node.removeEventListener('pointercancel', handleUp);
+    const onUp = () => {
+      node.style.cursor = '';
+      node.releasePointerCapture(e.pointerId);
+      node.removeEventListener('pointermove', onMove);
+      node.removeEventListener('pointerup',   onUp);
+      node.removeEventListener('pointercancel', onUp);
     };
-
-    node.addEventListener('pointermove', handleMove);
-    node.addEventListener('pointerup', handleUp);
-    node.addEventListener('pointercancel', handleUp);
-  };
-
-  const startTileDrag = (event: ReactPointerEvent<HTMLDivElement>, tile: WorkspaceTileType) => {
-    event.stopPropagation();
-    const node = viewportRef.current;
-    if (!node || activeTileId) return;
-
-    const startX = event.clientX;
-    const startY = event.clientY;
-    const origin = { x: tile.x, y: tile.y };
-    const worldWidth = node.clientWidth * WORLD_FACTOR;
-    const worldHeight = node.clientHeight * WORLD_FACTOR;
-
-    const handleMove = (moveEvent: PointerEvent) => {
-      const nextX = clamp(origin.x + (moveEvent.clientX - startX), 0, worldWidth - tile.width);
-      const nextY = clamp(origin.y + (moveEvent.clientY - startY), 0, worldHeight - tile.height);
-      setTilePosition(tile.id, nextX, nextY);
-    };
-
-    const handleUp = () => {
-      node.removeEventListener('pointermove', handleMove);
-      node.removeEventListener('pointerup', handleUp);
-      node.removeEventListener('pointercancel', handleUp);
-    };
-
-    node.addEventListener('pointermove', handleMove);
-    node.addEventListener('pointerup', handleUp);
-    node.addEventListener('pointercancel', handleUp);
+    node.addEventListener('pointermove',   onMove);
+    node.addEventListener('pointerup',     onUp);
+    node.addEventListener('pointercancel', onUp);
   };
 
   return (
-    <section className={styles.workspaceShell}>
-      <div className={styles.workspaceToolbar}>
-        <div className={styles.workspaceEyebrow}>Настраиваемое пространство</div>
-        <Button size="lg" icon={<Plus size={16} />} onClick={onOpenCreateMenu}>
-          Создать плитку
-        </Button>
-      </div>
+    <div
+      ref={viewportRef}
+      data-workspace-viewport="true"
+      className={`${styles.workspaceViewport} ${hasVideo ? styles.workspaceViewportVideo : ''}`}
+      onPointerDown={startPan}
+    >
+      {/* Video/static bg — behind everything, no pointer events */}
+      <WorkspaceBgLayer />
 
+      {/* Scrollable world canvas */}
       <div
-        ref={viewportRef}
-        className={styles.workspaceViewport}
-        onPointerDown={startPan}
+        className={styles.workspaceWorld}
+        style={{ transform: `translate(${viewport.x}px, ${viewport.y}px)` }}
       >
-        <div className={styles.workspaceWorld} style={{ transform: `translate(${viewport.x}px, ${viewport.y}px)` }}>
-          <div className={styles.workspaceGrid} />
-          {tiles.map((tile) => (
-            <WorkspaceTile
-              key={tile.id}
-              tile={tile}
-              snapshot={snapshot}
-              onDragStart={startTileDrag}
-            />
-          ))}
-        </div>
+        {/* Show grid only when no video bg */}
+        {!hasVideo && <div className={styles.workspaceGrid} />}
 
-        {tiles.length === 0 && (
-          <div className={styles.emptyState}>
-            <div className={styles.emptyTitle}>Пустое рабочее поле</div>
-            <p className={styles.emptyText}>
-              Сначала добавляется плитка, потом уже собирается личная среда. Никаких вбитых навсегда блоков, потому что один шаблон на всех обычно делает всем хуже.
-            </p>
-            <Button size="lg" icon={<Plus size={16} />} onClick={onOpenCreateMenu}>
-              Добавить первую плитку
-            </Button>
-          </div>
-        )}
+        {tiles.map((tile: WorkspaceTileType) => (
+          <WorkspaceTile key={tile.id} tile={tile} snapshot={snapshot} />
+        ))}
       </div>
 
+      {/* Tile modal via portal to body */}
       <AnimatePresence>
-        {activeTile ? <WorkspaceTileModal tile={activeTile} snapshot={snapshot} /> : null}
+        {activeTile && (
+          <WorkspaceTileModal key={activeTile.id} tile={activeTile} snapshot={snapshot} />
+        )}
       </AnimatePresence>
-    </section>
+    </div>
   );
 }

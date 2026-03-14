@@ -1,44 +1,66 @@
-import { useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, type ReactNode } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { motion } from 'framer-motion';
 import {
-  Plus, Search, ChevronUp, ChevronDown, Phone, Mail,
-  MoreHorizontal, Trash2, Edit3, Filter, Download,
-  Users,
+  ChevronLeft, Phone, Mail, Building2, User, Edit3,
+  Plus, MessageSquare, CheckSquare, Briefcase, Tag,
+  Send, MessageCircle, FileText, PhoneCall,
 } from 'lucide-react';
-import { api } from '../../shared/api/client';
-import { useUIStore } from '../../shared/stores/ui';
-import { Button } from '../../shared/ui/Button';
-import { Badge } from '../../shared/ui/Badge';
-import { Skeleton } from '../../shared/ui/Skeleton';
-import { EmptyState } from '../../shared/ui/EmptyState';
-import { useDebounce } from '../../shared/hooks/useDebounce';
-import { useIsMobile } from '../../shared/hooks/useIsMobile';
-import { useCapabilities } from '../../shared/hooks/useCapabilities';
-import { format } from 'date-fns';
+import { api } from '../../../shared/api/client';
+import { Button } from '../../../shared/ui/Button';
+import { Badge } from '../../../shared/ui/Badge';
+import { PageLoader } from '../../../shared/ui/PageLoader';
+import { EmptyState } from '../../../shared/ui/EmptyState';
+import { Drawer } from '../../../shared/ui/Drawer';
+import { FormErrorSummary } from '../../../shared/ui/FormErrorSummary';
+import { Input, Textarea } from '../../../shared/ui/Input';
+import { useForm } from 'react-hook-form';
+import { toast } from 'sonner';
+import { format, formatDistanceToNow } from 'date-fns';
 import { ru } from 'date-fns/locale';
-import styles from './Customers.module.css';
+import { formatMoney } from '../../../shared/utils/format';
+import { AiAssistant } from '../../../widgets/ai-assistant/AiAssistant';
+import { useDocumentTitle } from '../../../shared/hooks/useDocumentTitle';
+import { useUIStore } from '../../../shared/stores/ui';
+import styles from './CustomerProfile.module.css';
+import { setProductMoment } from '../../../shared/utils/productMoment';
+import { openExternal } from '../../../shared/lib/browser';
+import { useCapabilities } from '../../../shared/hooks/useCapabilities';
+import { useTabsKeyboardNav } from '../../../shared/hooks/useTabsKeyboardNav';
 
-interface Customer {
-  id: string;
-  full_name: string;
-  company_name: string;
-  phone: string;
-  email: string;
-  status: string;
-  source: string;
+interface CustomerDetail {
+  id: string; full_name: string; company_name: string;
+  phone: string; email: string; source: string; status: string;
   owner: { id: string; full_name: string } | null;
+  tags: string[]; notes: string;
+  created_at: string; updated_at: string;
+  last_contact_at?: string | null; follow_up_due_at?: string | null;
+  response_state?: string; next_action_note?: string;
+}
+interface Activity {
+  id: string; type: string;
+  payload: Record<string, unknown>;
+  actor: { full_name: string } | null;
   created_at: string;
-  last_contact_at?: string | null;
+}
+interface Deal {
+  id: string; title: string; amount: number | null;
+  currency: string; status: string;
+  stage: { name: string; type: string }; created_at: string;
+}
+interface Task {
+  id: string; title: string; priority: string;
+  status: string; due_at: string | null;
+  assigned_to: { full_name: string } | null;
 }
 
-interface CustomerList {
-  results: Customer[];
-  count: number;
-  next: string | null;
-  previous: string | null;
-}
+const TABS = [
+  { key: 'overview',  label: 'Обзор',      icon: <User size={13} /> },
+  { key: 'activity',  label: 'Активность', icon: <MessageSquare size={13} /> },
+  { key: 'deals',     label: 'Сделки',     icon: <Briefcase size={13} /> },
+  { key: 'tasks',     label: 'Задачи',     icon: <CheckSquare size={13} /> },
+];
 
 const STATUS_MAP: Record<string, { variant: 'success' | 'info' | 'default' | 'warning'; label: string }> = {
   new:      { variant: 'info',    label: 'Новый' },
@@ -47,401 +69,442 @@ const STATUS_MAP: Record<string, { variant: 'success' | 'info' | 'default' | 'wa
   archived: { variant: 'default', label: 'Архив' },
 };
 
-const STATUS_FILTERS = [
-  { key: '',         label: 'Все' },
-  { key: 'new',      label: 'Новые' },
-  { key: 'active',   label: 'Активные' },
-  { key: 'inactive', label: 'Неактивные' },
-];
+const ACTIVITY_ICONS: Record<string, ReactNode> = {
+  call:       <PhoneCall size={13} />,
+  message:    <MessageCircle size={13} />,
+  email:      <Mail size={13} />,
+  note:       <FileText size={13} />,
+  whatsapp:   <Send size={13} />,
+};
 
-type SortKey  = 'full_name' | 'company_name' | 'created_at' | 'last_contact_at';
-type SortDir  = 'asc' | 'desc';
-
-function initials(name: string): string {
-  return name
-    .split(' ')
-    .slice(0, 2)
-    .map(w => w[0] ?? '')
-    .join('')
-    .toUpperCase();
+function initials(name: string) {
+  return name.split(' ').slice(0, 2).map(w => w[0] ?? '').join('').toUpperCase();
 }
 
-export default function CustomersPage() {
+export default function CustomerProfilePage() {
+  const { id }     = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const isMobile = useIsMobile();
-  const openCreateCustomer = useUIStore(s => s.openCreateCustomer);
+  const qc = useQueryClient();
+  const openCreateDeal = useUIStore(s => s.openCreateDeal);
+  const openCreateTask = useUIStore(s => s.openCreateTask);
+  const openAssistantPrompt = useUIStore(s => s.openAssistantPrompt);
   const { can } = useCapabilities();
+  const canEditCustomer = can('customers:write');
+  const canCreateDeal = can('deals:write');
+  const canCreateTask = can('tasks:write');
+  const [tab, setTab]         = useState<typeof TABS[number]['key']>('overview');
+  const [editDrawer, setEditDrawer] = useState(false);
+  const tabKeys = TABS.map((item) => item.key);
+  const handleTabKeyDown = useTabsKeyboardNav(tabKeys, tab, setTab);
 
-  const [search,    setSearch]    = useState('');
-  const [status,    setStatus]    = useState('');
-  const [sortKey,   setSortKey]   = useState<SortKey>('created_at');
-  const [sortDir,   setSortDir]   = useState<SortDir>('desc');
-  const [page,      setPage]      = useState(1);
-  const [selected,  setSelected]  = useState<Set<string>>(new Set());
+  const { data: customer, isLoading } = useQuery<CustomerDetail>({
+    queryKey: ['customer', id],
+    queryFn:  () => api.get(`/customers/${id}/`),
+  });
+  useDocumentTitle(customer?.full_name);
 
-  const debouncedSearch = useDebounce(search, 280);
-
-  const { data, isLoading } = useQuery<CustomerList>({
-    queryKey: ['customers', debouncedSearch, status, sortKey, sortDir, page],
-    queryFn: () =>
-      api.get<CustomerList>('/customers/', {
-        params: {
-          search:   debouncedSearch || undefined,
-          status:   status || undefined,
-          ordering: `${sortDir === 'desc' ? '-' : ''}${sortKey}`,
-          page,
-          page_size: 20,
-        },
-      }),
-    placeholderData: keepPreviousData,
+  const { data: activities } = useQuery<{ results: Activity[] }>({
+    queryKey: ['customer-activities', id],
+    queryFn:  () => api.get(`/customers/${id}/activities/`),
+    enabled:  tab === 'activity' || tab === 'overview',
+  });
+  const { data: deals } = useQuery<{ results: Deal[] }>({
+    queryKey: ['customer-deals', id],
+    queryFn:  () => api.get(`/customers/${id}/deals/`),
+    enabled:  tab === 'deals' || tab === 'overview',
+  });
+  const { data: tasks } = useQuery<{ results: Task[] }>({
+    queryKey: ['customer-tasks', id],
+    queryFn:  () => api.get(`/customers/${id}/tasks/`),
+    enabled:  tab === 'tasks',
   });
 
-  const totalPages = Math.ceil((data?.count ?? 0) / 20);
+  const { register, handleSubmit, reset: resetEdit, formState: { isSubmitting: editSubmitting, errors } } =
+    useForm<Partial<CustomerDetail>>();
 
-  // Sorting
-  const handleSort = (key: SortKey) => {
-    if (key === sortKey) {
-      setSortDir(d => d === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortKey(key);
-      setSortDir('asc');
-    }
-    setPage(1);
-  };
+  const updateMutation = useMutation({
+    mutationFn: (data: Partial<CustomerDetail>) => api.patch(`/customers/${id}/`, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['customer', id] });
+      qc.invalidateQueries({ queryKey: ['customers'] });
+      toast.success('Клиент обновлён');
+      setEditDrawer(false);
+    },
+  });
 
-  // Selection
-  const toggleSelect = useCallback((id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setSelected(prev => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
-  }, []);
+  if (isLoading) return <PageLoader />;
+  if (!customer) return <EmptyState icon={<User size={22} />} title="Клиент не найден" />;
 
-  const toggleAll = useCallback(() => {
-    const ids = data?.results.map((customer) => customer.id) ?? [];
-    setSelected(prev =>
-      prev.size === ids.length ? new Set() : new Set(ids)
-    );
-  }, [data?.results]);
-
-  const SortIcon = ({ col }: { col: SortKey }) => (
-    sortKey === col
-      ? (sortDir === 'asc' ? <ChevronUp size={12} className={`${styles.sortIcon} ${styles.sortIconActive}`} /> : <ChevronDown size={12} className={`${styles.sortIcon} ${styles.sortIconActive}`} />)
-      : <ChevronDown size={12} className={styles.sortIcon} />
-  );
-
-  const customers = data?.results ?? [];
-  const hasSelection = selected.size > 0;
-  const hasActiveFilters = Boolean(search.trim() || status);
+  const sm = STATUS_MAP[customer.status] ?? STATUS_MAP.new;
+  const activeDeals = deals?.results.filter(d => d.status === 'open') ?? [];
 
   return (
-    <div className={styles.page}>
-      {/* ── Header ──────────────────────────────────────────── */}
-      <div className={styles.header}>
-        <div className={styles.headerLeft}>
-          <h1 className={styles.title}>
-            Клиенты
-            {data?.count !== undefined && (
-              <span className={styles.titleCount}>{data.count}</span>
-            )}
-          </h1>
-          <p className={styles.subtitle}>Управляйте базой клиентов</p>
-        </div>
-        <div className={styles.headerActions}>
-          {!isMobile && (
-            <Button variant="secondary" size="sm" icon={<Download size={13} />}>
-              Экспорт
-            </Button>
-          )}
-          {can('customers:write') && (
-            <Button
-              size="sm"
-              icon={<Plus size={13} />}
-              onClick={openCreateCustomer}
-            >
-              Добавить
-            </Button>
-          )}
-        </div>
-      </div>
+    <motion.div
+      className={styles.page}
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.25 }}
+    >
+      {/* ── Back ────────────────────────────────────────────── */}
+      <button className={styles.backBtn} onClick={() => navigate('/customers')}>
+        <ChevronLeft size={15} />
+        Все клиенты
+      </button>
 
-      <div className={styles.scenarioRail}>
-        <div className={styles.scenarioCopy}>
-          <span className={styles.scenarioEyebrow}>Рабочий контур</span>
-          <div className={styles.scenarioText}>Здесь должно быть просто: найти клиента, открыть карточку и не утонуть в декоративных объяснениях.</div>
-        </div>
-        <div className={styles.scenarioChips}>
-          <span className={styles.scenarioChip}>Найти</span>
-          <span className={styles.scenarioChip}>Отобрать</span>
-          <span className={styles.scenarioChip}>Открыть профиль</span>
-        </div>
-      </div>
+      {/* ── Profile header ──────────────────────────────────── */}
+      <div className={styles.profileHeader}>
+        <div className={styles.profileHeaderInner}>
+          <div className={styles.avatarLarge}>{initials(customer.full_name)}</div>
 
-      {/* ── Toolbar ─────────────────────────────────────────── */}
-      <div className={styles.toolbar}>
-        <div className={styles.searchWrap}>
-          <Search size={14} className={styles.searchIcon} />
-          <input
-            className={styles.searchInput}
-            placeholder="Поиск по имени, компании, телефону…"
-            value={search}
-            onChange={e => { setSearch(e.target.value); setPage(1); }}
-          />
-        </div>
-
-        <div className={styles.filterChips}>
-          {STATUS_FILTERS.map(f => (
-            <button
-              key={f.key}
-              className={`${styles.filterChip}${status === f.key ? ' ' + styles.filterChipActive : ''}`}
-              onClick={() => { setStatus(f.key); setPage(1); }}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
-
-        <div className={styles.toolbarRight}>
-          <Button variant="ghost" size="sm" icon={<Filter size={13} />}>
-            Фильтры
-          </Button>
-        </div>
-      </div>
-
-      {/* ── Bulk bar ────────────────────────────────────────── */}
-      <AnimatePresence>
-        {hasSelection && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className={styles.bulkBar}
-          >
-            <span className={styles.bulkCount}>Выбрано: {selected.size}</span>
-            <div className={styles.bulkActions}>
-              <Button variant="ghost" size="sm">Изменить статус</Button>
-              <Button variant="danger" size="sm" icon={<Trash2 size={13} />}>
-                Удалить
-              </Button>
-              <Button variant="ghost" size="sm" onClick={() => setSelected(new Set())}>
-                Отменить
-              </Button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* ── Table ───────────────────────────────────────────── */}
-      <div className={styles.tableWrap}>
-        {isLoading ? (
-          <div>
-            {[1,2,3,4,5,6].map(i => (
-              <div key={i} className={styles.skeletonTr}>
-                <Skeleton width={15} height={15} className={styles.skeletonCheck} />
-                <Skeleton width={30} height={30} className={styles.skeletonAvatar} />
-                <div className={styles.skeletonCustomerMeta}>
-                  <Skeleton height={13} width="45%" className={styles.skeletonLinePrimary} />
-                  <Skeleton height={11} width="25%" />
-                </div>
-                <Skeleton height={11} width="18%" />
-                <Skeleton height={20} width={60} />
+          <div className={styles.profileMeta}>
+            <h1 className={styles.profileName}>{customer.full_name}</h1>
+            {customer.company_name && (
+              <div className={styles.profileCompany}>
+                <Building2 size={13} />
+                {customer.company_name}
               </div>
-            ))}
+            )}
+            <div className={styles.profileContacts}>
+              {customer.phone && (
+                <a href={`tel:${customer.phone}`} className={styles.contactLink}>
+                  <Phone size={13} className={styles.contactLinkIcon} />
+                  {customer.phone}
+                </a>
+              )}
+              {customer.email && (
+                <a href={`mailto:${customer.email}`} className={styles.contactLink}>
+                  <Mail size={13} className={styles.contactLinkIcon} />
+                  {customer.email}
+                </a>
+              )}
+            </div>
           </div>
-        ) : customers.length === 0 ? (
-          <div className={styles.tableEmpty}>
-            <EmptyState
-              icon={<Users size={24} />}
-              title={hasActiveFilters ? 'Ничего не найдено' : 'Клиентов пока нет'}
-              description={hasActiveFilters ? 'Сузили выбор слишком сильно. Сбросьте фильтры или вернитесь к полному списку.' : 'Добавьте первого клиента или импортируйте базу'}
 
-              action={!hasActiveFilters && can('customers:write') ? {
-                label: 'Добавить клиента',
-                onClick: openCreateCustomer,
-              } : undefined}
-            />
-            {hasActiveFilters && (
-              <div className={styles.emptyRecoveryRail}>
-                <button className={styles.emptyRecoveryBtn} onClick={() => { setSearch(''); setStatus(''); setPage(1); }}>
-                  Сбросить поиск и фильтры
-                </button>
-                {can('customers.import') && (
-                  <button className={styles.emptyRecoveryBtn} onClick={() => navigate('/imports')}>
-                    Импортировать клиентов
-                  </button>
+          <div className={styles.profileActions}>
+            <Badge variant={sm.variant}>{sm.label}</Badge>
+            {canEditCustomer && (
+              <Button
+                variant="secondary"
+                size="sm"
+                icon={<Edit3 size={13} />}
+                onClick={() => {
+                  resetEdit(customer);
+                  setEditDrawer(true);
+                }}
+              >
+                Изменить
+              </Button>
+            )}
+            {customer.phone && (
+              <Button
+                size="sm"
+                icon={<MessageSquare size={13} />}
+                onClick={() => openExternal(`https://wa.me/${customer.phone.replace(/\D/g, '')}`)}
+              >
+                WhatsApp
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* Quick facts */}
+        <div className={styles.scenarioRail}>
+          <div className={styles.scenarioCopy}>
+            <span className={styles.scenarioEyebrow}>Работа с клиентом</span>
+            <div className={styles.scenarioText}>Здесь должны быть под рукой контакт, сделка и следующий шаг. Карточка нужна для работы, а не для красивого хранения полей.</div>
+          </div>
+          <div className={styles.scenarioChips}>
+            <span className={styles.scenarioChip}>Контакт</span>
+            <span className={styles.scenarioChip}>Сделка</span>
+            <span className={styles.scenarioChip}>Follow-up</span>
+          </div>
+        </div>
+
+        <div className={styles.quickFacts}>
+          <div className={styles.quickFact}>
+            <span className={styles.quickFactLabel}>Источник</span>
+            <span className={styles.quickFactValue}>{customer.source || <span className={styles.quickFactMuted}>—</span>}</span>
+          </div>
+          <div className={styles.quickFact}>
+            <span className={styles.quickFactLabel}>Владелец</span>
+            <span className={styles.quickFactValue}>{customer.owner?.full_name || <span className={styles.quickFactMuted}>—</span>}</span>
+          </div>
+          <div className={styles.quickFact}>
+            <span className={styles.quickFactLabel}>Создан</span>
+            <span className={styles.quickFactValue}>{format(new Date(customer.created_at), 'd MMM yyyy', { locale: ru })}</span>
+          </div>
+          {customer.last_contact_at && (
+            <div className={styles.quickFact}>
+              <span className={styles.quickFactLabel}>Контакт</span>
+              <span className={styles.quickFactValue}>
+                {formatDistanceToNow(new Date(customer.last_contact_at), { addSuffix: true, locale: ru })}
+              </span>
+            </div>
+          )}
+          <div className={styles.quickFact}>
+            <span className={styles.quickFactLabel}>Сделок</span>
+            <span className={styles.quickFactValue}>{activeDeals.length} активных</span>
+          </div>
+        </div>
+
+        <div className={styles.nextActionSurface}>
+          <div className={styles.nextActionCopy}>
+            <span className={styles.nextActionEyebrow}>Дальше по клиенту</span>
+            <strong className={styles.nextActionTitle}>Не оставляйте клиента просто карточкой</strong>
+            <span className={styles.nextActionText}>Свяжитесь, поставьте задачу или создайте сделку, пока по клиенту ещё понятен следующий шаг.</span>
+          </div>
+          <div className={styles.nextActionButtons}>
+            {can('deals:write') && <button className={styles.nextActionBtn} onClick={() => { setProductMoment(`Клиент «${customer.full_name}» открыт. Следующий логичный шаг - создать сделку или закрепить follow-up.`); openCreateDeal({ customerId: customer.id }); }}>Создать сделку</button>}
+            <button className={styles.nextActionBtn} onClick={() => openAssistantPrompt(`Какой следующий шаг по клиенту ${customer.full_name}?`)}>Подсказать следующий шаг</button>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Tabs ────────────────────────────────────────────── */}
+      <div className={styles.tabs} role="tablist" aria-label="Разделы карточки клиента" aria-orientation="horizontal" onKeyDown={handleTabKeyDown}>
+        {TABS.map(t => (
+          <button
+            key={t.key}
+            role="tab"
+            id={`customer-tab-${t.key}`}
+            aria-selected={tab === t.key}
+            aria-controls={`customer-panel-${t.key}`}
+            tabIndex={tab === t.key ? 0 : -1}
+            className={`${styles.tab}${tab === t.key ? ' ' + styles.tabActive : ''}`}
+            onClick={() => setTab(t.key)}
+          >
+            {t.icon}
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Body ────────────────────────────────────────────── */}
+      <div className={styles.bodyGrid}>
+        <div>
+          {/* Overview */}
+          {tab === 'overview' && (
+            <div id="customer-panel-overview" role="tabpanel" aria-labelledby="customer-tab-overview" tabIndex={0} className={styles.overviewStack}>
+              {/* Core info */}
+              <div className={styles.panel}>
+                <div className={styles.panelHeader}>
+                  <span className={styles.panelTitle}>Основные данные</span>
+                </div>
+                <div className={styles.infoGrid}>
+                  {[
+                    { label: 'Имя', value: customer.full_name },
+                    { label: 'Компания', value: customer.company_name || '—' },
+                    { label: 'Телефон', value: customer.phone || '—' },
+                    { label: 'Email', value: customer.email || '—' },
+                    { label: 'Статус', value: sm.label },
+                    { label: 'Источник', value: customer.source || '—' },
+                    { label: 'Владелец', value: customer.owner?.full_name || '—' },
+                    { label: 'Создан', value: format(new Date(customer.created_at), 'd MMM yyyy', { locale: ru }) },
+                  ].map((f) => (
+                    <div key={f.label} className={styles.infoField}>
+                      <div className={styles.infoFieldLabel}>{f.label}</div>
+                      <div className={styles.infoFieldValue}>{f.value}</div>
+                    </div>
+                  ))}
+                </div>
+                {customer.notes && (
+                  <div className={styles.notesArea}>
+                    <div className={`${styles.infoFieldLabel} ${styles.notesLabel}`}>Заметки</div>
+                    <p className={styles.notesText}>
+                      {customer.notes}
+                    </p>
+                  </div>
                 )}
               </div>
-            )}
-          </div>
-        ) : (
-          <>
-            <table className={styles.table}>
-              <thead className={styles.thead}>
-                <tr>
-                  <th className={`${styles.th} ${styles.thCheck}`}>
-                    <input
-                      type="checkbox"
-                      className={styles.checkbox}
-                      checked={selected.size === customers.length && customers.length > 0}
-                      onChange={toggleAll}
-                    />
-                  </th>
-                  <th className={`${styles.th} ${styles.thSortable} ${styles.thCustomer}`} onClick={() => handleSort('full_name')}>
-                    Клиент <SortIcon col="full_name" />
-                  </th>
-                  {!isMobile && (
-                    <th className={`${styles.th} ${styles.thPhone}`}>Телефон</th>
-                  )}
-                  {!isMobile && (
-                    <th className={`${styles.th} ${styles.thStatus}`}>Статус</th>
-                  )}
-                  {!isMobile && (
-                    <th className={`${styles.th} ${styles.thOwner}`}>Владелец</th>
-                  )}
-                  <th className={`${styles.th} ${styles.thSortable} ${styles.thCreated}`} onClick={() => handleSort('created_at')}>
-                    Добавлен <SortIcon col="created_at" />
-                  </th>
-                  <th className={`${styles.th} ${styles.thActions}`}>
-                    {/* actions */}
-                  </th>
-                </tr>
-              </thead>
-              <tbody className={styles.tbody}>
-                {customers.map((c, idx) => {
-                  const sm = STATUS_MAP[c.status] ?? STATUS_MAP.new;
-                  const isSelected = selected.has(c.id);
-                  return (
-                    <motion.tr
-                      key={c.id}
-                      className={`${styles.tr}${isSelected ? ' ' + styles.trSelected : ''}`}
-                      onClick={() => navigate(`/customers/${c.id}`)}
-                      initial={{ opacity: 0, y: 4 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: idx * 0.025, duration: 0.2 }}
-                    >
-                      <td className={`${styles.td} ${styles.tdCheck}`} onClick={e => toggleSelect(c.id, e)}>
-                        <input
-                          type="checkbox"
-                          className={styles.checkbox}
-                          checked={isSelected}
-                          onChange={() => {}}
-                        />
-                      </td>
-                      <td className={styles.td}>
-                        <div className={styles.customerCell}>
-                          <div className={styles.avatar}>{initials(c.full_name)}</div>
-                          <div className={styles.customerInfo}>
-                            <div className={styles.customerName}>{c.full_name}</div>
-                            {c.company_name && (
-                              <div className={styles.customerCompany}>{c.company_name}</div>
-                            )}
+
+              {/* Recent activity */}
+              {(activities?.results ?? []).length > 0 && (
+                <div className={styles.panel}>
+                  <div className={styles.panelHeader}>
+                    <span className={styles.panelTitle}>Последняя активность</span>
+                    <button className={styles.panelAction} onClick={() => setTab('activity')}>Все</button>
+                  </div>
+                  <div className={styles.activityList}>
+                    {(activities?.results ?? []).slice(0, 4).map((act) => (
+                      <div key={act.id} className={styles.activityItem}>
+                        <div className={styles.activityIconWrap}>
+                          {ACTIVITY_ICONS[act.type] ?? <MessageSquare size={13} />}
+                        </div>
+                        <div className={styles.activityBody}>
+                          <div className={styles.activityText}>
+                            {(act.payload as any)?.body ?? act.type}
+                          </div>
+                          <div className={styles.activityMeta}>
+                            {act.actor?.full_name && <>{act.actor.full_name} · </>}
+                            {formatDistanceToNow(new Date(act.created_at), { addSuffix: true, locale: ru })}
                           </div>
                         </div>
-                      </td>
-                      {!isMobile && (
-                        <td className={styles.td}>
-                          {c.phone && (
-                            <a
-                              href={`tel:${c.phone}`}
-                              className={styles.phoneLink}
-                              onClick={e => e.stopPropagation()}
-                            >
-                              {c.phone}
-                            </a>
-                          )}
-                        </td>
-                      )}
-                      {!isMobile && (
-                        <td className={styles.td}>
-                          <Badge variant={sm.variant} size="sm">{sm.label}</Badge>
-                        </td>
-                      )}
-                      {!isMobile && (
-                        <td className={`${styles.td} ${styles.muted}`}>
-                          {c.owner?.full_name ?? '—'}
-                        </td>
-                      )}
-                      <td className={`${styles.td} ${styles.muted}`}>
-                        {format(new Date(c.created_at), 'd MMM', { locale: ru })}
-                      </td>
-                      <td className={`${styles.td} ${styles.tdActions}`}>
-                        <div className={styles.rowActions}>
-                          {c.phone && (
-                            <a
-                              href={`tel:${c.phone}`}
-                              className={styles.rowActionBtn}
-                              onClick={e => e.stopPropagation()}
-                              title="Позвонить"
-                            >
-                              <Phone size={13} />
-                            </a>
-                          )}
-                          {c.email && (
-                            <a
-                              href={`mailto:${c.email}`}
-                              className={styles.rowActionBtn}
-                              onClick={e => e.stopPropagation()}
-                              title="Написать"
-                            >
-                              <Mail size={13} />
-                            </a>
-                          )}
-                          <button
-                            className={styles.rowActionBtn}
-                            onClick={e => { e.stopPropagation(); navigate(`/customers/${c.id}`); }}
-                            title="Открыть"
-                          >
-                            <Edit3 size={13} />
-                          </button>
-                        </div>
-                      </td>
-                    </motion.tr>
-                  );
-                })}
-              </tbody>
-            </table>
-
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div className={styles.pagination}>
-                <span className={styles.paginationInfo}>
-                  Показано {(page - 1) * 20 + 1}–{Math.min(page * 20, data?.count ?? 0)} из {data?.count ?? 0}
-                </span>
-                <div className={styles.paginationControls}>
-                  <button
-                    className={styles.pageBtn}
-                    onClick={() => setPage(p => Math.max(1, p - 1))}
-                    disabled={page === 1}
-                  >
-                    ‹
-                  </button>
-                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                    const p = Math.max(1, Math.min(page - 2, totalPages - 4)) + i;
-                    return (
-                      <button
-                        key={p}
-                        className={`${styles.pageBtn}${p === page ? ' ' + styles.pageBtnActive : ''}`}
-                        onClick={() => setPage(p)}
-                      >
-                        {p}
-                      </button>
-                    );
-                  })}
-                  <button
-                    className={styles.pageBtn}
-                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                    disabled={page === totalPages}
-                  >
-                    ›
-                  </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
+              )}
+
+              {/* Active deals */}
+              {activeDeals.length > 0 && (
+                <div className={styles.panel}>
+                  <div className={styles.panelHeader}>
+                    <span className={styles.panelTitle}>Активные сделки</span>
+                    <button className={styles.panelAction} onClick={() => setTab('deals')}>Все</button>
+                  </div>
+                  {activeDeals.slice(0, 3).map((deal) => (
+                    <div key={deal.id} className={styles.dealRow} onClick={() => navigate(`/deals/${deal.id}`)}>
+                      <div>
+                        <div className={styles.dealTitle}>{deal.title}</div>
+                        <div className={styles.dealStage}>{deal.stage.name}</div>
+                      </div>
+                      {deal.amount && (
+                        <div className={styles.dealAmount}>{formatMoney(deal.amount, deal.currency)}</div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Activity tab */}
+          {tab === 'activity' && (
+            <div id="customer-panel-activity" role="tabpanel" aria-labelledby="customer-tab-activity" tabIndex={0} className={styles.panel}>
+              <div className={styles.panelHeader}>
+                <span className={styles.panelTitle}>История активности</span>
               </div>
-            )}
-          </>
-        )}
+              {(activities?.results ?? []).length === 0
+                ? <div className={styles.panelEmpty}>Активностей пока нет</div>
+                : (
+                  <div className={styles.activityList}>
+                    {(activities?.results ?? []).map((act) => (
+                      <div key={act.id} className={styles.activityItem}>
+                        <div className={styles.activityIconWrap}>
+                          {ACTIVITY_ICONS[act.type] ?? <MessageSquare size={13} />}
+                        </div>
+                        <div className={styles.activityBody}>
+                          <div className={styles.activityText}>
+                            {(act.payload as any)?.body ?? act.type}
+                          </div>
+                          <div className={styles.activityMeta}>
+                            {act.actor?.full_name && <>{act.actor.full_name} · </>}
+                            {formatDistanceToNow(new Date(act.created_at), { addSuffix: true, locale: ru })}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )
+              }
+            </div>
+          )}
+
+          {/* Deals tab */}
+          {tab === 'deals' && (
+            <div id="customer-panel-deals" role="tabpanel" aria-labelledby="customer-tab-deals" tabIndex={0} className={styles.panel}>
+              <div className={styles.panelHeader}>
+                <span className={styles.panelTitle}>Сделки</span>
+                {can('deals:write') && <button className={styles.panelAction} onClick={() => openCreateDeal({ customerId: customer.id })}>
+                  + Создать
+                </button>}
+              </div>
+              {(deals?.results ?? []).length === 0
+                ? <div className={styles.panelEmpty}>Сделок нет. Создайте первую.</div>
+                : (deals?.results ?? []).map((deal) => (
+                    <div key={deal.id} className={styles.dealRow} onClick={() => navigate(`/deals/${deal.id}`)}>
+                      <div>
+                        <div className={styles.dealTitle}>{deal.title}</div>
+                        <div className={styles.dealStage}>{deal.stage.name}</div>
+                      </div>
+                      {deal.amount && (
+                        <div className={styles.dealAmount}>{formatMoney(deal.amount, deal.currency)}</div>
+                      )}
+                    </div>
+                  ))
+              }
+            </div>
+          )}
+
+          {/* Tasks tab */}
+          {tab === 'tasks' && (
+            <div id="customer-panel-tasks" role="tabpanel" aria-labelledby="customer-tab-tasks" tabIndex={0} className={styles.panel}>
+              <div className={styles.panelHeader}>
+                <span className={styles.panelTitle}>Задачи</span>
+                {can('tasks:write') && <button className={styles.panelAction} onClick={() => openCreateTask({ customerId: customer.id })}>
+                  + Добавить
+                </button>}
+              </div>
+              {(tasks?.results ?? []).length === 0
+                ? <div className={styles.panelEmpty}>Задач нет</div>
+                : (tasks?.results ?? []).map((t) => (
+                    <div key={t.id} className={styles.taskRow}>
+                      <div className={styles.taskHeader}>
+                        <CheckSquare size={14} className={styles.taskIcon} />
+                        <span className={`${styles.taskTitle} ${t.status === 'done' ? styles.taskTitleDone : ''}`}>
+                          {t.title}
+                        </span>
+                        {t.priority === 'high' && <Badge variant="danger" size="sm">Важно</Badge>}
+                      </div>
+                      {(t.due_at || t.assigned_to) && (
+                        <div className={styles.taskMeta}>
+                          {t.due_at && <span>{format(new Date(t.due_at), 'd MMM', { locale: ru })}</span>}
+                          {t.assigned_to && <span>{t.assigned_to.full_name}</span>}
+                        </div>
+                      )}
+                    </div>
+                  ))
+              }
+            </div>
+          )}
+        </div>
+
+        {/* Sidebar */}
+        <div className={styles.sidebar}>
+          {/* AI Assistant */}
+          <AiAssistant entityType="customer" entityId={id!} />
+
+          {/* Tags */}
+          {(customer.tags ?? []).length > 0 && (
+            <div className={styles.sideSection}>
+              <div className={styles.sideSectionHeader}>Теги</div>
+              <div className={styles.tagList}>
+                {customer.tags.map(tag => (
+                  <span key={tag} className={styles.tag}>
+                    <Tag size={10} />
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+
+      {/* ── Edit drawer ─────────────────────────────────────── */}
+      <Drawer
+        open={editDrawer}
+        onClose={() => setEditDrawer(false)}
+        title="Редактировать клиента"
+        subtitle="Исправьте ключевые данные контакта, чтобы карточка оставалась пригодной для работы."
+        size="sm"
+        footer={
+          <div className={styles.drawerFooter}>
+            <Button type="button" variant="secondary" onClick={() => setEditDrawer(false)}>Отмена</Button>
+            <Button type="submit" form="customer-edit-form" loading={editSubmitting || updateMutation.isPending}>Сохранить</Button>
+          </div>
+        }
+      >
+        <form id="customer-edit-form" onSubmit={handleSubmit(data => updateMutation.mutate(data))} className={styles.editForm} noValidate>
+          <FormErrorSummary errors={errors} title="Проверьте поля клиента" />
+          <Input label="Имя и фамилия" required defaultValue={customer.full_name} error={errors.full_name?.message} {...register('full_name', { required: 'Укажите имя клиента', validate: (v) => (String(v ?? '').trim().length >= 2) || 'Имя слишком короткое' })} />
+          <Input label="Компания" defaultValue={customer.company_name} error={errors.company_name?.message} {...register('company_name', { validate: (v) => !v || String(v).trim().length >= 2 || 'Название компании слишком короткое' })} />
+          <Input label="Телефон" defaultValue={customer.phone} error={errors.phone?.message} {...register('phone', { validate: (v) => !v || String(v).replace(/\D/g, '').length >= 10 || 'Введите корректный телефон' })} />
+          <Input label="Email" type="email" defaultValue={customer.email} error={errors.email?.message} {...register('email', { validate: (v) => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v)) || 'Введите корректный email' })} />
+          <Input label="Источник" defaultValue={customer.source} {...register('source')} />
+          <Textarea label="Заметки" rows={4} defaultValue={customer.notes} {...register('notes')} />
+        </form>
+      </Drawer>
+    </motion.div>
   );
 }

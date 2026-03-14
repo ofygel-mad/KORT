@@ -403,3 +403,94 @@ button:focus-visible {
     border-radius: 20px;
   }
 }
+
+/* ── Dashboard workspace root ──────────────────────── */
+.dashRoot {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: calc(100vh - var(--topbar-height, 56px));
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Floating Action Button group ─────────────────── */
+.fabGroup {
+  position: fixed;
+  top: calc(var(--topbar-height, 56px) + 14px);
+  right: 20px;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Small icon button (theme toggle) */
+.fabIcon {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  border: 1px solid rgba(160, 104, 56, 0.28);
+  background: linear-gradient(135deg, rgba(38, 28, 14, 0.94), rgba(24, 16, 6, 0.96));
+  color: rgba(200, 150, 80, 0.8);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow:
+    0 0 0 1px rgba(125, 78, 37, 0.12),
+    0 6px 18px rgba(0, 0, 0, 0.36);
+  backdrop-filter: blur(12px);
+  transition: border-color 160ms, color 160ms, box-shadow 160ms;
+}
+
+.fabIcon:hover {
+  border-color: rgba(160, 104, 56, 0.55);
+  color: rgba(230, 180, 100, 0.95);
+  box-shadow:
+    0 0 0 1px rgba(125, 78, 37, 0.22),
+    0 8px 22px rgba(0, 0, 0, 0.42);
+}
+
+/* Main create-tile FAB */
+.fab {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  height: 42px;
+  padding: 0 18px 0 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(160, 104, 56, 0.38);
+  background: linear-gradient(135deg, rgba(40, 28, 14, 0.96), rgba(26, 18, 8, 0.98));
+  color: rgba(220, 170, 110, 0.95);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  box-shadow:
+    0 0 0 1px rgba(125, 78, 37, 0.16),
+    0 8px 24px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(12px);
+  transition: border-color 160ms, box-shadow 160ms, color 160ms;
+}
+
+.fab:hover {
+  border-color: rgba(160, 104, 56, 0.62);
+  color: rgba(240, 195, 130, 1);
+  box-shadow:
+    0 0 0 1px rgba(125, 78, 37, 0.26),
+    0 12px 32px rgba(0, 0, 0, 0.46),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.fabActive {
+  border-color: rgba(160, 104, 56, 0.68);
+  background: linear-gradient(135deg, rgba(55, 35, 12, 0.98), rgba(32, 20, 6, 0.99));
+  color: rgba(248, 205, 140, 1);
+}
+
+.fabLabel {
+  white-space: nowrap;
+}

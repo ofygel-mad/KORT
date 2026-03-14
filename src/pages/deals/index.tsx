@@ -1,359 +1,448 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { motion } from 'framer-motion';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Plus, LayoutGrid, List, Briefcase,
-  Clock, TrendingUp, CheckSquare,
+  ChevronLeft, Edit3, User, Calendar, Target, AlertCircle,
+  Phone, Mail, Building2, Plus, CheckSquare, CheckCircle2, MessageSquare,
 } from 'lucide-react';
-import { api } from '../../shared/api/client';
-import { useAuthStore } from '../../shared/stores/auth';
-import { useUIStore } from '../../shared/stores/ui';
-import { useCapabilities } from '../../shared/hooks/useCapabilities';
-import { formatMoney, formatNumber } from '../../shared/utils/format';
-import { Button } from '../../shared/ui/Button';
-import { Badge } from '../../shared/ui/Badge';
-import { Skeleton } from '../../shared/ui/Skeleton';
-import { EmptyState } from '../../shared/ui/EmptyState';
-import { format, differenceInDays } from 'date-fns';
-import { setProductMoment } from '../../shared/utils/productMoment';
-import { ru } from 'date-fns/locale';
-import styles from './Deals.module.css';
+import { api } from '../../../shared/api/client';
+import { Button } from '../../../shared/ui/Button';
+import { PageLoader } from '../../../shared/ui/PageLoader';
+import { EmptyState } from '../../../shared/ui/EmptyState';
+import { Drawer } from '../../../shared/ui/Drawer';
+import { FormErrorSummary } from '../../../shared/ui/FormErrorSummary';
+import { Input } from '../../../shared/ui/Input';
+import { Badge } from '../../../shared/ui/Badge';
+import { currencySymbol, formatMoney } from '../../../shared/utils/format';
+import { useForm } from 'react-hook-form';
+import { toast } from 'sonner';
+import { format, formatDistanceToNow, differenceInDays } from 'date-fns';
+import { getDateLocale } from '../../../shared/utils/locale';
+import { useConvert } from '../../../shared/hooks/useExchangeRates';
+import { useDocumentTitle } from '../../../shared/hooks/useDocumentTitle';
+import { useUIStore } from '../../../shared/stores/ui';
+import { fadeUp } from '../../../shared/motion/presets';
+import s from './DealProfile.module.css';
+import { setProductMoment } from '../../../shared/utils/productMoment';
+import { useCapabilities } from '../../../shared/hooks/useCapabilities';
+import { useTabsKeyboardNav } from '../../../shared/hooks/useTabsKeyboardNav';
 
-interface Stage {
-  id: string; name: string; order: number; type: string; color: string;
-}
-
-interface Deal {
-  id: string; title: string;
-  amount: number | null; currency: string;
-  status: string;
-  stage: Stage;
-  customer: { id: string; full_name: string; company_name: string } | null;
+/* ── Types ──────────────────────────────────────────────────── */
+interface Stage { id: string; name: string; position: number; type: string; color?: string; }
+interface DealDetail {
+  id: string; title: string; amount: number | null; currency: string;
+  status: string; created_at: string; expected_close_date: string | null;
+  next_step?: string;
+  customer: { id: string; full_name: string; company_name: string; phone: string; email: string; } | null;
   owner: { id: string; full_name: string } | null;
+  stage: Stage;
   pipeline: { id: string; name: string; stages: Stage[] };
-  created_at: string;
-  updated_at: string;
+}
+interface Activity { id: string; type: string; payload: Record<string, unknown>; actor: { full_name: string } | null; created_at: string; }
+interface Task { id: string; title: string; is_done: boolean; due_date: string | null; priority: string; assignee: { full_name: string } | null; }
+
+type Tab = 'notes' | 'tasks' | 'activity';
+const TABS: { key: Tab; label: string }[] = [
+  { key: 'notes',    label: 'Заметки' },
+  { key: 'tasks',    label: 'Задачи' },
+  { key: 'activity', label: 'История' },
+];
+
+const STATUS_BADGE: Record<string, { bg: string; color: string; label: string }> = {
+  open: { bg: 'var(--fill-info-soft)',     color: 'var(--fill-info-text)',     label: 'Открыта' },
+  won:  { bg: 'var(--fill-positive-soft)', color: 'var(--fill-positive-text)', label: 'Выиграна' },
+  lost: { bg: 'var(--fill-negative-soft)', color: 'var(--fill-negative-text)', label: 'Проиграна' },
+};
+
+/* ── Helpers ────────────────────────────────────────────────── */
+function activityText(a: Activity): string {
+  const p = a.payload as any;
+  switch (a.type) {
+    case 'note.created':   return `📝 Добавил заметку`;
+    case 'stage.changed':  return `📊 Сменил этап → ${p?.to ?? ''}`;
+    case 'task.created':   return `✅ Создал задачу "${p?.title ?? ''}"`;
+    case 'deal.updated':   return `✏️ Обновил сделку`;
+    default:               return a.type;
+  }
 }
 
-interface PipelineData {
-  pipeline: { id: string; name: string; stages: Stage[] };
-  deals: Deal[];
-  total_open: number;
-  total_amount: number;
-}
-
-type ViewMode = 'board' | 'list';
-
-function daysSince(date: string): number {
-  return differenceInDays(new Date(), new Date(date));
-}
-
-export default function DealsPage() {
+/* ── Main ───────────────────────────────────────────────────── */
+export default function DealProfilePage() {
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const orgCurrency = useAuthStore(s => s.org?.currency ?? 'KZT');
-  const openCreateDeal = useUIStore(s => s.openCreateDeal);
+  const qc = useQueryClient();
+  const [tab, setTab] = useState<Tab>('notes');
+  const [editDrawer, setEditDrawer] = useState(false);
   const openAssistantPrompt = useUIStore(s => s.openAssistantPrompt);
   const { can } = useCapabilities();
-  const [view, setView] = useState<ViewMode>('board');
+  const canEditDeal = can('deals:write');
+  const canWriteTasks = can('tasks:write');
+  const tabKeys = TABS.filter((item) => item.key !== 'tasks' || canWriteTasks).map((item) => item.key);
+  const handleTabKeyDown = useTabsKeyboardNav(tabKeys, tab, setTab);
+  const [newTask, setNewTask]   = useState(false);
+  const [noteText, setNoteText] = useState('');
+  const convert = useConvert();
 
-  const { data, isLoading } = useQuery<PipelineData>({
-    queryKey: ['deals-board'],
-    queryFn: () => api.get('/deals/board/'),
+  const { data: deal, isLoading } = useQuery<DealDetail>({
+    queryKey: ['deal', id],
+    queryFn:  () => api.get(`/deals/${id}/`),
+    enabled:  !!id,
   });
 
-  const deals    = data?.deals ?? [];
-  const stages   = data?.pipeline?.stages ?? [];
-  const totalAmt = deals
-    .filter(d => d.status === 'open')
-    .reduce((s, d) => s + (d.amount ?? 0), 0);
+  const { data: activities } = useQuery<{ results: Activity[] }>({
+    queryKey: ['deal-activities', id],
+    queryFn:  () => api.get(`/deals/${id}/activities/`),
+    enabled:  !!id,
+  });
 
-  const dealsByStage = (stage: Stage) =>
-    deals.filter(d => d.stage.id === stage.id && d.status === 'open');
+  const { data: tasks } = useQuery<{ results: Task[] }>({
+    queryKey: ['deal-tasks', id],
+    queryFn:  () => api.get(`/tasks/?deal_id=${id}`),
+    enabled:  !!id,
+  });
+
+  useDocumentTitle(deal?.title ?? 'Сделка');
+
+  const { register, handleSubmit, formState: { isSubmitting, errors } } = useForm<{
+    title: string; amount: number | null; expected_close_date: string;
+  }>({ values: deal ? { title: deal.title, amount: deal.amount, expected_close_date: deal.expected_close_date ?? '' } : undefined });
+
+  const updateDeal = useMutation({
+    mutationFn: (d: any) => api.patch(`/deals/${id}/`, d),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['deal', id] }); toast.success('Сделка обновлена'); setEditDrawer(false); },
+    onError:   () => toast.error('Не удалось обновить'),
+  });
+
+  const stageChange = useMutation({
+    mutationFn: (stageId: string) => api.patch(`/deals/${id}/`, { stage_id: stageId }),
+    onSuccess:  () => { qc.invalidateQueries({ queryKey: ['deal', id] }); toast.success('Этап изменён'); },
+    onError:    () => toast.error('Не удалось изменить этап'),
+  });
+
+  const addNote = useMutation({
+    mutationFn: () => api.post(`/deals/${id}/activities/`, { type: 'note.created', payload: { body: noteText } }),
+    onSuccess:  () => { qc.invalidateQueries({ queryKey: ['deal-activities', id] }); setNoteText(''); toast.success('Заметка добавлена'); },
+    onError:    () => toast.error('Ошибка'),
+  });
+
+  const completeTask = useMutation({
+    mutationFn: (tid: string) => api.post(`/tasks/${tid}/complete/`),
+    onSuccess:  () => { qc.invalidateQueries({ queryKey: ['deal-tasks', id] }); toast.success('Задача выполнена ✓'); },
+  });
+
+  if (isLoading) return <PageLoader />;
+  if (!deal)     return null;
+
+  const stages      = [...(deal.pipeline.stages ?? [])].sort((a,b) => a.position - b.position);
+  const curIdx      = stages.findIndex(s => s.id === deal.stage.id);
+  const daysToClose = deal.expected_close_date ? differenceInDays(new Date(deal.expected_close_date), new Date()) : null;
+  const statusB     = STATUS_BADGE[deal.status] ?? STATUS_BADGE.open;
+  const converted   = deal.amount ? convert(deal.amount, deal.currency, 'KZT') : null;
 
   return (
-    <div className={styles.page}>
-      {/* ── Header ──────────────────────────────────────────── */}
-      <div className={styles.header}>
-        <div>
-          <h1 className={styles.title}>Сделки</h1>
-          <p className={styles.subtitle}>Управляйте воронкой продаж</p>
+    <motion.div className={s.page} variants={fadeUp} initial="hidden" animate="visible">
+      {/* Back ─────────────────────────────────────────────────── */}
+      <button className={s.back} onClick={() => navigate(-1)}>
+        <ChevronLeft size={16} /> Назад к сделкам
+      </button>
+
+      {/* Header ──────────────────────────────────────────────── */}
+      <div className={s.header}>
+        <div className={s.headerLeft}>
+          <h1 className={s.dealTitle}>{deal.title}</h1>
+          <div className={s.headerBadges}>
+            <Badge bg={statusB.bg} color={statusB.color}>{statusB.label}</Badge>
+            {deal.amount && (
+              <span className={s.amountChip}>
+                {currencySymbol(deal.currency)}{deal.amount.toLocaleString()}
+              </span>
+            )}
+            {converted && deal.currency !== 'KZT' && (
+              <Badge bg="var(--bg-surface-inset)" color="var(--text-tertiary)">
+                ≈ {formatMoney(converted, 'KZT')}
+              </Badge>
+            )}
+          </div>
         </div>
-        <div className={styles.headerActions}>
-          {can('deals:write') && (
-            <Button
-              size="sm"
-              icon={<Plus size={13} />}
-              onClick={() => openCreateDeal()}
+        <div className={s.headerActions}>
+          {canEditDeal && <Button variant="secondary" size="sm" icon={<Edit3 size={14} />} onClick={() => setEditDrawer(true)}>
+            Редактировать
+          </Button>}
+        </div>
+      </div>
+
+      <div className={s.scenarioRail}>
+        <div className={s.scenarioCopy}>
+          <span className={s.scenarioEyebrow}>Работа со сделкой</span>
+          <div className={s.scenarioText}>Этап, заметки и задачи собраны рядом, чтобы по сделке можно было двигаться вперёд без лишнего шума вокруг карточки.</div>
+        </div>
+        <div className={s.scenarioChips}>
+          <span className={s.scenarioChip}>Этап</span>
+          <span className={s.scenarioChip}>Заметка</span>
+          <span className={s.scenarioChip}>Задача</span>
+        </div>
+      </div>
+      <div className={s.nextActionSurface}>
+        <div className={s.nextActionCopy}>
+          <span className={s.nextActionEyebrow}>Дальше по сделке</span>
+          <strong className={s.nextActionTitle}>Оставьте следующий шаг, пока контекст сделки ещё живой</strong>
+          <span className={s.nextActionText}>Сдвиньте этап, оставьте заметку или поставьте задачу, пока сделка ещё находится в рабочем контексте команды.</span>
+        </div>
+        <div className={s.nextActionButtons}>
+          <button className={s.nextActionBtn} onClick={() => { setProductMoment(`Сделка «${deal.title}» в фокусе. Зафиксируйте следующий шаг, пока контекст не остыл.`); setTab('notes'); }}>Открыть заметки</button>
+          {canWriteTasks && <button className={s.nextActionBtn} onClick={() => setTab('tasks')}>Открыть задачи</button>}
+          <button className={s.nextActionBtn} onClick={() => openAssistantPrompt(`Что сейчас лучший следующий шаг по сделке ${deal.title}?`)}>Подсказать следующий шаг</button>
+        </div>
+      </div>
+
+      {/* Pipeline progress ───────────────────────────────────── */}
+      <div className={s.pipelineSection}>
+        <div className={s.pipelineLabel}>{deal.pipeline.name}</div>
+        <div className={s.stageTrack}>
+          {stages.map((stage, idx) => (
+            <div
+              key={stage.id}
+              className={`${s.stageStep} ${idx === curIdx ? s.active : idx < curIdx ? s.past : ''}`}
+              onClick={() => canEditDeal && idx !== curIdx && stageChange.mutate(stage.id)}
+              title={canEditDeal ? `${stage.name} - сменить этап` : stage.name}
             >
-              Добавить
-            </Button>
-          )}
-        </div>
-      </div>
-
-      <div className={styles.scenarioRail}>
-        <div className={styles.scenarioCopy}>
-          <span className={styles.scenarioEyebrow}>Воронка продаж</span>
-          <div className={styles.scenarioText}>Доска и список нужны только для одного: быстро понять, где зависла выручка, и двинуть сделку дальше.</div>
-        </div>
-        <div className={styles.scenarioChips}>
-          <span className={styles.scenarioChip}>Доска</span>
-          <span className={styles.scenarioChip}>Список</span>
-          <span className={styles.scenarioChip}>Следующий шаг</span>
-        </div>
-      </div>
-
-      {/* ── Pipeline stats ──────────────────────────────────── */}
-      {!isLoading && (
-        <div className={styles.pipelineStats}>
-          <div className={styles.pipelineStat}>
-            <span className={styles.pipelineStatLabel}>Открытых</span>
-            <span className={styles.pipelineStatValue}>{deals.filter(d => d.status === 'open').length}</span>
-          </div>
-          <div className={styles.pipelineStat}>
-            <span className={styles.pipelineStatLabel}>Объём</span>
-            <span className={styles.pipelineStatValue}>{formatMoney(totalAmt, orgCurrency)}</span>
-          </div>
-          <div className={styles.pipelineStat}>
-            <span className={styles.pipelineStatLabel}>Выиграно</span>
-            <span className={styles.pipelineStatValue}>{deals.filter(d => d.status === 'won').length}</span>
-          </div>
-          <div className={styles.pipelineStat}>
-            <span className={styles.pipelineStatLabel}>Этапов</span>
-            <span className={styles.pipelineStatValue}>{stages.length}</span>
-          </div>
-        </div>
-      )}
-
-      {/* ── Toolbar ─────────────────────────────────────────── */}
-      <div className={styles.toolbar}>
-        <div className={styles.viewToggle}>
-          <button
-            className={`${styles.viewBtn}${view === 'board' ? ' ' + styles.viewBtnActive : ''}`}
-            onClick={() => setView('board')}
-          >
-            <LayoutGrid size={13} />
-            Доска
-          </button>
-          <button
-            className={`${styles.viewBtn}${view === 'list' ? ' ' + styles.viewBtnActive : ''}`}
-            onClick={() => setView('list')}
-          >
-            <List size={13} />
-            Список
-          </button>
-        </div>
-      </div>
-
-      {/* ── Board view ──────────────────────────────────────── */}
-      {view === 'board' && (
-        <div className={styles.kanbanOuter}>
-          {isLoading ? (
-            <div className={styles.kanbanBoard}>
-              {[1,2,3,4].map(i => (
-                <div key={i} className={styles.kanbanCol}>
-                  <div className={styles.kanbanColHeader}>
-                    <Skeleton height={16} width={90} />
-                    <Skeleton height={14} width={30} />
-                  </div>
-                  {[1,2,3].map(j => (
-                    <div key={j} className={styles.kanbanSkeletonCard}>
-                      <Skeleton height={80} className={styles.kanbanSkeletonBlock} />
-                    </div>
-                  ))}
-                </div>
-              ))}
+              <div className={`${s.stageBar} ${idx < curIdx ? s.past : idx === curIdx ? s.active : ''}`} />
+              <span className={s.stageStepLabel}>{stage.name}</span>
             </div>
-          ) : stages.length === 0 ? (
-            <div className={styles.listEmpty}>
-              <EmptyState
-                icon={<Briefcase size={24} />}
-                title="Воронки ещё нет"
-                description="Настройте этапы воронки в разделе Настройки"
-              />
-              <div className={styles.emptyRecoveryRail}>
-                <button className={styles.emptyRecoveryBtn} onClick={() => navigate('/settings')}>Открыть настройки</button>
-                {can('deals:write') && <button className={styles.emptyRecoveryBtn} onClick={() => openCreateDeal()}>Создать тестовую сделку</button>}
-              </div>
-            </div>
-          ) : (
-            <div className={styles.kanbanBoard}>
-              {stages.map((stage, stageIdx) => {
-                const stageDeals = dealsByStage(stage);
-                const stageAmount = stageDeals.reduce((s, d) => s + (d.amount ?? 0), 0);
-                const color = stage.color || '#6B7280';
+          ))}
+        </div>
+      </div>
 
-                return (
-                  <motion.div
-                    key={stage.id}
-                    className={styles.kanbanCol}
-                    initial={{ opacity: 0, y: 12 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: stageIdx * 0.06, duration: 0.25 }}
-                  >
-                    <div className={styles.kanbanColHeader}>
-                      <div className={styles.kanbanColLabel}>
-                        <div
-                          className={styles.kanbanColIndicator}
-                          style={{ background: color }}
-                        />
-                        <span className={styles.kanbanColName}>{stage.name}</span>
-                      </div>
-                      <div className={styles.kanbanColMeta}>
-                        <span className={styles.kanbanColCount}>{stageDeals.length}</span>
-                        {stageAmount > 0 && (
-                          <span className={styles.kanbanColAmount}>
-                            {formatMoney(stageAmount, orgCurrency)}
-                          </span>
-                        )}
+      {/* Body grid ───────────────────────────────────────────── */}
+      <div className={s.bodyGrid}>
+        {/* Main column ──────────────────────────────────────── */}
+        <div className={s.card}>
+          {/* Tab bar */}
+          <div className={s.tabBar} role="tablist" aria-label="Разделы карточки сделки" aria-orientation="horizontal" onKeyDown={handleTabKeyDown}>
+            {TABS.filter((item) => item.key !== 'tasks' || canWriteTasks).map(t => (
+              <button
+                key={t.key}
+                role="tab"
+                id={`deal-tab-${t.key}`}
+                aria-selected={tab === t.key}
+                aria-controls={`deal-panel-${t.key}`}
+                tabIndex={tab === t.key ? 0 : -1}
+                className={`${s.tab} ${tab === t.key ? s.active : ''}`}
+                onClick={() => setTab(t.key)}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+
+          <div className={s.tabContent}>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={tab}
+                id={`deal-panel-${tab}`}
+                role="tabpanel"
+                aria-labelledby={`deal-tab-${tab}`}
+                tabIndex={0}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.14 }}
+              >
+                {/* Notes tab */}
+                {tab === 'notes' && (
+                  <>
+                    <div className={s.noteForm}>
+                      <textarea
+                        value={noteText}
+                        onChange={e => setNoteText(e.target.value)}
+                        placeholder="Добавьте заметку по сделке..."
+                        className={`kort-textarea ${s.noteTextarea}`}
+                      />
+                      <div className={s.noteActions}>
+                        <Button
+                          size="sm"
+                          disabled={!noteText.trim()}
+                          loading={addNote.isPending}
+                          onClick={() => addNote.mutate()}
+                        >
+                          Сохранить
+                        </Button>
                       </div>
                     </div>
+                    {(activities?.results ?? [])
+                      .filter(a => a.type === 'note.created')
+                      .map(a => (
+                        <div key={a.id} className={s.noteItem}>
+                          <div className={s.noteBody}>{(a.payload as any)?.body}</div>
+                          <div className={s.noteMeta}>
+                            {a.actor?.full_name} · {formatDistanceToNow(new Date(a.created_at), { addSuffix: true, locale: getDateLocale() })}
+                          </div>
+                        </div>
+                      ))
+                    }
+                    {(activities?.results ?? []).filter(a => a.type === 'note.created').length === 0 && (
+                      <EmptyState icon={<MessageSquare size={18} />} title="Заметок нет" subtitle="Добавьте первую заметку к сделке" />
+                    )}
+                  </>
+                )}
 
-                    <div className={styles.kanbanCards}>
-                      {stageDeals.length === 0 ? (
-                        <div className={styles.colEmpty}>Нет сделок</div>
-                      ) : (
-                        stageDeals.map((deal, di) => {
-                          const age = daysSince(deal.updated_at);
-                          const isStale   = age >= 7  && age < 14;
-                          const isOverdue = age >= 14;
-                          return (
-                            <motion.div
-                              key={deal.id}
-                              className={[
-                                styles.dealCard,
-                                isOverdue ? styles.dealCardOverdue :
-                                isStale   ? styles.dealCardStale   : '',
-                              ].filter(Boolean).join(' ')}
-                              onClick={() => { setProductMoment(`Вы открыли сделку «${deal.title}». Следующий шаг должен быть ближе, чем просто чтение карточки.`); navigate(`/deals/${deal.id}`); }}
-                              initial={{ opacity: 0, scale: 0.97 }}
-                              animate={{ opacity: 1, scale: 1 }}
-                              transition={{ delay: di * 0.04, duration: 0.2 }}
-                              whileHover={{ y: -2 }}
-                            >
-                              <div className={styles.dealCardTitle}>{deal.title}</div>
-                              <div className={styles.dealCardMeta}>
-                                <span className={styles.dealCardCustomer}>
-                                  {deal.customer?.full_name ?? '—'}
-                                </span>
-                                {deal.amount && (
-                                  <span className={styles.dealCardAmount}>
-                                    {formatMoney(deal.amount, deal.currency)}
-                                  </span>
-                                )}
-                              </div>
-                              <div className={styles.dealCardFooter}>
-                                <span className={styles.dealCardOwner}>
-                                  {deal.owner?.full_name ?? '—'}
-                                </span>
-                                <span className={styles.dealCardAge}>
-                                  {age}д назад
-                                </span>
-                              </div>
-                            </motion.div>
-                          );
-                        })
-                      )}
-
-                      <button
-                        className={styles.addDealBtn}
-                        onClick={() => openCreateDeal()}
-                      >
-                        <Plus size={12} />
+                {/* Tasks tab */}
+                {tab === 'tasks' && (
+                  <>
+                    <div className={s.taskHeader}>
+                      <span className={s.taskHeaderTitle}>Задачи</span>
+                      {can('tasks:write') && <Button size="sm" variant="secondary" icon={<Plus size={13} />} onClick={() => setNewTask(true)}>
                         Добавить
-                      </button>
+                      </Button>}
                     </div>
-                  </motion.div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
+                    {(tasks?.results ?? []).length === 0 ? (
+                      <EmptyState icon={<CheckSquare size={18} />} title="Задач нет" subtitle="Добавьте задачу к этой сделке" />
+                    ) : (
+                      (tasks?.results ?? []).map(task => (
+                        <div key={task.id} className={`${s.taskRow} ${task.is_done ? s.done : ''}`}>
+                          <input
+                            type="checkbox"
+                            checked={task.is_done}
+                            onChange={() => !task.is_done && completeTask.mutate(task.id)}
+                            className={s.taskCheck}
+                          />
+                          <div className={s.taskRowBody}>
+                            <div className={s.taskRowTitle}>{task.title}</div>
+                            {task.due_date && (
+                              <div className={s.taskRowDue}>
+                                До {format(new Date(task.due_date), 'd MMM', { locale: getDateLocale() })}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </>
+                )}
 
-      {/* ── List view ───────────────────────────────────────── */}
-      {view === 'list' && (
-        <div className={styles.listTable}>
-          {isLoading ? (
-            <div className={styles.listSkeleton}>
-              {[1,2,3,4,5].map(i => (
-                <div key={i} className={styles.listSkeletonRow}>
-                  <Skeleton height={13} width="30%" />
-                  <Skeleton height={13} width="20%" />
-                  <Skeleton height={20} width={80} />
-                  <Skeleton height={13} width="15%" />
-                </div>
-              ))}
-            </div>
-          ) : deals.length === 0 ? (
-            <div className={styles.listEmpty}>
-              <EmptyState
-                icon={<Briefcase size={24} />}
-                title="Сделок пока нет"
-                description="Создайте первую сделку"
-                action={{
-                  label: 'Создать сделку',
-                  onClick: () => openCreateDeal(),
-                }}
-              />
-              <div className={styles.emptyRecoveryRail}>
-                {can('customers.import') && <button className={styles.emptyRecoveryBtn} onClick={() => navigate('/imports')}>Импортировать базу</button>}
-                <button className={styles.emptyRecoveryBtn} onClick={() => openAssistantPrompt('С чего начать в воронке сделок прямо сейчас?')}>Спросить Copilot</button>
+                {/* Activity tab */}
+                {tab === 'activity' && (
+                  <div className={s.timeline}>
+                    {(activities?.results ?? []).length === 0 ? (
+                      <EmptyState icon={<AlertCircle size={18} />} title="История пуста" subtitle="Здесь будут отображаться все действия по сделке" />
+                    ) : (
+                      (activities?.results ?? []).map(a => (
+                        <div key={a.id} className={s.timelineItem}>
+                          <div className={s.timelineDot}>
+                            <AlertCircle size={10} />
+                          </div>
+                          <div className={s.timelineBody}>
+                            <div className={s.timelineText}>
+                              <strong>{a.actor?.full_name ?? 'Система'}</strong> — {activityText(a)}
+                            </div>
+                            <div className={s.timelineTime}>
+                              {formatDistanceToNow(new Date(a.created_at), { addSuffix: true, locale: getDateLocale() })}
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+              </motion.div>
+            </AnimatePresence>
+          </div>
+        </div>
+
+        {/* Sidebar ─────────────────────────────────────────── */}
+        <div className={s.sidebarStack}>
+          {/* Customer card */}
+          {deal.customer && (
+            <div className={`${s.sideCard} ${s.customerCard}`} onClick={() => navigate(`/customers/${deal.customer!.id}`)}>
+              <div className={s.sideCardLabel}>Клиент</div>
+              <div>
+                <div className={s.customerName}>{deal.customer.full_name}</div>
+                {deal.customer.company_name && (
+                  <div className={s.customerCompany}><Building2 size={11} className={s.inlineCompanyIcon} />{deal.customer.company_name}</div>
+                )}
+              </div>
+              <div className={s.customerLinks}>
+                {deal.customer.phone && (
+                  <a href={`tel:${deal.customer.phone}`} className={s.customerLink} onClick={e => e.stopPropagation()}>
+                    <Phone size={12} />{deal.customer.phone}
+                  </a>
+                )}
+                {deal.customer.email && (
+                  <a href={`mailto:${deal.customer.email}`} className={s.customerLink} onClick={e => e.stopPropagation()}>
+                    <Mail size={12} />{deal.customer.email}
+                  </a>
+                )}
               </div>
             </div>
-          ) : (
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th className={`${styles.th} ${styles.thDeal}`}>Сделка</th>
-                  <th className={`${styles.th} ${styles.thCustomer}`}>Клиент</th>
-                  <th className={`${styles.th} ${styles.thStage}`}>Этап</th>
-                  <th className={`${styles.th} ${styles.thAmount}`}>Сумма</th>
-                  <th className={`${styles.th} ${styles.thOwner}`}>Владелец</th>
-                  <th className={`${styles.th} ${styles.thCreated}`}>Создана</th>
-                </tr>
-              </thead>
-              <tbody>
-                {deals.filter(d => d.status === 'open').map((deal, idx) => (
-                  <motion.tr
-                    key={deal.id}
-                    className={styles.tr}
-                    onClick={() => { setProductMoment(`Вы открыли сделку «${deal.title}». Следующий шаг должен быть ближе, чем просто чтение карточки.`); navigate(`/deals/${deal.id}`); }}
-                    initial={{ opacity: 0, y: 4 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: idx * 0.025, duration: 0.2 }}
-                  >
-                    <td className={styles.td}>
-                      <div className={styles.dealTitle}>{deal.title}</div>
-                    </td>
-                    <td className={styles.td}>
-                      <div className={styles.dealCustomer}>
-                        {deal.customer?.full_name ?? '—'}
-                      </div>
-                    </td>
-                    <td className={styles.td}>
-                      <Badge variant="default" size="sm">{deal.stage.name}</Badge>
-                    </td>
-                    <td className={styles.td}>
-                      {deal.amount
-                        ? <span className={styles.dealAmountCell}>{formatMoney(deal.amount, deal.currency)}</span>
-                        : <span className={styles.tdMuted}>—</span>
-                      }
-                    </td>
-                    <td className={`${styles.td} ${styles.tdMuted}`}>
-                      {deal.owner?.full_name ?? '—'}
-                    </td>
-                    <td className={`${styles.td} ${styles.tdMuted}`}>
-                      {format(new Date(deal.created_at), 'd MMM', { locale: ru })}
-                    </td>
-                  </motion.tr>
-                ))}
-              </tbody>
-            </table>
           )}
+
+          {/* Details card */}
+          <div className={s.sideCard}>
+            <div className={s.sideCardLabel}>Детали</div>
+            <div className={s.metaList}>
+              {deal.owner && (
+                <div className={s.metaRow}>
+                  <span className={s.metaIcon}><User size={13} /></span>
+                  <div className={s.metaValue}>
+                    <div className={s.metaValueLabel}>Ответственный</div>
+                    <div className={s.metaValueText}>{deal.owner.full_name}</div>
+                  </div>
+                </div>
+              )}
+              <div className={s.metaRow}>
+                <span className={s.metaIcon}><Calendar size={13} /></span>
+                <div className={s.metaValue}>
+                  <div className={s.metaValueLabel}>Создана</div>
+                  <div className={s.metaValueText}>{format(new Date(deal.created_at), 'd MMM yyyy', { locale: getDateLocale() })}</div>
+                </div>
+              </div>
+              {deal.expected_close_date && (
+                <div className={s.metaRow}>
+                  <span className={s.metaIcon}><Target size={13} /></span>
+                  <div className={s.metaValue}>
+                    <div className={s.metaValueLabel}>Дата закрытия</div>
+                    <div className={s.metaValueText}>{format(new Date(deal.expected_close_date), 'd MMM yyyy', { locale: getDateLocale() })}</div>
+                    {daysToClose !== null && (
+                      <div className={`${s.metaValueExtra} ${daysToClose < 0 ? s.overdue : daysToClose < 7 ? s.warning : s.ok}`}>
+                        {daysToClose < 0 ? `просрочено ${Math.abs(daysToClose)} дн` : `через ${daysToClose} дн`}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              <div className={s.metaRow}>
+                <span className={s.metaIcon}><AlertCircle size={13} /></span>
+                <div className={s.metaValue}>
+                  <div className={s.metaValueLabel}>Воронка</div>
+                  <div className={s.metaValueText}>{deal.pipeline.name}</div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-      )}
-    </div>
+      </div>
+
+      {/* Edit drawer */}
+      <Drawer
+        open={editDrawer}
+        onClose={() => setEditDrawer(false)}
+        title="Редактировать сделку"
+        subtitle="Исправьте базовые данные сделки, чтобы команда видела корректную сумму и ожидаемую дату."
+        footer={
+          <div className={s.drawerFooter}>
+            <Button type="button" variant="secondary" onClick={() => setEditDrawer(false)}>Отмена</Button>
+            <Button type="submit" form="deal-edit-form" loading={isSubmitting || updateDeal.isPending}>Сохранить</Button>
+          </div>
+        }
+      >
+        <form id="deal-edit-form" className={s.formFields} onSubmit={handleSubmit(d => updateDeal.mutate(d))} noValidate>
+          <FormErrorSummary errors={errors} title="Проверьте данные сделки" />
+          <Input label="Название" required error={errors.title?.message} {...register('title', { required: 'Укажите название', validate: (v) => String(v ?? '').trim().length >= 3 || 'Название слишком короткое' })} />
+          <Input label="Сумма" type="number" error={errors.amount?.message as string | undefined} {...register('amount', { validate: (v) => !v || Number(v) >= 0 || 'Сумма не может быть отрицательной' })} />
+          <Input label="Дата закрытия" type="date" {...register('expected_close_date')} />
+        </form>
+      </Drawer>
+    </motion.div>
   );
 }
