@@ -1,0 +1,252 @@
+/* ── Root ───────────────────────────────── */
+.root {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, #12100d 0%, #0e0c09 100%);
+  color: rgba(255,255,255,0.85);
+  font-size: 14px;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ── Top bar ─────────────────────────────── */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  flex-shrink: 0;
+  background: rgba(255,255,255,0.015);
+}
+
+.stats {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.statVal {
+  font-size: 14px;
+  font-weight: 800;
+  color: rgba(255,255,255,0.88);
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.statLabel {
+  font-size: 10px;
+  color: rgba(255,255,255,0.28);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.statDiv {
+  width: 1px;
+  height: 26px;
+  background: rgba(255,255,255,0.07);
+}
+
+.addBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(160,104,56,0.4);
+  background: rgba(160,104,56,0.12);
+  color: rgba(210,160,90,0.9);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 140ms;
+  flex-shrink: 0;
+}
+.addBtn:hover { background: rgba(160,104,56,0.2); }
+
+/* ── Add deal panel ─────────────────────── */
+.addPanel {
+  padding: 12px 14px 11px;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  background: rgba(160,104,56,0.035);
+  flex-shrink: 0;
+}
+
+.addPanelTitle {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(210,160,90,0.75);
+  margin-bottom: 9px;
+}
+
+.addGrid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 7px;
+  margin-bottom: 9px;
+}
+
+.addField { display: flex; flex-direction: column; gap: 4px; }
+
+.addLabel {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.28);
+}
+
+.addInput {
+  height: 30px;
+  padding: 0 9px;
+  border-radius: 7px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.05);
+  color: rgba(255,255,255,0.88);
+  font-size: 12px;
+  outline: none;
+  transition: border-color 140ms;
+  font-family: inherit;
+}
+.addInput:focus { border-color: rgba(160,104,56,0.4); }
+.addInput::placeholder { color: rgba(255,255,255,0.18); }
+
+.addSelect {
+  height: 30px;
+  padding: 0 9px;
+  border-radius: 7px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.05);
+  color: rgba(255,255,255,0.75);
+  font-size: 12px;
+  outline: none;
+  cursor: pointer;
+  font-family: inherit;
+  appearance: none;
+}
+
+.addActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+.addCancel {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 7px;
+  border: 1px solid rgba(255,255,255,0.07);
+  background: rgba(255,255,255,0.04);
+  color: rgba(255,255,255,0.38);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 140ms;
+}
+.addCancel:hover { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.65); }
+
+.addConfirm {
+  height: 28px;
+  padding: 0 14px;
+  border-radius: 7px;
+  border: 1px solid rgba(160,104,56,0.45);
+  background: rgba(160,104,56,0.18);
+  color: rgba(210,160,90,0.95);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 140ms;
+}
+.addConfirm:hover:not(:disabled) { background: rgba(160,104,56,0.28); }
+.addConfirm:disabled { opacity: 0.4; cursor: default; }
+
+/* ── Tabs ───────────────────────────────── */
+.tabs {
+  display: flex;
+  gap: 2px;
+  padding: 7px 14px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  flex-shrink: 0;
+}
+
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 13px;
+  border-radius: 9px 9px 0 0;
+  border: none;
+  background: transparent;
+  color: rgba(255,255,255,0.3);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 140ms;
+  position: relative;
+  bottom: -1px;
+}
+.tab:hover { color: rgba(255,255,255,0.6); background: rgba(255,255,255,0.04); }
+
+.tabActive {
+  color: rgba(210,160,90,0.95) !important;
+  background: rgba(160,104,56,0.09) !important;
+  border-bottom: 2px solid rgba(160,104,56,0.65) !important;
+}
+
+.tabCount {
+  background: rgba(255,255,255,0.09);
+  border-radius: 999px;
+  padding: 0 6px;
+  font-size: 10px;
+  font-weight: 700;
+}
+.tabActive .tabCount {
+  background: rgba(160,104,56,0.22);
+  color: rgba(210,160,90,0.9);
+}
+
+/* ── Content wrap ───────────────────────── */
+.contentWrap {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Loading ────────────────────────────── */
+.loading {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  color: rgba(255,255,255,0.28);
+  font-size: 13px;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinner {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.07);
+  border-top-color: rgba(160,104,56,0.55);
+  animation: spin 0.9s linear infinite;
+}

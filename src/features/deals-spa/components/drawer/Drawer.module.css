@@ -1,0 +1,292 @@
+/* ── Overlay & Drawer ───────────────────────── */
+.overlay {
+  position: absolute; inset: 0;
+  background: rgba(0,0,0,0.45); backdrop-filter: blur(3px); z-index: 30;
+}
+.drawer {
+  position: absolute; top: 0; right: 0; bottom: 0;
+  width: min(780px, 96%);
+  background: linear-gradient(165deg, #181410 0%, #111009 100%);
+  border-left: 1px solid rgba(255,255,255,0.08);
+  box-shadow: -24px 0 70px rgba(0,0,0,0.55);
+  z-index: 31; display: flex; flex-direction: column;
+}
+
+/* ── Header ─────────────────────────────────── */
+.header {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  flex-shrink: 0; background: rgba(255,255,255,0.02);
+}
+.headerLeft { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+.avatar {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: rgba(160,104,56,0.22); color: rgba(210,160,90,0.9);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px; font-weight: 700; flex-shrink: 0;
+}
+.dealTitle { font-size: 14px; font-weight: 700; color: rgba(255,255,255,0.9); }
+.stagePill { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; margin-top: 2px; }
+.stageDot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+
+.headerActions { display: flex; align-items: center; gap: 5px; flex-shrink: 0; }
+
+.hdrBtn {
+  display: inline-flex; align-items: center; gap: 5px;
+  height: 28px; padding: 0 10px; border-radius: 8px;
+  font-size: 11px; font-weight: 600; cursor: pointer; transition: all 140ms;
+}
+.hdrBtnWon {
+  border: 1px solid rgba(34,197,94,0.3); background: rgba(34,197,94,0.08); color: rgba(134,239,172,0.85);
+}
+.hdrBtnWon:hover { background: rgba(34,197,94,0.18); }
+.hdrBtnLost {
+  border: 1px solid rgba(239,68,68,0.3); background: rgba(239,68,68,0.08); color: rgba(252,165,165,0.85);
+}
+.hdrBtnLost:hover { background: rgba(239,68,68,0.18); }
+
+.deleteBtn {
+  width: 28px; height: 28px; border-radius: 7px;
+  border: 1px solid rgba(255,255,255,0.07); background: transparent;
+  color: rgba(255,255,255,0.3); display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: all 140ms;
+}
+.deleteBtn:hover { background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.3); color: #fca5a5; }
+
+.closeBtn {
+  width: 28px; height: 28px; border-radius: 7px;
+  border: 1px solid rgba(255,255,255,0.07); background: rgba(255,255,255,0.04);
+  color: rgba(255,255,255,0.4); display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: all 140ms;
+}
+.closeBtn:hover { background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.25); color: #fca5a5; }
+
+/* ── Two-zone body ──────────────────────────── */
+.twoZone { display: flex; flex: 1; min-height: 0; overflow: hidden; }
+
+/* ── LEFT ───────────────────────────────────── */
+.profilePane {
+  width: 38%; flex-shrink: 0;
+  border-right: 1px solid rgba(255,255,255,0.06);
+  overflow-y: auto; padding: 12px 13px 20px;
+  display: flex; flex-direction: column; gap: 0;
+}
+
+.paneSection {
+  display: flex; flex-direction: column; gap: 7px;
+  padding-bottom: 12px; margin-bottom: 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.paneSection:last-child { border-bottom: none; }
+
+.sectionTitle {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+  color: rgba(255,255,255,0.28);
+}
+
+.sectionTitleRow { display: flex; align-items: center; justify-content: space-between; }
+
+/* Contact */
+.contactBlock { display: flex; flex-direction: column; gap: 5px; }
+.phoneRow {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 7px 9px; border-radius: 8px;
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06);
+}
+.phoneVal { font-size: 12px; color: rgba(255,255,255,0.8); font-variant-numeric: tabular-nums; }
+.contactBtns { display: flex; gap: 4px; }
+.contactBtn {
+  width: 24px; height: 24px; border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.07); background: rgba(255,255,255,0.05);
+  color: rgba(255,255,255,0.4); display: flex; align-items: center; justify-content: center;
+  cursor: pointer; text-decoration: none; transition: all 120ms;
+}
+.contactBtn:hover { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.85); }
+.infoRow { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 0 2px; }
+.infoLabel { font-size: 10px; color: rgba(255,255,255,0.3); white-space: nowrap; }
+.infoVal   { font-size: 11px; color: rgba(255,255,255,0.65); text-align: right; }
+
+/* Financials */
+.finGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.finCell {
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 8px; padding: 8px 10px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.finLabel { font-size: 9px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(255,255,255,0.28); }
+.finValue {
+  font-size: 14px; font-weight: 700; color: rgba(255,255,255,0.8);
+  cursor: pointer; transition: color 140ms;
+}
+.finValue:hover { color: rgba(210,160,90,0.9); }
+.finValueMoney { color: rgba(134,239,172,0.85); }
+.finInput {
+  font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.9);
+  background: transparent; border: none; outline: none; width: 100%; font-family: inherit;
+}
+
+.probBarWrap { padding: 0 2px; }
+.probBar { height: 4px; background: rgba(255,255,255,0.07); border-radius: 999px; overflow: hidden; }
+.probFill { height: 100%; border-radius: 999px; transition: width 400ms ease, background 400ms ease; }
+
+/* Details */
+.detailRows { display: flex; flex-direction: column; gap: 4px; }
+.detailRow {
+  display: flex; justify-content: space-between; align-items: center; gap: 8px;
+  padding: 5px 8px; border-radius: 7px; background: rgba(255,255,255,0.03);
+}
+.detailLabel { display: flex; align-items: center; gap: 3px; font-size: 10px; color: rgba(255,255,255,0.3); white-space: nowrap; }
+.detailVal { font-size: 11px; color: rgba(255,255,255,0.7); text-align: right; }
+.overdue { color: rgba(239,68,68,0.8) !important; }
+.upcoming { color: rgba(96,165,250,0.8) !important; }
+.won   { color: rgba(134,239,172,0.8) !important; }
+.lost  { color: rgba(252,165,165,0.7) !important; }
+
+/* Checklist */
+.checklist { display: flex; flex-direction: column; gap: 3px; }
+.checkItem {
+  display: flex; align-items: center; gap: 7px; padding: 7px 9px;
+  border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); background: rgba(255,255,255,0.03);
+  cursor: pointer; font-size: 12px; color: rgba(255,255,255,0.65); text-align: left; transition: background 120ms;
+}
+.checkItem:hover { background: rgba(255,255,255,0.06); }
+.checkDone { text-decoration: line-through; color: rgba(255,255,255,0.25); }
+
+/* Tasks */
+.addTaskBtn {
+  width: 22px; height: 22px; border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.07); background: rgba(255,255,255,0.04);
+  color: rgba(255,255,255,0.4); display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: all 120ms;
+}
+.addTaskBtn:hover { background: rgba(160,104,56,0.2); color: rgba(210,160,90,0.8); }
+
+.taskForm { display: flex; flex-direction: column; gap: 5px; }
+.taskFormRow { display: flex; gap: 5px; align-items: center; }
+.taskInput {
+  flex: 1; height: 28px; padding: 0 9px; border-radius: 7px;
+  border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.05);
+  color: rgba(255,255,255,0.88); font-size: 12px; outline: none; font-family: inherit;
+}
+.taskInput:focus { border-color: rgba(160,104,56,0.4); }
+.taskSelect {
+  height: 28px; padding: 0 8px; border-radius: 7px;
+  border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.05);
+  color: rgba(255,255,255,0.7); font-size: 11px; outline: none; font-family: inherit;
+}
+.taskConfirm {
+  height: 28px; padding: 0 10px; border-radius: 7px;
+  border: 1px solid rgba(160,104,56,0.4); background: rgba(160,104,56,0.16);
+  color: rgba(210,160,90,0.9); font-size: 11px; font-weight: 600; cursor: pointer;
+  white-space: nowrap;
+}
+.taskConfirm:disabled { opacity: 0.4; cursor: default; }
+
+.tasks { display: flex; flex-direction: column; gap: 3px; }
+.tasksEmpty { font-size: 11px; color: rgba(255,255,255,0.2); text-align: center; padding: 8px 0; }
+.taskRow {
+  display: flex; align-items: center; gap: 7px; padding: 5px 8px;
+  border-radius: 7px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.04);
+}
+.taskCheck { background: none; border: none; cursor: pointer; display: flex; flex-shrink: 0; padding: 0; }
+.taskBody { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; justify-content: space-between; }
+.taskTitle { font-size: 11px; color: rgba(255,255,255,0.7); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.taskDone { text-decoration: line-through; color: rgba(255,255,255,0.25); }
+.taskDue { font-size: 10px; color: rgba(255,255,255,0.3); white-space: nowrap; }
+.taskDueOverdue { color: rgba(239,68,68,0.7); }
+.taskPriority { font-size: 13px; font-weight: 900; flex-shrink: 0; }
+.priority_high   { color: rgba(239,68,68,0.7); }
+.priority_medium { color: rgba(245,158,11,0.6); }
+.priority_low    { color: rgba(255,255,255,0.15); }
+
+/* ── RIGHT — feed ───────────────────────────── */
+.feedPane { flex: 1; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+
+.feedFilters {
+  display: flex; gap: 4px; padding: 10px 14px 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.05); flex-shrink: 0;
+  flex-wrap: wrap;
+}
+.feedFilterBtn {
+  height: 24px; padding: 0 10px; border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.07); background: transparent;
+  color: rgba(255,255,255,0.35); font-size: 11px; cursor: pointer; transition: all 140ms;
+}
+.feedFilterBtn:hover { color: rgba(255,255,255,0.65); background: rgba(255,255,255,0.05); }
+.feedFilterActive {
+  background: rgba(160,104,56,0.12) !important;
+  border-color: rgba(160,104,56,0.35) !important;
+  color: rgba(210,160,90,0.9) !important;
+}
+
+.feed { flex: 1; overflow-y: auto; padding: 12px 14px; display: flex; flex-direction: column; gap: 0; }
+.feedEmpty { padding: 32px 0; text-align: center; font-size: 12px; color: rgba(255,255,255,0.2); }
+
+.feedEntry {
+  display: flex; gap: 10px; padding: 8px 0;
+  position: relative;
+}
+.feedEntry:not(.feedLast)::after {
+  content: ''; position: absolute;
+  left: 15px; top: 32px; bottom: 0; width: 1px;
+  background: rgba(255,255,255,0.05);
+}
+
+.feedIcon {
+  width: 30px; height: 30px; border-radius: 50%;
+  border: 1px solid; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  margin-top: 1px;
+}
+
+.feedBody { flex: 1; min-width: 0; }
+.feedTypeRow { display: flex; align-items: center; gap: 7px; margin-bottom: 3px; }
+.feedType { font-size: 11px; font-weight: 700; }
+.feedDuration { font-size: 10px; color: rgba(255,255,255,0.3); }
+.feedContent { font-size: 13px; color: rgba(255,255,255,0.75); line-height: 1.5; }
+.feedMeta { font-size: 10px; color: rgba(255,255,255,0.25); margin-top: 4px; }
+.feedAuthor { color: rgba(210,160,90,0.6); font-weight: 600; }
+
+/* ── Activity input ─────────────────────────── */
+.activityBox {
+  flex-shrink: 0;
+  border-top: 1px solid rgba(255,255,255,0.07);
+  background: rgba(255,255,255,0.015);
+  padding: 8px 12px 12px;
+}
+
+.activityTypeRow {
+  display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 7px;
+}
+.actTypeBtn {
+  display: inline-flex; align-items: center; gap: 4px;
+  height: 24px; padding: 0 9px; border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.07); background: transparent;
+  color: rgba(255,255,255,0.35); font-size: 10px; cursor: pointer; transition: all 140ms;
+}
+.actTypeBtn:hover { background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.65); }
+.actTypeBtnActive {
+  background: rgba(255,255,255,0.06) !important;
+}
+
+.activityInputRow { display: flex; align-items: flex-end; gap: 7px; }
+.actInput {
+  flex: 1; min-height: 36px; max-height: 90px; padding: 8px 11px;
+  border-radius: 9px; border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.85);
+  font-size: 12px; line-height: 1.45; resize: none; outline: none; font-family: inherit;
+  transition: border-color 140ms;
+}
+.actInput::placeholder { color: rgba(255,255,255,0.22); }
+.actInput:focus { border-color: rgba(160,104,56,0.4); }
+
+.actSend {
+  width: 34px; height: 34px; border-radius: 9px;
+  border: 1px solid rgba(160,104,56,0.4); background: rgba(160,104,56,0.16);
+  color: rgba(210,160,90,0.9); display: flex; align-items: center; justify-content: center;
+  cursor: pointer; flex-shrink: 0; transition: all 140ms;
+}
+.actSend:hover:not(:disabled) { background: rgba(160,104,56,0.28); }
+.actSend:disabled { opacity: 0.35; cursor: default; }

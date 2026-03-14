@@ -1,0 +1,165 @@
+/* ── Backdrop & shell ───────────────────────── */
+.backdrop {
+  position: absolute; inset: 0;
+  background: rgba(0,0,0,0.55); backdrop-filter: blur(6px);
+  z-index: 40;
+}
+.shell {
+  position: absolute; inset: 0; z-index: 41;
+  display: flex; align-items: center; justify-content: center;
+  pointer-events: none;
+}
+
+.modal {
+  pointer-events: all;
+  width: min(480px, 94%);
+  background: linear-gradient(165deg, #1c1712 0%, #141009 100%);
+  border: 1px solid rgba(255,255,255,0.11);
+  border-radius: 18px;
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.3), 0 40px 100px rgba(0,0,0,0.55);
+  overflow: hidden;
+}
+
+.modalWon {
+  border-color: rgba(34,197,94,0.2);
+  box-shadow: 0 0 0 1px rgba(34,197,94,0.08), 0 40px 100px rgba(0,0,0,0.55), 0 0 60px rgba(34,197,94,0.06);
+}
+
+/* ── Header ─────────────────────────────────── */
+.header {
+  display: flex; align-items: center; gap: 12px;
+  padding: 18px 18px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+
+.iconWrap {
+  width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.title { font-size: 16px; font-weight: 700; color: rgba(255,255,255,0.92); }
+.sub   { font-size: 12px; color: rgba(255,255,255,0.4); margin-top: 2px; }
+
+.closeBtn {
+  margin-left: auto; width: 30px; height: 30px; border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.07); background: rgba(255,255,255,0.04);
+  color: rgba(255,255,255,0.4); display: flex; align-items: center; justify-content: center;
+  cursor: pointer; flex-shrink: 0; transition: all 140ms;
+}
+.closeBtn:hover { background: rgba(255,255,255,0.09); color: rgba(255,255,255,0.8); }
+
+/* ── Body ───────────────────────────────────── */
+.body { padding: 16px 18px; display: flex; flex-direction: column; gap: 14px; }
+
+.field { display: flex; flex-direction: column; gap: 7px; }
+.fieldLabel {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase;
+  color: rgba(255,255,255,0.35); display: flex; align-items: center; gap: 5px;
+}
+
+/* Reason grid */
+.reasonGrid {
+  display: flex; flex-wrap: wrap; gap: 6px;
+}
+.reasonBtn {
+  height: 30px; padding: 0 12px; border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.04);
+  color: rgba(255,255,255,0.55); font-size: 12px; cursor: pointer; transition: all 140ms;
+}
+.reasonBtn:hover { background: rgba(255,255,255,0.09); color: rgba(255,255,255,0.85); }
+.reasonBtnActive {
+  border-color: rgba(239,68,68,0.4) !important;
+  background: rgba(239,68,68,0.1) !important;
+  color: rgba(252,165,165,0.9) !important;
+}
+
+.textarea {
+  padding: 9px 12px; border-radius: 9px;
+  border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.05);
+  color: rgba(255,255,255,0.85); font-size: 13px; line-height: 1.5;
+  resize: none; outline: none; font-family: inherit;
+}
+.textarea::placeholder { color: rgba(255,255,255,0.22); }
+.textarea:focus { border-color: rgba(160,104,56,0.4); }
+
+.input {
+  height: 42px; padding: 0 12px; border-radius: 9px;
+  border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.05);
+  color: rgba(255,255,255,0.88); font-size: 16px; font-weight: 700;
+  outline: none; font-family: inherit; transition: border-color 140ms;
+}
+.input:focus { border-color: rgba(34,197,94,0.4); }
+
+/* Return to leads toggle */
+.returnToggle {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 12px 14px; border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.07); background: rgba(255,255,255,0.03);
+  cursor: pointer; transition: background 140ms;
+}
+.returnToggle:hover { background: rgba(255,255,255,0.06); }
+
+.toggle {
+  width: 36px; height: 20px; border-radius: 999px;
+  background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15);
+  position: relative; flex-shrink: 0; margin-top: 1px;
+  transition: background 200ms, border-color 200ms;
+}
+.toggleOn {
+  background: rgba(59,130,246,0.5); border-color: rgba(59,130,246,0.6);
+}
+.toggleThumb {
+  position: absolute; top: 2px; left: 2px;
+  width: 14px; height: 14px; border-radius: 50%; background: white;
+  transition: transform 200ms;
+}
+.toggleOn .toggleThumb { transform: translateX(16px); }
+
+.toggleLabel {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.75);
+}
+.toggleHint { font-size: 11px; color: rgba(255,255,255,0.3); margin-top: 3px; }
+
+.wonMessage {
+  font-size: 13px; color: rgba(255,255,255,0.55); line-height: 1.6;
+}
+
+/* ── Footer ─────────────────────────────────── */
+.footer {
+  display: flex; align-items: center; justify-content: flex-end; gap: 8px;
+  padding: 12px 18px 16px;
+  border-top: 1px solid rgba(255,255,255,0.07);
+}
+
+.cancelBtn {
+  height: 34px; padding: 0 16px; border-radius: 9px;
+  border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.04);
+  color: rgba(255,255,255,0.5); font-size: 13px; cursor: pointer; transition: all 140ms;
+}
+.cancelBtn:hover { background: rgba(255,255,255,0.09); color: rgba(255,255,255,0.8); }
+
+.dangerBtn {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 34px; padding: 0 16px; border-radius: 9px;
+  border: 1px solid rgba(239,68,68,0.4); background: rgba(239,68,68,0.12);
+  color: rgba(252,165,165,0.9); font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: all 140ms;
+}
+.dangerBtn:hover:not(:disabled) { background: rgba(239,68,68,0.22); }
+.dangerBtn:disabled { opacity: 0.45; cursor: default; }
+
+.wonBtn {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 34px; padding: 0 20px; border-radius: 9px;
+  border: 1px solid rgba(34,197,94,0.4); background: rgba(34,197,94,0.15);
+  color: rgba(134,239,172,0.95); font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: all 140ms;
+}
+.wonBtn:hover:not(:disabled) { background: rgba(34,197,94,0.25); }
+.wonBtn:disabled { opacity: 0.45; cursor: default; }
+
+/* ── Delete confirm ─────────────────────────── */
+.deleteModal {
+  background: linear-gradient(165deg, #1c1410 0%, #140e09 100%);
+}

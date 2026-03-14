@@ -4,6 +4,7 @@
  */
 import { create } from 'zustand';
 import { leadsApi } from '../api/mock';
+import { useSharedBus } from '../../shared-bus';
 import type { Lead, LeadStage, QualifierStage, CloserStage } from '../api/types';
 
 interface LeadsState {
@@ -14,6 +15,7 @@ interface LeadsState {
   handoffLeadId: string | null;
 
   load: () => Promise<void>;
+  processInboundEvents: () => void;
   moveStage: (id: string, stage: LeadStage, pipeline: 'qualifier' | 'closer') => Promise<void>;
   toggleChecklist: (leadId: string, itemId: string) => Promise<void>;
   openDrawer: (id: string) => void;
@@ -36,6 +38,46 @@ export const useLeadsStore = create<LeadsState>((set, get) => ({
     set({ loading: true });
     const leads = await leadsApi.getLeads();
     set({ leads, loading: false });
+    // Consume any deal-returned events queued while this SPA wasn't mounted
+    get().processInboundEvents();
+  },
+
+  processInboundEvents: () => {
+    const bus = useSharedBus.getState();
+    const returned = bus.consumeDealReturned();
+    for (const ev of returned) {
+      // Check if this lead still exists in our store (moved to closer pipeline)
+      const existing = get().leads.find(l => l.id === ev.leadId);
+      if (existing) {
+        // Reset it back to qualifier new stage
+        set(s => ({
+          leads: s.leads.map(l => l.id === ev.leadId ? {
+            ...l, stage: 'new' as QualifierStage, pipeline: 'qualifier',
+            updatedAt: new Date().toISOString(),
+            history: [...l.history, {
+              id: crypto.randomUUID(),
+              author: 'Система', authorRole: 'general' as const,
+              action: `Возвращён из сделок. Причина: ${ev.reason}`,
+              comment: ev.comment,
+              timestamp: ev.returnedAt,
+            }],
+          } : l),
+        }));
+      } else {
+        // Lead not in store — create fresh from event data
+        leadsApi.createLead({
+          leadId: ev.leadId,
+          fullName: ev.fullName,
+          phone: ev.phone,
+          source: ev.source,
+          stage: 'new' as QualifierStage,
+          pipeline: 'qualifier',
+          comment: `Возвращён из сделок. Причина: ${ev.reason}${ev.comment ? ' — ' + ev.comment : ''}`,
+        } as Parameters<typeof leadsApi.createLead>[0]).then(lead => {
+          set(s => ({ leads: [lead, ...s.leads] }));
+        });
+      }
+    }
   },
 
   moveStage: async (id, stage, pipeline) => {
@@ -71,6 +113,9 @@ export const useLeadsStore = create<LeadsState>((set, get) => ({
   closeHandoff: () => set({ handoffLeadId: null }),
 
   completeHandoff: async (leadId, closerId, meetingAt, comment) => {
+    const lead = get().leads.find(l => l.id === leadId);
+    if (!lead) return;
+
     set(s => ({
       leads: s.leads.map(l => l.id === leadId ? {
         ...l, stage: 'awaiting_meeting' as CloserStage, pipeline: 'closer',
@@ -84,6 +129,22 @@ export const useLeadsStore = create<LeadsState>((set, get) => ({
       } : l),
       handoffLeadId: null,
     }));
+
+    // Notify Deals SPA via shared bus
+    useSharedBus.getState().publishLeadConverted({
+      leadId,
+      fullName:      lead.fullName,
+      phone:         lead.phone,
+      email:         lead.email,
+      companyName:   lead.companyName,
+      source:        lead.source,
+      budget:        lead.budget,
+      assignedName:  closerId,   // closer id used as name placeholder; replace when staff map available
+      qualifierName: 'Квалификатор',
+      meetingAt,
+      comment,
+      convertedAt: new Date().toISOString(),
+    });
   },
 
   addLead: async (data) => {

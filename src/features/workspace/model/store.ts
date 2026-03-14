@@ -82,7 +82,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
           y: Math.max(20, visibleCenterY + offsetY),
           width: size.width,
           height: size.height,
-          modalSize: kind === 'customers' ? 'wide' : 'default',
+          modalSize: (kind === 'customers' || kind === 'deals') ? 'wide' : 'default',
           version: 1,
           createdAt: new Date().toISOString(),
         };
