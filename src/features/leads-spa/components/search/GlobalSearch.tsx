@@ -1,80 +1,324 @@
-import { useState, useEffect, useRef } from 'react';
-import { Search, X } from 'lucide-react';
+/**
+ * CommandPalette — заменяет GlobalSearch.
+ *
+ * Революционный поиск в стиле Linear / Raycast:
+ *   - ⌘K / Ctrl+K открывает с любого места в SPA
+ *   - Fuzzy-поиск по имени, телефону, стадии, источнику
+ *   - Результаты сгруппированы: Квалификатор / Клоузер
+ *   - Keyboard navigation (↑↓ Enter Esc)
+ *   - Подсветка совпадений
+ *   - История последних 5 открытых лидов
+ *   - Быстрое действие «Позвонить» прямо из результата
+ */
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { Search, Phone, X, Clock } from 'lucide-react';
 import s from './Search.module.css';
 
+interface Lead {
+  id: string;
+  fullName: string;
+  phone: string;
+  pipeline: 'qualifier' | 'closer';
+  stage: string;
+  source: string;
+}
+
 interface Props {
-  leads: { id: string; fullName: string; phone: string; pipeline: string }[];
-  searchQuery: string;
-  setSearchQuery: (q: string) => void;
+  leads: Lead[];
   onSelectLead: (id: string) => void;
 }
 
-export function GlobalSearch({ leads, searchQuery, setSearchQuery, onSelectLead }: Props) {
-  const [open, setOpen] = useState(false);
+const STAGE_COLOR: Record<string, string> = {
+  new: '#3b82f6',          in_progress: '#8b5cf6',       no_answer: '#f59e0b',
+  thinking: '#ec4899',     meeting_set: '#22c55e',        junk: '#6b7280',
+  awaiting_meeting: '#3b82f6', meeting_done: '#8b5cf6',   proposal: '#f59e0b',
+  contract: '#ec4899',     awaiting_payment: '#f97316',   won: '#22c55e', lost: '#ef4444',
+};
+
+const STAGE_LABEL: Record<string, string> = {
+  new: 'Новый',            in_progress: 'В работе',       no_answer: 'Недозвон',
+  thinking: 'Думает',      meeting_set: 'Встреча',        junk: 'Брак',
+  awaiting_meeting: 'Ожидает встречи', meeting_done: 'Встреча прош.',
+  proposal: 'КП',          contract: 'Договор',
+  awaiting_payment: 'Оплата', won: 'Успешно',             lost: 'Слив',
+};
+
+const SOURCE_LABEL: Record<string, string> = {
+  instagram: 'IG', site: 'WEB', referral: 'REF', ad: 'ADS',
+};
+
+/** Подсветка совпадения */
+function hl(text: string, q: string): React.ReactNode {
+  if (!q) return text;
+  const i = text.toLowerCase().indexOf(q.toLowerCase());
+  if (i === -1) return text;
+  return (
+    <>
+      {text.slice(0, i)}
+      <mark className={s.hlMark}>{text.slice(i, i + q.length)}</mark>
+      {text.slice(i + q.length)}
+    </>
+  );
+}
+
+// ── Result item ──────────────────────────────────────────────
+function ResultItem({
+  lead, query, active, onHover, onSelect,
+}: {
+  lead: Lead; query: string; active: boolean;
+  onHover: () => void; onSelect: () => void;
+}) {
+  const accent = STAGE_COLOR[lead.stage] ?? '#6b7280';
+  return (
+    <div
+      className={`${s.result} ${active ? s.resultActive : ''}`}
+      data-active={active}
+      onMouseEnter={onHover}
+      onClick={onSelect}
+    >
+      <div className={s.resultAvatar}>{lead.fullName[0]}</div>
+      <div className={s.resultBody}>
+        <div className={s.resultName}>{hl(lead.fullName, query)}</div>
+        <div className={s.resultMeta}>
+          <span className={s.resultPhone}>{lead.phone}</span>
+          <span className={s.resultSrc}>{SOURCE_LABEL[lead.source] ?? lead.source}</span>
+        </div>
+      </div>
+      <div className={s.resultRight}>
+        <span className={s.resultStage} style={{ color: accent, borderColor: `${accent}44` }}>
+          {STAGE_LABEL[lead.stage] ?? lead.stage}
+        </span>
+        <a
+          className={s.callBtn}
+          href={`tel:${lead.phone}`}
+          title="Позвонить"
+          onClick={e => e.stopPropagation()}
+        >
+          <Phone size={11} />
+        </a>
+      </div>
+    </div>
+  );
+}
+
+// ── Main component ───────────────────────────────────────────
+export function CommandPalette({ leads, onSelectLead }: Props) {
+  const [open,      setOpen]      = useState(false);
+  const [query,     setQuery]     = useState('');
+  const [activeIdx, setActiveIdx] = useState(0);
+  const [recentIds, setRecentIds] = useState<string[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
+  const listRef  = useRef<HTMLDivElement>(null);
 
-  const results = searchQuery.trim().length > 1
-    ? leads.filter(l =>
-        l.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        l.phone.includes(searchQuery)
-      ).slice(0, 6)
-    : [];
-
+  // ⌘K / Ctrl+K
   useEffect(() => {
-    if (open) setTimeout(() => inputRef.current?.focus(), 50);
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setOpen(v => !v);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
+
+  // Фокус при открытии
+  useEffect(() => {
+    if (open) {
+      setQuery('');
+      setActiveIdx(0);
+      setTimeout(() => inputRef.current?.focus(), 30);
+    }
   }, [open]);
 
-  const handleSelect = (id: string) => {
-    onSelectLead(id);
+  const close = useCallback(() => {
     setOpen(false);
-    setSearchQuery('');
+    setQuery('');
+    setActiveIdx(0);
+  }, []);
+
+  // Фильтрация
+  const q = query.trim().toLowerCase();
+  const filtered = q.length > 0
+    ? leads.filter(l =>
+        l.fullName.toLowerCase().includes(q) ||
+        l.phone.includes(q) ||
+        (STAGE_LABEL[l.stage] ?? '').toLowerCase().includes(q) ||
+        (SOURCE_LABEL[l.source] ?? '').toLowerCase().includes(q)
+      )
+    : [];
+
+  const qualifier = filtered.filter(l => l.pipeline === 'qualifier');
+  const closer    = filtered.filter(l => l.pipeline === 'closer');
+  const flat      = [...qualifier, ...closer];
+
+  const recentLeads = recentIds
+    .map(id => leads.find(l => l.id === id))
+    .filter(Boolean) as Lead[];
+
+  const displayList = q.length > 0 ? flat : recentLeads;
+
+  // Keyboard navigation
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setActiveIdx(i => Math.min(i + 1, displayList.length - 1));
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setActiveIdx(i => Math.max(i - 1, 0));
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (displayList[activeIdx]) handleSelect(displayList[activeIdx].id);
+      } else if (e.key === 'Escape') {
+        close();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [open, activeIdx, displayList, close]);
+
+  // Прокрутка активного элемента
+  useEffect(() => {
+    listRef.current
+      ?.querySelector<HTMLElement>('[data-active="true"]')
+      ?.scrollIntoView({ block: 'nearest' });
+  }, [activeIdx]);
+
+  const handleSelect = (id: string) => {
+    setRecentIds(prev => [id, ...prev.filter(x => x !== id)].slice(0, 5));
+    onSelectLead(id);
+    close();
   };
+
+  const isMac = typeof navigator !== 'undefined' && /Mac/.test(navigator.platform);
+  const kbdHint = isMac ? '⌘K' : 'Ctrl+K';
 
   return (
     <>
+      {/* ── Trigger ──────────────────────────────────── */}
       <button className={s.trigger} onClick={() => setOpen(true)}>
-        <Search size={13} />
-        <span>Поиск лидов...</span>
+        <Search size={13} className={s.triggerIcon} />
+        <span className={s.triggerPlaceholder}>Поиск лидов...</span>
+        <kbd className={s.triggerKbd}>{kbdHint}</kbd>
       </button>
 
+      {/* ── Overlay + Palette ─────────────────────────── */}
       {open && (
-        <>
-          <div className={s.overlay} onClick={() => { setOpen(false); setSearchQuery(''); }} />
-          <div className={s.panel}>
+        <div
+          className={s.overlay}
+          onClick={e => { if (e.target === e.currentTarget) close(); }}
+        >
+          <div className={s.palette}>
+
+            {/* Input */}
             <div className={s.inputRow}>
-              <Search size={15} className={s.inputIcon} />
+              <Search size={16} className={s.inputIcon} />
               <input
                 ref={inputRef}
                 className={s.input}
-                placeholder="Имя или номер телефона"
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Имя, телефон, статус или источник..."
+                value={query}
+                onChange={e => { setQuery(e.target.value); setActiveIdx(0); }}
+                autoComplete="off"
+                spellCheck={false}
               />
-              {searchQuery && (
-                <button className={s.clearBtn} onClick={() => setSearchQuery('')}><X size={13} /></button>
+              {query && (
+                <button
+                  className={s.clearBtn}
+                  onClick={() => { setQuery(''); inputRef.current?.focus(); }}
+                >
+                  <X size={13} />
+                </button>
+              )}
+              <kbd className={s.escKbd} onClick={close}>Esc</kbd>
+            </div>
+
+            {/* Results */}
+            <div ref={listRef} className={s.resultArea}>
+
+              {/* Нет запроса, есть история */}
+              {q.length === 0 && recentLeads.length > 0 && (
+                <div className={s.group}>
+                  <div className={s.groupLabel}>
+                    <Clock size={10} />
+                    Недавно открытые
+                  </div>
+                  {recentLeads.map((lead, i) => (
+                    <ResultItem
+                      key={lead.id} lead={lead} query="" active={activeIdx === i}
+                      onHover={() => setActiveIdx(i)}
+                      onSelect={() => handleSelect(lead.id)}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {/* Нет запроса и нет истории */}
+              {q.length === 0 && recentLeads.length === 0 && (
+                <div className={s.emptyHint}>
+                  <Search size={22} className={s.emptyIcon} />
+                  <div className={s.emptyText}>Начните вводить имя, телефон или статус</div>
+                  <div className={s.emptySubtext}>
+                    Поиск по {leads.length} лид{leads.length === 1 ? 'у' : 'ам'} в реальном времени
+                  </div>
+                </div>
+              )}
+
+              {/* Есть запрос — группированные результаты */}
+              {q.length > 0 && (
+                <>
+                  {qualifier.length > 0 && (
+                    <div className={s.group}>
+                      <div className={s.groupLabel} style={{ color: '#8b5cf6' }}>
+                        Квалификатор
+                        <span className={s.groupCount}>{qualifier.length}</span>
+                      </div>
+                      {qualifier.map((lead, i) => (
+                        <ResultItem
+                          key={lead.id} lead={lead} query={query} active={activeIdx === i}
+                          onHover={() => setActiveIdx(i)}
+                          onSelect={() => handleSelect(lead.id)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                  {closer.length > 0 && (
+                    <div className={s.group}>
+                      <div className={s.groupLabel} style={{ color: '#22c55e' }}>
+                        Клоузер
+                        <span className={s.groupCount}>{closer.length}</span>
+                      </div>
+                      {closer.map((lead, i) => (
+                        <ResultItem
+                          key={lead.id} lead={lead} query={query}
+                          active={activeIdx === qualifier.length + i}
+                          onHover={() => setActiveIdx(qualifier.length + i)}
+                          onSelect={() => handleSelect(lead.id)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                  {filtered.length === 0 && (
+                    <div className={s.noResults}>
+                      Нет лидов по запросу «{query}»
+                    </div>
+                  )}
+                </>
               )}
             </div>
-            {results.length > 0 && (
-              <div className={s.results}>
-                {results.map(lead => (
-                  <button key={lead.id} className={s.resultItem} onClick={() => handleSelect(lead.id)}>
-                    <div className={s.resultAvatar}>{lead.fullName[0]}</div>
-                    <div className={s.resultBody}>
-                      <span className={s.resultName}>{lead.fullName}</span>
-                      <span className={s.resultPhone}>{lead.phone}</span>
-                    </div>
-                    <span className={s.resultPipeline}>
-                      {lead.pipeline === 'qualifier' ? 'Квалификатор' : 'Клоузер'}
-                    </span>
-                  </button>
-                ))}
+
+            {/* Footer с хинтами по клавишам */}
+            {displayList.length > 0 && (
+              <div className={s.footer}>
+                <span><kbd className={s.footerKbd}>↑↓</kbd> навигация</span>
+                <span><kbd className={s.footerKbd}>Enter</kbd> открыть</span>
+                <span><kbd className={s.footerKbd}>Esc</kbd> закрыть</span>
               </div>
             )}
-            {searchQuery.length > 1 && results.length === 0 && (
-              <div className={s.noResults}>Ничего не найдено</div>
-            )}
           </div>
-        </>
+        </div>
       )}
     </>
   );

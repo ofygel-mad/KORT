@@ -12,7 +12,7 @@ import { CloserView } from './views/CloserView';
 import { AllLeadsView } from './views/AllLeadsView';
 import { LeadDrawer } from './components/drawer/LeadDrawer';
 import { HandoffModal } from './components/handoff/HandoffModal';
-import { GlobalSearch } from './components/search/GlobalSearch';
+import { CommandPalette } from './components/search/GlobalSearch';
 import { NotificationCenter } from './components/notifications/NotificationCenter';
 import s from './LeadsSPA.module.css';
 
@@ -30,7 +30,7 @@ export function LeadsSPA({ tileId }: Props) {
   const { leads, loading, load, addLead } = useLeadsStore();
   const { load: loadNotifs } = useNotifStore();
   const { currentRole } = useLeadsRbac();
-  const { currentTab: tab, setTab, searchQuery, setSearch, openDrawer, openHandoff } = useTileLeadsUI(tileId);
+  const { currentTab: tab, setTab, openDrawer, openHandoff } = useTileLeadsUI(tileId);
   const [addOpen, setAddOpen] = useState(false);
 
   // Add form state
@@ -72,7 +72,7 @@ export function LeadsSPA({ tileId }: Props) {
       {/* ── Top bar ─────────────────────────────────────── */}
       <header className={s.topbar}>
         <div className={s.topbarLeft}>
-          <GlobalSearch leads={leads} searchQuery={searchQuery} setSearchQuery={setSearch} onSelectLead={openDrawer} />
+          <CommandPalette leads={leads} onSelectLead={openDrawer} />
         </div>
         <div className={s.topbarRight}>
           <NotificationCenter />
