@@ -180,6 +180,7 @@
    Layer 2: Semantic Tokens — DARK THEME
    ═══════════════════════════════════════════════════════════════════════ */
 [data-theme="dark"] {
+  color-scheme: dark;
   --bg-canvas:           #100E0B;
   --bg-surface:          #171410;
   --bg-surface-elevated: #1E1A14;

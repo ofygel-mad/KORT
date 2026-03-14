@@ -12,6 +12,7 @@
   border-left: 1px solid rgba(255,255,255,0.08);
   box-shadow: -24px 0 70px rgba(0,0,0,0.55);
   z-index: 31;
+  color-scheme: dark;
   display: flex;
   flex-direction: column;
 }
