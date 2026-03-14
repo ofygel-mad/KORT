@@ -1,23 +1,274 @@
-.root { height:100%; display:flex; flex-direction:column; background:linear-gradient(180deg,#0c0f14,#090b10); color:var(--text-primary); overflow-y:auto; font-size:14px; gap:0; }
-.header { display:flex; align-items:baseline; justify-content:space-between; padding:16px 18px 12px; border-bottom:1px solid rgba(255,255,255,0.06); flex-shrink:0; }
-.title { font-size:16px; font-weight:800; }
-.subtitle { font-size:12px; color:rgba(255,255,255,0.3); }
-.metricsGrid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; padding:14px 18px; border-bottom:1px solid rgba(255,255,255,0.06); flex-shrink:0; }
-.metricCard { position:relative; overflow:hidden; padding:14px; border-radius:14px; border:1px solid color-mix(in srgb, var(--m-color) 20%, rgba(255,255,255,0.06)); background:color-mix(in srgb, var(--m-color) 8%, rgba(255,255,255,0.03)); }
-.metricGlow { position:absolute; top:-20px; right:-20px; width:60px; height:60px; border-radius:50%; background:color-mix(in srgb, var(--m-color) 30%, transparent); filter:blur(20px); pointer-events:none; }
-.metricValue { font-size:22px; font-weight:800; color:var(--text-primary); line-height:1.1; }
-.metricLabel { font-size:13px; font-weight:600; color:rgba(255,255,255,0.7); margin-top:4px; }
-.metricSub { font-size:11px; color:rgba(255,255,255,0.3); }
-.section { padding:14px 18px; border-bottom:1px solid rgba(255,255,255,0.05); }
-.sectionTitle { font-size:12px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:rgba(255,255,255,0.3); margin-bottom:10px; }
-.bars { display:grid; gap:8px; }
-.barRow { display:grid; grid-template-columns:80px 1fr 30px; align-items:center; gap:10px; }
-.barLabel { font-size:12px; color:rgba(255,255,255,0.5); }
-.barTrack { height:6px; border-radius:999px; background:rgba(255,255,255,0.07); overflow:hidden; }
-.barFill { height:100%; border-radius:999px; transition:width 600ms ease; }
-.barVal { font-size:12px; font-weight:700; color:rgba(255,255,255,0.6); text-align:right; }
-.dealRow { display:flex; align-items:center; gap:12px; padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.04); }
-.dealRow:last-child { border-bottom:none; }
-.dealName { flex:1; font-size:13px; font-weight:500; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.dealAmount { font-size:13px; font-weight:700; color:rgba(220,180,110,0.9); flex-shrink:0; }
-.dealDays { font-size:11px; color:rgba(255,255,255,0.3); flex-shrink:0; }
+/* ReportsSPA — Executive analytics panel */
+
+.root {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #080a0e;
+  color: rgba(255,255,255,0.82);
+  overflow: hidden;
+  font-size: 13px;
+}
+
+/* ── 1. PULSE — KPI row ──────────────────────────── */
+.pulse {
+  display: flex;
+  align-items: stretch;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  flex-shrink: 0;
+}
+
+.kpi {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 14px 16px 12px;
+  min-width: 0;
+}
+
+.kpiVal {
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kpiLbl {
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.35);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kpiNote {
+  font-size: 10px;
+  color: rgba(255,255,255,0.2);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.kpiAlert {
+  font-size: 10px;
+  color: #ef4444;
+  font-weight: 600;
+}
+
+.kpiSep {
+  width: 1px;
+  background: rgba(255,255,255,0.06);
+  flex-shrink: 0;
+  margin: 10px 0;
+}
+
+/* ── 2. BODY — 2 columns ─────────────────────────── */
+.body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  overflow: hidden;
+}
+
+.panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 12px 14px 10px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.panel + .panel {
+  border-left: 1px solid rgba(255,255,255,0.06);
+}
+
+.panelTitle {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.22);
+  margin-bottom: 10px;
+  flex-shrink: 0;
+}
+
+/* ── Bar rows (shared) ───────────────────────────── */
+.bars {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  flex: 1;
+  justify-content: space-around;
+}
+
+.barRow {
+  display: grid;
+  grid-template-columns: 60px 1fr 18px auto;
+  align-items: center;
+  gap: 7px;
+}
+
+.barLabel {
+  font-size: 11px;
+  color: rgba(255,255,255,0.4);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Pipeline label with dot */
+.pipeLabel {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  color: rgba(255,255,255,0.38);
+  white-space: nowrap;
+  overflow: hidden;
+}
+.pipeDot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.barTrack {
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.06);
+  overflow: hidden;
+}
+
+.barFill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 500ms ease;
+}
+
+.barNum {
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.48);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.barVal {
+  font-size: 9px;
+  color: rgba(134,239,172,0.55);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  text-align: right;
+}
+
+/* ── 3. FEED ─────────────────────────────────────── */
+.feed {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 10px 14px 12px;
+  max-height: 188px;
+  overflow: hidden;
+}
+
+.feedTitle {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.2);
+  margin-bottom: 7px;
+  flex-shrink: 0;
+}
+
+.feedList {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  overflow: hidden;
+}
+
+.feedItem {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 5px 5px;
+  border-radius: 7px;
+  transition: background 90ms;
+  cursor: default;
+}
+.feedItem:hover { background: rgba(255,255,255,0.03); }
+
+.feedAv {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(160,104,56,0.18);
+  color: rgba(210,160,90,0.85);
+  font-size: 9px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.feedBody {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.feedName {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.7);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.feedStage {
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.feedMeta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.feedSrc {
+  font-size: 9px;
+  font-weight: 700;
+  color: rgba(147,197,253,0.45);
+  letter-spacing: 0.04em;
+}
+
+.feedTime {
+  font-size: 10px;
+  color: rgba(255,255,255,0.18);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.feedEmpty {
+  font-size: 12px;
+  color: rgba(255,255,255,0.15);
+  padding: 16px 0;
+  text-align: center;
+}
