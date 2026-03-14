@@ -23,11 +23,11 @@ export const WORKSPACE_BG_OPTIONS: WorkspaceBgDefinition[] = [
   { id: 'grid',  label: 'Сетка',          description: 'Дефолтный точечный фон',        isVideo: false },
   { id: 'bg01',  label: 'Абстракция',     description: 'Плавные цветовые волны',         isVideo: true, filename: 'bg01.mp4' },
   { id: 'bg02',  label: 'Туман',          description: 'Атмосферный медленный дрейф',    isVideo: true, filename: 'bg02.mp4' },
-  { id: 'bg03',  label: 'Космос',         description: 'Тихое звёздное движение',        isVideo: true, filename: 'bg03.mp4' },
+  { id: 'bg03',  label: 'Сияние',         description: 'Тихое звёздное движение',        isVideo: true, filename: 'bg03.mp4' },
   { id: 'bg04',  label: 'Геометрия',      description: 'Анимированные формы',            isVideo: true, filename: 'bg04.mp4' },
   { id: 'bg05',  label: 'Огонь',          description: 'Тлеющие угли и свет',           isVideo: true, filename: 'bg05.mp4' },
   { id: 'bg06',  label: 'Матрица',        description: 'Цифровой поток данных',          isVideo: true, filename: 'bg06.mp4' },
-  { id: 'bg07',  label: 'Океан',          description: 'Медитативные волны',             isVideo: true, filename: 'bg07.mp4' },
+  { id: 'bg07',  label: 'Поток',          description: 'Медитативные волны',             isVideo: true, filename: 'bg07.mp4' },
 ];
 
 interface WorkspaceThemeStore {
