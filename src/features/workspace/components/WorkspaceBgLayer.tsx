@@ -8,15 +8,17 @@ import styles from './Workspace.module.css';
  */
 export function WorkspaceBgLayer() {
   const { activeBg } = useWorkspaceTheme();
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const fillVideoRef = useRef<HTMLVideoElement>(null);
+  const mainVideoRef = useRef<HTMLVideoElement>(null);
   const def = WORKSPACE_BG_OPTIONS.find((o) => o.id === activeBg)!;
 
   // Reload video source when bg changes
   useEffect(() => {
-    const v = videoRef.current;
-    if (!v) return;
-    v.load();
-    v.play().catch(() => {/* autoplay blocked — silent */});
+    const videos = [fillVideoRef.current, mainVideoRef.current].filter(Boolean) as HTMLVideoElement[];
+    for (const video of videos) {
+      video.load();
+      video.play().catch(() => { /* autoplay blocked — silent */ });
+    }
   }, [activeBg]);
 
   if (!def.isVideo) return null;
@@ -24,14 +26,27 @@ export function WorkspaceBgLayer() {
   return (
     <div className={styles.workspaceBgLayer}>
       <video
-        ref={videoRef}
-        className={styles.workspaceBgVideo}
+        ref={fillVideoRef}
+        className={styles.workspaceBgVideoFill}
         autoPlay
         loop
         muted
         playsInline
         disablePictureInPicture
         key={def.filename}
+      >
+        <source src={`/workspace-bgs/${def.filename}`} type="video/mp4" />
+      </video>
+
+      <video
+        ref={mainVideoRef}
+        className={styles.workspaceBgVideoMain}
+        autoPlay
+        loop
+        muted
+        playsInline
+        disablePictureInPicture
+        key={`${def.filename}-main`}
       >
         <source src={`/workspace-bgs/${def.filename}`} type="video/mp4" />
       </video>
