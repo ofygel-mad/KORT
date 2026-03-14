@@ -50,7 +50,7 @@ export const WORKSPACE_WIDGETS: WorkspaceWidgetDefinition[] = [
     description: 'Локальный центр контроля задач. Можно создать сколько угодно копий.',
     icon: CheckSquare,
     renderPreview: (s, v) => <TasksTilePreview key={v} snapshot={s} />,
-    renderSPA:     (s, v) => <TasksSPA key={v} snapshot={s} />,
+    renderSPA:     (_s, v) => <TasksSPA key={v} />,
   },
   {
     kind: 'reports',

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { nanoid } from 'nanoid';
+import { useBadgeStore } from '../../shared-bus/badge.store';
 import type { WorkspaceModalSize, WorkspaceTile, WorkspaceViewport, WorkspaceWidgetKind } from './types';
 
 export const WORLD_FACTOR = 3;
@@ -117,7 +118,14 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
         tiles: state.tiles.map((t) => (t.id === id ? { ...t, version: t.version + 1 } : t)),
       })),
 
-      openTile: (id) => set({ activeTileId: id }),
+      openTile: (id) => {
+        set({ activeTileId: id });
+        // Сбрасываем бейдж при открытии — для Лидов и Сделок
+        const tile = get().tiles.find(t => t.id === id);
+        if (tile && (tile.kind === 'customers' || tile.kind === 'deals')) {
+          useBadgeStore.getState().clearBadge(tile.kind);
+        }
+      },
       minimizeTile: () => set({ activeTileId: null, settingsTileId: null }),
       openSettings: (id) => set({ settingsTileId: id }),
       closeSettings: () => set({ settingsTileId: null }),

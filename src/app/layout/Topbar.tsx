@@ -12,6 +12,8 @@ import { useUIStore } from '../../shared/stores/ui';
 import { useCapabilities } from '../../shared/hooks/useCapabilities';
 import { useIsMobile } from '../../shared/hooks/useIsMobile';
 import { useT } from '../../shared/i18n';
+import { useSharedBus } from '../../features/shared-bus';
+import type { GlobalNotifEvent } from '../../features/shared-bus';
 import { popoverVariants, overlayVariants, t } from '../../shared/motion/presets';
 import styles from './Topbar.module.css';
 
@@ -23,6 +25,8 @@ function NotificationBell() {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
+  const [localNotifs, setLocalNotifs] = useState<GlobalNotifEvent[]>([]);
+  const localUnread = useRef(0);
 
   const { data } = useQuery<{ results: Notification[]; count: number }>({
     queryKey:       ['notifications'],
@@ -37,7 +41,8 @@ function NotificationBell() {
     onSuccess:  () => qc.invalidateQueries({ queryKey: ['notifications'] }),
   });
 
-  const unread = (data?.results ?? []).filter(n => !n.is_read).length;
+  const apiUnread = (data?.results ?? []).filter(n => !n.is_read).length;
+  const unread = apiUnread + localNotifs.filter(() => !open).length;
 
   useEffect(() => {
     const h = (e: MouseEvent) => {
@@ -46,11 +51,28 @@ function NotificationBell() {
     return addDocumentListener('mousedown', h);
   }, []);
 
+  // Опрос shared-bus на предмет новых уведомлений от SPA
+  useEffect(() => {
+    const id = setInterval(() => {
+      const items = useSharedBus.getState().consumeGlobalNotifs();
+      if (items.length > 0) {
+        setLocalNotifs(prev => [...items, ...prev].slice(0, 50));
+        localUnread.current += items.length;
+        // Инвалидировать QueryClient чтобы точка обновилась
+        qc.invalidateQueries({ queryKey: ['notifications'] });
+      }
+    }, 2000);
+    return () => clearInterval(id);
+  }, [qc]);
+
   return (
     <div ref={ref} className={styles.notifRoot}>
       <motion.button
         className={[styles.iconBtn, open ? styles.active : ''].join(' ')}
-        onClick={() => setOpen(o => !o)}
+        onClick={() => {
+          setOpen(o => !o);
+          if (!open) setLocalNotifs(prev => prev); // панель открылась — можно помечать прочитанными
+        }}
         whileTap={{ scale: 0.93 }}
         transition={t.fast}
         aria-label="Уведомления"
@@ -82,18 +104,43 @@ function NotificationBell() {
               )}
             </div>
 
-            {(data?.results ?? []).length === 0
-              ? <div className={styles.notifEmpty}>Уведомлений нет</div>
-              : (data?.results ?? []).map(n => (
-                <div
-                  key={n.id}
-                  className={[styles.notifItem, !n.is_read ? styles.unread : ''].join(' ')}
-                >
-                  <div className={styles.notifItemTitle}>{n.title}</div>
-                  <div className={styles.notifItemBody}>{n.body}</div>
-                </div>
-              ))
-            }
+            {localNotifs.length === 0 && (data?.results ?? []).length === 0 ? (
+              <div className={styles.notifEmpty}>Уведомлений нет</div>
+            ) : (
+              <>
+                {/* ── Локальные уведомления от SPA ── */}
+                {localNotifs.map(n => {
+                  const KIND_ICON: Record<string, string> = {
+                    info: '💬', success: '✅', warning: '⚠️', error: '🔴',
+                  };
+                  const SRC_LABEL: Record<string, string> = {
+                    leads: 'Лиды', deals: 'Сделки', tasks: 'Задачи', system: 'Система',
+                  };
+                  return (
+                    <div key={n.id} className={`${styles.notifItem} ${styles.unread}`}>
+                      <div className={styles.notifItemTitle}>
+                        {KIND_ICON[n.kind] ?? '🔔'} {n.title}
+                        <span style={{ fontSize: 10, opacity: 0.5, marginLeft: 6 }}>
+                          [{SRC_LABEL[n.source] ?? n.source}]
+                        </span>
+                      </div>
+                      <div className={styles.notifItemBody}>{n.body}</div>
+                    </div>
+                  );
+                })}
+
+                {/* ── API уведомления ── */}
+                {(data?.results ?? []).map(n => (
+                  <div
+                    key={n.id}
+                    className={[styles.notifItem, !n.is_read ? styles.unread : ''].join(' ')}
+                  >
+                    <div className={styles.notifItemTitle}>{n.title}</div>
+                    <div className={styles.notifItemBody}>{n.body}</div>
+                  </div>
+                ))}
+              </>
+            )}
           </motion.div>
         )}
       </AnimatePresence>

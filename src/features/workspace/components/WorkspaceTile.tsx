@@ -1,5 +1,6 @@
 import { useRef } from 'react';
 import { WORKSPACE_WIDGET_MAP } from '../registry';
+import { useBadgeStore } from '../../shared-bus/badge.store';
 import { useWorkspaceStore, WORLD_FACTOR } from '../model/store';
 import type { WorkspaceSnapshot, WorkspaceTile as WorkspaceTileType } from '../model/types';
 import styles from './Workspace.module.css';
@@ -16,6 +17,8 @@ export function WorkspaceTile({ tile, snapshot }: Props) {
   const definition   = WORKSPACE_WIDGET_MAP[tile.kind];
   const Icon         = definition.icon;
   const isNew        = recentTileId === tile.id;
+  const badge        = useBadgeStore(s => s.getBadge(tile.kind));
+  const showBadge    = badge > 0;
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (activeTileId) return;
@@ -56,7 +59,14 @@ export function WorkspaceTile({ tile, snapshot }: Props) {
     >
       <div className={styles.tileHeader}>
         <div className={styles.tileIdentity}>
-          <span className={styles.tileIcon}><Icon size={14} /></span>
+          <span className={styles.tileIconWrap}>
+            <span className={styles.tileIcon}><Icon size={14} /></span>
+            {showBadge && (
+              <span className={styles.tileBadge}>
+                {badge > 99 ? '99+' : badge}
+              </span>
+            )}
+          </span>
           <div>
             <div className={styles.tileTitle}>{tile.title}</div>
             <div className={styles.tileSubtitle}>Живое превью</div>

@@ -51,6 +51,9 @@ export function CreateTaskModal() {
       tags,
       subtasks: [],
       linkedEntity: createPreset?.linkedEntity,
+      taskType: 'manual',
+      timerEnabled: false,
+      timerWarning: false,
     });
     closeCreateModal();
   };

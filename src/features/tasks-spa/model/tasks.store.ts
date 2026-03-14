@@ -7,6 +7,8 @@
 import { create } from 'zustand';
 import { tasksApi } from '../api/mock';
 import { useSharedBus } from '../../shared-bus';
+import { useBadgeStore } from '../../shared-bus/badge.store';
+import type { GlobalNotifEvent } from '../../shared-bus';
 import type {
   Task, TaskStatus, TaskPriority, ViewMode, GroupBy, SortBy,
 } from '../api/types';
@@ -147,6 +149,21 @@ export const useTasksStore = create<TasksState>((set, get) => ({
   createTask: async (data) => {
     const task = await tasksApi.createTask(data);
     set(s => ({ tasks: [task, ...s.tasks] }));
+
+    // ── Badge: новая задача → +1 на плитке Задачи ──────────────
+    useBadgeStore.getState().incrementBadge('tasks');
+
+    // ── Global notif → Topbar Bell ─────────────────────────────
+    const notif: GlobalNotifEvent = {
+      id: crypto.randomUUID(),
+      title: 'Новая задача',
+      body: task.title,
+      kind: task.priority === 'critical' ? 'error' : 'info',
+      source: 'tasks',
+      createdAt: new Date().toISOString(),
+    };
+    useSharedBus.getState().publishGlobalNotif(notif);
+
     get().publishSnapshot();
   },
 
@@ -191,11 +208,15 @@ export const useTasksStore = create<TasksState>((set, get) => ({
           taskId: id,
           title: task.title,
           assignedName: task.assignedName,
-          linkedEntityType: task.linkedEntity?.type,
+          linkedEntityType: task.linkedEntity?.type === 'standalone' ? undefined : task.linkedEntity?.type,
           linkedEntityId: task.linkedEntity?.id,
           doneAt: now,
         });
       }
+
+      // ── Badge: задача выполнена → -1 ──────────────────────────
+      useBadgeStore.getState().decrementBadge('tasks');
+
       get().publishSnapshot();
     }
   },
@@ -249,6 +270,14 @@ export const useTasksStore = create<TasksState>((set, get) => ({
 
   deleteTask: async (id) => {
     await tasksApi.deleteTask(id);
+
+    // ── Badge: задача удалена → -1 ──────────────────────────────
+    // Уменьшаем только если задача НЕ была выполнена (done уже уменьшил)
+    const task = get().tasks.find(t => t.id === id);
+    if (task && task.status !== 'done') {
+      useBadgeStore.getState().decrementBadge('tasks');
+    }
+
     set(s => ({
       tasks: s.tasks.filter(t => t.id !== id),
       activeId: s.activeId === id ? null : s.activeId,
