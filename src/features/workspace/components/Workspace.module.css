@@ -44,7 +44,8 @@
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  /* Keep the whole frame visible in workspace (no corner cropping). */
+  object-fit: contain;
   object-position: center center;
   opacity: 0.6;
   display: block;
