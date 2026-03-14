@@ -3,6 +3,7 @@ import type { StoreApi } from 'zustand';
 import type { Task, TaskStatus, TaskPriority, ViewMode, GroupBy, SortBy } from '../api/types';
 
 export interface TileTasksUIState {
+  filter: 'all' | 'todo' | 'in_progress' | 'done';
   activeId: string | null;
   drawerOpen: boolean;
   createModalOpen: boolean;
@@ -26,6 +27,7 @@ export interface TileTasksUIState {
   setFilterPriority: (p: TaskPriority | 'all') => void;
   setFilterAssignee: (a: string | 'all') => void;
   setSearchQuery: (q: string) => void;
+  setFilter: (f: 'all' | 'todo' | 'in_progress' | 'done') => void;
 }
 
 const cache = new Map<string, StoreApi<TileTasksUIState>>();
@@ -33,6 +35,7 @@ const cache = new Map<string, StoreApi<TileTasksUIState>>();
 function createTileTasksUI(): StoreApi<TileTasksUIState> {
   return createStore<TileTasksUIState>()((set) => ({
     activeId: null,
+    filter: 'all',
     drawerOpen: false,
     createModalOpen: false,
     createPreset: null,
@@ -55,6 +58,7 @@ function createTileTasksUI(): StoreApi<TileTasksUIState> {
     setFilterPriority: (filterPriority) => set({ filterPriority }),
     setFilterAssignee: (filterAssignee) => set({ filterAssignee }),
     setSearchQuery: (searchQuery) => set({ searchQuery }),
+    setFilter: (filter) => set({ filter }),
   }));
 }
 

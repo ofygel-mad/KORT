@@ -12,6 +12,7 @@ import {
 import { useTasksStore }  from '../../../../tasks-spa/model/tasks.store';
 import { useTileTasksUI } from '../../../../tasks-spa/model/tile-ui.store';
 import { PRIORITY_META_MAP, TASK_TYPE_LABEL, TASK_TYPE_ICON } from './tasksMeta';
+import { useSharedBus } from '../../../../shared-bus';
 import type { Task, TaskType, TaskPriority } from '../../../../tasks-spa/api/types';
 import s from './TasksSPA.module.css';
 
@@ -222,8 +223,14 @@ interface Props { tileId: string; }
 
 export function TasksSPA({ tileId }: Props) {
   const { tasks, loading, load, moveStatus, deleteTask } = useTasksStore();
-  const [filter, setFilter] = useState<Filter>('all');
-  const { createModalOpen, openCreateModal, closeCreateModal, createPreset } = useTileTasksUI(tileId);
+  const {
+    filter,
+    setFilter,
+    createModalOpen,
+    openCreateModal,
+    closeCreateModal,
+    createPreset,
+  } = useTileTasksUI(tileId);
   const notifiedRef = useRef<Set<string>>(new Set());
 
   useEffect(() => { load(); }, [load]);
