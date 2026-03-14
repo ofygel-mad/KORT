@@ -10,7 +10,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import {
   GripVertical, Pencil, Trash2, Building2, Users, GitBranch,
-  Shield, Globe, Zap, Key, Copy, Plus, MessageSquare, MonitorCog, Sun, Moon, Monitor, Check, Palette, Layers3, Sparkles,
+  Shield, Globe, Zap, Key, Copy, Plus, MessageSquare, MonitorCog, Check, Palette, Layers3, Sparkles,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { api } from '../../shared/api/client';
@@ -411,7 +411,7 @@ function PipelinesSection() {
 }
 
 function AppearanceSection() {
-  const { theme, setTheme, themePack, setThemePack } = useUIStore();
+  const { themePack, setThemePack } = useUIStore();
   const [wsThemeOpen, setWsThemeOpen] = useState(false);
 
   return (
@@ -419,26 +419,11 @@ function AppearanceSection() {
       <div className={s.sectionHeader}>
         <div>
           <div className={s.sectionTitle}>Темы и характер интерфейса</div>
-          <div className={s.sectionSubtitle}>Mode отвечает за свет и тьму, theme pack — за surface, глубину и плотность акцента.</div>
+          <div className={s.sectionSubtitle}>Theme pack отвечает за surface, глубину и плотность акцента.</div>
         </div>
       </div>
       <div className={s.sectionBody}>
         <div className={s.appearanceStack}>
-          <div className={s.appearanceBlock}>
-            <div className={s.appearanceLabel}>Режим отображения</div>
-            <div className={s.themeModeRow}>
-              {[
-                { value: 'light', label: 'Светлая', icon: <Sun size={14} /> },
-                { value: 'dark', label: 'Тёмная', icon: <Moon size={14} /> },
-                { value: 'system', label: 'Системная', icon: <Monitor size={14} /> },
-              ].map((mode) => (
-                <button key={mode.value} className={`${s.themeModeBtn} ${theme === mode.value ? s.themeModeBtnActive : ''}`} onClick={() => setTheme(mode.value as 'light' | 'dark' | 'system')}>
-                  {mode.icon}
-                  {mode.label}
-                </button>
-              ))}
-            </div>
-          </div>
           <div className={s.appearanceBlock}>
             <div className={s.appearanceLabel}>Theme packs</div>
             <div className={s.themeGrid}>
@@ -498,7 +483,7 @@ function AppearanceSection() {
                 <li>плотность фирменного акцента</li>
                 <li>характер dashboard, drawers, assistant и palette</li>
               </ul>
-              <p className={s.appearanceHintText}>Настройка хранится локально и уважает системную тему, если выбран режим «Системная».</p>
+              <p className={s.appearanceHintText}>Настройка хранится локально.</p>
             </div>
           </div>
         </div>
