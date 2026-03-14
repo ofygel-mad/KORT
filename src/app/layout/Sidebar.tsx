@@ -88,6 +88,24 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
           </Tooltip>
         ))}
 
+        <Tooltip content={collapsed ? 'Развернуть' : 'Свернуть'} disabled={!collapsed} side="right">
+          <button
+            className={`${styles.navItem} ${styles.navInlineControl}`}
+            onClick={toggleSidebar}
+            aria-label={collapsed ? 'Развернуть боковую панель' : 'Свернуть боковую панель'}
+          >
+            <span className={styles.navIcon}>
+              <motion.div
+                animate={{ rotate: collapsed ? 180 : 0 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+              >
+                <ChevronLeft size={15} />
+              </motion.div>
+            </span>
+            {label(collapsed ? 'Развернуть' : 'Свернуть', collapsed)}
+          </button>
+        </Tooltip>
+
         {/* Secondary section */}
         {secondaryVisible.length > 0 && (
           <>
@@ -165,21 +183,6 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
           </div>
         )}
 
-        {/* Collapse toggle */}
-        <Tooltip content={collapsed ? 'Развернуть' : 'Свернуть'} disabled={!collapsed} side="right">
-          <button
-            className={styles.collapseBtn}
-            onClick={toggleSidebar}
-            aria-label={collapsed ? 'Развернуть боковую панель' : 'Свернуть боковую панель'}
-          >
-            <motion.div
-              animate={{ rotate: collapsed ? 180 : 0 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-            >
-              <ChevronLeft size={15} />
-            </motion.div>
-          </button>
-        </Tooltip>
       </div>
     </motion.aside>
   );

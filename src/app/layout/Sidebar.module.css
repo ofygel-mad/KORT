@@ -104,6 +104,16 @@
   border-radius: 0 var(--radius-full) var(--radius-full) 0;
 }
 
+.navInlineControl {
+  margin-top: 2px;
+  margin-bottom: 6px;
+  color: var(--text-tertiary);
+}
+
+.navInlineControl:hover {
+  color: var(--text-primary);
+}
+
 /* Icon inside nav item */
 .navIcon {
   flex-shrink: 0;
@@ -141,28 +151,6 @@
   flex-direction: column;
   gap: 1px;
   flex-shrink: 0;
-}
-
-/* ─── Collapse button ─────────────────────────────────────────────────────── */
-.collapseBtn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 7px 10px;
-  border-radius: var(--radius-md);
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  color: var(--text-tertiary);
-  width: 100%;
-  transition:
-    background-color var(--motion-fast) var(--motion-ease),
-    color var(--motion-fast) var(--motion-ease);
-}
-
-.collapseBtn:hover {
-  background: var(--nav-item-hover-bg);
-  color: var(--text-primary);
 }
 
 /* ─── User section at bottom ──────────────────────────────────────────────── */
@@ -224,7 +212,6 @@
 }
 
 .navItem,
-.collapseBtn,
 .userSection {
   transition:
     background-color var(--motion-fast) var(--motion-ease),
@@ -233,8 +220,7 @@
     box-shadow var(--motion-fast) var(--motion-ease);
 }
 
-.userSection:hover,
-.collapseBtn:hover {
+.userSection:hover {
   transform: translateX(1px);
 }
 
