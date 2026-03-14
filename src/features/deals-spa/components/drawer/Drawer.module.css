@@ -172,9 +172,19 @@
 }
 .taskInput:focus { border-color: rgba(160,104,56,0.4); }
 .taskSelect {
-  height: 28px; padding: 0 8px; border-radius: 7px;
-  border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.05);
-  color: rgba(255,255,255,0.7); font-size: 11px; outline: none; font-family: inherit;
+  height: 28px;
+  padding: 0 24px 0 8px;
+  border-radius: 7px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.05)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='rgba(255,255,255,0.35)' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat right 7px center;
+  color: rgba(255,255,255,0.7);
+  font-size: 11px;
+  outline: none;
+  font-family: inherit;
+  appearance: none;
+  cursor: pointer;
+  color-scheme: dark;
 }
 .taskConfirm {
   height: 28px; padding: 0 10px; border-radius: 7px;

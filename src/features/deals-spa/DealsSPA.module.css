@@ -124,16 +124,18 @@
 
 .addSelect {
   height: 30px;
-  padding: 0 9px;
+  padding: 0 28px 0 9px;
   border-radius: 7px;
   border: 1px solid rgba(255,255,255,0.08);
-  background: rgba(255,255,255,0.05);
+  background: rgba(255,255,255,0.05)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='rgba(255,255,255,0.35)' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat right 8px center;
   color: rgba(255,255,255,0.75);
   font-size: 12px;
   outline: none;
   cursor: pointer;
   font-family: inherit;
   appearance: none;
+  color-scheme: dark;
 }
 
 .addActions {
