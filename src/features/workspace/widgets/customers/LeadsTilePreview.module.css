@@ -221,3 +221,173 @@
   background: rgba(255,255,255,0.05);
   animation: shimmerAnim 1.5s ease-in-out infinite 0.3s;
 }
+
+/* ── Tab bar (board mode) ────────────────────────── */
+.tabBar {
+  display: flex;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.tabPill {
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.22);
+  padding: 1px 5px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+
+.tabPillActive {
+  color: rgba(255,255,255,0.75);
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.10);
+}
+
+/* ── Card active highlight ───────────────────────── */
+.cardActive {
+  border-color: rgba(160,104,56,0.45) !important;
+  background: rgba(160,104,56,0.08) !important;
+}
+
+/* ── Screen badge (drawer mode header) ──────────── */
+.screenBadge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.screenDot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(160,104,56,0.8);
+  flex-shrink: 0;
+}
+
+.screenLabel {
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.28);
+}
+
+/* ── Drawer preview (drawer mode body) ──────────── */
+.drawerPreview {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  background: rgba(255,255,255,0.025);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 9px;
+  padding: 8px 8px 7px;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.drawerHeader {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-shrink: 0;
+}
+
+.drawerAvatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(160,104,56,0.28);
+  color: rgba(210,160,90,0.95);
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.drawerMeta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.drawerName {
+  font-size: 10px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.9);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.drawerStage {
+  display: inline-block;
+  font-size: 7.5px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  border: 1px solid;
+  border-radius: 999px;
+  padding: 0 5px;
+  line-height: 14px;
+}
+
+.drawerRow {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.drawerRowLabel {
+  font-size: 8px;
+  color: rgba(255,255,255,0.28);
+  flex-shrink: 0;
+  min-width: 38px;
+}
+
+.drawerRowValue {
+  font-size: 9px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.65);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Last event from the feed */
+.drawerEvent {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  margin-top: auto;
+  padding-top: 5px;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  flex-shrink: 0;
+}
+
+.drawerEventDot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(160,104,56,0.65);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.drawerEventText {
+  font-size: 8px;
+  line-height: 1.4;
+  color: rgba(255,255,255,0.32);
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
