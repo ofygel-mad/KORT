@@ -2,11 +2,15 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, AlertCircle, RotateCcw, Trash2 } from 'lucide-react';
 import { useDealsStore } from '../../model/deals.store';
+import { useTileDealsUI } from '../../model/tile-ui.store';
 import { LOST_REASONS } from '../../api/types';
 import s from './Modals.module.css';
 
-export function LostModal() {
-  const { deals, lostModalId, closeLostModal, markLost } = useDealsStore();
+interface Props { tileId: string; }
+
+export function LostModal({ tileId }: Props) {
+  const { deals, markLost } = useDealsStore();
+  const { lostModalId, closeLostModal } = useTileDealsUI(tileId);
   const deal = deals.find(d => d.id === lostModalId);
 
   const [reason,    setReason]    = useState('');
@@ -24,7 +28,7 @@ export function LostModal() {
   const handleSubmit = async () => {
     if (!reason) return;
     setSubmitting(true);
-    await markLost(lostModalId, reason, comment, returnTo);
+    await markLost(lostModalId, reason, comment, returnTo, closeLostModal);
     setSubmitting(false);
     setReason(''); setComment(''); setReturnTo(false);
   };

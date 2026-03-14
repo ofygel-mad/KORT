@@ -7,6 +7,7 @@ import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Phone, MessageCircle, Clock, CheckSquare, Square, User, Tag, Send, CalendarDays } from 'lucide-react';
 import { useLeadsStore } from '../../model/leads.store';
+import { useTileLeadsUI } from '../../model/tile-ui.store';
 import { CONTRACT_CHECKLIST } from '../../api/types';
 import s from './Drawer.module.css';
 
@@ -38,8 +39,11 @@ function fmtDateTime(iso?: string) {
   return new Date(iso).toLocaleString('ru', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
 }
 
-export function LeadDrawer() {
-  const { leads, drawerOpen, activeLeadId, closeDrawer, toggleChecklist, addComment } = useLeadsStore();
+interface Props { tileId: string; }
+
+export function LeadDrawer({ tileId }: Props) {
+  const { leads, toggleChecklist, addComment } = useLeadsStore();
+  const { drawerOpen, activeLeadId, closeDrawer } = useTileLeadsUI(tileId);
   const lead = leads.find(l => l.id === activeLeadId);
   const [commentText, setCommentText] = useState('');
   const [sending, setSending] = useState(false);

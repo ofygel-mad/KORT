@@ -10,6 +10,7 @@ import {
   Trash2, Bell, BellOff, X, Timer,
 } from 'lucide-react';
 import { useTasksStore }  from '../../../../tasks-spa/model/tasks.store';
+import { useTileTasksUI } from '../../../../tasks-spa/model/tile-ui.store';
 import { PRIORITY_META_MAP, TASK_TYPE_LABEL, TASK_TYPE_ICON } from './tasksMeta';
 import type { TaskType, TaskPriority } from '../../../../tasks-spa/api/types';
 import s from './TasksSPA.module.css';
@@ -25,9 +26,9 @@ function formatCountdown(deadline: string): { label: string; overdue: boolean } 
   return { label: `${sec}с`, overdue: false };
 }
 
-interface CreateModalProps { onClose: () => void; }
+interface CreateModalProps { tileId: string; onClose: () => void; preset?: any; }
 
-function CreateModal({ onClose }: CreateModalProps) {
+function CreateModal({ onClose, preset }: CreateModalProps) {
   const createTask = useTasksStore(state => state.createTask);
 
   const [title,         setTitle]         = useState('');
@@ -38,6 +39,16 @@ function CreateModal({ onClose }: CreateModalProps) {
   const [timerEnabled,  setTimerEnabled]  = useState(false);
   const [timerDeadline, setTimerDeadline] = useState('');
   const [timerWarning,  setTimerWarning]  = useState(false);
+  const [assignee, setAssignee] = useState('');
+
+  useEffect(() => {
+    if (preset) {
+      if (preset.title) setTitle(preset.title);
+      if (preset.priority) setPriority(preset.priority);
+      if (preset.assignedName) setAssignee(preset.assignedName);
+      if (preset.dueAt) setDueAt(new Date(preset.dueAt).toISOString().slice(0, 16));
+    }
+  }, [preset]);
 
   const handleSubmit = async () => {
     if (!title.trim()) return;
@@ -50,6 +61,7 @@ function CreateModal({ onClose }: CreateModalProps) {
       createdBy: 'Менеджер',
       note: note.trim() || undefined,
       dueAt: dueAt ? new Date(dueAt).toISOString() : undefined,
+      assignedName: assignee || undefined,
       timerEnabled,
       timerDeadline: timerEnabled && timerDeadline
         ? new Date(timerDeadline).toISOString()
@@ -206,10 +218,12 @@ function TimerBadge({ deadline, warning }: { deadline: string; warning: boolean 
 
 type Filter = 'all' | 'todo' | 'in_progress' | 'done';
 
-export function TasksSPA() {
+interface Props { tileId: string; }
+
+export function TasksSPA({ tileId }: Props) {
   const { tasks, loading, load, moveStatus, deleteTask } = useTasksStore();
   const [filter, setFilter] = useState<Filter>('all');
-  const [createOpen, setCreateOpen] = useState(false);
+  const { createModalOpen, openCreateModal, closeCreateModal, createPreset } = useTileTasksUI(tileId);
   const notifiedRef = useRef<Set<string>>(new Set());
 
   useEffect(() => { load(); }, [load]);
@@ -280,7 +294,7 @@ export function TasksSPA() {
           <span className={s.heading}>Задачи</span>
           {overdue > 0 && <span className={s.overdueChip}>{overdue} просрочено</span>}
         </div>
-        <button className={s.addBtn} onClick={() => setCreateOpen(true)}>
+        <button className={s.addBtn} onClick={() => openCreateModal()}>
           <Plus size={14} /> Задача
         </button>
       </div>
@@ -377,7 +391,7 @@ export function TasksSPA() {
         </div>
       </div>
 
-      {createOpen && <CreateModal onClose={() => setCreateOpen(false)} />}
+      {createModalOpen && <CreateModal tileId={tileId} onClose={closeCreateModal} preset={createPreset} />}
     </div>
   );
 }
