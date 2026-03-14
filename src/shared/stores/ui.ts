@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware';
 import { useCommandPalette } from './commandPalette';
 import { getDocument, getWindow, readStorage } from '../lib/browser';
 
-export type Theme = 'light' | 'dark' | 'system';
+export type Theme = 'dark';
 export type ThemePack = 'neutral' | 'graphite' | 'sand' | 'obsidian' | 'enterprise';
 
 type ActionRequest<T = undefined> = {
@@ -44,27 +44,19 @@ interface UIStore {
   openCommandPalette: () => void;
 }
 
-function resolveThemeMode(theme: Theme) {
-  if (theme === 'system') {
-    return getWindow()?.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-  }
-  return theme;
-}
-
 function applyTheme(theme: Theme, pack: ThemePack = 'neutral') {
   const root = getDocument()?.documentElement;
   if (!root) return;
-  const mode = resolveThemeMode(theme);
-  root.setAttribute('data-theme', mode);
+  root.setAttribute('data-theme', theme);
   root.setAttribute('data-theme-mode', theme);
   root.setAttribute('data-theme-pack', pack);
-  root.style.colorScheme = mode;
+  root.style.colorScheme = theme;
 }
 
 export const useUIStore = create<UIStore>()(
   persist(
     (set, get) => ({
-      theme: 'system',
+      theme: 'dark',
       themePack: 'neutral',
       sidebarCollapsed: false,
       focusMode: false,
@@ -73,9 +65,9 @@ export const useUIStore = create<UIStore>()(
       createDealRequest: { nonce: 0, payload: undefined },
       createTaskRequest: { nonce: 0, payload: undefined },
       assistantPromptRequest: { nonce: 0, payload: undefined },
-      setTheme: (theme) => {
-        set({ theme });
-        applyTheme(theme, get().themePack);
+      setTheme: () => {
+        set({ theme: 'dark' });
+        applyTheme('dark', get().themePack);
       },
       setThemePack: (themePack) => {
         set({ themePack });
@@ -120,14 +112,7 @@ if (win) {
   } catch {
     parsed = {};
   }
-  const theme: Theme = (parsed.theme as Theme) ?? 'system';
+  const theme: Theme = 'dark';
   const themePack: ThemePack = (parsed.themePack as ThemePack) ?? 'neutral';
   applyTheme(theme, themePack);
-  const media = win.matchMedia('(prefers-color-scheme: dark)');
-  const syncTheme = () => {
-    const state = useUIStore.getState();
-    if (state.theme === 'system') applyTheme('system', state.themePack);
-  };
-  if (typeof media.addEventListener === 'function') media.addEventListener('change', syncTheme);
-  else media.addListener(syncTheme);
 }
