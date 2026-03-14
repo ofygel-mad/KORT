@@ -51,16 +51,13 @@
 
 /* Fill side gaps softly when source/video aspect differs from viewport. */
 .workspaceBgVideoFill {
-  object-fit: cover;
-  filter: blur(22px) saturate(0.9);
-  transform: scale(1.06);
-  opacity: 0.34;
+  display: none;
 }
 
-/* Keep full frame visible without harsh crop. */
+/* Fill the workspace viewport edge-to-edge without side blur bands. */
 .workspaceBgVideoMain {
-  object-fit: contain;
-  opacity: 0.62;
+  object-fit: cover;
+  opacity: 0.72;
 }
 
 /* ═══════════════════════════════════════════════
