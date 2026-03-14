@@ -252,8 +252,8 @@
 }
 
 .tileModalWide {
-  width:  min(96vw, 1460px);
-  height: min(92vh, 900px);
+  width:  min(97vw, 1540px);
+  height: min(94vh, 940px);
 }
 
 /* Header — glass strip */
@@ -262,7 +262,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 14px 16px 13px;
+  padding: 10px 14px 10px;
   border-bottom: 1px solid rgba(255,255,255,0.07);
   background: rgba(255,255,255,0.025);
   backdrop-filter: blur(8px);

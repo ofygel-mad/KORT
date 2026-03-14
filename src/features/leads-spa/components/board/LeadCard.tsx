@@ -14,28 +14,22 @@ const SOURCE_LABEL: Record<string, string> = {
 };
 
 function isStaleLead(lead: Lead): boolean {
-  const hoursOld = (Date.now() - new Date(lead.updatedAt).getTime()) / 3600000;
-  return hoursOld > 24;
+  return (Date.now() - new Date(lead.updatedAt).getTime()) / 3600000 > 24;
+}
+
+function getLastNote(lead: Lead): string | null {
+  if (lead.comment) return lead.comment;
+  const meaningful = [...lead.history]
+    .reverse()
+    .find(e => e.author !== 'Система' && e.action !== 'Лид создан');
+  return meaningful?.comment ?? (meaningful?.action !== 'Взято в работу' ? meaningful?.action ?? null : null);
 }
 
 export function LeadCard({ lead, onDragStart, onDragEnd }: Props) {
-  const openDrawer = useLeadsStore(s => s.openDrawer);
+  const openDrawer  = useLeadsStore(s => s.openDrawer);
   const openHandoff = useLeadsStore(s => s.openHandoff);
-  const stale = isStaleLead(lead);
-
-  const handleWAClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    const clean = lead.phone.replace(/\D/g, '');
-    window.open(`https://wa.me/${clean}`, '_blank');
-  };
-  const handleCallClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    window.location.href = `tel:${lead.phone}`;
-  };
-  const handleMoveClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    openHandoff(lead.id);
-  };
+  const stale   = isStaleLead(lead);
+  const lastNote = getLastNote(lead);
 
   return (
     <div
@@ -59,6 +53,10 @@ export function LeadCard({ lead, onDragStart, onDragEnd }: Props) {
         </div>
       </div>
 
+      {lastNote && (
+        <div className={s.cardNote}>{lastNote}</div>
+      )}
+
       <div className={s.cardMeta}>
         <span className={s.cardSource}>{SOURCE_LABEL[lead.source] ?? lead.source}</span>
         {lead.callbackAt && (
@@ -69,20 +67,22 @@ export function LeadCard({ lead, onDragStart, onDragEnd }: Props) {
         )}
         {lead.budget && (
           <span className={s.cardBudget}>
-            {new Intl.NumberFormat('ru-RU', { maximumFractionDigits:0 }).format(lead.budget)} ₸
+            {new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 }).format(lead.budget)} ₸
           </span>
         )}
       </div>
 
+      {/* Actions — revealed only on card hover via CSS */}
       <div className={s.cardActions} onClick={e => e.stopPropagation()}>
-        <button className={s.cardAction} onClick={handleWAClick} title="WhatsApp">
+        <button className={s.cardAction} onClick={e => { e.stopPropagation(); window.open(`https://wa.me/${lead.phone.replace(/\D/g,'')}`, '_blank'); }} title="WhatsApp">
           <MessageCircle size={13} />
         </button>
-        <button className={s.cardAction} onClick={handleCallClick} title="Позвонить">
+        <button className={s.cardAction} onClick={e => { e.stopPropagation(); window.location.href = `tel:${lead.phone}`; }} title="Позвонить">
           <Phone size={13} />
         </button>
         {lead.pipeline === 'qualifier' && (
-          <button className={`${s.cardAction} ${s.cardActionMove}`} onClick={handleMoveClick} title="Передать">
+          <button className={`${s.cardAction} ${s.cardActionMove}`}
+            onClick={e => { e.stopPropagation(); openHandoff(lead.id); }} title="Передать">
             <MoveRight size={13} />
           </button>
         )}

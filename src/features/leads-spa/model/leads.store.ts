@@ -22,6 +22,7 @@ interface LeadsState {
   closeHandoff: () => void;
   completeHandoff: (leadId: string, closerId: string, meetingAt: string, comment: string) => Promise<void>;
   addLead: (data: Partial<Lead>) => Promise<void>;
+  addComment: (leadId: string, comment: string, author: string) => Promise<void>;
 }
 
 export const useLeadsStore = create<LeadsState>((set, get) => ({
@@ -88,5 +89,22 @@ export const useLeadsStore = create<LeadsState>((set, get) => ({
   addLead: async (data) => {
     const lead = await leadsApi.createLead(data);
     set(s => ({ leads: [lead, ...s.leads] }));
+  },
+
+  addComment: async (leadId, comment, author) => {
+    const entry = {
+      id: crypto.randomUUID(),
+      author,
+      authorRole: 'general' as const,
+      action: comment,
+      timestamp: new Date().toISOString(),
+    };
+    set(s => ({
+      leads: s.leads.map(l => l.id === leadId
+        ? { ...l, history: [...l.history, entry], updatedAt: new Date().toISOString() }
+        : l
+      ),
+    }));
+    await leadsApi.addHistoryEntry(leadId, { author, authorRole: 'general', action: comment, timestamp: entry.timestamp });
   },
 }));

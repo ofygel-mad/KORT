@@ -11,23 +11,22 @@
 
 .column {
   flex-shrink: 0;
-  width: 220px;
+  width: 224px;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.06);
+  background: rgba(255,255,255,0.025);
+  border: 1px solid rgba(255,255,255,0.05);
   border-top: 2px solid var(--col-accent);
-  border-radius: 14px;
+  border-radius: 12px;
   padding: 10px 8px;
   min-height: 180px;
   max-height: 100%;
-  transition: background 160ms, border-color 160ms;
+  transition: background 160ms;
 }
 
 .columnOver {
-  background: color-mix(in srgb, var(--col-accent) 8%, rgba(255,255,255,0.04));
-  border-color: color-mix(in srgb, var(--col-accent) 45%, rgba(255,255,255,0.12));
+  background: color-mix(in srgb, var(--col-accent) 7%, rgba(255,255,255,0.03));
 }
 
 .colHeader {
@@ -35,11 +34,11 @@
   align-items: center;
   gap: 7px;
   padding: 0 4px 8px;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
 }
 
 .colDot {
-  width: 8px; height: 8px;
+  width: 7px; height: 7px;
   border-radius: 50%;
   background: var(--col-accent);
   flex-shrink: 0;
@@ -50,15 +49,15 @@
   font-weight: 700;
   letter-spacing: 0.07em;
   text-transform: uppercase;
-  color: rgba(255,255,255,0.55);
+  color: rgba(255,255,255,0.5);
   flex: 1;
 }
 
 .colCount {
   font-size: 11px;
   font-weight: 700;
-  background: rgba(255,255,255,0.08);
-  color: rgba(255,255,255,0.5);
+  background: rgba(255,255,255,0.07);
+  color: rgba(255,255,255,0.4);
   border-radius: 999px;
   padding: 0 7px;
   line-height: 18px;
@@ -67,41 +66,73 @@
 .colCards {
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 6px;
   overflow-y: auto;
   flex: 1;
   padding: 2px 0;
+}
+
+/* Empty column placeholder */
+.colEmpty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px dashed rgba(255,255,255,0.07);
+  border-radius: 9px;
+  padding: 20px 10px;
+  color: rgba(255,255,255,0.18);
+  font-size: 11px;
+  text-align: center;
+  pointer-events: none;
+  min-height: 70px;
 }
 
 /* ── Card ────────────────────────────────── */
 .card {
   position: relative;
   padding: 10px;
-  border-radius: 11px;
-  border: 1px solid rgba(255,255,255,0.07);
-  background: rgba(255,255,255,0.04);
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.06);
+  background: rgba(255,255,255,0.035);
   cursor: grab;
   transition: background 120ms, border-color 120ms, transform 120ms, box-shadow 120ms;
   flex-shrink: 0;
 }
 
 .card:hover {
-  background: rgba(255,255,255,0.07);
-  border-color: rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.065);
+  border-color: rgba(255,255,255,0.11);
   transform: translateY(-1px);
-  box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.32);
 }
 
-.card:active { cursor: grabbing; transform: rotate(2deg) scale(1.02); }
+.card:active { cursor: grabbing; transform: rotate(1.5deg) scale(1.02); }
 
-/* SLA stale — red glow */
+/* Reveal actions on hover */
+.card .cardActions {
+  opacity: 0;
+  max-height: 0;
+  overflow: hidden;
+  transition: opacity 160ms, max-height 160ms;
+  pointer-events: none;
+}
+.card:hover .cardActions {
+  opacity: 1;
+  max-height: 40px;
+  pointer-events: all;
+}
+
+/* SLA stale — red left border + subtle glow */
 @keyframes stalePulse {
-  0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.25); }
-  50%      { box-shadow: 0 0 0 4px rgba(239,68,68,0.1); }
+  0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.2); }
+  50%      { box-shadow: 0 0 0 3px rgba(239,68,68,0.08); }
 }
 .cardStale {
-  border-color: rgba(239,68,68,0.35) !important;
-  animation: stalePulse 2.4s ease-in-out infinite;
+  border-left: 2px solid rgba(239,68,68,0.5) !important;
+  animation: stalePulse 2.8s ease-in-out infinite;
 }
 
 .cardStaleBadge {
@@ -115,13 +146,13 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 7px;
+  margin-bottom: 6px;
 }
 
 .cardAvatar {
   width: 28px; height: 28px;
   border-radius: 50%;
-  background: rgba(160,104,56,0.22);
+  background: rgba(160,104,56,0.2);
   color: rgba(210,160,90,0.9);
   display: flex; align-items: center; justify-content: center;
   font-size: 12px; font-weight: 700;
@@ -132,48 +163,61 @@
 
 .cardName {
   font-size: 13px; font-weight: 600;
-  color: rgba(255,255,255,0.9);
+  color: rgba(255,255,255,0.88);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
-.cardPhone { font-size: 11px; color: rgba(255,255,255,0.35); }
+.cardPhone { font-size: 11px; color: rgba(255,255,255,0.3); margin-top: 1px; }
+
+/* Last comment / note */
+.cardNote {
+  font-size: 11px;
+  color: rgba(255,255,255,0.38);
+  line-height: 1.4;
+  margin-bottom: 7px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 2px;
+}
 
 .cardMeta {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px;
-  margin-bottom: 8px;
+  gap: 4px;
+  margin-bottom: 0;
 }
 
 .cardSource {
   font-size: 10px; font-weight: 600;
-  background: rgba(59,130,246,0.15);
-  color: rgba(147,197,253,0.8);
+  background: rgba(59,130,246,0.12);
+  color: rgba(147,197,253,0.75);
   border-radius: 999px;
   padding: 1px 7px;
-  border: 1px solid rgba(59,130,246,0.2);
+  border: 1px solid rgba(59,130,246,0.18);
 }
 
 .cardCallback {
   display: inline-flex; align-items: center; gap: 3px;
   font-size: 10px;
-  background: rgba(245,158,11,0.12);
-  color: rgba(253,211,77,0.8);
+  background: rgba(245,158,11,0.1);
+  color: rgba(253,211,77,0.75);
   border-radius: 999px; padding: 1px 7px;
-  border: 1px solid rgba(245,158,11,0.2);
+  border: 1px solid rgba(245,158,11,0.18);
 }
 
 .cardBudget {
   font-size: 10px; font-weight: 700;
-  background: rgba(34,197,94,0.1);
-  color: rgba(134,239,172,0.8);
+  background: rgba(34,197,94,0.08);
+  color: rgba(134,239,172,0.75);
   border-radius: 999px; padding: 1px 7px;
-  border: 1px solid rgba(34,197,94,0.18);
+  border: 1px solid rgba(34,197,94,0.15);
 }
 
 .cardActions {
   display: flex;
   gap: 5px;
+  margin-top: 8px;
 }
 
 .cardAction {
@@ -190,7 +234,8 @@
 .cardAction:hover { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.85); }
 
 .cardActionMove {
-  border-color: rgba(160,104,56,0.3);
-  color: rgba(210,160,90,0.7);
+  border-color: rgba(160,104,56,0.25);
+  color: rgba(210,160,90,0.65);
 }
-.cardActionMove:hover { background: rgba(160,104,56,0.15); color: rgba(210,160,90,0.95); }
+.cardActionMove:hover { background: rgba(160,104,56,0.14); color: rgba(210,160,90,0.95); }
+

@@ -33,7 +33,7 @@ export const WORKSPACE_WIDGETS: WorkspaceWidgetDefinition[] = [
     title: 'Лиды',
     description: 'CRM воронка: квалификация, передача и закрытие лидов.',
     icon: Users,
-    renderPreview: (s, v) => <LeadsTilePreview key={v} snapshot={s} />,
+    renderPreview: (_s, v) => <LeadsTilePreview key={v} />,
     renderSPA:     (_s, v) => <LeadsSPA key={v} />,
   },
   {

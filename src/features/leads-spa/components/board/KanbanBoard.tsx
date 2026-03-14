@@ -60,14 +60,18 @@ export function KanbanBoard({ columns, leads }: Props) {
               <span className={s.colCount}>{colLeads.length}</span>
             </div>
             <div className={s.colCards}>
-              {colLeads.map(lead => (
-                <LeadCard
-                  key={lead.id}
-                  lead={lead}
-                  onDragStart={() => setDragId(lead.id)}
-                  onDragEnd={() => { setDragId(null); setOverCol(null); }}
-                />
-              ))}
+              {colLeads.length === 0 ? (
+                <div className={s.colEmpty}>Перетащите<br/>лида сюда</div>
+              ) : (
+                colLeads.map(lead => (
+                  <LeadCard
+                    key={lead.id}
+                    lead={lead}
+                    onDragStart={() => setDragId(lead.id)}
+                    onDragEnd={() => { setDragId(null); setOverCol(null); }}
+                  />
+                ))
+              )}
             </div>
           </div>
         );

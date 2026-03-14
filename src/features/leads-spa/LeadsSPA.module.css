@@ -7,7 +7,7 @@
   color: rgba(255,255,255,0.85);
   font-size: 14px;
   overflow: hidden;
-  position: relative; /* for drawer/modal absolute positioning */
+  position: relative;
 }
 
 /* ── Topbar ─────────────────────────────── */
@@ -16,74 +16,106 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 10px 16px;
-  border-bottom: 1px solid rgba(255,255,255,0.07);
+  padding: 8px 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
   flex-shrink: 0;
-  background: rgba(255,255,255,0.02);
+  background: rgba(255,255,255,0.015);
 }
-
-.topbarLeft { display: flex; align-items: center; gap: 12px; }
-.topbarRight { display: flex; align-items: center; gap: 8px; }
-
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 14px;
-  font-weight: 800;
-  color: rgba(210,160,90,0.9);
-  letter-spacing: -0.01em;
-}
+.topbarLeft  { display: flex; align-items: center; gap: 10px; flex: 1; }
+.topbarRight { display: flex; align-items: center; gap: 7px; }
 
 .addBtn {
-  display: inline-flex; align-items: center; gap: 6px;
+  display: inline-flex; align-items: center; gap: 5px;
   height: 30px; padding: 0 12px;
-  border-radius: 9px;
-  border: 1px solid rgba(160,104,56,0.45);
-  background: rgba(160,104,56,0.14);
+  border-radius: 8px;
+  border: 1px solid rgba(160,104,56,0.4);
+  background: rgba(160,104,56,0.12);
   color: rgba(210,160,90,0.9);
   font-size: 12px; font-weight: 600;
   cursor: pointer; transition: all 140ms;
 }
-.addBtn:hover { background: rgba(160,104,56,0.22); }
+.addBtn:hover { background: rgba(160,104,56,0.2); }
 
-/* Add form strip */
-.addForm {
-  display: flex; align-items: center; gap: 8px;
-  padding: 8px 16px;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
-  background: rgba(160,104,56,0.06);
+/* ── Add panel ──────────────────────────── */
+.addPanel {
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  background: rgba(160,104,56,0.04);
   flex-shrink: 0;
 }
 
+.addPanelTitle {
+  font-size: 12px; font-weight: 700;
+  color: rgba(210,160,90,0.8);
+  margin-bottom: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.addGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.addField { display: flex; flex-direction: column; gap: 4px; }
+.addFieldFull { grid-column: 1 / -1; }
+
+.addLabel {
+  font-size: 10px; font-weight: 600;
+  color: rgba(255,255,255,0.3);
+  letter-spacing: 0.05em; text-transform: uppercase;
+}
+
 .addInput {
-  height: 34px; padding: 0 12px;
-  border-radius: 9px;
+  height: 32px; padding: 0 10px;
+  border-radius: 8px;
   border: 1px solid rgba(255,255,255,0.08);
   background: rgba(255,255,255,0.05);
-  color: rgba(255,255,255,0.9);
-  font-size: 13px; outline: none; flex: 1;
+  color: rgba(255,255,255,0.88);
+  font-size: 12px; outline: none;
+  transition: border-color 140ms; font-family: inherit;
 }
 .addInput:focus { border-color: rgba(160,104,56,0.45); }
-.addInput::placeholder { color: rgba(255,255,255,0.25); }
+.addInput::placeholder { color: rgba(255,255,255,0.2); }
 
-.addConfirm {
-  height: 34px; padding: 0 16px; border-radius: 9px;
-  border: 1px solid rgba(160,104,56,0.5);
-  background: rgba(160,104,56,0.22);
-  color: rgba(210,160,90,0.95);
-  font-size: 13px; font-weight: 600; cursor: pointer;
+.addSelect {
+  height: 32px; padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.05);
+  color: rgba(255,255,255,0.88);
+  font-size: 12px; outline: none; cursor: pointer;
+  font-family: inherit;
+  appearance: none; -webkit-appearance: none;
 }
-.addConfirm:hover { background: rgba(160,104,56,0.32); }
+.addSelect:focus { border-color: rgba(160,104,56,0.45); }
+
+.addActions {
+  display: flex; align-items: center; justify-content: flex-end; gap: 8px;
+}
 
 .addCancel {
-  width: 34px; height: 34px; border-radius: 9px;
+  display: inline-flex; align-items: center; gap: 5px;
+  height: 30px; padding: 0 12px; border-radius: 8px;
   border: 1px solid rgba(255,255,255,0.07);
   background: rgba(255,255,255,0.04);
-  color: rgba(255,255,255,0.4); display: flex; align-items: center; justify-content: center;
-  cursor: pointer;
+  color: rgba(255,255,255,0.4); font-size: 12px; cursor: pointer;
+  transition: all 140ms;
 }
-.addCancel:hover { background: rgba(255,255,255,0.08); }
+.addCancel:hover { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.7); }
+
+.addConfirm {
+  height: 30px; padding: 0 16px; border-radius: 8px;
+  border: 1px solid rgba(160,104,56,0.5);
+  background: rgba(160,104,56,0.2);
+  color: rgba(210,160,90,0.95);
+  font-size: 12px; font-weight: 600; cursor: pointer;
+  transition: all 140ms;
+}
+.addConfirm:hover:not(:disabled) { background: rgba(160,104,56,0.3); }
+.addConfirm:disabled { opacity: 0.4; cursor: default; }
 
 /* ── Tabs ───────────────────────────────── */
 .tabs {
@@ -96,64 +128,52 @@
 
 .tab {
   display: inline-flex; align-items: center; gap: 6px;
-  height: 34px; padding: 0 14px;
-  border-radius: 10px 10px 0 0;
+  height: 33px; padding: 0 13px;
+  border-radius: 9px 9px 0 0;
   border: none;
   background: transparent;
-  color: rgba(255,255,255,0.35);
+  color: rgba(255,255,255,0.32);
   font-size: 12px; font-weight: 600;
   cursor: pointer; transition: all 140ms;
   position: relative; bottom: -1px;
 }
-
-.tab:hover { color: rgba(255,255,255,0.65); background: rgba(255,255,255,0.04); }
+.tab:hover { color: rgba(255,255,255,0.6); background: rgba(255,255,255,0.04); }
 
 .tabActive {
   color: rgba(210,160,90,0.95) !important;
-  background: rgba(160,104,56,0.1) !important;
-  border-bottom: 2px solid rgba(160,104,56,0.7) !important;
+  background: rgba(160,104,56,0.09) !important;
+  border-bottom: 2px solid rgba(160,104,56,0.65) !important;
 }
 
 .tabCount {
-  background: rgba(255,255,255,0.1);
-  border-radius: 999px;
-  padding: 0 6px;
-  font-size: 10px;
-  font-weight: 700;
+  background: rgba(255,255,255,0.09);
+  border-radius: 999px; padding: 0 6px;
+  font-size: 10px; font-weight: 700;
 }
-
 .tabActive .tabCount {
-  background: rgba(160,104,56,0.25);
+  background: rgba(160,104,56,0.22);
   color: rgba(210,160,90,0.9);
 }
 
 /* ── Board wrap ─────────────────────────── */
 .boardWrap {
-  flex: 1;
-  min-height: 0;
+  flex: 1; min-height: 0;
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
+  display: flex; flex-direction: column;
 }
 
 /* ── Loading ────────────────────────────── */
 .loading {
   flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 14px;
-  color: rgba(255,255,255,0.3);
-  font-size: 13px;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 14px; color: rgba(255,255,255,0.28); font-size: 13px;
 }
 
 @keyframes spin { to { transform: rotate(360deg); } }
-
 .loadingSpinner {
-  width: 28px; height: 28px;
-  border-radius: 50%;
-  border: 2px solid rgba(255,255,255,0.08);
-  border-top-color: rgba(160,104,56,0.6);
-  animation: spin 0.8s linear infinite;
+  width: 28px; height: 28px; border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.07);
+  border-top-color: rgba(160,104,56,0.55);
+  animation: spin 0.9s linear infinite;
 }

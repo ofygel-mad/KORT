@@ -6,7 +6,7 @@ import type { WorkspaceModalSize, WorkspaceTile, WorkspaceViewport, WorkspaceWid
 export const WORLD_FACTOR = 3;
 
 const DEFAULT_TILE_SIZE: Record<WorkspaceWidgetKind, { width: number; height: number }> = {
-  customers: { width: 260, height: 170 },
+  customers: { width: 280, height: 175 },
   deals:     { width: 260, height: 170 },
   tasks:     { width: 260, height: 170 },
   reports:   { width: 240, height: 155 },
@@ -15,7 +15,7 @@ const DEFAULT_TILE_SIZE: Record<WorkspaceWidgetKind, { width: number; height: nu
 };
 
 const TITLES: Record<WorkspaceWidgetKind, string> = {
-  customers: 'Клиенты',
+  customers: 'Лиды',
   deals:     'Сделки',
   tasks:     'Задачи',
   reports:   'Сводка',
@@ -82,7 +82,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
           y: Math.max(20, visibleCenterY + offsetY),
           width: size.width,
           height: size.height,
-          modalSize: 'default',
+          modalSize: kind === 'customers' ? 'wide' : 'default',
           version: 1,
           createdAt: new Date().toISOString(),
         };

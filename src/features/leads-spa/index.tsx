@@ -1,23 +1,14 @@
 /**
- * leads-spa/index.tsx
- * Entry point — mounted inside the workspace tile modal.
- * Self-contained SPA with its own state, routing and RBAC.
- *
- * ARCHITECTURE:
- *   features/leads-spa/
- *     api/          ← mock now, swap for real fetch later
- *     model/        ← zustand stores (leads, rbac, notifications)
- *     components/   ← board, drawer, handoff, search, notifications
- *     views/        ← QualifierView, CloserView
- *     index.tsx     ← this file (entry, shell, nav)
+ * leads-spa/index.tsx — SPA shell mounted inside the workspace tile modal.
  */
 import { useEffect, useState } from 'react';
-import { Users, Briefcase, CalendarDays, Bell, Search as SearchIcon, Plus, X } from 'lucide-react';
+import { Users, Briefcase, LayoutList, Plus, X, ChevronDown } from 'lucide-react';
 import { useLeadsStore } from './model/leads.store';
 import { useNotifStore } from './model/notifications.store';
 import { useLeadsRbac, canSeeQualifierBoard, canSeeCloserBoard } from './model/rbac.store';
 import { QualifierView } from './views/QualifierView';
 import { CloserView } from './views/CloserView';
+import { AllLeadsView } from './views/AllLeadsView';
 import { LeadDrawer } from './components/drawer/LeadDrawer';
 import { HandoffModal } from './components/handoff/HandoffModal';
 import { GlobalSearch } from './components/search/GlobalSearch';
@@ -26,19 +17,29 @@ import s from './LeadsSPA.module.css';
 
 type NavTab = 'qualifier' | 'closer' | 'all';
 
+const SOURCE_OPTIONS = [
+  { value: 'instagram', label: 'Instagram' },
+  { value: 'site',      label: 'Сайт' },
+  { value: 'referral',  label: 'Реферал' },
+  { value: 'ad',        label: 'Реклама' },
+];
+
 export function LeadsSPA() {
-  const { leads, loading, load } = useLeadsStore();
+  const { leads, loading, load, addLead } = useLeadsStore();
   const { load: loadNotifs } = useNotifStore();
   const { currentRole } = useLeadsRbac();
   const [tab, setTab] = useState<NavTab>('qualifier');
   const [addOpen, setAddOpen] = useState(false);
-  const [newName, setNewName] = useState('');
-  const [newPhone, setNewPhone] = useState('');
-  const { addLead } = useLeadsStore();
+
+  // Add form state
+  const [newName,   setNewName]   = useState('');
+  const [newPhone,  setNewPhone]  = useState('');
+  const [newSource, setNewSource] = useState('instagram');
+  const [newBudget, setNewBudget] = useState('');
+  const [newComment,setNewComment]= useState('');
 
   useEffect(() => { load(); loadNotifs(); }, []);
 
-  // Auto-select visible tab based on role
   useEffect(() => {
     if (!canSeeQualifierBoard(currentRole)) setTab('closer');
   }, [currentRole]);
@@ -48,13 +49,16 @@ export function LeadsSPA() {
 
   const handleAddLead = async () => {
     if (!newName.trim() || !newPhone.trim()) return;
-    await addLead({ fullName: newName.trim(), phone: newPhone.trim() });
-    setNewName(''); setNewPhone(''); setAddOpen(false);
+    await addLead({
+      fullName: newName.trim(),
+      phone: newPhone.trim(),
+      source: newSource,
+      budget: newBudget ? parseInt(newBudget.replace(/\D/g,''), 10) || undefined : undefined,
+      comment: newComment.trim() || undefined,
+    });
+    setNewName(''); setNewPhone(''); setNewBudget(''); setNewComment(''); setNewSource('instagram');
+    setAddOpen(false);
   };
-
-  const tabLeads = tab === 'all' ? leads : tab === 'qualifier'
-    ? leads.filter(l => l.pipeline === 'qualifier')
-    : leads.filter(l => l.pipeline === 'closer');
 
   const counts = {
     qualifier: leads.filter(l => l.pipeline === 'qualifier').length,
@@ -66,10 +70,6 @@ export function LeadsSPA() {
       {/* ── Top bar ─────────────────────────────────────── */}
       <header className={s.topbar}>
         <div className={s.topbarLeft}>
-          <div className={s.brand}>
-            <Users size={15} />
-            <span>Лиды</span>
-          </div>
           <GlobalSearch />
         </div>
         <div className={s.topbarRight}>
@@ -77,17 +77,45 @@ export function LeadsSPA() {
           <button className={s.addBtn} onClick={() => setAddOpen(v => !v)}>
             <Plus size={14} />
             Добавить лида
+            <ChevronDown size={12} style={{ opacity: 0.6, transform: addOpen ? 'rotate(180deg)' : '', transition: 'transform 200ms' }} />
           </button>
         </div>
       </header>
 
-      {/* ── Add lead inline form ─────────────────────── */}
+      {/* ── Add lead expanded form ───────────────────── */}
       {addOpen && (
-        <div className={s.addForm}>
-          <input className={s.addInput} placeholder="Имя" value={newName} onChange={e => setNewName(e.target.value)} />
-          <input className={s.addInput} placeholder="+7 (___) ___-__-__" value={newPhone} onChange={e => setNewPhone(e.target.value)} />
-          <button className={s.addConfirm} onClick={handleAddLead}>Добавить</button>
-          <button className={s.addCancel} onClick={() => setAddOpen(false)}><X size={14} /></button>
+        <div className={s.addPanel}>
+          <div className={s.addPanelTitle}>Новый лид</div>
+          <div className={s.addGrid}>
+            <div className={s.addField}>
+              <label className={s.addLabel}>Имя *</label>
+              <input className={s.addInput} placeholder="Имя клиента" value={newName} onChange={e => setNewName(e.target.value)} />
+            </div>
+            <div className={s.addField}>
+              <label className={s.addLabel}>Телефон *</label>
+              <input className={s.addInput} placeholder="+7 (___) ___-__-__" value={newPhone} onChange={e => setNewPhone(e.target.value)} />
+            </div>
+            <div className={s.addField}>
+              <label className={s.addLabel}>Источник</label>
+              <select className={s.addSelect} value={newSource} onChange={e => setNewSource(e.target.value)}>
+                {SOURCE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            </div>
+            <div className={s.addField}>
+              <label className={s.addLabel}>Бюджет (₸)</label>
+              <input className={s.addInput} placeholder="500 000" value={newBudget} onChange={e => setNewBudget(e.target.value)} />
+            </div>
+            <div className={`${s.addField} ${s.addFieldFull}`}>
+              <label className={s.addLabel}>Первичный комментарий</label>
+              <input className={s.addInput} placeholder="Что хочет клиент, откуда пришёл..." value={newComment} onChange={e => setNewComment(e.target.value)} />
+            </div>
+          </div>
+          <div className={s.addActions}>
+            <button className={s.addCancel} onClick={() => setAddOpen(false)}><X size={13} /> Отмена</button>
+            <button className={s.addConfirm} onClick={handleAddLead} disabled={!newName.trim() || !newPhone.trim()}>
+              Добавить →
+            </button>
+          </div>
         </div>
       )}
 
@@ -107,13 +135,13 @@ export function LeadsSPA() {
         )}
         {showQualifier && showCloser && (
           <button className={`${s.tab} ${tab === 'all' ? s.tabActive : ''}`} onClick={() => setTab('all')}>
-            Все лиды
+            <LayoutList size={13} /> Все лиды
             <span className={s.tabCount}>{leads.length}</span>
           </button>
         )}
       </nav>
 
-      {/* ── Board area ───────────────────────────────── */}
+      {/* ── Board / Table area ───────────────────────── */}
       <div className={s.boardWrap}>
         {loading ? (
           <div className={s.loading}>
@@ -122,13 +150,14 @@ export function LeadsSPA() {
           </div>
         ) : (
           <>
-            {(tab === 'qualifier' || tab === 'all') && showQualifier && <QualifierView leads={tabLeads} />}
-            {(tab === 'closer'    || tab === 'all') && showCloser    && <CloserView leads={tabLeads} />}
+            {tab === 'qualifier' && showQualifier && <QualifierView leads={leads.filter(l => l.pipeline === 'qualifier')} />}
+            {tab === 'closer'    && showCloser    && <CloserView    leads={leads.filter(l => l.pipeline === 'closer')} />}
+            {tab === 'all'                         && <AllLeadsView  leads={leads} />}
           </>
         )}
       </div>
 
-      {/* ── Overlays (drawer, handoff modal) ─────────── */}
+      {/* ── Overlays ─────────────────────────────────── */}
       <LeadDrawer />
       <HandoffModal />
     </div>
