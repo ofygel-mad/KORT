@@ -1,6 +1,6 @@
 import { addDocumentListener } from '../../shared/lib/browser';
 import { useLocation, useNavigate, useMatch } from 'react-router-dom';
-import { Search, ChevronRight, Bell, Sun, Moon, Monitor, ArrowLeft, Shield, ShieldCheck } from 'lucide-react';
+import { Search, ChevronRight, Bell, ArrowLeft, Shield, ShieldCheck } from 'lucide-react';
 import { useCommandPalette } from '../../shared/stores/commandPalette';
 import { useAuthStore } from '../../shared/stores/auth';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -160,7 +160,7 @@ export function Topbar() {
   const navigate  = useNavigate();
   const { toggle } = useCommandPalette();
   const user       = useAuthStore(s => s.user);
-  const { theme, setTheme, adminMode, setAdminMode } = useUIStore();
+  const { adminMode, setAdminMode } = useUIStore();
   const isMobile   = useIsMobile();
   const { locale, setLocale } = useT();
   const { canUseAdminMode } = useCapabilities();
@@ -231,34 +231,6 @@ export function Topbar() {
           {locale === 'ru' ? 'KK' : 'RU'}
         </button>
 
-        {/* Theme switcher */}
-        {isMobile ? (
-          <motion.button
-            className={styles.iconBtn}
-            whileTap={{ scale: 0.9 }}
-            transition={t.fast}
-            onClick={() => setTheme(theme === 'dark' ? 'light' : theme === 'light' ? 'system' : 'dark')}
-            aria-label="Сменить тему"
-          >
-            {theme === 'dark'   ? <Moon size={15} /> :
-             theme === 'light'  ? <Sun  size={15} /> : <Monitor size={15} />}
-          </motion.button>
-        ) : (
-          <div className={styles.themeSwitcher}>
-            {([['light', Sun], ['dark', Moon], ['system', Monitor]] as const).map(([thm, Icon]) => (
-              <motion.button
-                key={thm}
-                className={[styles.themeBtn, theme === thm ? styles.themeActive : ''].join(' ')}
-                onClick={() => setTheme(thm)}
-                whileTap={{ scale: 0.88 }}
-                transition={t.fast}
-                title={{ light: 'Светлая', dark: 'Тёмная', system: 'Системная' }[thm]}
-              >
-                <Icon size={13} strokeWidth={1.75} />
-              </motion.button>
-            ))}
-          </div>
-        )}
 
         {/* Avatar */}
         <button
