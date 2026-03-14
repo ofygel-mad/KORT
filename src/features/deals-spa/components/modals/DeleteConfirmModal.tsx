@@ -1,16 +1,20 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Trash2 } from 'lucide-react';
 import { useDealsStore } from '../../model/deals.store';
+import { useTileDealsUI } from '../../model/tile-ui.store';
 import s from './Modals.module.css';
 
-export function DeleteConfirmModal() {
-  const { deals, deleteConfirmId, closeDeleteConfirm, deleteDeal, closeDrawer } = useDealsStore();
+interface Props { tileId: string; }
+
+export function DeleteConfirmModal({ tileId }: Props) {
+  const { deals, deleteDeal } = useDealsStore();
+  const { deleteConfirmId, closeDeleteConfirm, closeDrawer } = useTileDealsUI(tileId);
   const deal = deals.find(d => d.id === deleteConfirmId);
 
   const handleDelete = async () => {
     if (!deleteConfirmId) return;
     closeDrawer();
-    await deleteDeal(deleteConfirmId);
+    await deleteDeal(deleteConfirmId, closeDeleteConfirm);
   };
 
   return (

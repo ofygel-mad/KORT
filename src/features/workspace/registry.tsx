@@ -23,8 +23,8 @@ export interface WorkspaceWidgetDefinition {
   title: string;
   description: string;
   icon: LucideIcon;
-  renderPreview: (snapshot?: WorkspaceSnapshot, version?: number) => JSX.Element;
-  renderSPA:     (snapshot?: WorkspaceSnapshot, version?: number) => JSX.Element;
+  renderPreview: (snapshot?: WorkspaceSnapshot, version?: number, tileId?: string) => JSX.Element;
+  renderSPA:     (snapshot?: WorkspaceSnapshot, version?: number, tileId?: string) => JSX.Element;
 }
 
 export const WORKSPACE_WIDGETS: WorkspaceWidgetDefinition[] = [
@@ -33,24 +33,24 @@ export const WORKSPACE_WIDGETS: WorkspaceWidgetDefinition[] = [
     title: 'Лиды',
     description: 'CRM воронка: квалификация, передача и закрытие лидов.',
     icon: Users,
-    renderPreview: (_s, v) => <LeadsTilePreview key={v} />,
-    renderSPA:     (_s, v) => <LeadsSPA key={v} />,
+    renderPreview: (_s, v, tid) => <LeadsTilePreview key={v} tileId={tid ?? 'default'} />,
+    renderSPA:     (_s, v, tid) => <LeadsSPA key={v} tileId={tid ?? 'default'} />,
   },
   {
     kind: 'deals',
     title: 'Сделки',
     description: 'Воронка сделок: встречи, КП, договоры, оплаты.',
     icon: Briefcase,
-    renderPreview: (_s, v) => <DealsTilePreview key={v} />,
-    renderSPA:     (_s, v) => <DealsSPA key={v} />,
+    renderPreview: (_s, v, tid) => <DealsTilePreview key={v} tileId={tid ?? 'default'} />,
+    renderSPA:     (_s, v, tid) => <DealsSPA key={v} tileId={tid ?? 'default'} />,
   },
   {
     kind: 'tasks',
     title: 'Задачи',
     description: 'Локальный центр контроля задач. Можно создать сколько угодно копий.',
     icon: CheckSquare,
-    renderPreview: (s, v) => <TasksTilePreview key={v} snapshot={s} />,
-    renderSPA:     (_s, v) => <TasksSPA key={v} />,
+    renderPreview: (s, v, tid) => <TasksTilePreview key={v} snapshot={s} tileId={tid ?? 'default'} />,
+    renderSPA:     (_s, v, tid) => <TasksSPA key={v} tileId={tid ?? 'default'} />,
   },
   {
     kind: 'reports',

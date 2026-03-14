@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Calendar, User, MessageSquare, AlertCircle } from 'lucide-react';
 import { useLeadsStore } from '../../model/leads.store';
+import { useTileLeadsUI } from '../../model/tile-ui.store';
 import s from './Handoff.module.css';
 
 const CLOSERS = [
@@ -9,8 +10,11 @@ const CLOSERS = [
   { id: 'u3', name: 'Алибек Нуров' },
 ];
 
-export function HandoffModal() {
-  const { leads, handoffLeadId, closeHandoff, completeHandoff } = useLeadsStore();
+interface Props { tileId: string; }
+
+export function HandoffModal({ tileId }: Props) {
+  const { leads, completeHandoff } = useLeadsStore();
+  const { handoffLeadId, closeHandoff } = useTileLeadsUI(tileId);
   const lead = leads.find(l => l.id === handoffLeadId);
   const [closerId, setCloserId] = useState('');
   const [meetingAt, setMeetingAt] = useState('');
@@ -24,7 +28,7 @@ export function HandoffModal() {
     if (!comment.trim()) { setError('Оставьте комментарий для передачи'); return; }
     setError('');
     setSubmitting(true);
-    await completeHandoff(handoffLeadId!, closerId, meetingAt, comment);
+    await completeHandoff(handoffLeadId!, closerId, meetingAt, comment, closeHandoff);
     setSubmitting(false);
     setCloserId(''); setMeetingAt(''); setComment('');
   };

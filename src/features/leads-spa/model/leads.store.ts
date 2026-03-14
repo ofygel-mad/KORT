@@ -12,19 +12,18 @@ import type { Lead, LeadStage, QualifierStage, CloserStage } from '../api/types'
 interface LeadsState {
   leads: Lead[];
   loading: boolean;
-  activeLeadId: string | null;
-  drawerOpen: boolean;
-  handoffLeadId: string | null;
 
   load: () => Promise<void>;
   processInboundEvents: () => void;
   moveStage: (id: string, stage: LeadStage, pipeline: 'qualifier' | 'closer') => Promise<void>;
   toggleChecklist: (leadId: string, itemId: string) => Promise<void>;
-  openDrawer: (id: string) => void;
-  closeDrawer: () => void;
-  openHandoff: (id: string) => void;
-  closeHandoff: () => void;
-  completeHandoff: (leadId: string, closerId: string, meetingAt: string, comment: string) => Promise<void>;
+  completeHandoff: (
+    leadId: string,
+    closerId: string,
+    meetingAt: string,
+    comment: string,
+    onDone: () => void,
+  ) => Promise<void>;
   addLead: (data: Partial<Lead>) => Promise<void>;
   addComment: (leadId: string, comment: string, author: string) => Promise<void>;
 }
@@ -32,15 +31,11 @@ interface LeadsState {
 export const useLeadsStore = create<LeadsState>((set, get) => ({
   leads: [],
   loading: false,
-  activeLeadId: null,
-  drawerOpen: false,
-  handoffLeadId: null,
 
   load: async () => {
     set({ loading: true });
     const leads = await leadsApi.getLeads();
     set({ leads, loading: false });
-    // Consume any deal-returned events queued while this SPA wasn't mounted
     get().processInboundEvents();
   },
 
@@ -48,10 +43,8 @@ export const useLeadsStore = create<LeadsState>((set, get) => ({
     const bus = useSharedBus.getState();
     const returned = bus.consumeDealReturned();
     for (const ev of returned) {
-      // Check if this lead still exists in our store (moved to closer pipeline)
       const existing = get().leads.find(l => l.id === ev.leadId);
       if (existing) {
-        // Reset it back to qualifier new stage
         set(s => ({
           leads: s.leads.map(l => l.id === ev.leadId ? {
             ...l, stage: 'new' as QualifierStage, pipeline: 'qualifier',
@@ -66,7 +59,6 @@ export const useLeadsStore = create<LeadsState>((set, get) => ({
           } : l),
         }));
       } else {
-        // Lead not in store — create fresh from event data
         leadsApi.createLead({
           leadId: ev.leadId,
           fullName: ev.fullName,
@@ -83,10 +75,7 @@ export const useLeadsStore = create<LeadsState>((set, get) => ({
   },
 
   moveStage: async (id, stage, pipeline) => {
-    // Optimistic update
-    set(s => ({
-      leads: s.leads.map(l => l.id === id ? { ...l, stage, pipeline, updatedAt: new Date().toISOString() } : l),
-    }));
+    set(s => ({ leads: s.leads.map(l => l.id === id ? { ...l, stage, pipeline, updatedAt: new Date().toISOString() } : l) }));
     await leadsApi.updateLeadStage(id, stage, pipeline);
     await leadsApi.addHistoryEntry(id, {
       author: 'Менеджер', authorRole: 'general',
@@ -109,12 +98,7 @@ export const useLeadsStore = create<LeadsState>((set, get) => ({
     await leadsApi.updateChecklist(leadId, itemId, done);
   },
 
-  openDrawer: (id) => set({ activeLeadId: id, drawerOpen: true }),
-  closeDrawer: () => set({ drawerOpen: false, activeLeadId: null }),
-  openHandoff: (id) => set({ handoffLeadId: id }),
-  closeHandoff: () => set({ handoffLeadId: null }),
-
-  completeHandoff: async (leadId, closerId, meetingAt, comment) => {
+  completeHandoff: async (leadId, closerId, meetingAt, comment, onDone) => {
     const lead = get().leads.find(l => l.id === leadId);
     if (!lead) return;
 
@@ -129,34 +113,31 @@ export const useLeadsStore = create<LeadsState>((set, get) => ({
         }],
         updatedAt: new Date().toISOString(),
       } : l),
-      handoffLeadId: null,
     }));
 
-    // Notify Deals SPA via shared bus
     useSharedBus.getState().publishLeadConverted({
       leadId,
-      fullName:      lead.fullName,
-      phone:         lead.phone,
-      email:         lead.email,
-      companyName:   lead.companyName,
-      source:        lead.source,
-      budget:        lead.budget,
-      assignedName:  closerId,   // closer id used as name placeholder; replace when staff map available
+      fullName: lead.fullName,
+      phone: lead.phone,
+      email: lead.email,
+      companyName: lead.companyName,
+      source: lead.source,
+      budget: lead.budget,
+      assignedName: closerId,
       qualifierName: 'Квалификатор',
       meetingAt,
       comment,
       convertedAt: new Date().toISOString(),
     });
+
+    onDone();
   },
 
   addLead: async (data) => {
     const lead = await leadsApi.createLead(data);
     set(s => ({ leads: [lead, ...s.leads] }));
-
-    // ── Badge: новый лид ────────────────────────────────────────
     useBadgeStore.getState().incrementBadge('customers');
 
-    // ── Global notif → Topbar Bell ─────────────────────────────
     const notif: GlobalNotifEvent = {
       id: crypto.randomUUID(),
       title: 'Новый лид',
@@ -179,8 +160,7 @@ export const useLeadsStore = create<LeadsState>((set, get) => ({
     set(s => ({
       leads: s.leads.map(l => l.id === leadId
         ? { ...l, history: [...l.history, entry], updatedAt: new Date().toISOString() }
-        : l
-      ),
+        : l),
     }));
     await leadsApi.addHistoryEntry(leadId, { author, authorRole: 'general', action: comment, timestamp: entry.timestamp });
   },

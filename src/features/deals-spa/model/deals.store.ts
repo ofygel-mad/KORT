@@ -58,14 +58,6 @@ interface DealsState {
   deals: Deal[];
   loading: boolean;
 
-  // Drawer
-  activeId: string | null;
-  drawerOpen: boolean;
-
-  // Modals
-  lostModalId: string | null;
-  wonModalId: string | null;
-  deleteConfirmId: string | null;
 
   // Actions — data
   load: () => Promise<void>;
@@ -76,30 +68,16 @@ interface DealsState {
   addTask: (dealId: string, title: string, priority: DealTask['priority'], dueAt?: string) => Promise<void>;
   toggleTask: (dealId: string, taskId: string) => Promise<void>;
   toggleChecklist: (dealId: string, itemId: string) => Promise<void>;
-  markLost: (id: string, reason: string, comment: string, returnToLeads: boolean) => Promise<void>;
-  markWon: (id: string, finalValue: number) => Promise<void>;
-  deleteDeal: (id: string) => Promise<void>;
+  markLost: (id: string, reason: string, comment: string, returnToLeads: boolean, onDone?: () => void) => Promise<void>;
+  markWon: (id: string, finalValue: number, onDone?: () => void) => Promise<void>;
+  deleteDeal: (id: string, onDone?: () => void) => Promise<void>;
   createFromLead: (payload: Parameters<typeof dealsApi.createDeal>[0]) => Promise<void>;
 
-  // Actions — UI
-  openDrawer: (id: string) => void;
-  closeDrawer: () => void;
-  openLostModal: (id: string) => void;
-  closeLostModal: () => void;
-  openWonModal: (id: string) => void;
-  closeWonModal: () => void;
-  openDeleteConfirm: (id: string) => void;
-  closeDeleteConfirm: () => void;
 }
 
 export const useDealsStore = create<DealsState>((set, get) => ({
   deals: [],
   loading: false,
-  activeId: null,
-  drawerOpen: false,
-  lostModalId: null,
-  wonModalId: null,
-  deleteConfirmId: null,
 
   load: async () => {
     set({ loading: true });
@@ -234,7 +212,7 @@ export const useDealsStore = create<DealsState>((set, get) => ({
     await dealsApi.toggleChecklist(dealId, itemId, done);
   },
 
-  markLost: async (id, reason, comment, returnToLeads) => {
+  markLost: async (id, reason, comment, returnToLeads, onDone) => {
     const deal = get().deals.find(d => d.id === id);
     if (!deal) return;
     const now = new Date().toISOString();
@@ -252,8 +230,7 @@ export const useDealsStore = create<DealsState>((set, get) => ({
           author: 'Менеджер', createdAt: now,
         }],
       } : d),
-      lostModalId: null,
-    }));
+        }));
 
     if (returnToLeads) {
       useSharedBus.getState().publishDealReturned({
@@ -275,9 +252,10 @@ export const useDealsStore = create<DealsState>((set, get) => ({
       lostAt: now,
     });
     _publishDealsSnapshot(get().deals);
+    onDone?.();
   },
 
-  markWon: async (id, finalValue) => {
+  markWon: async (id, finalValue, onDone) => {
     const now = new Date().toISOString();
     await dealsApi.moveStage(id, 'won');
     await dealsApi.updateDeal(id, { value: finalValue });
@@ -292,8 +270,7 @@ export const useDealsStore = create<DealsState>((set, get) => ({
           author: 'Менеджер', createdAt: now,
         }],
       } : d),
-      wonModalId: null,
-    }));
+        }));
 
     const deal = get().deals.find(d => d.id === id);
     if (deal) {
@@ -303,16 +280,15 @@ export const useDealsStore = create<DealsState>((set, get) => ({
       });
     }
     _publishDealsSnapshot(get().deals);
+    onDone?.();
   },
 
-  deleteDeal: async (id) => {
+  deleteDeal: async (id, onDone) => {
     await dealsApi.deleteDeal(id);
     set(s => ({
       deals: s.deals.filter(d => d.id !== id),
-      deleteConfirmId: null,
-      activeId: s.activeId === id ? null : s.activeId,
-      drawerOpen: s.activeId === id ? false : s.drawerOpen,
     }));
+    onDone?.();
   },
 
   createFromLead: async (payload) => {
@@ -334,12 +310,4 @@ export const useDealsStore = create<DealsState>((set, get) => ({
     useSharedBus.getState().publishGlobalNotif(notif);
   },
 
-  openDrawer:  (id) => set({ activeId: id, drawerOpen: true }),
-  closeDrawer: ()  => set({ drawerOpen: false, activeId: null }),
-  openLostModal:      (id) => set({ lostModalId: id }),
-  closeLostModal:     ()   => set({ lostModalId: null }),
-  openWonModal:       (id) => set({ wonModalId: id }),
-  closeWonModal:      ()   => set({ wonModalId: null }),
-  openDeleteConfirm:  (id) => set({ deleteConfirmId: id }),
-  closeDeleteConfirm: ()   => set({ deleteConfirmId: null }),
 }));

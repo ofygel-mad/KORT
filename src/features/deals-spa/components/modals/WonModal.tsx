@@ -2,10 +2,14 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Trophy } from 'lucide-react';
 import { useDealsStore } from '../../model/deals.store';
+import { useTileDealsUI } from '../../model/tile-ui.store';
 import s from './Modals.module.css';
 
-export function WonModal() {
-  const { deals, wonModalId, closeWonModal, markWon } = useDealsStore();
+interface Props { tileId: string; }
+
+export function WonModal({ tileId }: Props) {
+  const { deals, markWon } = useDealsStore();
+  const { wonModalId, closeWonModal } = useTileDealsUI(tileId);
   const deal = deals.find(d => d.id === wonModalId);
 
   const [value,     setValue]     = useState('');
@@ -22,7 +26,7 @@ export function WonModal() {
   const handleSubmit = async () => {
     const finalValue = parseInt(value.replace(/\D/g, ''), 10) || deal.value;
     setSubmitting(true);
-    await markWon(wonModalId, finalValue);
+    await markWon(wonModalId, finalValue, closeWonModal);
     setSubmitting(false);
     setValue('');
   };

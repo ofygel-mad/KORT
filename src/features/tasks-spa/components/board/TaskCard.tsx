@@ -1,11 +1,10 @@
 /**
  * features/tasks-spa/components/board/TaskCard.tsx
  */
-import { Calendar, Link2, CheckSquare, AlertCircle, User, ChevronRight } from 'lucide-react';
-import { useTasksStore } from '../../model/tasks.store';
+import { Calendar, Link2, CheckSquare, AlertCircle } from 'lucide-react';
 import type { Task } from '../../api/types';
 import {
-  PRIORITY_COLOR, PRIORITY_LABEL, STATUS_COLOR, TAGS,
+  PRIORITY_COLOR, PRIORITY_LABEL, TAGS,
 } from '../../api/types';
 import s from './Board.module.css';
 
@@ -29,21 +28,18 @@ const ENTITY_TYPE_LABEL: Record<string, string> = {
   standalone: '',
 };
 
-export function TaskCard({ task, onDragStart, onDragEnd }: {
+export function TaskCard({ task, onDragStart, onDragEnd, onOpenDrawer }: {
   task: Task;
   onDragStart: () => void;
   onDragEnd: () => void;
+  onOpenDrawer: (id: string) => void;
 }) {
-  const openDrawer = useTasksStore(s => s.openDrawer);
-  const moveStatus = useTasksStore(s => s.moveStatus);
-
   const due = formatDue(task.dueAt);
   const doneSubs = task.subtasks.filter(st => st.done).length;
   const totalSubs = task.subtasks.length;
   const taskTags = TAGS.filter(tg => task.tags.includes(tg.id));
 
   const priorityColor = PRIORITY_COLOR[task.priority];
-  const statusColor = STATUS_COLOR[task.status];
 
   return (
     <div
@@ -51,13 +47,11 @@ export function TaskCard({ task, onDragStart, onDragEnd }: {
       draggable
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
-      onClick={() => openDrawer(task.id)}
+      onClick={() => onOpenDrawer(task.id)}
       style={{ '--priority-color': priorityColor } as React.CSSProperties}
     >
-      {/* Priority stripe */}
       <div className={s.cardPriorityStripe} style={{ background: priorityColor }} />
 
-      {/* Header */}
       <div className={s.cardHeader}>
         <span className={s.cardPriorityBadge} style={{ color: priorityColor }}>
           {task.priority === 'critical' && <AlertCircle size={10} />}
@@ -71,10 +65,8 @@ export function TaskCard({ task, onDragStart, onDragEnd }: {
         )}
       </div>
 
-      {/* Title */}
       <p className={s.cardTitle}>{task.title}</p>
 
-      {/* Tags */}
       {taskTags.length > 0 && (
         <div className={s.cardTags}>
           {taskTags.map(tg => (
@@ -85,7 +77,6 @@ export function TaskCard({ task, onDragStart, onDragEnd }: {
         </div>
       )}
 
-      {/* Footer */}
       <div className={s.cardFooter}>
         <div className={s.cardFooterLeft}>
           {due && (

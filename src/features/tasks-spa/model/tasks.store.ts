@@ -18,21 +18,6 @@ interface TasksState {
   tasks: Task[];
   loading: boolean;
 
-  // UI state
-  activeId: string | null;
-  drawerOpen: boolean;
-  createModalOpen: boolean;
-  /** Pre-fill for create modal (from bus request) */
-  createPreset: Partial<Task> | null;
-
-  // Filters / view
-  viewMode: ViewMode;
-  groupBy: GroupBy;
-  sortBy: SortBy;
-  filterStatus: TaskStatus | 'all';
-  filterAssignee: string | 'all';
-  filterPriority: TaskPriority | 'all';
-  searchQuery: string;
 
   // Actions — data
   load: () => Promise<void>;
@@ -47,43 +32,17 @@ interface TasksState {
   addComment: (taskId: string, content: string, author: string) => Promise<void>;
   deleteTask: (id: string) => Promise<void>;
 
-  // Actions — UI
-  openDrawer: (id: string) => void;
-  closeDrawer: () => void;
-  openCreateModal: (preset?: Partial<Task>) => void;
-  closeCreateModal: () => void;
-  setViewMode: (mode: ViewMode) => void;
-  setGroupBy: (g: GroupBy) => void;
-  setSortBy: (s: SortBy) => void;
-  setFilterStatus: (s: TaskStatus | 'all') => void;
-  setFilterAssignee: (a: string | 'all') => void;
-  setFilterPriority: (p: TaskPriority | 'all') => void;
-  setSearchQuery: (q: string) => void;
 }
 
 export const useTasksStore = create<TasksState>((set, get) => ({
   tasks: [],
   loading: false,
-  activeId: null,
-  drawerOpen: false,
-  createModalOpen: false,
-  createPreset: null,
-
-  viewMode: 'kanban',
-  groupBy: 'status',
-  sortBy: 'dueAt',
-  filterStatus: 'all',
-  filterAssignee: 'all',
-  filterPriority: 'all',
-  searchQuery: '',
-
   // ── Load ──────────────────────────────────────────────────
 
   load: async () => {
     set({ loading: true });
     const tasks = await tasksApi.getTasks();
     set({ tasks, loading: false });
-    get().processInboundEvents();
     get().publishSnapshot();
   },
 
@@ -91,26 +50,9 @@ export const useTasksStore = create<TasksState>((set, get) => ({
 
   processInboundEvents: () => {
     const bus = useSharedBus.getState();
-    const requests = bus.consumeTaskRequests();
-
-    for (const req of requests) {
-      // Open create modal pre-filled with request data
-      const preset: Partial<Task> = {
-        linkedEntity: req.linkedEntityId
-          ? {
-              type: req.linkedEntityType ?? 'standalone',
-              id: req.linkedEntityId,
-              title: req.linkedEntityTitle ?? '',
-            }
-          : undefined,
-        title: req.suggestedTitle ?? '',
-        assignedName: req.suggestedAssignee,
-        dueAt: req.suggestedDueAt,
-        priority: req.priority ?? 'medium',
-      };
-      set({ createModalOpen: true, createPreset: preset });
-    }
+    bus.consumeTaskRequests();
   },
+
 
   // ── Publish snapshot → Summary ────────────────────────────
 
@@ -280,23 +222,8 @@ export const useTasksStore = create<TasksState>((set, get) => ({
 
     set(s => ({
       tasks: s.tasks.filter(t => t.id !== id),
-      activeId: s.activeId === id ? null : s.activeId,
-      drawerOpen: s.activeId === id ? false : s.drawerOpen,
     }));
     get().publishSnapshot();
   },
 
-  // ── UI actions ────────────────────────────────────────────
-
-  openDrawer: (id) => set({ activeId: id, drawerOpen: true }),
-  closeDrawer: () => set({ drawerOpen: false }),
-  openCreateModal: (preset) => set({ createModalOpen: true, createPreset: preset ?? null }),
-  closeCreateModal: () => set({ createModalOpen: false, createPreset: null }),
-  setViewMode: (viewMode) => set({ viewMode }),
-  setGroupBy: (groupBy) => set({ groupBy }),
-  setSortBy: (sortBy) => set({ sortBy }),
-  setFilterStatus: (filterStatus) => set({ filterStatus }),
-  setFilterAssignee: (filterAssignee) => set({ filterAssignee }),
-  setFilterPriority: (filterPriority) => set({ filterPriority }),
-  setSearchQuery: (searchQuery) => set({ searchQuery }),
 }));

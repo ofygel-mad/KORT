@@ -9,6 +9,8 @@ import {
   Filter, SortAsc, RefreshCw,
 } from 'lucide-react';
 import { useTasksStore } from './model/tasks.store';
+import { useTileTasksUI } from './model/tile-ui.store';
+import type { Task } from './api/types';
 import { TaskKanbanBoard }  from './components/board/KanbanBoard';
 import { TaskDrawer }       from './components/drawer/TaskDrawer';
 import { CreateTaskModal }  from './components/modals/CreateTaskModal';
@@ -18,11 +20,14 @@ import {
 } from './api/types';
 import type { TaskPriority, TaskStatus } from './api/types';
 import { ASSIGNEES } from './api/mock';
+import { useSharedBus } from '../shared-bus';
 import s from './TasksSPA.module.css';
 
-export function TasksSPA() {
+interface Props { tileId: string; }
+
+export function TasksSPA({ tileId }: Props) {
+  const { tasks, loading, load } = useTasksStore();
   const {
-    tasks, loading, load, processInboundEvents,
     viewMode, setViewMode,
     groupBy, setGroupBy,
     sortBy, setSortBy,
@@ -31,17 +36,29 @@ export function TasksSPA() {
     filterPriority, setFilterPriority,
     searchQuery, setSearchQuery,
     openCreateModal,
-  } = useTasksStore();
+  } = useTileTasksUI(tileId);
 
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   useEffect(() => { load(); }, []);
 
-  // Poll for incoming bus requests every 2s
+  // Poll bus and open per-tile create modal
   useEffect(() => {
-    const id = setInterval(() => processInboundEvents(), 2000);
+    const id = setInterval(() => {
+      const requests = useSharedBus.getState().consumeTaskRequests();
+      for (const req of requests) {
+        const preset: Partial<Task> = {
+          linkedEntity: req.linkedEntityId ? { type: req.linkedEntityType ?? 'standalone', id: req.linkedEntityId, title: req.linkedEntityTitle ?? '' } : undefined,
+          title: req.suggestedTitle ?? '',
+          assignedName: req.suggestedAssignee,
+          dueAt: req.suggestedDueAt,
+          priority: req.priority ?? 'medium',
+        };
+        openCreateModal(preset);
+      }
+    }, 2000);
     return () => clearInterval(id);
-  }, []);
+  }, [openCreateModal]);
 
   // Quick stats
   const total      = tasks.length;
@@ -186,12 +203,12 @@ export function TasksSPA() {
 
       {/* ── Content ─────────────────────────────────────── */}
       <div className={s.content}>
-        {viewMode === 'kanban' ? <TaskKanbanBoard /> : <ListView />}
+        {viewMode === 'kanban' ? <TaskKanbanBoard tileId={tileId} /> : <ListView tileId={tileId} />}
       </div>
 
       {/* ── Overlays ────────────────────────────────────── */}
-      <TaskDrawer />
-      <CreateTaskModal />
+      <TaskDrawer tileId={tileId} />
+      <CreateTaskModal tileId={tileId} />
     </div>
   );
 }

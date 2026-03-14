@@ -1,5 +1,4 @@
 import { Phone, MessageCircle, Clock, AlertTriangle, MoveRight } from 'lucide-react';
-import { useLeadsStore } from '../../model/leads.store';
 import type { Lead } from '../../api/types';
 import s from './Board.module.css';
 
@@ -7,6 +6,8 @@ interface Props {
   lead: Lead;
   onDragStart: () => void;
   onDragEnd: () => void;
+  onOpenDrawer: (id: string) => void;
+  onOpenHandoff: (id: string) => void;
 }
 
 const SOURCE_LABEL: Record<string, string> = {
@@ -25,9 +26,7 @@ function getLastNote(lead: Lead): string | null {
   return meaningful?.comment ?? (meaningful?.action !== 'Взято в работу' ? meaningful?.action ?? null : null);
 }
 
-export function LeadCard({ lead, onDragStart, onDragEnd }: Props) {
-  const openDrawer  = useLeadsStore(s => s.openDrawer);
-  const openHandoff = useLeadsStore(s => s.openHandoff);
+export function LeadCard({ lead, onDragStart, onDragEnd, onOpenDrawer, onOpenHandoff }: Props) {
   const stale   = isStaleLead(lead);
   const lastNote = getLastNote(lead);
 
@@ -37,7 +36,7 @@ export function LeadCard({ lead, onDragStart, onDragEnd }: Props) {
       draggable
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
-      onClick={() => openDrawer(lead.id)}
+      onClick={() => onOpenDrawer(lead.id)}
     >
       {stale && (
         <div className={s.cardStaleBadge} title="Без движения больше суток">
@@ -82,7 +81,7 @@ export function LeadCard({ lead, onDragStart, onDragEnd }: Props) {
         </button>
         {lead.pipeline === 'qualifier' && (
           <button className={`${s.cardAction} ${s.cardActionMove}`}
-            onClick={e => { e.stopPropagation(); openHandoff(lead.id); }} title="Передать">
+            onClick={e => { e.stopPropagation(); onOpenHandoff(lead.id); }} title="Передать">
             <MoveRight size={13} />
           </button>
         )}

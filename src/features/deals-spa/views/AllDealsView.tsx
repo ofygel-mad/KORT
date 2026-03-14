@@ -1,5 +1,4 @@
 import { useState, useMemo } from 'react';
-import { useDealsStore } from '../model/deals.store';
 import type { Deal, DealStage } from '../api/types';
 import { STAGE_LABEL, STAGE_ACCENT } from '../api/types';
 import s from './AllDeals.module.css';
@@ -22,8 +21,7 @@ function daysAgo(iso: string) {
 type ViewTab = 'active' | 'won' | 'lost';
 type SortKey = 'value' | 'date' | 'probability' | 'name';
 
-export function AllDealsView({ deals }: { deals: Deal[] }) {
-  const openDrawer = useDealsStore(st => st.openDrawer);
+export function AllDealsView({ deals, onOpenDrawer }: { deals: Deal[]; onOpenDrawer: (id: string) => void }) {
   const [tab,     setTab]     = useState<ViewTab>('active');
   const [search,  setSearch]  = useState('');
   const [stage,   setStage]   = useState<DealStage | ''>('');
@@ -172,7 +170,7 @@ export function AllDealsView({ deals }: { deals: Deal[] }) {
               <tr><td colSpan={10} className={s.empty}>Нет сделок</td></tr>
             )}
             {filtered.map(deal => (
-              <tr key={deal.id} className={s.row} onClick={() => openDrawer(deal.id)}>
+              <tr key={deal.id} className={s.row} onClick={() => onOpenDrawer(deal.id)}>
                 <td className={s.td}>
                   <div className={s.avatar}>{deal.fullName[0]}</div>
                 </td>

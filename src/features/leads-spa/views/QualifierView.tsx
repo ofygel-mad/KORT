@@ -11,6 +11,6 @@ const COLUMNS: KanbanColumn[] = [
   { stage:'junk',         pipeline:'qualifier', label:'Брак / Спам',      accent:'#6b7280' },
 ];
 
-export function QualifierView({ leads }: { leads: Lead[] }) {
-  return <KanbanBoard columns={COLUMNS} leads={leads.filter(l => l.pipeline === 'qualifier')} />;
+export function QualifierView({ leads, onOpenDrawer, onOpenHandoff }: { leads: Lead[]; onOpenDrawer: (id: string) => void; onOpenHandoff: (id: string) => void }) {
+  return <KanbanBoard columns={COLUMNS} leads={leads.filter(l => l.pipeline === 'qualifier')} onOpenDrawer={onOpenDrawer} onOpenHandoff={onOpenHandoff} />;
 }

@@ -75,7 +75,7 @@ export function WorkspaceTile({ tile, snapshot }: Props) {
       </div>
       <div className={styles.tileMonitor}>
         <div className={styles.tileMonitorViewport}>
-          {definition.renderPreview(snapshot, tile.version)}
+          {definition.renderPreview(snapshot, tile.version, tile.id)}
         </div>
       </div>
     </div>

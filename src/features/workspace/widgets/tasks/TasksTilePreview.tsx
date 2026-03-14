@@ -1,5 +1,7 @@
 import type { WorkspaceSnapshot } from '../../model/types';
 import styles from '../../components/Workspace.module.css';
+import { useTileTasksUI } from '../../../tasks-spa/model/tile-ui.store';
+import { useTasksStore } from '../../../tasks-spa/model/tasks.store';
 
 const PRIORITY_LABEL: Record<string, string> = {
   high: 'Высокий',
@@ -7,8 +9,11 @@ const PRIORITY_LABEL: Record<string, string> = {
   low: 'Низкий',
 };
 
-export function TasksTilePreview({ snapshot }: { snapshot?: WorkspaceSnapshot }) {
+export function TasksTilePreview({ snapshot, tileId }: { snapshot?: WorkspaceSnapshot; tileId: string }) {
   const rows = snapshot?.todayTasks ?? [];
+  const { activeId } = useTileTasksUI(tileId);
+  const { tasks } = useTasksStore();
+  const activeTask = tasks.find(t => t.id === activeId);
 
   return (
     <div className={styles.previewFrame}>
@@ -17,6 +22,7 @@ export function TasksTilePreview({ snapshot }: { snapshot?: WorkspaceSnapshot })
         <span>Клиент</span>
         <span>Приоритет</span>
       </div>
+      {activeTask && <div className={styles.previewEmpty}>📝 {activeTask.title}</div>}
       <div className={styles.previewBody}>
         {rows.length === 0 ? (
           <div className={styles.previewEmpty}>Сегодня тихо. Даже машины иногда отдыхают.</div>
