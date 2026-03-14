@@ -1,6 +1,6 @@
 .backdrop { position:absolute; inset:0; background:rgba(0,0,0,0.55); backdrop-filter:blur(8px); z-index:40; }
 .shell { position:absolute; inset:0; z-index:41; display:flex; align-items:center; justify-content:center; pointer-events:none; }
-.modal { pointer-events:all; width:min(440px,calc(100% - 32px)); border-radius:20px; border:1px solid rgba(255,255,255,0.1); background:linear-gradient(158deg,#1c1710,#120e09); box-shadow:0 0 0 1px rgba(160,104,56,0.15), 0 40px 80px rgba(0,0,0,0.55); overflow:hidden; }
+.modal { pointer-events:all; width:min(440px,calc(100% - 32px)); border-radius:20px; border:1px solid rgba(255,255,255,0.1); background:linear-gradient(158deg,#1c1710,#120e09); box-shadow:0 0 0 1px rgba(160,104,56,0.15), 0 40px 80px rgba(0,0,0,0.55); overflow:hidden; color-scheme:dark; }
 .header { padding:18px 18px 14px; border-bottom:1px solid rgba(255,255,255,0.07); display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
 .eyebrow { font-size:10px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:rgba(180,120,60,0.8); margin-bottom:4px; }
 .title { font-size:18px; font-weight:800; color:rgba(255,255,255,0.9); }
