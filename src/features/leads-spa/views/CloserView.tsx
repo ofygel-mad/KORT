@@ -12,6 +12,6 @@ const COLUMNS: KanbanColumn[] = [
   { stage:'lost',              pipeline:'closer', label:'Слив на встрече',  accent:'#6b7280' },
 ];
 
-export function CloserView({ leads }: { leads: Lead[] }) {
-  return <KanbanBoard columns={COLUMNS} leads={leads.filter(l => l.pipeline === 'closer')} />;
+export function CloserView({ leads, onOpenDrawer }: { leads: Lead[]; onOpenDrawer: (id: string) => void }) {
+  return <KanbanBoard columns={COLUMNS} leads={leads.filter(l => l.pipeline === 'closer')} onOpenDrawer={onOpenDrawer} onOpenHandoff={() => {}} />;
 }

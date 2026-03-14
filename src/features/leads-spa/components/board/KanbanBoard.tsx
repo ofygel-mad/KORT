@@ -18,18 +18,19 @@ export interface KanbanColumn {
 interface Props {
   columns: KanbanColumn[];
   leads: Lead[];
+  onOpenDrawer: (id: string) => void;
+  onOpenHandoff: (id: string) => void;
 }
 
-export function KanbanBoard({ columns, leads }: Props) {
+export function KanbanBoard({ columns, leads, onOpenDrawer, onOpenHandoff }: Props) {
   const moveStage = useLeadsStore(st => st.moveStage);
-  const openHandoff = useLeadsStore(st => st.openHandoff);
   const [dragId, setDragId] = useState<string | null>(null);
   const [overCol, setOverCol] = useState<LeadStage | null>(null);
 
   const handleDrop = (stage: LeadStage, pipeline: 'qualifier' | 'closer', leadId: string) => {
     if (stage === 'meeting_set' && pipeline === 'qualifier') {
       // Trigger handoff modal instead of moving directly
-      openHandoff(leadId);
+      onOpenHandoff(leadId);
     } else {
       moveStage(leadId, stage, pipeline);
     }
@@ -69,6 +70,8 @@ export function KanbanBoard({ columns, leads }: Props) {
                     lead={lead}
                     onDragStart={() => setDragId(lead.id)}
                     onDragEnd={() => { setDragId(null); setOverCol(null); }}
+                    onOpenDrawer={onOpenDrawer}
+                    onOpenHandoff={onOpenHandoff}
                   />
                 ))
               )}

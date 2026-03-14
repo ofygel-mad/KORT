@@ -1,18 +1,22 @@
 import { useState, useEffect, useRef } from 'react';
 import { Search, X } from 'lucide-react';
-import { useLeadsStore } from '../../model/leads.store';
 import s from './Search.module.css';
 
-export function GlobalSearch() {
+interface Props {
+  leads: { id: string; fullName: string; phone: string; pipeline: string }[];
+  searchQuery: string;
+  setSearchQuery: (q: string) => void;
+  onSelectLead: (id: string) => void;
+}
+
+export function GlobalSearch({ leads, searchQuery, setSearchQuery, onSelectLead }: Props) {
   const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState('');
-  const { leads, openDrawer } = useLeadsStore();
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const results = query.trim().length > 1
+  const results = searchQuery.trim().length > 1
     ? leads.filter(l =>
-        l.fullName.toLowerCase().includes(query.toLowerCase()) ||
-        l.phone.includes(query)
+        l.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        l.phone.includes(searchQuery)
       ).slice(0, 6)
     : [];
 
@@ -21,9 +25,9 @@ export function GlobalSearch() {
   }, [open]);
 
   const handleSelect = (id: string) => {
-    openDrawer(id);
+    onSelectLead(id);
     setOpen(false);
-    setQuery('');
+    setSearchQuery('');
   };
 
   return (
@@ -35,7 +39,7 @@ export function GlobalSearch() {
 
       {open && (
         <>
-          <div className={s.overlay} onClick={() => { setOpen(false); setQuery(''); }} />
+          <div className={s.overlay} onClick={() => { setOpen(false); setSearchQuery(''); }} />
           <div className={s.panel}>
             <div className={s.inputRow}>
               <Search size={15} className={s.inputIcon} />
@@ -43,11 +47,11 @@ export function GlobalSearch() {
                 ref={inputRef}
                 className={s.input}
                 placeholder="Имя или номер телефона"
-                value={query}
-                onChange={e => setQuery(e.target.value)}
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
               />
-              {query && (
-                <button className={s.clearBtn} onClick={() => setQuery('')}><X size={13} /></button>
+              {searchQuery && (
+                <button className={s.clearBtn} onClick={() => setSearchQuery('')}><X size={13} /></button>
               )}
             </div>
             {results.length > 0 && (
@@ -66,7 +70,7 @@ export function GlobalSearch() {
                 ))}
               </div>
             )}
-            {query.length > 1 && results.length === 0 && (
+            {searchQuery.length > 1 && results.length === 0 && (
               <div className={s.noResults}>Ничего не найдено</div>
             )}
           </div>

@@ -4,6 +4,7 @@
  */
 import { useEffect } from 'react';
 import { useDealsStore } from '../../../deals-spa/model/deals.store';
+import { useTileDealsUI } from '../../../deals-spa/model/tile-ui.store';
 import { STAGE_LABEL, STAGE_ACCENT, ACTIVE_STAGES } from '../../../deals-spa/api/types';
 import s from './DealsTilePreview.module.css';
 
@@ -13,8 +14,10 @@ function fmtShort(n: number) {
   return String(n);
 }
 
-export function DealsTilePreview() {
+export function DealsTilePreview({ tileId }: { tileId: string }) {
   const { deals, loading, load } = useDealsStore();
+  const { activeId } = useTileDealsUI(tileId);
+  const activeDeal = deals.find(d => d.id === activeId);
 
   useEffect(() => {
     if (deals.length === 0 && !loading) load();
@@ -65,6 +68,8 @@ export function DealsTilePreview() {
           </div>
         )}
       </div>
+
+      {activeDeal && <div className={s.more}>📄 {activeDeal.fullName}</div>}
 
       {/* Mini pipeline */}
       <div className={s.pipeline}>

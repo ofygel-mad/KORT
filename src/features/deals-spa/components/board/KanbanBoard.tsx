@@ -11,9 +11,9 @@ function fmt(n: number) {
   return n + ' ₸';
 }
 
-interface Props { deals: Deal[] }
+interface Props { deals: Deal[]; onOpenDrawer: (id: string) => void; onOpenLostModal: (id: string) => void; onOpenWonModal: (id: string) => void }
 
-export function DealKanbanBoard({ deals }: Props) {
+export function DealKanbanBoard({ deals, onOpenDrawer, onOpenLostModal, onOpenWonModal }: Props) {
   const moveStage = useDealsStore(st => st.moveStage);
   const [dragId, setDragId] = useState<string | null>(null);
   const [overCol, setOverCol] = useState<DealStage | null>(null);
@@ -63,6 +63,9 @@ export function DealKanbanBoard({ deals }: Props) {
                     deal={deal}
                     onDragStart={() => setDragId(deal.id)}
                     onDragEnd={() => { setDragId(null); setOverCol(null); }}
+                    onOpenDrawer={onOpenDrawer}
+                    onOpenLostModal={onOpenLostModal}
+                    onOpenWonModal={onOpenWonModal}
                   />
                 ))
               }

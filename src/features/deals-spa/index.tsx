@@ -6,6 +6,7 @@
 import { useEffect, useState } from 'react';
 import { Briefcase, LayoutList, Plus, X, ChevronDown } from 'lucide-react';
 import { useDealsStore } from './model/deals.store';
+import { useTileDealsUI } from './model/tile-ui.store';
 import { DealKanbanBoard } from './components/board/KanbanBoard';
 import { DealDrawer } from './components/drawer/DealDrawer';
 import { LostModal } from './components/modals/LostModal';
@@ -14,13 +15,14 @@ import { DeleteConfirmModal } from './components/modals/DeleteConfirmModal';
 import { AllDealsView } from './views/AllDealsView';
 import s from './DealsSPA.module.css';
 
-type NavTab = 'pipeline' | 'all';
 
 const ASSIGNEES = ['Сауле М.', 'Алибек Н.'];
 
-export function DealsSPA() {
+interface Props { tileId: string; }
+
+export function DealsSPA({ tileId }: Props) {
   const { deals, loading, load, createFromLead } = useDealsStore();
-  const [tab,       setTab]       = useState<NavTab>('pipeline');
+  const { currentTab: tab, setTab, openDrawer, openLostModal, openWonModal } = useTileDealsUI(tileId);
   const [addOpen,   setAddOpen]   = useState(false);
 
   // Add form
@@ -154,17 +156,17 @@ export function DealsSPA() {
           </div>
         ) : (
           <>
-            {tab === 'pipeline' && <DealKanbanBoard deals={activeDeals} />}
-            {tab === 'all'      && <AllDealsView deals={deals} />}
+            {tab === 'pipeline' && <DealKanbanBoard deals={activeDeals} onOpenDrawer={openDrawer} onOpenLostModal={openLostModal} onOpenWonModal={openWonModal} />}
+            {tab === 'all'      && <AllDealsView deals={deals} onOpenDrawer={openDrawer} />}
           </>
         )}
       </div>
 
       {/* ── Overlays ─────────────────────────────── */}
-      <DealDrawer />
-      <LostModal />
-      <WonModal />
-      <DeleteConfirmModal />
+      <DealDrawer tileId={tileId} />
+      <LostModal tileId={tileId} />
+      <WonModal tileId={tileId} />
+      <DeleteConfirmModal tileId={tileId} />
     </div>
   );
 }

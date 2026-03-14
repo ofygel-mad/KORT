@@ -1,5 +1,4 @@
 import { Phone, MessageCircle, Trophy, XCircle, Clock, CheckSquare } from 'lucide-react';
-import { useDealsStore } from '../../model/deals.store';
 import type { Deal } from '../../api/types';
 import { STAGE_ACCENT } from '../../api/types';
 import s from './Board.module.css';
@@ -31,14 +30,14 @@ function isOverdue(dueAt?: string): boolean {
   return new Date(dueAt).getTime() < Date.now();
 }
 
-export function DealCard({ deal, onDragStart, onDragEnd }: {
+export function DealCard({ deal, onDragStart, onDragEnd, onOpenDrawer, onOpenLostModal, onOpenWonModal }: {
   deal: Deal;
   onDragStart: () => void;
   onDragEnd: () => void;
+  onOpenDrawer: (id: string) => void;
+  onOpenLostModal: (id: string) => void;
+  onOpenWonModal: (id: string) => void;
 }) {
-  const openDrawer     = useDealsStore(s => s.openDrawer);
-  const openLostModal  = useDealsStore(s => s.openLostModal);
-  const openWonModal   = useDealsStore(s => s.openWonModal);
   const stale  = isStale(deal);
   const days   = daysInStage(deal);
   const task   = nextTask(deal);
@@ -55,7 +54,7 @@ export function DealCard({ deal, onDragStart, onDragEnd }: {
       draggable
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
-      onClick={() => openDrawer(deal.id)}
+      onClick={() => onOpenDrawer(deal.id)}
     >
       {/* Header */}
       <div className={s.cardTop}>
@@ -122,12 +121,12 @@ export function DealCard({ deal, onDragStart, onDragEnd }: {
           <MessageCircle size={12} />
         </button>
         <button className={`${s.cardAction} ${s.cardActionWon}`}
-          onClick={e => { e.stopPropagation(); openWonModal(deal.id); }}
+          onClick={e => { e.stopPropagation(); onOpenWonModal(deal.id); }}
           title="Закрыть как выигранную">
           <Trophy size={12} />
         </button>
         <button className={`${s.cardAction} ${s.cardActionLost}`}
-          onClick={e => { e.stopPropagation(); openLostModal(deal.id); }}
+          onClick={e => { e.stopPropagation(); onOpenLostModal(deal.id); }}
           title="Отметить как проигранную">
           <XCircle size={12} />
         </button>

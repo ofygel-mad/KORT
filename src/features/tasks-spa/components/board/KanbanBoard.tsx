@@ -6,25 +6,21 @@
 import { useRef, useState } from 'react';
 import { Plus } from 'lucide-react';
 import { useTasksStore } from '../../model/tasks.store';
+import { useTileTasksUI } from '../../model/tile-ui.store';
 import { TaskCard } from './TaskCard';
 import { STATUS_LABEL, STATUS_COLOR, STATUS_ORDER } from '../../api/types';
 import type { TaskStatus, Task } from '../../api/types';
 import s from './Board.module.css';
 
-export function TaskKanbanBoard() {
+export function TaskKanbanBoard({ tileId }: { tileId: string }) {
   const tasks       = useTasksStore(st => st.tasks);
   const moveStatus  = useTasksStore(st => st.moveStatus);
-  const openCreate  = useTasksStore(st => st.openCreateModal);
+  const { openCreateModal: openCreate, filterStatus, filterAssignee, filterPriority, searchQuery, openDrawer } = useTileTasksUI(tileId);
 
   const [dragging, setDragging]   = useState<string | null>(null);
   const [overCol,  setOverCol]    = useState<TaskStatus | null>(null);
   const dragTaskRef = useRef<Task | null>(null);
 
-  // Apply filters from store
-  const filterStatus   = useTasksStore(st => st.filterStatus);
-  const filterAssignee = useTasksStore(st => st.filterAssignee);
-  const filterPriority = useTasksStore(st => st.filterPriority);
-  const searchQuery    = useTasksStore(st => st.searchQuery);
 
   const filtered = tasks.filter(t => {
     if (filterStatus   !== 'all' && t.status   !== filterStatus)   return false;
@@ -78,6 +74,7 @@ export function TaskKanbanBoard() {
               <TaskCard
                 key={task.id}
                 task={task}
+                onOpenDrawer={openDrawer}
                 onDragStart={() => { setDragging(task.id); dragTaskRef.current = task; }}
                 onDragEnd={() => { setDragging(null); dragTaskRef.current = null; setOverCol(null); }}
               />

@@ -2,6 +2,9 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { nanoid } from 'nanoid';
 import { useBadgeStore } from '../../shared-bus/badge.store';
+import { clearTileLeadsUI } from '../../leads-spa/model/tile-ui.store';
+import { clearTileDealsUI } from '../../deals-spa/model/tile-ui.store';
+import { clearTileTasksUI } from '../../tasks-spa/model/tile-ui.store';
 import type { WorkspaceModalSize, WorkspaceTile, WorkspaceViewport, WorkspaceWidgetKind } from './types';
 
 export const WORLD_FACTOR = 3;
@@ -100,11 +103,16 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
         tiles: state.tiles.map((t) => (t.id === id ? { ...t, x, y } : t)),
       })),
 
-      removeTile: (id) => set((state) => ({
-        tiles: state.tiles.filter((t) => t.id !== id),
-        activeTileId: state.activeTileId === id ? null : state.activeTileId,
-        settingsTileId: state.settingsTileId === id ? null : state.settingsTileId,
-      })),
+      removeTile: (id) => {
+        clearTileLeadsUI(id);
+        clearTileDealsUI(id);
+        clearTileTasksUI(id);
+        set((state) => ({
+          tiles: state.tiles.filter((t) => t.id !== id),
+          activeTileId: state.activeTileId === id ? null : state.activeTileId,
+          settingsTileId: state.settingsTileId === id ? null : state.settingsTileId,
+        }));
+      },
 
       renameTile: (id, title) => set((state) => ({
         tiles: state.tiles.map((t) => (t.id === id ? { ...t, title: title.trim() || t.title } : t)),

@@ -3,7 +3,6 @@
  * Clean table with filter bar, sortable columns, opens LeadDrawer on row click.
  */
 import { useState, useMemo } from 'react';
-import { useLeadsStore } from '../model/leads.store';
 import type { Lead } from '../api/types';
 import s from './AllLeads.module.css';
 
@@ -57,8 +56,7 @@ const SOURCE_OPTIONS = [
 ];
 
 // ── component ─────────────────────────────────────────────────
-export function AllLeadsView({ leads }: { leads: Lead[] }) {
-  const openDrawer = useLeadsStore(st => st.openDrawer);
+export function AllLeadsView({ leads, onOpenDrawer }: { leads: Lead[]; onOpenDrawer: (id: string) => void }) {
   const [pipeline, setPipeline] = useState('');
   const [source, setSource] = useState('');
   const [search, setSearch] = useState('');
@@ -153,7 +151,7 @@ export function AllLeadsView({ leads }: { leads: Lead[] }) {
               <tr
                 key={lead.id}
                 className={`${s.row} ${isStale(lead) ? s.rowStale : ''}`}
-                onClick={() => openDrawer(lead.id)}
+                onClick={() => onOpenDrawer(lead.id)}
               >
                 <td className={s.td}>
                   <div className={s.avatar}>{lead.fullName[0]}</div>

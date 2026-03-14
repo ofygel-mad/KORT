@@ -5,6 +5,7 @@
 import { useState, useRef } from 'react';
 import { X, Link2, Calendar, User, AlertCircle } from 'lucide-react';
 import { useTasksStore } from '../../model/tasks.store';
+import { useTileTasksUI } from '../../model/tile-ui.store';
 import {
   PRIORITY_LABEL, PRIORITY_COLOR, PRIORITY_ORDER,
   STATUS_LABEL, STATUS_COLOR, STATUS_ORDER,
@@ -26,10 +27,11 @@ function fmtDate(iso?: string) {
   return new Date(iso).toISOString().slice(0, 16);
 }
 
-export function TaskDrawer() {
-  const { tasks, activeId, drawerOpen, closeDrawer,
-          moveStatus, updateTask, addSubtask, toggleSubtask,
-          addComment, deleteTask } = useTasksStore();
+interface Props { tileId: string; }
+
+export function TaskDrawer({ tileId }: Props) {
+  const { tasks, moveStatus, updateTask, addSubtask, toggleSubtask, addComment, deleteTask } = useTasksStore();
+  const { activeId, drawerOpen, closeDrawer } = useTileTasksUI(tileId);
 
   const task = tasks.find(t => t.id === activeId);
   const [commentText, setCommentText] = useState('');

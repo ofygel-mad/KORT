@@ -4,6 +4,7 @@
 import { useEffect, useState } from 'react';
 import { Users, Briefcase, LayoutList, Plus, X, ChevronDown } from 'lucide-react';
 import { useLeadsStore } from './model/leads.store';
+import { useTileLeadsUI } from './model/tile-ui.store';
 import { useNotifStore } from './model/notifications.store';
 import { useLeadsRbac, canSeeQualifierBoard, canSeeCloserBoard } from './model/rbac.store';
 import { QualifierView } from './views/QualifierView';
@@ -15,7 +16,6 @@ import { GlobalSearch } from './components/search/GlobalSearch';
 import { NotificationCenter } from './components/notifications/NotificationCenter';
 import s from './LeadsSPA.module.css';
 
-type NavTab = 'qualifier' | 'closer' | 'all';
 
 const SOURCE_OPTIONS = [
   { value: 'instagram', label: 'Instagram' },
@@ -24,11 +24,13 @@ const SOURCE_OPTIONS = [
   { value: 'ad',        label: 'Реклама' },
 ];
 
-export function LeadsSPA() {
+interface Props { tileId: string; }
+
+export function LeadsSPA({ tileId }: Props) {
   const { leads, loading, load, addLead } = useLeadsStore();
   const { load: loadNotifs } = useNotifStore();
   const { currentRole } = useLeadsRbac();
-  const [tab, setTab] = useState<NavTab>('qualifier');
+  const { currentTab: tab, setTab, searchQuery, setSearch, openDrawer, openHandoff } = useTileLeadsUI(tileId);
   const [addOpen, setAddOpen] = useState(false);
 
   // Add form state
@@ -70,7 +72,7 @@ export function LeadsSPA() {
       {/* ── Top bar ─────────────────────────────────────── */}
       <header className={s.topbar}>
         <div className={s.topbarLeft}>
-          <GlobalSearch />
+          <GlobalSearch leads={leads} searchQuery={searchQuery} setSearchQuery={setSearch} onSelectLead={openDrawer} />
         </div>
         <div className={s.topbarRight}>
           <NotificationCenter />
@@ -150,16 +152,16 @@ export function LeadsSPA() {
           </div>
         ) : (
           <>
-            {tab === 'qualifier' && showQualifier && <QualifierView leads={leads.filter(l => l.pipeline === 'qualifier')} />}
-            {tab === 'closer'    && showCloser    && <CloserView    leads={leads.filter(l => l.pipeline === 'closer')} />}
-            {tab === 'all'                         && <AllLeadsView  leads={leads} />}
+            {tab === 'qualifier' && showQualifier && <QualifierView leads={leads.filter(l => l.pipeline === 'qualifier')} onOpenDrawer={openDrawer} onOpenHandoff={openHandoff} />}
+            {tab === 'closer'    && showCloser    && <CloserView    leads={leads.filter(l => l.pipeline === 'closer')} onOpenDrawer={openDrawer} />}
+            {tab === 'all'                         && <AllLeadsView  leads={leads} onOpenDrawer={openDrawer} />}
           </>
         )}
       </div>
 
       {/* ── Overlays ─────────────────────────────────── */}
-      <LeadDrawer />
-      <HandoffModal />
+      <LeadDrawer tileId={tileId} />
+      <HandoffModal tileId={tileId} />
     </div>
   );
 }

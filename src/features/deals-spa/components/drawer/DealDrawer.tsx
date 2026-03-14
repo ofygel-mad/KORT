@@ -6,6 +6,7 @@ import {
   PhoneCall, Mail, Users as UsersIcon,
 } from 'lucide-react';
 import { useDealsStore } from '../../model/deals.store';
+import { useTileDealsUI } from '../../model/tile-ui.store';
 import { STAGE_LABEL, STAGE_ACCENT, DEAL_CHECKLIST, ACTIVITY_LABEL, ACTIVITY_COLOR } from '../../api/types';
 import type { ActivityType, TaskPriority } from '../../api/types';
 import s from './Drawer.module.css';
@@ -49,12 +50,11 @@ const ACTIVITY_TYPES: { value: ActivityType; label: string }[] = [
 
 // ── Component ─────────────────────────────────────────────────
 
-export function DealDrawer() {
-  const {
-    deals, drawerOpen, activeId, closeDrawer,
-    addActivity, addTask, toggleTask, toggleChecklist,
-    updateDeal, openLostModal, openWonModal, openDeleteConfirm,
-  } = useDealsStore();
+interface Props { tileId: string; }
+
+export function DealDrawer({ tileId }: Props) {
+  const { deals, addActivity, addTask, toggleTask, toggleChecklist, updateDeal } = useDealsStore();
+  const { drawerOpen, activeId, closeDrawer, openLostModal, openWonModal, openDeleteConfirm } = useTileDealsUI(tileId);
 
   const deal = deals.find(d => d.id === activeId);
 

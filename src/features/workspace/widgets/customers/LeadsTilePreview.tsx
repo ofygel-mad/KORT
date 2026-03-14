@@ -5,6 +5,7 @@
  */
 import { useEffect } from 'react';
 import { useLeadsStore } from '../../../leads-spa/model/leads.store';
+import { useTileLeadsUI } from '../../../leads-spa/model/tile-ui.store';
 import s from './LeadsTilePreview.module.css';
 
 const QUALIFIER_COLS = [
@@ -19,8 +20,10 @@ const SOURCE_ICON: Record<string, string> = {
   instagram: 'IG', site: 'WEB', referral: 'REF', ad: 'ADS',
 };
 
-export function LeadsTilePreview() {
+export function LeadsTilePreview({ tileId }: { tileId: string }) {
   const { leads, loading, load } = useLeadsStore();
+  const { activeLeadId } = useTileLeadsUI(tileId);
+  const activeLead = leads.find(l => l.id === activeLeadId);
 
   // Trigger load if store is empty (e.g. tile opened before main SPA)
   useEffect(() => {
@@ -64,6 +67,8 @@ export function LeadsTilePreview() {
           </div>
         )}
       </div>
+
+      {activeLead && <div className={s.moreChip}>👤 {activeLead.fullName}</div>}
 
       {/* ── Mini kanban columns ─────────────── */}
       <div className={s.board}>

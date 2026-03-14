@@ -120,7 +120,7 @@ export function WorkspaceTileModal({ tile, snapshot }: Props) {
 
           {/* SPA content area */}
           <div className={styles.tileModalMonitor}>
-            {definition.renderSPA(snapshot, tile.version)}
+            {definition.renderSPA(snapshot, tile.version, tile.id)}
           </div>
 
           {/* Settings popover — closes on outside click */}

@@ -5,13 +5,17 @@
 import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { useTasksStore } from '../../model/tasks.store';
+import { useTileTasksUI } from '../../model/tile-ui.store';
 import { PRIORITY_ORDER, PRIORITY_LABEL, STATUS_ORDER, STATUS_LABEL, TAGS } from '../../api/types';
 import type { TaskPriority, TaskStatus } from '../../api/types';
 import { ASSIGNEES } from '../../api/mock';
 import s from './Modals.module.css';
 
-export function CreateTaskModal() {
-  const { createModalOpen, createPreset, closeCreateModal, createTask } = useTasksStore();
+interface Props { tileId: string; }
+
+export function CreateTaskModal({ tileId }: Props) {
+  const { createTask } = useTasksStore();
+  const { createModalOpen, createPreset, closeCreateModal } = useTileTasksUI(tileId);
 
   const [title,      setTitle]      = useState('');
   const [desc,       setDesc]       = useState('');
