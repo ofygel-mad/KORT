@@ -1,5 +1,6 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, Users, Briefcase, CheckSquare, MoreHorizontal, Smartphone } from 'lucide-react';
+import { useWorkspaceStore } from '../../features/workspace/model/store';
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { usePwaInstall } from '../../shared/hooks/usePwaInstall';
@@ -7,9 +8,9 @@ import styles from './MobileNav.module.css';
 
 const PRIMARY_NAV = [
   { to: '/', icon: LayoutDashboard, label: 'Главная' },
-  { to: '/customers', icon: Users, label: 'Клиенты' },
-  { to: '/deals', icon: Briefcase, label: 'Сделки' },
-  { to: '/tasks', icon: CheckSquare, label: 'Задачи' },
+  { to: '/customers', icon: Users, label: 'Лиды', kind: 'customers' as const },
+  { to: '/deals', icon: Briefcase, label: 'Сделки', kind: 'deals' as const },
+  { to: '/tasks', icon: CheckSquare, label: 'Задачи', kind: 'tasks' as const },
 ];
 
 const MORE_LABELS: Record<string, string> = {
@@ -23,6 +24,8 @@ const MORE_LABELS: Record<string, string> = {
 export function MobileNav() {
   const [moreOpen, setMoreOpen] = useState(false);
   const { canInstall, install } = usePwaInstall();
+  const navigate = useNavigate();
+  const openWorkspaceTileByKind = useWorkspaceStore((s) => s.openWorkspaceTileByKind);
 
   return (
     <>
@@ -57,8 +60,21 @@ export function MobileNav() {
         )}
       </AnimatePresence>
       <nav className="mobile-nav">
-        {PRIMARY_NAV.map(({ to, icon: Icon, label }) => (
-          <NavLink key={to} to={to} end={to === '/'} className={({ isActive }) => `mobile-nav-item${isActive ? ' active' : ''}`}>
+        {PRIMARY_NAV.map(({ to, icon: Icon, label, kind }) => (
+          <NavLink
+            key={`${label}-${to}`}
+            to={to}
+            end={to === '/'}
+            className={({ isActive }) => `mobile-nav-item${isActive ? ' active' : ''}`}
+            onClick={(e) => {
+              if (!kind) return;
+              e.preventDefault();
+              navigate('/');
+              requestAnimationFrame(() => {
+                openWorkspaceTileByKind(kind);
+              });
+            }}
+          >
             <Icon size={20} strokeWidth={1.75} />
             <span>{label}</span>
           </NavLink>

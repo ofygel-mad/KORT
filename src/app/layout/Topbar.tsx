@@ -172,7 +172,7 @@ function useDynamicCrumb(): { parent: string; parentPath: string; current: strin
     select:   (d: any) => d.title as string,
   });
 
-  if (customerId) return { parent: 'Клиенты', parentPath: '/customers', current: customer ?? '…' };
+  if (customerId) return { parent: 'Лиды', parentPath: '/customers', current: customer ?? '…' };
   if (dealId)     return { parent: 'Сделки',  parentPath: '/deals',     current: deal     ?? '…' };
   if (matchTask)  return { parent: 'Задачи',  parentPath: '/tasks',     current: 'Задача' };
   return null;
@@ -181,7 +181,7 @@ function useDynamicCrumb(): { parent: string; parentPath: string; current: strin
 const BREADCRUMBS: Record<string, string> = {
   '/':           'Главная',
   '/feed':       'Лента',
-  '/customers':  'Клиенты',
+  '/customers':  'Лиды',
   '/deals':      'Сделки',
   '/tasks':      'Задачи',
   '/reports':    'Отчёты',

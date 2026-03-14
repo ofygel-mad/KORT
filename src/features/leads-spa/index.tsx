@@ -30,8 +30,7 @@ export function LeadsSPA({ tileId }: Props) {
   const { leads, loading, load, addLead } = useLeadsStore();
   const { load: loadNotifs } = useNotifStore();
   const { currentRole } = useLeadsRbac();
-  const { currentTab: tab, setTab, openDrawer, openHandoff } = useTileLeadsUI(tileId);
-  const [addOpen, setAddOpen] = useState(false);
+  const { currentTab: tab, setTab, openDrawer, openHandoff, createPanelOpen: addOpen, setCreatePanelOpen } = useTileLeadsUI(tileId);
 
   // Add form state
   const [newName,   setNewName]   = useState('');
@@ -59,7 +58,7 @@ export function LeadsSPA({ tileId }: Props) {
       comment: newComment.trim() || undefined,
     });
     setNewName(''); setNewPhone(''); setNewBudget(''); setNewComment(''); setNewSource('instagram');
-    setAddOpen(false);
+    setCreatePanelOpen(false);
   };
 
   const counts = {
@@ -76,7 +75,7 @@ export function LeadsSPA({ tileId }: Props) {
         </div>
         <div className={s.topbarRight}>
           <NotificationCenter />
-          <button className={s.addBtn} onClick={() => setAddOpen(v => !v)}>
+          <button className={s.addBtn} onClick={() => setCreatePanelOpen(!addOpen)}>
             <Plus size={14} />
             Добавить лида
             <ChevronDown size={12} style={{ opacity: 0.6, transform: addOpen ? 'rotate(180deg)' : '', transition: 'transform 200ms' }} />
@@ -113,7 +112,7 @@ export function LeadsSPA({ tileId }: Props) {
             </div>
           </div>
           <div className={s.addActions}>
-            <button className={s.addCancel} onClick={() => setAddOpen(false)}><X size={13} /> Отмена</button>
+            <button className={s.addCancel} onClick={() => setCreatePanelOpen(false)}><X size={13} /> Отмена</button>
             <button className={s.addConfirm} onClick={handleAddLead} disabled={!newName.trim() || !newPhone.trim()}>
               Добавить →
             </button>

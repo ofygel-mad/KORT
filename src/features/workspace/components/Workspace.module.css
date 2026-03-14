@@ -759,9 +759,45 @@
    ═══════════════════════════════════════════════ */
 @media (max-width: 980px) {
   .menuGrid { grid-template-columns: 1fr; }
+  .tileModalShell {
+    align-items: stretch;
+    justify-content: stretch;
+    padding: 0;
+  }
   .tileModalDefault, .tileModalCompact, .tileModalWide {
-    width: calc(100vw - 10px);
-    height: calc(100vh - 10px);
-    border-radius: 16px;
+    width: 100vw;
+    max-width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 0;
+    margin: 0;
+  }
+  .tileModalHeader {
+    padding: calc(8px + env(safe-area-inset-top, 0px)) 10px 8px;
+    gap: 8px;
+  }
+  .tileIdentity {
+    min-width: 0;
+    overflow: hidden;
+  }
+  .tileModalTitle {
+    font-size: 14px;
+  }
+  .tileModalSubtitle {
+    display: none;
+  }
+  .tileModalActions {
+    gap: 4px;
+  }
+  .tileModalMonitor {
+    min-height: 0;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 56px);
+  }
+  .tileSettingsPopover {
+    right: 10px;
+    top: 54px;
+    width: min(300px, calc(100vw - 20px));
   }
 }

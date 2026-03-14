@@ -35,7 +35,8 @@ interface WorkspaceStore {
   activeTileId: string | null;
   settingsTileId: string | null;
   recentTileId: string | null;
-  addTile: (kind: WorkspaceWidgetKind) => void;
+  addTile: (kind: WorkspaceWidgetKind) => string;
+  openWorkspaceTileByKind: (kind: WorkspaceWidgetKind, opts?: { createIfMissing?: boolean }) => string | null;
   alignTilesToGrid: () => void;
   setTilePosition: (id: string, x: number, y: number) => void;
   removeTile: (id: string) => void;
@@ -98,6 +99,27 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
         setTimeout(() => {
           set((s) => (s.recentTileId === id ? { recentTileId: null } : {}));
         }, 3000);
+
+        return id;
+      },
+
+      openWorkspaceTileByKind: (kind, opts) => {
+        const createIfMissing = opts?.createIfMissing ?? true;
+        const state = get();
+        const existing = state.tiles
+          .filter((tile) => tile.kind === kind)
+          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+
+        if (existing) {
+          state.openTile(existing.id);
+          return existing.id;
+        }
+
+        if (!createIfMissing) return null;
+
+        const newTileId = state.addTile(kind);
+        get().openTile(newTileId);
+        return newTileId;
       },
 
       alignTilesToGrid: () => {

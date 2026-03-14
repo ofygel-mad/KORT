@@ -2,33 +2,56 @@ import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Plus, Users, Briefcase, CheckSquare, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useUIStore } from '../stores/ui';
 import { useCapabilities } from '../hooks/useCapabilities';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { getNavigator } from '../lib/browser';
+import { useSharedBus } from '../../features/shared-bus';
+import { useWorkspaceStore } from '../../features/workspace/model/store';
+import { setTileLeadsCreatePanelOpen } from '../../features/leads-spa/model/tile-ui.store';
+import { setTileDealsCreatePanelOpen } from '../../features/deals-spa/model/tile-ui.store';
 import s from './MobileFab.module.css';
 
 const ACTIONS = [
-  { icon: <Users size={18} />, label: 'Клиент', path: '/customers', capability: 'customers:write', run: (api: ReturnType<typeof useUIStore.getState>) => api.openCreateCustomer() },
-  { icon: <Briefcase size={18} />, label: 'Сделка', path: '/deals', capability: 'deals:write', run: (api: ReturnType<typeof useUIStore.getState>) => api.openCreateDeal() },
-  { icon: <CheckSquare size={18} />, label: 'Задача', path: '/tasks', capability: 'tasks:write', run: (api: ReturnType<typeof useUIStore.getState>) => api.openCreateTask() },
+  { icon: <Users size={18} />, label: 'Лид', capability: 'customers:write', kind: 'customers' as const },
+  { icon: <Briefcase size={18} />, label: 'Сделка', capability: 'deals:write', kind: 'deals' as const },
+  { icon: <CheckSquare size={18} />, label: 'Задача', capability: 'tasks:write', kind: 'tasks' as const },
 ] as const;
 
 export function MobileFab() {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
-  const ui = useUIStore();
   const { can } = useCapabilities();
   const nav = getNavigator();
   const visibleActions = ACTIONS.filter((action) => can(action.capability));
+  const openWorkspaceTileByKind = useWorkspaceStore((s) => s.openWorkspaceTileByKind);
 
   if (!isMobile || visibleActions.length === 0) return null;
 
   function handleAction(action: typeof ACTIONS[number]) {
     setOpen(false);
-    navigate(action.path);
-    setTimeout(() => action.run(ui), 100);
+    navigate('/');
+
+    requestAnimationFrame(() => {
+      const tileId = openWorkspaceTileByKind(action.kind);
+      if (!tileId) return;
+
+      if (action.kind === 'customers') {
+        setTileLeadsCreatePanelOpen(tileId, true);
+        return;
+      }
+      if (action.kind === 'deals') {
+        setTileDealsCreatePanelOpen(tileId, true);
+        return;
+      }
+
+      useSharedBus.getState().publishTaskRequest({
+        sourceSpа: 'standalone',
+        suggestedTitle: '',
+        priority: 'medium',
+      });
+    });
+
     if (nav && 'vibrate' in nav) nav.vibrate(8);
   }
 
