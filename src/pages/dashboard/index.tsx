@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Layers } from 'lucide-react';
+import { Plus, Layers, LayoutGrid } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { WorkspaceCanvas } from '../../features/workspace/components/WorkspaceCanvas';
 import { WorkspaceAddMenu } from '../../features/workspace/components/WorkspaceAddMenu';
@@ -11,6 +11,7 @@ export default function DashboardPage() {
   const [menuOpen,  setMenuOpen]  = useState(false);
   const [themeOpen, setThemeOpen] = useState(false);
   const addTile = useWorkspaceStore((s) => s.addTile);
+  const alignTilesToGrid = useWorkspaceStore((s) => s.alignTilesToGrid);
 
   return (
     <div className={styles.dashRoot}>
@@ -29,23 +30,38 @@ export default function DashboardPage() {
           <Layers size={16} />
         </motion.button>
 
-        {/* Create tile FAB */}
-        <motion.button
-          className={`${styles.fab} ${menuOpen ? styles.fabActive : ''}`}
-          onClick={() => setMenuOpen((v) => !v)}
-          whileHover={{ scale: 1.03 }}
-          whileTap={{ scale: 0.95 }}
-          aria-label="Создать плитку"
-        >
-          <motion.span
-            animate={{ rotate: menuOpen ? 45 : 0 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 28 }}
-            style={{ display: 'flex' }}
+        <div className={styles.fabStack}>
+          <motion.button
+            className={styles.fab}
+            onClick={alignTilesToGrid}
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.95 }}
+            aria-label="Выровнять"
           >
-            <Plus size={17} strokeWidth={2.5} />
-          </motion.span>
-          <span className={styles.fabLabel}>Создать плитку</span>
-        </motion.button>
+            <span style={{ display: 'flex' }}>
+              <LayoutGrid size={17} strokeWidth={2.5} />
+            </span>
+            <span className={styles.fabLabel}>Выровнять</span>
+          </motion.button>
+
+          {/* Create tile FAB */}
+          <motion.button
+            className={`${styles.fab} ${menuOpen ? styles.fabActive : ''}`}
+            onClick={() => setMenuOpen((v) => !v)}
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.95 }}
+            aria-label="Создать плитку"
+          >
+            <motion.span
+              animate={{ rotate: menuOpen ? 45 : 0 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 28 }}
+              style={{ display: 'flex' }}
+            >
+              <Plus size={17} strokeWidth={2.5} />
+            </motion.span>
+            <span className={styles.fabLabel}>Создать плитку</span>
+          </motion.button>
+        </div>
       </div>
 
       <WorkspaceAddMenu

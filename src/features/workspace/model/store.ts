@@ -36,6 +36,7 @@ interface WorkspaceStore {
   settingsTileId: string | null;
   recentTileId: string | null;
   addTile: (kind: WorkspaceWidgetKind) => void;
+  alignTilesToGrid: () => void;
   setTilePosition: (id: string, x: number, y: number) => void;
   removeTile: (id: string) => void;
   renameTile: (id: string, title: string) => void;
@@ -97,6 +98,33 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
         setTimeout(() => {
           set((s) => (s.recentTileId === id ? { recentTileId: null } : {}));
         }, 3000);
+      },
+
+      alignTilesToGrid: () => {
+        const { tiles, viewport, viewportSize } = get();
+        if (!tiles.length || viewportSize.width <= 0 || viewportSize.height <= 0) return;
+
+        const maxTileWidth = Math.max(...tiles.map((tile) => tile.width));
+        const maxTileHeight = Math.max(...tiles.map((tile) => tile.height));
+        const gap = 24;
+        const outerPadding = 20;
+        const colWidth = maxTileWidth + gap;
+        const rowHeight = maxTileHeight + gap;
+        const columns = Math.max(1, Math.floor((viewportSize.width - outerPadding * 2 + gap) / colWidth));
+        const worldWidth = viewportSize.width * WORLD_FACTOR;
+        const worldHeight = viewportSize.height * WORLD_FACTOR;
+        const startX = clamp(-viewport.x + outerPadding, 0, Math.max(0, worldWidth - maxTileWidth));
+        const startY = clamp(-viewport.y + outerPadding, 0, Math.max(0, worldHeight - maxTileHeight));
+
+        set((state) => ({
+          tiles: state.tiles.map((tile, index) => {
+            const column = index % columns;
+            const row = Math.floor(index / columns);
+            const x = clamp(startX + column * colWidth, 0, Math.max(0, worldWidth - tile.width));
+            const y = clamp(startY + row * rowHeight, 0, Math.max(0, worldHeight - tile.height));
+            return { ...tile, x, y };
+          }),
+        }));
       },
 
       setTilePosition: (id, x, y) => set((state) => ({
