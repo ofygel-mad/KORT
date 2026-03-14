@@ -583,6 +583,7 @@ header, nav, main, aside, section, article,
   background:var(--input-bg); font-size:var(--text-size-md); font-family:var(--font-body);
   color:var(--input-text); outline:none; width:100%;
   transition:border-color var(--transition-fast),box-shadow var(--transition-fast);
+  color-scheme: light;
 }
 .kort-input:hover  { border-color:var(--input-border-hover); }
 .kort-input:focus  { border-color:var(--input-border-focus); box-shadow:var(--shadow-focus); }
@@ -604,8 +605,15 @@ header, nav, main, aside, section, article,
   appearance:none; font-size:var(--text-size-md); font-family:var(--font-body);
   color:var(--input-text); outline:none; width:100%; cursor:pointer;
   transition:border-color var(--transition-fast),box-shadow var(--transition-fast);
+  color-scheme: light;
 }
 .kort-select:focus { border-color:var(--input-border-focus); box-shadow:var(--shadow-focus); }
+
+/* Dark theme overrides for native selects */
+[data-theme="dark"] .kort-input,
+[data-theme="dark"] .kort-select {
+  color-scheme: dark;
+}
 
 /* ═══════════════════════════════════════════════════════════════════════
    SURFACE CLASSES

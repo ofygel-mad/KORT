@@ -270,27 +270,34 @@
 
 .inlineSelect {
   height: 30px;
-  padding: 0 6px;
+  padding: 0 24px 0 6px;
   border: 1px solid var(--border-default);
   border-radius: var(--radius-sm);
-  background: var(--bg-surface);
+  background: var(--bg-surface)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%236B7280' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat right 6px center;
   color: var(--text-primary);
   font-size: 12px;
   font-family: var(--font-body);
   outline: none;
   cursor: pointer;
+  appearance: none;
+  color-scheme: light dark;
 }
 
 .inviteSelect {
   height: 36px;
-  padding: 0 8px;
+  padding: 0 28px 0 8px;
   border: 1px solid var(--border-default);
   border-radius: var(--radius-md);
-  background: var(--bg-surface);
+  background: var(--bg-surface)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%236B7280' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat right 8px center;
   color: var(--text-primary);
   font-size: 12px;
   font-family: var(--font-body);
   outline: none;
+  appearance: none;
+  cursor: pointer;
+  color-scheme: light dark;
 }
 
 .iconButton {
