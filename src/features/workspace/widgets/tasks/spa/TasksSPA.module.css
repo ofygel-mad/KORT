@@ -91,7 +91,9 @@
 .formInput:focus { border-color:rgba(255,255,255,0.25); }
 .formTextarea { font-size:13px; color:#d1d5db; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:9px 11px; outline:none; resize:vertical; line-height:1.5; font-family:inherit; transition:border-color 140ms; }
 .formTextarea:focus { border-color:rgba(255,255,255,0.2); }
-.formSelect { font-size:13px; color:#e5e7eb; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:9px 11px; outline:none; cursor:pointer; -webkit-appearance:none; }
+.formSelect { font-size:13px; color:#e5e7eb; background:#1e1e26; border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:9px 11px; outline:none; cursor:pointer; -webkit-appearance:none; color-scheme:dark; }
+.formSelect option { background:#1e1e26; color:#e5e7eb; }
+.formSelect:focus { border-color:rgba(255,255,255,0.25); }
 
 /* Timer section */
 .timerSection { padding:12px 20px 0; display:flex; flex-direction:column; gap:8px; }
