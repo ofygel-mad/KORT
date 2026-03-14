@@ -16,7 +16,7 @@ export function AuthShell() {
       <div className={styles.brand}>
         {/* Logo pinned top-left */}
         <div className={styles.brandLogo}>
-          <KortLogo size={36} />
+          <KortLogo size={44} />
           <span className={styles.brandLogoName}>Kort</span>
         </div>
 
