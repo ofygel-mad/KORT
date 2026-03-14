@@ -11,7 +11,6 @@ import {
 } from 'lucide-react';
 import { useTasksStore }  from '../../../../tasks-spa/model/tasks.store';
 import { useTileTasksUI } from '../../../../tasks-spa/model/tile-ui.store';
-import { useSharedBus } from '../../../../shared-bus';
 import { PRIORITY_META_MAP, TASK_TYPE_LABEL, TASK_TYPE_ICON } from './tasksMeta';
 import type { Task, TaskType, TaskPriority } from '../../../../tasks-spa/api/types';
 import s from './TasksSPA.module.css';
@@ -27,7 +26,7 @@ function formatCountdown(deadline: string): { label: string; overdue: boolean } 
   return { label: `${sec}с`, overdue: false };
 }
 
-interface CreateModalProps { tileId: string; onClose: () => void; preset?: Partial<Task> | null; }
+interface CreateModalProps { tileId: string; onClose: () => void; preset?: any; }
 
 function CreateModal({ onClose, preset }: CreateModalProps) {
   const createTask = useTasksStore(state => state.createTask);
