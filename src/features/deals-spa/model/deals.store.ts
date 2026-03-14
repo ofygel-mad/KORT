@@ -5,6 +5,8 @@
 import { create } from 'zustand';
 import { dealsApi } from '../api/mock';
 import { useSharedBus } from '../../shared-bus';
+import { useBadgeStore } from '../../shared-bus/badge.store';
+import type { GlobalNotifEvent } from '../../shared-bus';
 import type { Deal, DealStage, DealActivity, DealTask, ActivityType } from '../api/types';
 import { STAGE_PROBABILITY, STAGE_LABEL } from '../api/types';
 
@@ -316,6 +318,20 @@ export const useDealsStore = create<DealsState>((set, get) => ({
   createFromLead: async (payload) => {
     const deal = await dealsApi.createDeal(payload);
     set(s => ({ deals: [deal, ...s.deals] }));
+
+    // ── Badge: новая сделка в воронке ────────────────────────────
+    useBadgeStore.getState().incrementBadge('deals');
+
+    // ── Global notif → Topbar Bell ─────────────────────────────
+    const notif: GlobalNotifEvent = {
+      id: crypto.randomUUID(),
+      title: 'Новая сделка',
+      body: deal.title ?? deal.fullName,
+      kind: 'success',
+      source: 'deals',
+      createdAt: new Date().toISOString(),
+    };
+    useSharedBus.getState().publishGlobalNotif(notif);
   },
 
   openDrawer:  (id) => set({ activeId: id, drawerOpen: true }),

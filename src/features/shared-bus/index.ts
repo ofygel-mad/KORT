@@ -109,6 +109,19 @@ export interface TaskDoneEvent {
   doneAt: string;
 }
 
+/** Любой SPA → Topbar Bell: показать уведомление в колокольчике */
+export interface GlobalNotifEvent {
+  id: string;
+  title: string;
+  body: string;
+  /** 'info' | 'success' | 'warning' | 'error' */
+  kind: 'info' | 'success' | 'warning' | 'error';
+  /** ISO timestamp */
+  createdAt: string;
+  /** Источник для иконки */
+  source: 'leads' | 'deals' | 'tasks' | 'system';
+}
+
 /**
  * Snapshot: любое SPA публикует статистический слепок своих данных.
  * Summary-SPA подписана на снэпшоты всех источников.
@@ -160,6 +173,7 @@ interface SharedBusState {
   taskRequestQueue:   TaskRequestEvent[];
   taskDoneQueue:      TaskDoneEvent[];
   snapshotQueue:      SpaSnapshot[];
+  globalNotifQueue: GlobalNotifEvent[];
 
   // ── Publishers ────────────────────────────────────────────
   publishLeadConverted: (ev: LeadConvertedEvent) => void;
@@ -169,6 +183,7 @@ interface SharedBusState {
   publishTaskRequest:   (ev: TaskRequestEvent)    => void;
   publishTaskDone:      (ev: TaskDoneEvent)        => void;
   publishSnapshot:      (snap: SpaSnapshot)       => void;
+  publishGlobalNotif: (ev: GlobalNotifEvent) => void;
 
   // ── Consumers (drain queue → return consumed items) ───────
   consumeLeadConverted: () => LeadConvertedEvent[];
@@ -178,6 +193,7 @@ interface SharedBusState {
   consumeTaskRequests:  () => TaskRequestEvent[];
   consumeTaskDone:      () => TaskDoneEvent[];
   consumeSnapshots:     () => SpaSnapshot[];
+  consumeGlobalNotifs: () => GlobalNotifEvent[];
 }
 
 export const useSharedBus = create<SharedBusState>((set, get) => ({
@@ -188,6 +204,7 @@ export const useSharedBus = create<SharedBusState>((set, get) => ({
   taskRequestQueue:   [],
   taskDoneQueue:      [],
   snapshotQueue:      [],
+  globalNotifQueue: [],
 
   publishLeadConverted: (ev) =>
     set(s => ({ leadConvertedQueue: [...s.leadConvertedQueue, ev] })),
@@ -203,6 +220,8 @@ export const useSharedBus = create<SharedBusState>((set, get) => ({
     set(s => ({ taskDoneQueue: [...s.taskDoneQueue, ev] })),
   publishSnapshot: (snap) =>
     set(s => ({ snapshotQueue: [...s.snapshotQueue, snap] })),
+  publishGlobalNotif: (ev) =>
+    set(s => ({ globalNotifQueue: [...s.globalNotifQueue, ev] })),
 
   consumeLeadConverted: () => {
     const items = get().leadConvertedQueue;
@@ -237,6 +256,11 @@ export const useSharedBus = create<SharedBusState>((set, get) => ({
   consumeSnapshots: () => {
     const items = get().snapshotQueue;
     set({ snapshotQueue: [] });
+    return items;
+  },
+  consumeGlobalNotifs: () => {
+    const items = get().globalNotifQueue;
+    set({ globalNotifQueue: [] });
     return items;
   },
 }));

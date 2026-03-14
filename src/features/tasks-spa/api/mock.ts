@@ -29,6 +29,9 @@ const _tasks: Task[] = [
   {
     id: 't1',
     title: 'Отправить КП Нурлану Касымову',
+    taskType: 'manual',
+    timerEnabled: false,
+    timerWarning: false,
     description: 'Подготовить и отправить коммерческое предложение на 2-комнатную квартиру в ЖК «Алатау».',
     status: 'in_progress',
     priority: 'high',
@@ -53,6 +56,9 @@ const _tasks: Task[] = [
   {
     id: 't2',
     title: 'Перезвонить Мадине Нурлановой',
+    taskType: 'manual',
+    timerEnabled: false,
+    timerWarning: false,
     description: 'Клиент просил перезвонить после 14:00. Уточнить актуальность заявки.',
     status: 'todo',
     priority: 'critical',
@@ -71,6 +77,9 @@ const _tasks: Task[] = [
   {
     id: 't3',
     title: 'Подписать договор с Гульнарой Бековой',
+    taskType: 'manual',
+    timerEnabled: false,
+    timerWarning: false,
     description: 'Согласовать время встречи, распечатать 2 экземпляра договора.',
     status: 'review',
     priority: 'high',
@@ -95,6 +104,9 @@ const _tasks: Task[] = [
   {
     id: 't4',
     title: 'Отчёт по сделкам за март',
+    taskType: 'manual',
+    timerEnabled: false,
+    timerWarning: false,
     description: 'Подготовить итоговый отчёт: выигранные, проигранные, в воронке.',
     status: 'todo',
     priority: 'medium',
@@ -110,6 +122,9 @@ const _tasks: Task[] = [
   {
     id: 't5',
     title: 'Провести встречу с Ерланом Жумабековым',
+    taskType: 'manual',
+    timerEnabled: false,
+    timerWarning: false,
     description: 'Показ объекта. Маршрут выслан клиенту в WhatsApp.',
     status: 'done',
     priority: 'high',
@@ -137,6 +152,9 @@ const _tasks: Task[] = [
   {
     id: 't6',
     title: 'Выставить счёт Тимуру Смагулову',
+    taskType: 'manual',
+    timerEnabled: false,
+    timerWarning: false,
     description: 'После согласования договора — выставить счёт на предоплату 30%.',
     status: 'todo',
     priority: 'high',
@@ -153,6 +171,9 @@ const _tasks: Task[] = [
   {
     id: 't7',
     title: 'Обновить базу объектов',
+    taskType: 'manual',
+    timerEnabled: false,
+    timerWarning: false,
     description: 'Загрузить новые планировки ЖК «Сункар» (фото + характеристики).',
     status: 'in_progress',
     priority: 'low',
@@ -175,6 +196,9 @@ const _tasks: Task[] = [
   {
     id: 't8',
     title: 'Follow-up: Алия Тасбулатова после встречи',
+    taskType: 'manual',
+    timerEnabled: false,
+    timerWarning: false,
     description: 'Отправить спасибо за встречу + презентацию объектов на e-mail.',
     status: 'done',
     priority: 'medium',
@@ -205,8 +229,12 @@ export const tasksApi = {
   createTask: async (data: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'activities'>): Promise<Task> => {
     await delay(120);
     const now = new Date().toISOString();
+    const payload = data as Partial<Task>;
     const task: Task = {
-      ...data,
+      taskType: 'manual',
+      timerEnabled: false,
+      timerWarning: false,
+      ...payload,
       id: nanoid(),
       createdAt: now,
       updatedAt: now,

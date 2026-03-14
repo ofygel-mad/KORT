@@ -5,6 +5,8 @@
 import { create } from 'zustand';
 import { leadsApi } from '../api/mock';
 import { useSharedBus } from '../../shared-bus';
+import { useBadgeStore } from '../../shared-bus/badge.store';
+import type { GlobalNotifEvent } from '../../shared-bus';
 import type { Lead, LeadStage, QualifierStage, CloserStage } from '../api/types';
 
 interface LeadsState {
@@ -150,6 +152,20 @@ export const useLeadsStore = create<LeadsState>((set, get) => ({
   addLead: async (data) => {
     const lead = await leadsApi.createLead(data);
     set(s => ({ leads: [lead, ...s.leads] }));
+
+    // ── Badge: новый лид ────────────────────────────────────────
+    useBadgeStore.getState().incrementBadge('customers');
+
+    // ── Global notif → Topbar Bell ─────────────────────────────
+    const notif: GlobalNotifEvent = {
+      id: crypto.randomUUID(),
+      title: 'Новый лид',
+      body: lead.fullName,
+      kind: 'info',
+      source: 'leads',
+      createdAt: new Date().toISOString(),
+    };
+    useSharedBus.getState().publishGlobalNotif(notif);
   },
 
   addComment: async (leadId, comment, author) => {

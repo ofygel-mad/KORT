@@ -81,6 +81,23 @@ export const TAGS = [
   { id: 'payment',  label: 'Оплата',      color: '#ec4899' },
 ];
 
+
+// ── Task type (вид задачи) ────────────────────────────────────
+
+export type TaskType = 'call' | 'callback' | 'manual';
+
+export const TASK_TYPE_LABEL: Record<TaskType, string> = {
+  call:     'Звонок',
+  callback: 'Перезвонить',
+  manual:   'Задача вручную',
+};
+
+export const TASK_TYPE_ICON: Record<TaskType, string> = {
+  call:     '📞',
+  callback: '🔄',
+  manual:   '✏️',
+};
+
 // ── Main Task type ────────────────────────────────────────────
 
 export interface Task {
@@ -116,6 +133,21 @@ export interface Task {
 
   // Recurrence (future extension point)
   recurrence?: 'none' | 'daily' | 'weekly' | 'monthly';
+
+  // Task type
+  taskType: TaskType;
+
+  // Manual note / attachment text
+  note?: string;
+
+  // Timer
+  timerEnabled: boolean;
+  /** ISO — deadline for the timer countdown. Required when timerEnabled=true */
+  timerDeadline?: string;
+  /** true = red pulsing critical warning; false = calm single notification */
+  timerWarning: boolean;
+  /** Set to true once the timer notification has fired to avoid repeats */
+  timerFired?: boolean;
 }
 
 // ── View grouping ─────────────────────────────────────────────
