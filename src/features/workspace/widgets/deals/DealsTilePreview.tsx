@@ -1,6 +1,8 @@
 /**
- * DealsTilePreview — live mini-pipeline from deals store.
- * Shows stage columns with deal counts + weighted value.
+ * DealsTilePreview — живой экран-превью сделок.
+ *
+ * РЕЖИМ DRAWER: drawer открыт → мини-карточка сделки
+ * РЕЖИМ BOARD:  drawer закрыт → мини-пайплайн + активный таб
  */
 import { useEffect } from 'react';
 import { useDealsStore } from '../../../deals-spa/model/deals.store';
@@ -14,9 +16,15 @@ function fmtShort(n: number) {
   return String(n);
 }
 
+const TAB_LABELS: Record<string, string> = {
+  pipeline: 'Пайплайн',
+  all: 'Все',
+};
+
 export function DealsTilePreview({ tileId }: { tileId: string }) {
   const { deals, loading, load } = useDealsStore();
-  const { activeId } = useTileDealsUI(tileId);
+  // ↓ читаем ВСЕ нужные поля из tile-ui.store
+  const { activeId, drawerOpen, currentTab } = useTileDealsUI(tileId);
   const activeDeal = deals.find(d => d.id === activeId);
 
   useEffect(() => {
@@ -24,14 +32,14 @@ export function DealsTilePreview({ tileId }: { tileId: string }) {
   }, []);
 
   const active = deals.filter(d => d.stage !== 'won' && d.stage !== 'lost');
-  const won    = deals.filter(d => d.stage === 'won');
+  const won = deals.filter(d => d.stage === 'won');
   const totalWeighted = active.reduce((a, d) => a + d.value * (d.probability / 100), 0);
 
   if (loading && deals.length === 0) {
     return (
       <div className={s.root}>
         <div className={s.shimmer}>
-          {[1,2,3,4].map(i => (
+          {[1, 2, 3, 4].map(i => (
             <div key={i} className={s.shimCol}>
               <div className={s.shimHdr} />
               <div className={s.shimCard} />
@@ -42,8 +50,91 @@ export function DealsTilePreview({ tileId }: { tileId: string }) {
     );
   }
 
+  // ══════════════════════════════════════════════════════════
+  //  РЕЖИМ 1: DRAWER ОТКРЫТ — мини-карточка сделки
+  // ══════════════════════════════════════════════════════════
+  if (drawerOpen && activeDeal) {
+    const accent = STAGE_ACCENT[activeDeal.stage] ?? '#6b7280';
+    const stageLabel = STAGE_LABEL[activeDeal.stage] ?? activeDeal.stage;
+    const lastActivity = activeDeal.activities?.[activeDeal.activities.length - 1];
+
+    return (
+      <div className={s.root}>
+        {/* Индикатор экрана */}
+        <div className={s.screenBadge}>
+          <span className={s.screenDot} />
+          <span className={s.screenLabel}>Карточка сделки</span>
+        </div>
+
+        <div className={s.drawerPreview}>
+          {/* Шапка */}
+          <div className={s.drawerHeader}>
+            <div className={s.drawerAvatar}>{activeDeal.fullName[0]}</div>
+            <div className={s.drawerMeta}>
+              <div className={s.drawerName}>{activeDeal.fullName}</div>
+              <span
+                className={s.drawerStage}
+                style={{ color: accent, borderColor: `${accent}55` }}
+              >
+                {stageLabel}
+              </span>
+            </div>
+          </div>
+
+          {/* Сумма + вероятность */}
+          <div className={s.drawerRow}>
+            <span className={s.drawerRowLabel}>Сумма</span>
+            <span className={s.drawerRowValue} style={{ color: 'rgba(134,239,172,0.85)' }}>
+              {fmtShort(activeDeal.value)} ₸
+            </span>
+          </div>
+          <div className={s.drawerRow}>
+            <span className={s.drawerRowLabel}>Вероятность</span>
+            <span className={s.drawerRowValue}>{activeDeal.probability}%</span>
+          </div>
+
+          {/* Мини-полоска вероятности */}
+          <div className={s.probTrack}>
+            <div
+              className={s.probFill}
+              style={{
+                width: `${activeDeal.probability}%`,
+                background:
+                  activeDeal.probability >= 75 ? '#22c55e' :
+                    activeDeal.probability >= 45 ? '#f59e0b' : '#ef4444',
+              }}
+            />
+          </div>
+
+          {/* Последнее activity */}
+          {lastActivity && (
+            <div className={s.drawerEvent}>
+              <span className={s.drawerEventDot} />
+              <span className={s.drawerEventText}>{lastActivity.content}</span>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════
+  //  РЕЖИМ 2: BOARD — мини-пайплайн + таб-индикатор
+  // ══════════════════════════════════════════════════════════
   return (
     <div className={s.root}>
+      {/* Таб-индикатор */}
+      <div className={s.tabBar}>
+        {(['pipeline', 'all'] as const).map(tab => (
+          <span
+            key={tab}
+            className={`${s.tabPill} ${currentTab === tab ? s.tabPillActive : ''}`}
+          >
+            {TAB_LABELS[tab]}
+          </span>
+        ))}
+      </div>
+
       {/* Stats bar */}
       <div className={s.statsBar}>
         <div className={s.chip}>
@@ -69,15 +160,17 @@ export function DealsTilePreview({ tileId }: { tileId: string }) {
         )}
       </div>
 
-      {activeDeal && <div className={s.more}>📄 {activeDeal.fullName}</div>}
-
       {/* Mini pipeline */}
       <div className={s.pipeline}>
         {ACTIVE_STAGES.map(stage => {
           const col = active.filter(d => d.stage === stage);
           const colVal = col.reduce((a, d) => a + d.value * (d.probability / 100), 0);
           return (
-            <div key={stage} className={s.col} style={{ '--acc': STAGE_ACCENT[stage] } as React.CSSProperties}>
+            <div
+              key={stage}
+              className={s.col}
+              style={{ '--acc': STAGE_ACCENT[stage] } as React.CSSProperties}
+            >
               <div className={s.colTop}>
                 <span className={s.dot} style={{ background: STAGE_ACCENT[stage] }} />
                 <span className={s.colLabel}>{STAGE_LABEL[stage]}</span>
@@ -89,22 +182,32 @@ export function DealsTilePreview({ tileId }: { tileId: string }) {
               <div className={s.cards}>
                 {col.length === 0 ? (
                   <div className={s.emptyCol} />
-                ) : col.slice(0, 2).map(deal => (
-                  <div key={deal.id} className={s.card}>
-                    <div className={s.cardAv}>{deal.fullName[0]}</div>
-                    <div className={s.cardInfo}>
-                      <div className={s.cardName}>{deal.fullName.split(' ')[0]}</div>
-                      <div className={s.cardAmt}>{fmtShort(deal.value)} ₸</div>
+                ) : (
+                  col.slice(0, 2).map(deal => (
+                    <div
+                      key={deal.id}
+                      // ↓ подсвечиваем последнюю просмотренную сделку
+                      className={`${s.card} ${deal.id === activeId ? s.cardActive : ''}`}
+                    >
+                      <div className={s.cardAv}>{deal.fullName[0]}</div>
+                      <div className={s.cardInfo}>
+                        <div className={s.cardName}>{deal.fullName.split(' ')[0]}</div>
+                        <div className={s.cardAmt}>{fmtShort(deal.value)} ₸</div>
+                      </div>
+                      <div className={s.miniBar}>
+                        <div
+                          className={s.miniBarFill}
+                          style={{
+                            width: `${deal.probability}%`,
+                            background:
+                              deal.probability >= 75 ? '#22c55e' :
+                                deal.probability >= 45 ? '#f59e0b' : '#ef4444',
+                          }}
+                        />
+                      </div>
                     </div>
-                    {/* Micro probability bar */}
-                    <div className={s.miniBar}>
-                      <div className={s.miniBarFill} style={{
-                        width: `${deal.probability}%`,
-                        background: deal.probability >= 75 ? '#22c55e' : deal.probability >= 45 ? '#f59e0b' : '#ef4444',
-                      }} />
-                    </div>
-                  </div>
-                ))}
+                  ))
+                )}
                 {col.length > 2 && (
                   <div className={s.more}>+{col.length - 2}</div>
                 )}
