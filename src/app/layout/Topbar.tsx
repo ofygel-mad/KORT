@@ -227,7 +227,7 @@ export function Topbar() {
           </button>
         )}
         <nav className={styles.breadcrumb} aria-label="breadcrumb">
-          {!isMobile && <span className={styles.crumbRoot}>Kort</span>}
+          {!isMobile && <span className={styles.crumbRoot}>KORT</span>}
           {!isMobile && <ChevronRight size={12} className={styles.crumbSep} />}
 
           {dynamic ? (

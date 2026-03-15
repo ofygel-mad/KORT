@@ -98,7 +98,7 @@ export default function AdminPage() {
     mutationFn: (mode: string) => api.patch('/organization/', { mode }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['organization'] });
-      toast.success('Режим Kort обновлён');
+      toast.success('Режим KORT обновлён');
       reloadWindow();
     },
     onError: (e: any) => toast.error(e?.response?.data?.detail ?? 'Ошибка'),
