@@ -9,7 +9,7 @@ interface KortLogoProps {
 export function KortLogo({ size = 32, style }: KortLogoProps) {
   return (
     <img
-      src="/logo1.ico"
+      src="/logo2.ico"
       alt="Kort"
       width={size}
       height={size}

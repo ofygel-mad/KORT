@@ -1,7 +1,34 @@
 .root {
+  position: relative;
   display: flex;
   min-height: 100vh;
-  background: radial-gradient(circle at top right, var(--brand-accent-glow) 0%, transparent 26%), var(--bg-canvas);
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--brand-accent-glow) 70%, transparent) 0%, transparent 24%),
+    radial-gradient(circle at 12% 18%, color-mix(in srgb, var(--fill-accent) 12%, transparent) 0%, transparent 22%),
+    var(--bg-canvas);
+  isolation: isolate;
+}
+
+.ambientGlow,
+.ambientGrid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.ambientGlow {
+  background: radial-gradient(circle at center, color-mix(in srgb, var(--fill-accent) 6%, transparent), transparent 52%);
+  filter: blur(34px);
+  opacity: 0.8;
+}
+
+.ambientGrid {
+  opacity: 0.08;
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--text-primary) 18%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--text-primary) 18%, transparent) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: linear-gradient(180deg, rgba(255,255,255,0.4), transparent 88%);
 }
 
 .sidebarRail {

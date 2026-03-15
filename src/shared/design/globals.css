@@ -526,6 +526,19 @@ body {
   line-height: 1.5;
   min-height: 100vh;
 }
+
+body[data-cursor='enhanced'],
+body[data-cursor='enhanced'] a,
+body[data-cursor='enhanced'] button,
+body[data-cursor='enhanced'] [role="button"],
+body[data-cursor='enhanced'] input,
+body[data-cursor='enhanced'] textarea,
+body[data-cursor='enhanced'] select,
+body[data-cursor='enhanced'] summary,
+body[data-cursor='enhanced'] label {
+  cursor: none !important;
+}
+
 button,input,textarea,select { font:inherit; }
 * { -webkit-tap-highlight-color:transparent; }
 

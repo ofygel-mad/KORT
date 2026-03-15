@@ -16,10 +16,9 @@ import { FocusMode } from '../../widgets/focus-mode/FocusMode';
 import { SmartSuggestions } from '../../widgets/smart-suggestions/SmartSuggestions';
 import { useIsMobile } from '../../shared/hooks/useIsMobile';
 import { useAuthStore } from '../../shared/stores/auth';
-import { api } from '../../shared/api/client';
 import { MobileFab } from '../../shared/ui/MobileFab';
 import { AiAssistant } from '../../widgets/ai-assistant/AiAssistant';
-import { resolveOnboardingCompleted } from '../../shared/lib/auth';
+import { EditorialCursor } from '../../shared/ui/EditorialCursor';
 import { CreateCustomerDrawer } from '../../features/quick-actions/CreateCustomerDrawer';
 import { CreateDealDrawer } from '../../features/quick-actions/CreateDealDrawer';
 import { useCapabilities } from '../../shared/hooks/useCapabilities';
@@ -67,27 +66,8 @@ export function AppShell() {
   const isMobile = useIsMobile();
   const location = useLocation();
   const navigate = useNavigate();
-  const { setAuth, clearAuth, org: currentOrg, token, refreshToken } = useAuthStore();
+  const { org: currentOrg } = useAuthStore();
 
-  useEffect(() => {
-    api.get<any>('/auth/me')
-      .then((data) => {
-        const onboardingCompleted = resolveOnboardingCompleted(data, currentOrg?.onboarding_completed ?? false);
-        setAuth(
-          data.user,
-          { ...data.org, onboarding_completed: onboardingCompleted },
-          token!,
-          refreshToken!,
-          data.capabilities ?? [],
-          data.role ?? 'viewer',
-        );
-        if (!onboardingCompleted && location.pathname !== '/onboarding') navigate('/onboarding', { replace: true });
-      })
-      .catch(() => {
-        clearAuth();
-        navigate('/auth/login', { replace: true });
-      });
-  }, [clearAuth, currentOrg?.onboarding_completed, location.pathname, navigate, refreshToken, setAuth, token]);
 
   useKeyboardShortcuts({
     ...(can('customers:write') ? { n: () => openCreateCustomer() } : {}),
@@ -112,6 +92,9 @@ export function AppShell() {
 
   return (
     <div className={styles.root}>
+      <EditorialCursor />
+      <div className={styles.ambientGlow} aria-hidden="true" />
+      <div className={styles.ambientGrid} aria-hidden="true" />
       <OfflineBanner />
       {!isMobile && (
         <motion.div className={styles.sidebarRail} animate={{ width: sidebarW }} transition={{ type: 'spring', stiffness: 320, damping: 32 }}>
