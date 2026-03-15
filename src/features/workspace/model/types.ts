@@ -18,6 +18,13 @@ export interface WorkspaceTile {
   modalSize: WorkspaceModalSize;
   version: number;
   createdAt: string;
+  pinned?: boolean;
+  zIndex?: number;
+}
+
+export interface FabPosition {
+  x: number;
+  y: number;
 }
 
 export interface WorkspaceSnapshot {
