@@ -8,6 +8,7 @@ export function EditorialCursor() {
   const outerRef = useRef<HTMLDivElement>(null);
   const innerRef = useRef<HTMLDivElement>(null);
   const rafRef   = useRef(0);
+  const hoveredClickableRef = useRef<Element | null>(null);
   const target   = useRef({ x: -200, y: -200 });
   const current  = useRef({ x: -200, y: -200 });
   const [active,  setActive]  = useState(false);
@@ -18,42 +19,53 @@ export function EditorialCursor() {
     if (!window.matchMedia('(pointer: fine)').matches) return;
     document.body.dataset.cursor = 'enhanced';
 
-    const onMove = (e: MouseEvent) => {
-      target.current.x = e.clientX;
-      target.current.y = e.clientY;
-      const el = e.target instanceof Element ? e.target.closest(CLICKABLE) : null;
+    const updateHoverState = (el: Element | null) => {
       setActive(Boolean(el));
       setCompact(Boolean(el?.closest('input, textarea, select')));
       // Метка только если явно задана через data-cursor-label — не дефолтный "Open"
       setLabel(el?.getAttribute('data-cursor-label') ?? '');
     };
 
+    const onMove = (e: MouseEvent) => {
+      target.current.x = e.clientX;
+      target.current.y = e.clientY;
+    };
+
+    const onHover = (e: MouseEvent) => {
+      const el = e.target instanceof Element ? e.target.closest(CLICKABLE) : null;
+      if (hoveredClickableRef.current !== el) {
+        hoveredClickableRef.current = el;
+        updateHoverState(el);
+      }
+    };
+
     const onLeave = () => {
+      hoveredClickableRef.current = null;
       target.current = { x: -200, y: -200 };
-      setActive(false);
+      updateHoverState(null);
     };
 
     const loop = () => {
       current.current.x += (target.current.x - current.current.x) * 0.16;
       current.current.y += (target.current.y - current.current.y) * 0.16;
-      outerRef.current?.style.setProperty(
-        'transform', `translate3d(${current.current.x}px,${current.current.y}px,0)`
-      );
-      innerRef.current?.style.setProperty(
-        'transform', `translate3d(${target.current.x}px,${target.current.y}px,0)`
-      );
+      if (outerRef.current) {
+        outerRef.current.style.transform = `translate3d(${current.current.x}px,${current.current.y}px,0)`;
+      }
+      if (innerRef.current) {
+        innerRef.current.style.transform = `translate3d(${target.current.x}px,${target.current.y}px,0)`;
+      }
       rafRef.current = requestAnimationFrame(loop);
     };
 
     window.addEventListener('mousemove', onMove, { passive: true });
-    window.addEventListener('mouseover', onMove, { passive: true });
+    window.addEventListener('mouseover', onHover, { passive: true });
     document.addEventListener('mouseleave', onLeave, { passive: true });
     rafRef.current = requestAnimationFrame(loop);
 
     return () => {
       delete document.body.dataset.cursor;
       window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('mouseover', onMove);
+      window.removeEventListener('mouseover', onHover);
       document.removeEventListener('mouseleave', onLeave);
       cancelAnimationFrame(rafRef.current);
     };
