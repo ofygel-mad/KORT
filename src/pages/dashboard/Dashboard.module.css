@@ -422,7 +422,7 @@ button:focus-visible {
   right: 20px;
   z-index: 60;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
 }
 
