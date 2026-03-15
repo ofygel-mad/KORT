@@ -1,0 +1,228 @@
+/* ═══════════════════════════════════════════════════════════════
+   KORT — LaunchScreen v3  ·  Data Interface Edition
+   Cold blue labels × Warm amber core
+═══════════════════════════════════════════════════════════════ */
+
+.root {
+  position: fixed;
+  inset: 0;
+  background: #070605;
+  overflow: hidden;
+  z-index: 9999;
+}
+
+.mount {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* ── Logo ─────────────────────────────────────────────────── */
+.logo {
+  position: absolute;
+  top: 28px; left: 36px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: opacity 1.0s ease .3s, transform 1.0s cubic-bezier(.22,1,.36,1) .3s;
+}
+.logoIn { opacity: 1; transform: translateY(0); }
+
+.logoName {
+  font-family: var(--font-display, 'Plus Jakarta Sans', sans-serif);
+  font-size: 22px; font-weight: 700; letter-spacing: .04em;
+  color: rgba(242, 220, 172, .92);
+}
+
+/* ── DATA LABELS (CSS overlays positioned by Three.js projection) */
+.dataLabel {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  pointer-events: none;
+  transition: opacity .1s linear;
+}
+
+/* Label name line — cold blue, high contrast against amber scene */
+.lName {
+  display: block;
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  color: #62B4FF;
+  text-shadow:
+    0 0 10px rgba(98, 180, 255, .70),
+    0 0 22px rgba(98, 180, 255, .35);
+  white-space: nowrap;
+}
+
+/* Meta line — ID + sync percentage */
+.lMeta {
+  display: block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8.5px;
+  letter-spacing: .16em;
+  color: rgba(98, 180, 255, .45);
+  white-space: nowrap;
+}
+
+/* Coordinates line */
+.lCoord {
+  display: block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 7.5px;
+  letter-spacing: .12em;
+  color: rgba(98, 180, 255, .25);
+  white-space: nowrap;
+}
+
+/* ── Button wrapper ──────────────────────────────────────── */
+.btnWrap {
+  position: absolute;
+  top: calc(50% + 84px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  opacity: 0;
+  transition: opacity 1.4s ease .65s;
+}
+.btnWrapIn { opacity: 1; }
+
+/* ── Launch button ───────────────────────────────────────── */
+.btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 152px; height: 46px;
+  border: none; border-radius: 23px;
+  background: linear-gradient(
+    160deg,
+    rgba(252,188,65,.97)  0%,
+    rgba(210,140,30,.99) 45%,
+    rgba(164,104,18,.95) 100%
+  );
+  box-shadow:
+    0 0 0 1px rgba(255,195,90,.38),
+    0 0 24px 7px rgba(230,155,36,.36),
+    0 0 64px 16px rgba(208,125,22,.15),
+    inset 0 1px 0 rgba(255,245,198,.34),
+    inset 0 -1px 0 rgba(90,40,0,.24);
+  cursor: pointer; overflow: visible;
+  animation: hb 1.90s cubic-bezier(.36,.07,.19,.97) infinite;
+  transition: box-shadow .28s ease, transform .20s ease;
+  will-change: transform;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn:hover:not(:disabled) {
+  box-shadow:
+    0 0 0 1px rgba(255,218,105,.56),
+    0 0 38px 12px rgba(248,175,48,.54),
+    0 0 90px 24px rgba(232,150,30,.26),
+    inset 0 1px 0 rgba(255,252,220,.46),
+    inset 0 -1px 0 rgba(90,40,0,.18);
+  transform: scale(1.050);
+}
+.btn:active:not(:disabled) { transform: scale(.964); }
+.btn:disabled { cursor: default; }
+
+/* ECG double-pulse heartbeat */
+@keyframes hb {
+  0%   { transform:scale(1.000); box-shadow:0 0 0 1px rgba(255,195,90,.38),0 0 24px 7px rgba(230,155,36,.36),0 0 64px 16px rgba(208,125,22,.15),inset 0 1px 0 rgba(255,245,198,.34),inset 0 -1px 0 rgba(90,40,0,.24); }
+  6%   { transform:scale(1.070); box-shadow:0 0 0 1px rgba(255,218,105,.55),0 0 36px 11px rgba(248,175,48,.55),0 0 92px 22px rgba(232,148,28,.26),inset 0 1px 0 rgba(255,252,220,.44),inset 0 -1px 0 rgba(90,40,0,.18); }
+  13%  { transform:scale(1.010); }
+  20%  { transform:scale(1.098); box-shadow:0 0 0 1px rgba(255,228,118,.62),0 0 48px 15px rgba(252,185,55,.62),0 0 110px 30px rgba(240,158,32,.32),inset 0 1px 0 rgba(255,254,228,.52),inset 0 -1px 0 rgba(90,40,0,.14); }
+  35%  { transform:scale(1.000); box-shadow:0 0 0 1px rgba(255,195,90,.38),0 0 24px 7px rgba(230,155,36,.36),0 0 64px 16px rgba(208,125,22,.15),inset 0 1px 0 rgba(255,245,198,.34),inset 0 -1px 0 rgba(90,40,0,.24); }
+  100% { transform:scale(1.000); box-shadow:0 0 0 1px rgba(255,195,90,.38),0 0 24px 7px rgba(230,155,36,.36),0 0 64px 16px rgba(208,125,22,.15),inset 0 1px 0 rgba(255,245,198,.34),inset 0 -1px 0 rgba(90,40,0,.24); }
+}
+
+.btnFiring {
+  animation: none !important;
+  pointer-events: none;
+  opacity: 0;
+  transform: scale(1.14) !important;
+  transition: opacity .44s ease, transform .44s cubic-bezier(.22,1,.36,1) !important;
+}
+
+/* ── Three expanding pulse rings ─────────────────────────── */
+.ring1, .ring2, .ring3 {
+  position: absolute; inset: -2px;
+  border-radius: 25px;
+  border: 1px solid rgba(255, 195, 76, .46);
+  animation: ringOut 1.90s ease-out infinite;
+  pointer-events: none;
+}
+.ring2 { inset: -3px; border-color: rgba(255,195,76,.24); animation-delay: .633s; }
+.ring3 { inset: -4px; border-color: rgba(255,195,76,.11); animation-delay: 1.266s; }
+
+@keyframes ringOut {
+  0%   { transform: scale(1.00); opacity: .92; }
+  65%  { transform: scale(1.68); opacity: .00; }
+  100% { transform: scale(1.68); opacity: .00; }
+}
+
+/* ── Button label ────────────────────────────────────────── */
+.btnLabel {
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-size: 13px; font-weight: 500;
+  letter-spacing: .26em; text-transform: uppercase;
+  color: rgba(255, 248, 222, .97);
+  text-shadow: 0 0 14px rgba(255,232,158,.55), 0 1px 2px rgba(70,25,0,.32);
+  position: relative; z-index: 1;
+  user-select: none;
+}
+
+/* ── Sub caption ─────────────────────────────────────────── */
+.sub {
+  margin: 0;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; letter-spacing: .20em; text-transform: uppercase;
+  color: rgba(180, 142, 80, .46);
+  transition: opacity .40s ease;
+}
+.subHide { opacity: 0; }
+
+/* ── Amber flash (implode burst) ────────────────────────── */
+.flash {
+  position: absolute; inset: 0;
+  background: radial-gradient(
+    ellipse 68% 58% at 50% 46%,
+    rgba(255,232,158,1.00)  0%,
+    rgba(248,180,68, .92)  20%,
+    rgba(196,115,26, .64)  50%,
+    rgba(7,  6,  5,  .20) 100%
+  );
+  pointer-events: none; z-index: 20;
+}
+
+/* ── Final curtain ───────────────────────────────────────── */
+.curtain {
+  position: absolute; inset: 0;
+  background: #070605; z-index: 30;
+  animation: curtainIn .58s ease forwards;
+}
+@keyframes curtainIn { from{opacity:0} to{opacity:1} }
+
+/* ── Responsive ─────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .logo { top: 20px; left: 20px; }
+  .logoName { font-size: 18px; }
+  .btn { width: 136px; height: 42px; }
+  .btnLabel { font-size: 11px; letter-spacing: .22em; }
+  .lName  { font-size: 9px; }
+  .lMeta  { font-size: 7.5px; }
+  .lCoord { display: none; }
+}
