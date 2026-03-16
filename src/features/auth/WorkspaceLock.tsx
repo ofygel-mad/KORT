@@ -247,7 +247,7 @@ export function WorkspaceLock({ onUnlocked }: WorkspaceLockProps) {
         </AnimatePresence>
       </motion.div>
 
-      <AuthModal open={modalOpen} onClose={() => setModalOpen(false)} onSuccess={handleAuthSuccess} />
+      <AuthModal open={modalOpen} onClose={() => setModalOpen(false)} onAuthSuccess={handleAuthSuccess} />
     </>
   );
 }
