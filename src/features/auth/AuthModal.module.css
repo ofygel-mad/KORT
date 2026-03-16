@@ -2,17 +2,19 @@
   position: fixed;
   inset: 0;
   z-index: 9000;
-  display: grid;
-  place-items: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   padding: 20px;
+  overflow-y: auto;
   background: rgba(4, 6, 10, 0.74);
   backdrop-filter: blur(12px);
 }
 
 .panel {
   width: min(760px, 100%);
-  min-height: 560px;
-  max-height: min(88vh, 780px);
+  min-height: min(560px, calc(100dvh - 40px));
+  max-height: calc(100dvh - 40px);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -125,7 +127,9 @@
 
 .stepViewport {
   flex: 1;
-  overflow: auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .stepContent {
@@ -433,10 +437,12 @@
 @media (max-width: 720px) {
   .overlay {
     padding: 10px;
+    align-items: flex-start;
   }
 
   .panel {
     min-height: auto;
+    max-height: calc(100dvh - 20px);
     border-radius: 22px;
   }
 
@@ -458,5 +464,11 @@
 
   .orgTypeButton {
     min-width: 96px;
+  }
+}
+
+@media (max-height: 760px) {
+  .overlay {
+    align-items: flex-start;
   }
 }
