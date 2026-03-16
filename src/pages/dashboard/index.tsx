@@ -6,6 +6,8 @@ import { WorkspaceAddMenu } from '../../features/workspace/components/WorkspaceA
 import { WorkspaceThemeModal } from '../../features/workspace/components/WorkspaceThemeModal';
 import { WorkspaceSpotlight } from '../../features/workspace/components/WorkspaceSpotlight';
 import { useWorkspaceStore } from '../../features/workspace/model/store';
+import { WorkspaceLock } from '../../features/auth/WorkspaceLock';
+import { useAuthStore } from '../../shared/stores/auth';
 import styles from './Dashboard.module.css';
 
 const FAB_STORAGE_KEY = 'kort-fab-position';
@@ -24,6 +26,7 @@ export default function DashboardPage() {
   const [spotlightOpen, setSpotlightOpen] = useState(false);
   const addTile          = useWorkspaceStore((s) => s.addTile);
   const alignTilesToGrid = useWorkspaceStore((s) => s.alignTilesToGrid);
+  const isUnlocked       = useAuthStore((s) => s.isUnlocked);
 
   // Draggable FAB
   const [fabPos, setFabPos] = useState<{ x: number; y: number } | null>(getInitialFabPos);
@@ -35,15 +38,18 @@ export default function DashboardPage() {
 
   // Cmd/Ctrl+K → spotlight
   useEffect(() => {
+    if (!isUnlocked) return;
+
     const handler = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
         e.preventDefault();
-        setSpotlightOpen(v => !v);
+        setSpotlightOpen((v) => !v);
       }
     };
+
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, []);
+  }, [isUnlocked]);
 
   const startFabDrag = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
@@ -83,8 +89,11 @@ export default function DashboardPage() {
     <div className={styles.dashRoot}>
       <WorkspaceCanvas />
 
-      {/* Floating control panel — draggable */}
-      <div
+      {/* Lock overlay — shown until user authenticates */}
+      {!isUnlocked && <WorkspaceLock onUnlocked={() => {}} />}
+
+      {/* Floating control panel — draggable, only visible when unlocked */}
+      {isUnlocked && <div
         ref={fabRef}
         className={styles.fabGroup}
         style={fabStyle}
@@ -148,23 +157,27 @@ export default function DashboardPage() {
             </motion.button>
           </div>
         </div>
-      </div>
+      </div>}
 
-      {/* Modals & overlays */}
-      <WorkspaceAddMenu
-        open={menuOpen}
-        onClose={() => setMenuOpen(false)}
-        onSelect={(kind) => { addTile(kind); setMenuOpen(false); }}
-      />
-      <WorkspaceThemeModal
-        open={themeOpen}
-        onClose={() => setThemeOpen(false)}
-      />
-      <WorkspaceSpotlight
-        open={spotlightOpen}
-        onClose={() => setSpotlightOpen(false)}
-        onOpenTheme={() => setThemeOpen(true)}
-      />
+      {/* Modals & overlays, only shown when unlocked */}
+      {isUnlocked && (
+        <>
+          <WorkspaceAddMenu
+            open={menuOpen}
+            onClose={() => setMenuOpen(false)}
+            onSelect={(kind) => { addTile(kind); setMenuOpen(false); }}
+          />
+          <WorkspaceThemeModal
+            open={themeOpen}
+            onClose={() => setThemeOpen(false)}
+          />
+          <WorkspaceSpotlight
+            open={spotlightOpen}
+            onClose={() => setSpotlightOpen(false)}
+            onOpenTheme={() => setThemeOpen(true)}
+          />
+        </>
+      )}
     </div>
   );
 }

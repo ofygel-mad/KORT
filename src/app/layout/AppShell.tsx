@@ -1,10 +1,11 @@
 import { addDocumentListener } from '../../shared/lib/browser';
-import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
+import { LockedSidebar, LockedTopbar } from './LockedChrome';
 import { MobileNav } from './MobileNav';
 import { CommandPalette } from '../../widgets/command-palette/CommandPalette';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { WifiOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { pageTransition } from '../../shared/motion/presets';
@@ -65,20 +66,28 @@ export function AppShell() {
   const { can } = useCapabilities();
   const isMobile = useIsMobile();
   const location = useLocation();
-  const navigate = useNavigate();
-  const { org: currentOrg } = useAuthStore();
+  const { isUnlocked } = useAuthStore();
 
 
-  useKeyboardShortcuts({
-    ...(can('customers:write') ? { n: () => openCreateCustomer() } : {}),
-    ...(can('deals:write') ? { d: () => openCreateDeal() } : {}),
-    ...(can('tasks:write') ? { t: () => openCreateTask() } : {}),
-    f: () => toggleFocusMode(),
-    '/': () => toggle(),
-    '?': () => setShortcutsOpen(true),
-  });
+  const keyboardShortcuts = useMemo(
+    () => (isUnlocked
+      ? {
+          ...(can('customers:write') ? { n: () => openCreateCustomer() } : {}),
+          ...(can('deals:write') ? { d: () => openCreateDeal() } : {}),
+          ...(can('tasks:write') ? { t: () => openCreateTask() } : {}),
+          f: () => toggleFocusMode(),
+          '/': () => toggle(),
+          '?': () => setShortcutsOpen(true),
+        }
+      : {}),
+    [can, isUnlocked, openCreateCustomer, openCreateDeal, openCreateTask, toggle, toggleFocusMode],
+  );
+
+  useKeyboardShortcuts(keyboardShortcuts);
 
   useEffect(() => {
+    if (!isUnlocked) return;
+
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
@@ -86,7 +95,7 @@ export function AppShell() {
       }
     };
     return addDocumentListener('keydown', onKey);
-  }, [toggle]);
+  }, [isUnlocked, toggle]);
 
   const sidebarW = isMobile ? 0 : sidebarCollapsed ? 64 : 220;
 
@@ -97,13 +106,13 @@ export function AppShell() {
       <div className={styles.ambientGrid} aria-hidden="true" />
       <OfflineBanner />
       {!isMobile && (
-        <motion.div className={styles.sidebarRail} animate={{ width: sidebarW }} transition={{ type: 'spring', stiffness: 320, damping: 32 }}>
-          <Sidebar />
+        <motion.div className={styles.sidebarRail} animate={{ width: isUnlocked ? sidebarW : 84 }} transition={{ type: 'spring', stiffness: 320, damping: 32 }}>
+          {isUnlocked ? <Sidebar /> : <LockedSidebar />}
         </motion.div>
       )}
 
       <div className={styles.content}>
-        <Topbar />
+        {isUnlocked ? <Topbar /> : <LockedTopbar />}
         <main className={styles.main}>
           <AnimatePresence mode="wait" initial={false}>
             <motion.div key={location.pathname} initial={pageTransition.initial} animate={pageTransition.animate} exit={pageTransition.exit} transition={pageTransition.transition} className={styles.routeViewport}>
@@ -113,15 +122,15 @@ export function AppShell() {
         </main>
       </div>
 
-      {isMobile && <MobileNav />}
-      {isMobile && <MobileFab />}
-      <CreateCustomerDrawer />
-      <CreateDealDrawer />
-      <FocusMode />
-      <SmartSuggestions />
-      <AiAssistant />
-      {isOpen && <CommandPalette />}
-      <ShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
+      {isUnlocked && isMobile && <MobileNav />}
+      {isUnlocked && isMobile && <MobileFab />}
+      {isUnlocked && <CreateCustomerDrawer />}
+      {isUnlocked && <CreateDealDrawer />}
+      {isUnlocked && <FocusMode />}
+      {isUnlocked && <SmartSuggestions />}
+      {isUnlocked && <AiAssistant />}
+      {isUnlocked && isOpen && <CommandPalette />}
+      {isUnlocked && <ShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />}
     </div>
   );
 }

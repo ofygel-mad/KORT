@@ -1,0 +1,462 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(4, 6, 10, 0.74);
+  backdrop-filter: blur(12px);
+}
+
+.panel {
+  width: min(760px, 100%);
+  min-height: 560px;
+  max-height: min(88vh, 780px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid rgba(120, 130, 146, 0.2);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at top right, rgba(114, 136, 172, 0.08), transparent 28%),
+    linear-gradient(180deg, rgba(16, 20, 28, 0.98), rgba(8, 11, 18, 0.98));
+  box-shadow: 0 34px 90px rgba(0, 0, 0, 0.6);
+}
+
+.panelHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 24px 28px 18px;
+}
+
+.brandBlock {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.brandMark {
+  width: 42px;
+  height: 42px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 14px;
+  border: 1px solid rgba(137, 147, 161, 0.2);
+  background: linear-gradient(180deg, rgba(54, 61, 72, 0.95), rgba(24, 29, 37, 0.95));
+  color: rgba(227, 233, 241, 0.92);
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.brandTitle {
+  color: rgba(240, 244, 248, 0.94);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.brandText {
+  margin-top: 4px;
+  color: rgba(163, 173, 186, 0.72);
+  font-size: 13px;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.secondaryHeaderButton,
+.closeButton {
+  border: 1px solid rgba(120, 130, 146, 0.18);
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(224, 229, 236, 0.8);
+  transition: background 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+.secondaryHeaderButton {
+  height: 38px;
+  padding: 0 14px;
+  border-radius: 12px;
+  cursor: pointer;
+  font: inherit;
+}
+
+.closeButton {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  display: inline-grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.secondaryHeaderButton:hover,
+.closeButton:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(120, 130, 146, 0.3);
+  color: rgba(242, 246, 252, 0.92);
+}
+
+.progress {
+  display: flex;
+  gap: 8px;
+  padding: 0 28px 18px;
+}
+
+.progressDot {
+  width: 40px;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(97, 107, 121, 0.28);
+}
+
+.progressActive {
+  background: rgba(208, 216, 226, 0.82);
+}
+
+.progressDone {
+  background: rgba(138, 147, 160, 0.54);
+}
+
+.stepViewport {
+  flex: 1;
+  overflow: auto;
+}
+
+.stepContent {
+  padding: 12px 28px 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.stepHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(28px, 4vw, 38px);
+  line-height: 1.04;
+  letter-spacing: -0.03em;
+  color: rgba(243, 247, 252, 0.96);
+}
+
+.subtitle {
+  margin: 0;
+  max-width: 620px;
+  color: rgba(167, 177, 190, 0.76);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.socialRow {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.socialButton {
+  min-height: 54px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 1px solid rgba(120, 130, 146, 0.18);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(225, 231, 238, 0.86);
+  cursor: pointer;
+  font: inherit;
+}
+
+.socialButton:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(120, 130, 146, 0.32);
+}
+
+.socialIcon {
+  display: inline-flex;
+  align-items: center;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: rgba(136, 146, 161, 0.64);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(101, 112, 127, 0.22);
+}
+
+.formFields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.input,
+.select {
+  width: 100%;
+  min-height: 52px;
+  padding: 0 16px;
+  border: 1px solid rgba(120, 130, 146, 0.18);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.035);
+  color: rgba(240, 244, 248, 0.94);
+  font: inherit;
+  box-sizing: border-box;
+  outline: 0;
+}
+
+.input::placeholder {
+  color: rgba(141, 151, 164, 0.58);
+}
+
+.input:focus,
+.select:focus {
+  border-color: rgba(180, 190, 203, 0.42);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.passwordField {
+  position: relative;
+}
+
+.passwordField .input {
+  padding-right: 48px;
+}
+
+.passwordToggle {
+  position: absolute;
+  top: 50%;
+  right: 14px;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 28px;
+  display: inline-grid;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: rgba(168, 177, 188, 0.72);
+  cursor: pointer;
+}
+
+.passwordToggle:hover {
+  color: rgba(235, 240, 246, 0.92);
+}
+
+.primaryButton {
+  min-height: 54px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 0;
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(220, 227, 236, 0.96), rgba(170, 179, 191, 0.92));
+  color: rgba(9, 12, 18, 0.96);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.primaryButton:hover {
+  filter: brightness(1.03);
+}
+
+.footerRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: rgba(168, 177, 188, 0.74);
+  font-size: 14px;
+}
+
+.linkButton {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: rgba(233, 239, 246, 0.94);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.errorMessage {
+  padding: 12px 14px;
+  border: 1px solid rgba(197, 110, 110, 0.32);
+  border-radius: 14px;
+  background: rgba(88, 23, 23, 0.28);
+  color: rgba(255, 215, 215, 0.92);
+  font-size: 13px;
+}
+
+.typeGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.typeCard {
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 14px;
+  padding: 20px;
+  border: 1px solid rgba(120, 130, 146, 0.18);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at top right, rgba(255, 255, 255, 0.05), transparent 34%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.02));
+  color: rgba(240, 244, 248, 0.94);
+  text-align: left;
+  cursor: pointer;
+}
+
+.typeCard:hover {
+  border-color: rgba(163, 174, 188, 0.3);
+  background:
+    radial-gradient(circle at top right, rgba(255, 255, 255, 0.08), transparent 34%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.03));
+}
+
+.typeIcon {
+  width: 52px;
+  height: 52px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(120, 130, 146, 0.16);
+}
+
+.typeTitle {
+  display: block;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.typeText {
+  display: block;
+  max-width: 270px;
+  color: rgba(165, 175, 188, 0.76);
+  line-height: 1.5;
+}
+
+.orgTypeRow {
+  display: flex;
+  gap: 10px;
+}
+
+.orgTypeButton {
+  flex: 1;
+  min-height: 48px;
+  border-radius: 14px;
+  border: 1px solid rgba(120, 130, 146, 0.18);
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(226, 232, 239, 0.86);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+}
+
+.orgTypeButtonActive {
+  border-color: rgba(219, 226, 235, 0.32);
+  background: rgba(219, 226, 235, 0.12);
+  color: rgba(245, 248, 252, 0.98);
+}
+
+.companyNameBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.legalPreview {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  border-radius: 14px;
+  border: 1px dashed rgba(120, 130, 146, 0.18);
+  background: rgba(255, 255, 255, 0.02);
+  color: rgba(187, 196, 208, 0.78);
+  font-size: 13px;
+}
+
+.selectWrap {
+  position: relative;
+}
+
+.select {
+  appearance: none;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.03)),
+    linear-gradient(45deg, transparent 50%, rgba(208, 214, 223, 0.72) 50%),
+    linear-gradient(135deg, rgba(208, 214, 223, 0.72) 50%, transparent 50%);
+  background-position:
+    0 0,
+    calc(100% - 22px) 23px,
+    calc(100% - 16px) 23px;
+  background-size:
+    auto,
+    6px 6px,
+    6px 6px;
+  background-repeat: no-repeat;
+}
+
+.select option {
+  color: #f2f5f9;
+  background: #0c1017;
+}
+
+@media (max-width: 720px) {
+  .overlay {
+    padding: 10px;
+  }
+
+  .panel {
+    min-height: auto;
+    border-radius: 22px;
+  }
+
+  .panelHeader,
+  .progress,
+  .stepContent {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
+  .socialRow,
+  .typeGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .orgTypeRow {
+    flex-wrap: wrap;
+  }
+
+  .orgTypeButton {
+    min-width: 96px;
+  }
+}

@@ -26,12 +26,14 @@ type AuthState = {
   refreshToken: string | null;
   role: string;
   capabilities: string[];
+  isUnlocked: boolean;
   setAuth: (user: User, org: Org, token: string, refresh: string, caps: string[], role?: string) => void;
   setTokens: (access: string, refresh: string) => void;
   setRole: (role: string) => void;
   setUser: (user: Partial<User>) => void;
   setOrg: (org: Partial<Org>) => void;
   clearAuth: () => void;
+  unlock: () => void;
 };
 
 export const useAuthStore = create<AuthState>()(
@@ -43,6 +45,7 @@ export const useAuthStore = create<AuthState>()(
       refreshToken: null,
       role: 'viewer',
       capabilities: [],
+      isUnlocked: false,
       setAuth: (user, org, token, refresh, capabilities, role = 'viewer') =>
         set({ user, org, token, refreshToken: refresh, capabilities, role }),
       setTokens: (token, refreshToken) => set({ token, refreshToken }),
@@ -50,8 +53,20 @@ export const useAuthStore = create<AuthState>()(
       setUser: (partial) => set({ user: { ...get().user!, ...partial } }),
       setOrg: (partial) => set({ org: { ...get().org!, ...partial } }),
       clearAuth: () =>
-        set({ user: null, org: null, token: null, refreshToken: null, role: 'viewer', capabilities: [] }),
+        set({ user: null, org: null, token: null, refreshToken: null, role: 'viewer', capabilities: [], isUnlocked: false }),
+      unlock: () => set({ isUnlocked: true }),
     }),
-    { name: 'kort-auth' },
+    {
+      name: 'kort-auth',
+      partialize: (state) => ({
+        user: state.user,
+        org: state.org,
+        token: state.token,
+        refreshToken: state.refreshToken,
+        role: state.role,
+        capabilities: state.capabilities,
+        // isUnlocked is intentionally excluded — lock shows on every page load
+      }),
+    },
   ),
 );
