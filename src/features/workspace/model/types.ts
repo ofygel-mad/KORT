@@ -1,4 +1,4 @@
-export type WorkspaceWidgetKind = 'customers' | 'deals' | 'tasks' | 'reports' | 'imports' | 'draft';
+export type WorkspaceWidgetKind = 'customers' | 'deals' | 'tasks' | 'reports' | 'imports' | 'chapan';
 
 export interface WorkspaceViewport {
   x: number;

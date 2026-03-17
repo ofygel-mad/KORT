@@ -1,0 +1,242 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ── Stats ── */
+
+.statsRow {
+  display: flex;
+  gap: 8px;
+}
+
+.statCard {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 12px 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.015);
+}
+
+.statVal {
+  font-size: 22px;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.8);
+  line-height: 1;
+}
+
+.statLbl {
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.22);
+  text-align: center;
+}
+
+/* ── Section ── */
+
+.section {
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.015);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sectionHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sectionIcon {
+  color: rgba(210, 160, 90, 0.5);
+  flex-shrink: 0;
+}
+
+.sectionTitle {
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.7);
+  flex: 1;
+}
+
+.sectionCount {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.05);
+  padding: 2px 7px;
+  border-radius: 5px;
+}
+
+/* ── Add worker row ── */
+
+.addRow {
+  display: flex;
+  gap: 8px;
+}
+
+.addInput {
+  flex: 1;
+  height: 34px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 140ms;
+}
+
+.addInput:focus {
+  border-color: rgba(160, 104, 56, 0.4);
+}
+
+.addInput::placeholder {
+  color: rgba(255, 255, 255, 0.18);
+}
+
+.addBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(160, 104, 56, 0.3);
+  background: rgba(160, 104, 56, 0.1);
+  color: rgba(210, 160, 90, 0.8);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 120ms;
+}
+
+.addBtn:hover:not(:disabled) {
+  background: rgba(160, 104, 56, 0.2);
+}
+
+.addBtn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* ── Worker list ── */
+
+.workerList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.workerRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.02);
+  transition: border-color 120ms;
+}
+
+.workerRow:hover {
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.workerAvatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgba(160, 104, 56, 0.15);
+  border: 1px solid rgba(160, 104, 56, 0.2);
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(210, 160, 90, 0.7);
+  flex-shrink: 0;
+  text-transform: uppercase;
+}
+
+.workerBody {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.workerName {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.workerLoad {
+  font-size: 10px;
+  color: rgba(245, 158, 11, 0.55);
+}
+
+.workerFree {
+  font-size: 10px;
+  color: rgba(34, 197, 94, 0.45);
+}
+
+.removeBtn {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: rgba(239, 68, 68, 0.3);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 120ms, color 120ms;
+}
+
+.removeBtn:hover {
+  background: rgba(239, 68, 68, 0.08);
+  color: rgba(239, 68, 68, 0.7);
+}
+
+/* ── Catalog tags ── */
+
+.tagGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 9px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.02);
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.catalogNote {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.18);
+  font-style: italic;
+}

@@ -5,6 +5,7 @@ import { useBadgeStore } from '../../shared-bus/badge.store';
 import { clearTileLeadsUI } from '../../leads-spa/model/tile-ui.store';
 import { clearTileDealsUI } from '../../deals-spa/model/tile-ui.store';
 import { clearTileTasksUI } from '../../tasks-spa/model/tile-ui.store';
+import { clearTileChapanUI } from '../../chapan-spa/model/tile-ui.store';
 import type { WorkspaceModalSize, WorkspaceTile, WorkspaceViewport, WorkspaceWidgetKind } from './types';
 
 export const WORLD_FACTOR = 3;
@@ -18,7 +19,7 @@ const DEFAULT_TILE_SIZE: Record<WorkspaceWidgetKind, { width: number; height: nu
   tasks:     { width: 260, height: 170 },
   reports:   { width: 240, height: 155 },
   imports:   { width: 240, height: 155 },
-  draft:     { width: 260, height: 170 },
+  chapan:    { width: 260, height: 170 },
 };
 
 const TITLES: Record<WorkspaceWidgetKind, string> = {
@@ -27,7 +28,7 @@ const TITLES: Record<WorkspaceWidgetKind, string> = {
   tasks:     'Задачи',
   reports:   'Сводка',
   imports:   'Импорт',
-  draft:     'Черновик',
+  chapan:    'Чапан',
 };
 
 interface ContextMenuState {
@@ -180,7 +181,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
       },
 
       removeTile: (id) => {
-        clearTileLeadsUI(id); clearTileDealsUI(id); clearTileTasksUI(id);
+        clearTileLeadsUI(id); clearTileDealsUI(id); clearTileTasksUI(id); clearTileChapanUI(id);
         set((state) => ({
           tiles: state.tiles.filter((t) => t.id !== id),
           activeTileId: state.activeTileId === id ? null : state.activeTileId,

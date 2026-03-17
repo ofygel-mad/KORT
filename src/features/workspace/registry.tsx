@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { Briefcase, CheckSquare, DatabaseZap, FolderInput, Users, PenLine } from 'lucide-react';
+import { Briefcase, CheckSquare, DatabaseZap, FolderInput, Users, Factory } from 'lucide-react';
 import type { WorkspaceSnapshot, WorkspaceWidgetKind } from './model/types';
 
 // Tile previews
@@ -8,15 +8,15 @@ import { DealsTilePreview }   from './widgets/deals/DealsTilePreview';
 import { TasksTilePreview }   from './widgets/tasks/TasksTilePreview';
 import { ReportsTilePreview } from './widgets/reports/ReportsTilePreview';
 import { ImportsTilePreview } from './widgets/imports/ImportsTilePreview';
-import { DraftTilePreview }   from './widgets/draft/DraftTilePreview';
+import { ChapanTilePreview }  from './widgets/chapan/ChapanTilePreview';
 
 // Full SPA environments
 import { LeadsSPA }   from '../leads-spa';
-import { DealsSPA }   from '../deals-spa';      // ← new independent SPA
+import { DealsSPA }   from '../deals-spa';
 import { TasksSPA }   from './widgets/tasks/spa/TasksSPA';
 import { ReportsSPA } from './widgets/reports/spa/ReportsSPA';
 import { ImportsSPA } from './widgets/imports/spa/ImportsSPA';
-import { DraftSPA }   from './widgets/draft/spa/DraftSPA';
+import { ChapanSPA }  from './widgets/chapan/spa/ChapanSPA';
 
 export interface WorkspaceWidgetDefinition {
   kind: WorkspaceWidgetKind;
@@ -63,18 +63,18 @@ export const WORKSPACE_WIDGETS: WorkspaceWidgetDefinition[] = [
   {
     kind: 'imports',
     title: 'Импорт',
-    description: 'Быстрый вход в поток загрузки и синхронизации данных.',
+    description: 'Центр загрузки, маппинга и синхронизации данных.',
     icon: FolderInput,
     renderPreview: (_s, v) => <ImportsTilePreview key={v} />,
-    renderSPA:     (_s, v) => <ImportsSPA key={v} />,
+    renderSPA:     (_s, v, tid) => <ImportsSPA key={v} tileId={tid ?? 'default'} />,
   },
   {
-    kind: 'draft',
-    title: 'Черновик',
-    description: 'Свободное пространство — собери нужные тебе инструменты и блоки.',
-    icon: PenLine,
-    renderPreview: (_s, v) => <DraftTilePreview key={v} />,
-    renderSPA:     (_s, v) => <DraftSPA key={v} />,
+    kind: 'chapan',
+    title: 'Чапан',
+    description: 'Workzone цеха Чапан — производство, заказы и контроль.',
+    icon: Factory,
+    renderPreview: (_s, v) => <ChapanTilePreview key={v} />,
+    renderSPA:     (_s, v, tid) => <ChapanSPA key={v} tileId={tid ?? 'default'} />,
   },
 ];
 

@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Building2, ChevronRight, Eye, EyeOff, User, X } from 'lucide-react';
+import { ArrowLeft, Building2, ChevronRight, Eye, EyeOff, User, X } from 'lucide-react';
 import { MOCK_AUTH_RESPONSE } from '../../shared/api/mock-data';
 import { useAuthStore } from '../../shared/stores/auth';
 import styles from './AuthModal.module.css';
@@ -16,20 +16,204 @@ interface AuthModalProps {
 }
 
 const ORG_TYPES: OrgType[] = ['ИП', 'ТОО', 'АО'];
-const COMPANY_ROLES = ['Директор', 'Бухгалтер', 'Менеджер'] as const;
-const STEP_ORDER: Step[] = ['login', 'choose-type', 'employee', 'company'];
+const COMPANY_ROLES = ['Админ', 'Бухгалтер', 'Менеджер'] as const;
 
 const OVERLAY = {
   hidden: { opacity: 0 },
-  visible: { opacity: 1 },
-  exit: { opacity: 0 },
+  visible: { opacity: 1, transition: { duration: 0.3 } },
+  exit: { opacity: 0, transition: { duration: 0.2 } },
 };
 
 const PANEL = {
-  hidden: { opacity: 0, scale: 0.96, y: 18 },
-  visible: { opacity: 1, scale: 1, y: 0, transition: { duration: 0.26, ease: [0.22, 1, 0.36, 1] } },
-  exit: { opacity: 0, scale: 0.96, y: 12, transition: { duration: 0.18 } },
+  hidden: { opacity: 0, scale: 0.93, y: 22 },
+  visible: { opacity: 1, scale: 1, y: 0, transition: { duration: 0.38, ease: [0.16, 1, 0.3, 1] } },
+  exit: { opacity: 0, scale: 0.96, y: 14, transition: { duration: 0.2 } },
 };
+
+/* ── Carousel Slides ── */
+
+const NET_NODES = [
+  { cx: 50, cy: 28, label: 'Клиенты' },
+  { cx: 175, cy: 22, label: 'Сделки' },
+  { cx: 120, cy: 70, label: 'Задачи' },
+  { cx: 26, cy: 105, label: 'Лиды' },
+  { cx: 215, cy: 95, label: 'Отчёты' },
+  { cx: 68, cy: 152, label: 'KPI' },
+  { cx: 180, cy: 148, label: 'Команда' },
+];
+
+const NET_EDGES: [number, number][] = [
+  [0, 2], [1, 2], [2, 3], [2, 4], [3, 5], [4, 6], [5, 6], [0, 1],
+];
+
+function SlideNetwork() {
+  return (
+    <div className={styles.slideInner}>
+      <svg viewBox="0 0 240 175" className={styles.slideCanvas}>
+        <defs>
+          <filter id="nGlow" x="-80%" y="-80%" width="260%" height="260%">
+            <feGaussianBlur stdDeviation="3" result="b" />
+            <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+          </filter>
+        </defs>
+
+        {NET_EDGES.map(([from, to], i) => (
+          <motion.path
+            key={i}
+            d={`M${NET_NODES[from].cx},${NET_NODES[from].cy} L${NET_NODES[to].cx},${NET_NODES[to].cy}`}
+            stroke="rgba(80,125,185,0.18)"
+            strokeWidth="1"
+            fill="none"
+            initial={{ pathLength: 0, opacity: 0 }}
+            animate={{ pathLength: 1, opacity: 1 }}
+            transition={{ duration: 0.7, delay: 0.15 + i * 0.08, ease: [0.4, 0, 0.2, 1] }}
+          />
+        ))}
+
+        {NET_NODES.map((n, i) => (
+          <motion.g
+            key={i}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.35, delay: 0.25 + i * 0.1 }}
+          >
+            <circle cx={n.cx} cy={n.cy} r={i === 2 ? 5 : 3.5} fill="rgba(90,150,225,0.65)" filter="url(#nGlow)" />
+            <text x={n.cx} y={n.cy + (i < 3 ? -10 : 14)} textAnchor="middle" fill="rgba(145,165,200,0.58)" fontSize="9.5" fontWeight="500">{n.label}</text>
+          </motion.g>
+        ))}
+
+        <motion.circle
+          r="1.5" fill="rgba(120,175,245,0.55)"
+          animate={{ cx: [50, 120], cy: [28, 70], opacity: [0, 0.7, 0.7, 0] }}
+          transition={{ duration: 2.5, ease: 'linear', repeat: Infinity, repeatDelay: 4, times: [0, 0.1, 0.9, 1] }}
+        />
+        <motion.circle
+          r="1.5" fill="rgba(120,175,245,0.55)"
+          animate={{ cx: [120, 180], cy: [70, 148], opacity: [0, 0.7, 0.7, 0] }}
+          transition={{ duration: 2.2, ease: 'linear', repeat: Infinity, repeatDelay: 5, delay: 1.8, times: [0, 0.1, 0.9, 1] }}
+        />
+      </svg>
+      <div className={styles.slideCaption}>
+        <div className={styles.slideTitle}>Единое пространство</div>
+        <div className={styles.slideSubtitle}>Все бизнес-процессы связаны</div>
+      </div>
+    </div>
+  );
+}
+
+const BAR_DATA = [
+  { x: 28, h: 48 }, { x: 62, h: 72 }, { x: 96, h: 60 }, { x: 130, h: 92 }, { x: 164, h: 105 },
+];
+
+function SlideAnalytics() {
+  return (
+    <div className={styles.slideInner}>
+      <svg viewBox="0 0 240 175" className={styles.slideCanvas}>
+        {[50, 80, 110, 140].map(y => (
+          <line key={y} x1="20" y1={y} x2="220" y2={y} stroke="rgba(70,95,130,0.08)" strokeWidth="0.5" />
+        ))}
+
+        {BAR_DATA.map((b, i) => (
+          <motion.rect
+            key={i}
+            x={b.x} width={22} rx={3}
+            fill="rgba(70,125,195,0.22)"
+            initial={{ y: 155, height: 0 }}
+            animate={{ y: 155 - b.h, height: b.h }}
+            transition={{ duration: 0.6, delay: 0.25 + i * 0.1, ease: [0.22, 1, 0.36, 1] }}
+          />
+        ))}
+
+        <motion.path
+          d="M39,107 L73,83 L107,92 L141,63 L175,48 L209,55"
+          fill="none"
+          stroke="rgba(110,170,240,0.5)"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          initial={{ pathLength: 0 }}
+          animate={{ pathLength: 1 }}
+          transition={{ duration: 1, delay: 0.5, ease: [0.4, 0, 0.2, 1] }}
+        />
+
+        {BAR_DATA.map((b, i) => (
+          <motion.circle
+            key={`dot-${i}`}
+            cx={b.x + 11} cy={[107, 83, 92, 63, 48][i]}
+            r="2.5"
+            fill="rgba(120,175,245,0.7)"
+            initial={{ opacity: 0, scale: 0 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.8 + i * 0.1, duration: 0.25 }}
+          />
+        ))}
+
+        <motion.g initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.3, duration: 0.35 }}>
+          <text x="218" y="38" textAnchor="end" fill="rgba(110,170,240,0.65)" fontSize="13" fontWeight="600">+24%</text>
+          <text x="218" y="50" textAnchor="end" fill="rgba(135,155,185,0.45)" fontSize="8.5">рост</text>
+        </motion.g>
+      </svg>
+      <div className={styles.slideCaption}>
+        <div className={styles.slideTitle}>Аналитика реального времени</div>
+        <div className={styles.slideSubtitle}>KPI, метрики и прогнозы</div>
+      </div>
+    </div>
+  );
+}
+
+const PIPE_STAGES = [
+  { cx: 35, label: 'Лид' },
+  { cx: 95, label: 'Квалификация' },
+  { cx: 165, label: 'Переговоры' },
+  { cx: 225, label: 'Закрытие' },
+];
+
+function SlidePipeline() {
+  return (
+    <div className={styles.slideInner}>
+      <svg viewBox="0 0 260 160" className={styles.slideCanvas}>
+        <motion.path
+          d={`M${PIPE_STAGES[0].cx},80 L${PIPE_STAGES[3].cx},80`}
+          stroke="rgba(70,110,160,0.18)"
+          strokeWidth="1.5"
+          fill="none"
+          initial={{ pathLength: 0 }}
+          animate={{ pathLength: 1 }}
+          transition={{ duration: 0.8, ease: [0.4, 0, 0.2, 1] }}
+        />
+
+        {PIPE_STAGES.map((s, i) => (
+          <motion.g key={i} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 + i * 0.15, duration: 0.3 }}>
+            <circle cx={s.cx} cy={80} r="10" fill="rgba(75,120,185,0.06)" stroke="rgba(80,130,195,0.2)" strokeWidth="1.2" />
+            <circle cx={s.cx} cy={80} r="3" fill="rgba(95,155,225,0.55)" />
+            <text x={s.cx} y={104} textAnchor="middle" fill="rgba(145,165,195,0.55)" fontSize="9" fontWeight="500">{s.label}</text>
+          </motion.g>
+        ))}
+
+        <motion.circle
+          cy={80} r="3.5"
+          fill="rgba(120,180,250,0.75)"
+          initial={{ cx: PIPE_STAGES[0].cx, opacity: 0 }}
+          animate={{
+            cx: [PIPE_STAGES[0].cx, PIPE_STAGES[1].cx, PIPE_STAGES[2].cx, PIPE_STAGES[3].cx],
+            opacity: [0, 1, 1, 0],
+          }}
+          transition={{ duration: 3.5, ease: 'easeInOut', repeat: Infinity, repeatDelay: 2, delay: 1, times: [0, 0.33, 0.66, 1] }}
+        />
+
+        <motion.g initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.2, duration: 0.35 }}>
+          <text x="130" y="135" textAnchor="middle" fill="rgba(110,165,235,0.5)" fontSize="10" fontWeight="500">87% конверсия</text>
+        </motion.g>
+      </svg>
+      <div className={styles.slideCaption}>
+        <div className={styles.slideTitle}>Воронка продаж</div>
+        <div className={styles.slideSubtitle}>Контроль каждого этапа сделки</div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Auth Helpers ── */
 
 function trimPhone(value: string) {
   return value.replace(/[^\d+()\-\s]/g, '').slice(0, 22);
@@ -83,24 +267,7 @@ function PasswordField({
   );
 }
 
-function ModalProgress({ step }: { step: Step }) {
-  const activeIndex = STEP_ORDER.indexOf(step);
-
-  return (
-    <div className={styles.progress} aria-hidden="true">
-      {[0, 1, 2].map((index) => {
-        const stateClass =
-          index === activeIndex || (index === 2 && activeIndex === 3)
-            ? styles.progressActive
-            : index < activeIndex
-              ? styles.progressDone
-              : '';
-
-        return <span key={index} className={[styles.progressDot, stateClass].join(' ')} />;
-      })}
-    </div>
-  );
-}
+/* ── Auth Steps ── */
 
 function StepLogin({ onCreateAccount, onSuccess }: { onCreateAccount: () => void; onSuccess: () => void }) {
   const setAuth = useAuthStore((state) => state.setAuth);
@@ -208,19 +375,19 @@ function StepChooseType({ onSelect }: { onSelect: (value: 'employee' | 'company'
     <div className={styles.stepContent}>
       <div className={styles.stepHeader}>
         <h2 className={styles.title}>Создание аккаунта</h2>
-        <p className={styles.subtitle}>Выберите сценарий регистрации. Внутри модального окна оставлен запас под будущие внешние провайдеры.</p>
+        <p className={styles.subtitle}>Выберите сценарий регистрации.</p>
       </div>
 
       <div className={styles.typeGrid}>
         <button type="button" className={styles.typeCard} onClick={() => onSelect('employee')}>
-          <span className={styles.typeIcon}><User size={24} /></span>
-          <span className={styles.typeTitle}>Сотрудник</span>
-          <span className={styles.typeText}>ФИО, телефон, почта и пароль.</span>
+          <span className={styles.typeIcon}><User size={22} /></span>
+          <span className={styles.typeLabel}>Сотрудник</span>
+          <span className={styles.typeDesc}>ФИО, телефон, почта и пароль.</span>
         </button>
         <button type="button" className={styles.typeCard} onClick={() => onSelect('company')}>
-          <span className={styles.typeIcon}><Building2 size={24} /></span>
-          <span className={styles.typeTitle}>Компания</span>
-          <span className={styles.typeText}>Юридическая форма, БИН/ИИН, роль и рабочие контакты.</span>
+          <span className={styles.typeIcon}><Building2 size={22} /></span>
+          <span className={styles.typeLabel}>Компания</span>
+          <span className={styles.typeDesc}>Юридическая форма, БИН/ИИН, роль и контакты.</span>
         </button>
       </div>
     </div>
@@ -446,31 +613,46 @@ function StepCompany({ onSuccess }: { onSuccess: () => void }) {
   );
 }
 
+/* ── Main Modal ── */
+
+const SLIDE_COUNT = 3;
+const SLIDE_INTERVAL = 5000;
+
 export function AuthModal({ open, onClose, onAuthSuccess }: AuthModalProps) {
   const [step, setStep] = useState<Step>('login');
+  const [slide, setSlide] = useState(0);
+  const slideTimer = useRef<ReturnType<typeof setInterval>>();
+
+  const resetSlideTimer = useCallback(() => {
+    if (slideTimer.current) clearInterval(slideTimer.current);
+    slideTimer.current = setInterval(() => {
+      setSlide((prev) => (prev + 1) % SLIDE_COUNT);
+    }, SLIDE_INTERVAL);
+  }, []);
 
   useEffect(() => {
     if (!open) {
-      setStep('login');
+      if (slideTimer.current) clearInterval(slideTimer.current);
       return;
     }
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        onClose();
-      }
+    setStep('login');
+    setSlide(0);
+    resetSlideTimer();
+    return () => {
+      if (slideTimer.current) clearInterval(slideTimer.current);
     };
+  }, [open, resetSlideTimer]);
 
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [open, onClose]);
+  const goToSlide = useCallback((index: number) => {
+    setSlide(index);
+    resetSlideTimer();
+  }, [resetSlideTimer]);
 
   const goBack = () => {
     if (step === 'choose-type') {
       setStep('login');
       return;
     }
-
     if (step === 'employee' || step === 'company') {
       setStep('choose-type');
     }
@@ -486,50 +668,87 @@ export function AuthModal({ open, onClose, onAuthSuccess }: AuthModalProps) {
           animate="visible"
           exit="exit"
           onClick={(event) => {
-            if (event.target === event.currentTarget) {
-              onClose();
-            }
+            if (event.target === event.currentTarget) onClose();
           }}
         >
           <motion.div className={styles.panel} variants={PANEL} initial="hidden" animate="visible" exit="exit">
-            <div className={styles.panelHeader}>
-              <div className={styles.brandBlock}>
-                <span className={styles.brandMark}>K</span>
-                <div>
-                  <div className={styles.brandTitle}>KORT</div>
-                  <div className={styles.brandText}>Безопасный доступ в рабочую область</div>
-                </div>
+            {/* Brand side — carousel */}
+            <aside className={styles.brandSide}>
+              <div className={styles.brandOrb1} />
+              <div className={styles.brandOrb2} />
+
+              <div className={styles.carousel}>
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={slide}
+                    className={styles.carouselSlide}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.35 }}
+                  >
+                    {slide === 0 && <SlideNetwork />}
+                    {slide === 1 && <SlideAnalytics />}
+                    {slide === 2 && <SlidePipeline />}
+                  </motion.div>
+                </AnimatePresence>
               </div>
 
-              <div className={styles.headerActions}>
-                {step !== 'login' && (
-                  <button type="button" className={styles.secondaryHeaderButton} onClick={goBack}>
-                    Назад
-                  </button>
-                )}
+              <div className={styles.carouselDots}>
+                {Array.from({ length: SLIDE_COUNT }, (_, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    className={`${styles.carouselDot} ${i === slide ? styles.carouselDotActive : ''}`}
+                    onClick={() => goToSlide(i)}
+                    aria-label={`Слайд ${i + 1}`}
+                  />
+                ))}
+              </div>
+            </aside>
+
+            {/* Form side */}
+            <div className={styles.formSide}>
+              <div className={styles.formHeader}>
+                <div className={styles.headerLeft}>
+                  <AnimatePresence>
+                    {step !== 'login' && (
+                      <motion.button
+                        type="button"
+                        className={styles.backButton}
+                        onClick={goBack}
+                        initial={{ opacity: 0, x: -8 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -8 }}
+                        transition={{ duration: 0.16 }}
+                      >
+                        <ArrowLeft size={16} />
+                        <span>Назад</span>
+                      </motion.button>
+                    )}
+                  </AnimatePresence>
+                </div>
                 <button type="button" className={styles.closeButton} onClick={onClose} aria-label="Закрыть">
                   <X size={18} />
                 </button>
               </div>
-            </div>
 
-            <ModalProgress step={step} />
-
-            <div className={styles.stepViewport}>
-              <AnimatePresence mode="wait" initial={false}>
-                <motion.div
-                  key={step}
-                  initial={{ opacity: 0, x: 28 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -24 }}
-                  transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-                >
-                  {step === 'login' && <StepLogin onCreateAccount={() => setStep('choose-type')} onSuccess={onAuthSuccess} />}
-                  {step === 'choose-type' && <StepChooseType onSelect={(value) => setStep(value)} />}
-                  {step === 'employee' && <StepEmployee onSuccess={onAuthSuccess} />}
-                  {step === 'company' && <StepCompany onSuccess={onAuthSuccess} />}
-                </motion.div>
-              </AnimatePresence>
+              <div className={styles.formViewport}>
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.div
+                    key={step}
+                    initial={{ opacity: 0, x: 28 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -24 }}
+                    transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                  >
+                    {step === 'login' && <StepLogin onCreateAccount={() => setStep('choose-type')} onSuccess={onAuthSuccess} />}
+                    {step === 'choose-type' && <StepChooseType onSelect={(value) => setStep(value)} />}
+                    {step === 'employee' && <StepEmployee onSuccess={onAuthSuccess} />}
+                    {step === 'company' && <StepCompany onSuccess={onAuthSuccess} />}
+                  </motion.div>
+                </AnimatePresence>
+              </div>
             </div>
           </motion.div>
         </motion.div>

@@ -1,0 +1,555 @@
+/* ── Root wrapper (adds warning banners above board) ── */
+
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: 100%;
+  min-height: 0;
+}
+
+/* ── Warning banners ── */
+
+.banners {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.bannerBlocked, .bannerUnassigned {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.bannerBlocked {
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  background: rgba(245, 158, 11, 0.06);
+  color: rgba(245, 158, 11, 0.8);
+}
+
+.bannerUnassigned {
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.02);
+  color: rgba(255, 255, 255, 0.35);
+}
+
+/* ── Board ── */
+
+.board {
+  display: flex;
+  gap: 10px;
+  flex: 1;
+  min-height: 0;
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+
+.board::-webkit-scrollbar {
+  height: 3px;
+}
+
+.board::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+}
+
+/* ── Column ── */
+
+.column {
+  flex: 0 0 186px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.colHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  margin-bottom: 6px;
+  flex-shrink: 0;
+}
+
+.colDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.colTitle {
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.colCount {
+  margin-left: auto;
+  font-size: 10px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.2);
+  min-width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.colBody {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.colBody::-webkit-scrollbar {
+  width: 2px;
+}
+
+.colBody::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 2px;
+}
+
+/* ── Card ── */
+
+.card {
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.02);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: border-color 140ms;
+}
+
+.cardOverdue {
+  border-color: rgba(239, 68, 68, 0.25);
+  background: rgba(239, 68, 68, 0.02);
+}
+
+.cardVip {
+  border-color: rgba(236, 72, 153, 0.2);
+}
+
+.cardBlocked {
+  border-color: rgba(245, 158, 11, 0.25);
+  background: rgba(245, 158, 11, 0.025);
+}
+
+/* ── Card internals ── */
+
+.cardTop {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.cardPriority {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.blockedBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: auto;
+  height: 16px;
+  padding: 0 5px;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 700;
+  color: rgba(245, 158, 11, 0.9);
+  background: rgba(245, 158, 11, 0.12);
+}
+
+.cardOrder {
+  font-size: 10px;
+  font-weight: 700;
+  color: rgba(210, 160, 90, 0.65);
+}
+
+.cardName {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.cardMeta {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.25);
+}
+
+.blockReason {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  font-size: 10px;
+  color: rgba(245, 158, 11, 0.7);
+  line-height: 1.35;
+  padding: 3px 5px;
+  border-radius: 5px;
+  background: rgba(245, 158, 11, 0.06);
+}
+
+.defectNote {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  font-size: 10px;
+  color: rgba(239, 68, 68, 0.7);
+  line-height: 1.35;
+  padding: 3px 5px;
+  border-radius: 5px;
+  background: rgba(239, 68, 68, 0.06);
+}
+
+/* ── Worker row ── */
+
+.cardWorkerRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.cardWorker {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.35);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.assignSelect {
+  height: 22px;
+  padding: 0 4px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(255, 255, 255, 0.3);
+  font: inherit;
+  font-size: 9px;
+  flex-shrink: 0;
+  max-width: 80px;
+}
+
+.assignSelect option {
+  background: #1a1d24;
+  color: #e0e0e0;
+}
+
+/* ── Timing ── */
+
+.cardTime {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.2);
+}
+
+.cardDueRow {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.22);
+  margin-top: 1px;
+}
+
+.cardDueOverdue {
+  color: rgba(239, 68, 68, 0.7);
+  font-weight: 700;
+}
+
+.cardDueToday {
+  color: rgba(239, 68, 68, 0.65);
+  font-weight: 700;
+}
+
+.cardDueTomorrow {
+  color: rgba(245, 158, 11, 0.65);
+  font-weight: 600;
+}
+
+/* ── Card actions ── */
+
+.cardActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.moveBtn {
+  flex: 1;
+  min-width: 0;
+  height: 24px;
+  border-radius: 5px;
+  border: 1px solid rgba(160, 104, 56, 0.25);
+  background: rgba(160, 104, 56, 0.08);
+  color: rgba(210, 160, 90, 0.7);
+  font: inherit;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 120ms;
+  white-space: nowrap;
+}
+
+.moveBtn:hover {
+  background: rgba(160, 104, 56, 0.18);
+}
+
+.blockBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: 5px;
+  border: 1px solid rgba(245, 158, 11, 0.18);
+  background: transparent;
+  color: rgba(245, 158, 11, 0.5);
+  font: inherit;
+  font-size: 9px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 120ms, color 120ms;
+}
+
+.blockBtn:hover {
+  background: rgba(245, 158, 11, 0.08);
+  color: rgba(245, 158, 11, 0.85);
+}
+
+.unblockBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 5px;
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  background: rgba(34, 197, 94, 0.06);
+  color: rgba(34, 197, 94, 0.75);
+  font: inherit;
+  font-size: 9px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 120ms;
+}
+
+.unblockBtn:hover {
+  background: rgba(34, 197, 94, 0.12);
+}
+
+/* ── Defect input row ── */
+
+.defectRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.defectToggle {
+  border: none;
+  background: none;
+  color: rgba(255, 255, 255, 0.18);
+  font: inherit;
+  font-size: 9px;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  transition: color 120ms;
+}
+
+.defectToggle:hover {
+  color: rgba(239, 68, 68, 0.5);
+}
+
+.defectInput {
+  flex: 1;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 4px;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  background: rgba(239, 68, 68, 0.04);
+  color: rgba(255, 255, 255, 0.6);
+  font: inherit;
+  font-size: 10px;
+  outline: none;
+}
+
+.defectSave {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(34, 197, 94, 0.25);
+  border-radius: 4px;
+  background: rgba(34, 197, 94, 0.08);
+  color: rgba(34, 197, 94, 0.8);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.defectCancel {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 4px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.3);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* ── Block confirm modal ── */
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+}
+
+.blockModalBox {
+  width: min(400px, 100%);
+  background: #12151a;
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  border-radius: 14px;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.blockModalTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: rgba(245, 158, 11, 0.85);
+}
+
+.blockReasonInput {
+  height: 38px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+}
+
+.blockReasonInput:focus {
+  border-color: rgba(245, 158, 11, 0.35);
+}
+
+.blockReasonInput::placeholder {
+  color: rgba(255, 255, 255, 0.2);
+}
+
+.blockModalActions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.blockModalCancel {
+  height: 34px;
+  padding: 0 16px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.45);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.blockModalConfirm {
+  height: 34px;
+  padding: 0 16px;
+  border-radius: 8px;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  background: rgba(245, 158, 11, 0.12);
+  color: rgba(245, 158, 11, 0.9);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 120ms;
+}
+
+.blockModalConfirm:hover:not(:disabled) {
+  background: rgba(245, 158, 11, 0.22);
+}
+
+.blockModalConfirm:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* ── Empty ── */
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 48px 24px;
+  text-align: center;
+  height: 100%;
+}
+
+.emptyIcon {
+  color: rgba(255, 255, 255, 0.08);
+}
+
+.emptyTitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.2);
+}
+
+.emptySub {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.12);
+}
