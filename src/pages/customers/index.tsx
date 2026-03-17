@@ -7,27 +7,27 @@ import {
   Plus, MessageSquare, CheckSquare, Briefcase, Tag,
   Send, MessageCircle, FileText, PhoneCall,
 } from 'lucide-react';
-import { api } from '../../../shared/api/client';
-import { Button } from '../../../shared/ui/Button';
-import { Badge } from '../../../shared/ui/Badge';
-import { PageLoader } from '../../../shared/ui/PageLoader';
-import { EmptyState } from '../../../shared/ui/EmptyState';
-import { Drawer } from '../../../shared/ui/Drawer';
-import { FormErrorSummary } from '../../../shared/ui/FormErrorSummary';
-import { Input, Textarea } from '../../../shared/ui/Input';
+import { api } from '../../shared/api/client';
+import { Button } from '../../shared/ui/Button';
+import { Badge } from '../../shared/ui/Badge';
+import { PageLoader } from '../../shared/ui/PageLoader';
+import { EmptyState } from '../../shared/ui/EmptyState';
+import { Drawer } from '../../shared/ui/Drawer';
+import { FormErrorSummary } from '../../shared/ui/FormErrorSummary';
+import { Input, Textarea } from '../../shared/ui/Input';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { format, formatDistanceToNow } from 'date-fns';
 import { ru } from 'date-fns/locale';
-import { formatMoney } from '../../../shared/utils/format';
-import { AiAssistant } from '../../../widgets/ai-assistant/AiAssistant';
-import { useDocumentTitle } from '../../../shared/hooks/useDocumentTitle';
-import { useUIStore } from '../../../shared/stores/ui';
-import styles from './CustomerProfile.module.css';
-import { setProductMoment } from '../../../shared/utils/productMoment';
-import { openExternal } from '../../../shared/lib/browser';
-import { useCapabilities } from '../../../shared/hooks/useCapabilities';
-import { useTabsKeyboardNav } from '../../../shared/hooks/useTabsKeyboardNav';
+import { formatMoney } from '../../shared/utils/format';
+import { AiAssistant } from '../../widgets/ai-assistant/AiAssistant';
+import { useDocumentTitle } from '../../shared/hooks/useDocumentTitle';
+import { useUIStore } from '../../shared/stores/ui';
+import styles from './Customers.module.css';
+import { setProductMoment } from '../../shared/utils/productMoment';
+import { openExternal } from '../../shared/lib/browser';
+import { useCapabilities } from '../../shared/hooks/useCapabilities';
+import { useTabsKeyboardNav } from '../../shared/hooks/useTabsKeyboardNav';
 
 interface CustomerDetail {
   id: string; full_name: string; company_name: string;

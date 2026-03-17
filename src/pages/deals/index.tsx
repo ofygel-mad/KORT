@@ -6,27 +6,27 @@ import {
   ChevronLeft, Edit3, User, Calendar, Target, AlertCircle,
   Phone, Mail, Building2, Plus, CheckSquare, CheckCircle2, MessageSquare,
 } from 'lucide-react';
-import { api } from '../../../shared/api/client';
-import { Button } from '../../../shared/ui/Button';
-import { PageLoader } from '../../../shared/ui/PageLoader';
-import { EmptyState } from '../../../shared/ui/EmptyState';
-import { Drawer } from '../../../shared/ui/Drawer';
-import { FormErrorSummary } from '../../../shared/ui/FormErrorSummary';
-import { Input } from '../../../shared/ui/Input';
-import { Badge } from '../../../shared/ui/Badge';
-import { currencySymbol, formatMoney } from '../../../shared/utils/format';
+import { api } from '../../shared/api/client';
+import { Button } from '../../shared/ui/Button';
+import { PageLoader } from '../../shared/ui/PageLoader';
+import { EmptyState } from '../../shared/ui/EmptyState';
+import { Drawer } from '../../shared/ui/Drawer';
+import { FormErrorSummary } from '../../shared/ui/FormErrorSummary';
+import { Input } from '../../shared/ui/Input';
+import { Badge } from '../../shared/ui/Badge';
+import { currencySymbol, formatMoney } from '../../shared/utils/format';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { format, formatDistanceToNow, differenceInDays } from 'date-fns';
-import { getDateLocale } from '../../../shared/utils/locale';
-import { useConvert } from '../../../shared/hooks/useExchangeRates';
-import { useDocumentTitle } from '../../../shared/hooks/useDocumentTitle';
-import { useUIStore } from '../../../shared/stores/ui';
-import { fadeUp } from '../../../shared/motion/presets';
-import s from './DealProfile.module.css';
-import { setProductMoment } from '../../../shared/utils/productMoment';
-import { useCapabilities } from '../../../shared/hooks/useCapabilities';
-import { useTabsKeyboardNav } from '../../../shared/hooks/useTabsKeyboardNav';
+import { getDateLocale } from '../../shared/utils/locale';
+import { useConvert } from '../../shared/hooks/useExchangeRates';
+import { useDocumentTitle } from '../../shared/hooks/useDocumentTitle';
+import { useUIStore } from '../../shared/stores/ui';
+import { fadeUp } from '../../shared/motion/presets';
+import s from './Deals.module.css';
+import { setProductMoment } from '../../shared/utils/productMoment';
+import { useCapabilities } from '../../shared/hooks/useCapabilities';
+import { useTabsKeyboardNav } from '../../shared/hooks/useTabsKeyboardNav';
 
 /* ── Types ──────────────────────────────────────────────────── */
 interface Stage { id: string; name: string; position: number; type: string; color?: string; }
