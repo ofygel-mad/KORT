@@ -10,7 +10,7 @@
   padding: 20px;
   overflow-y: auto;
   background: rgba(4, 6, 10, 0.76);
-  backdrop-filter: blur(14px);
+  backdrop-filter: blur(6px);
 }
 
 /* ── Split Panel ── */
@@ -39,43 +39,15 @@
   justify-content: center;
   gap: 16px;
   padding: 32px 20px 28px;
-  background: linear-gradient(165deg, #0b1224, #101a32, #0a1020);
-  border-right: 1px solid rgba(100, 120, 155, 0.1);
+  background: linear-gradient(180deg, #0d1220 0%, #0a0e1a 100%);
+  border-right: 1px solid rgba(100, 120, 155, 0.08);
   overflow: hidden;
 }
 
-.brandOrb1 {
-  position: absolute;
-  width: 240px;
-  height: 240px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(50, 88, 165, 0.18), rgba(65, 40, 130, 0.06), transparent 70%);
-  filter: blur(38px);
-  animation: orbFloat1 9s ease-in-out infinite;
-  pointer-events: none;
-}
-
+/* orb elements removed — kept as hidden stubs to preserve DOM structure */
+.brandOrb1,
 .brandOrb2 {
-  position: absolute;
-  width: 160px;
-  height: 160px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(80, 50, 155, 0.12), transparent 70%);
-  filter: blur(28px);
-  animation: orbFloat2 11s ease-in-out infinite 2.5s;
-  pointer-events: none;
-}
-
-@keyframes orbFloat1 {
-  0%, 100% { transform: translate(-25%, -35%); }
-  33% { transform: translate(28%, -8%); }
-  66% { transform: translate(-12%, 28%); }
-}
-
-@keyframes orbFloat2 {
-  0%, 100% { transform: translate(28%, 22%); }
-  33% { transform: translate(-28%, 32%); }
-  66% { transform: translate(16%, -24%); }
+  display: none;
 }
 
 /* ── Carousel ── */
@@ -376,23 +348,33 @@
 /* ── Primary Button ── */
 
 .primaryButton {
-  min-height: 52px;
+  min-height: 48px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
   border: 0;
-  border-radius: 14px;
-  background: linear-gradient(180deg, rgba(215, 224, 236, 0.95), rgba(160, 172, 190, 0.9));
+  border-radius: 12px;
+  background: rgba(222, 230, 241, 0.96);
   color: rgba(9, 12, 18, 0.95);
   font: inherit;
-  font-weight: 700;
+  font-weight: 600;
+  letter-spacing: -0.01em;
   cursor: pointer;
-  transition: filter 150ms ease;
+  transition: background 140ms ease, opacity 140ms ease;
 }
 
 .primaryButton:hover {
-  filter: brightness(1.04);
+  background: rgba(236, 242, 250, 0.98);
+}
+
+.primaryButton:active {
+  background: rgba(208, 218, 232, 0.96);
+}
+
+.primaryButton:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(120, 155, 210, 0.28);
 }
 
 /* ── Footer ── */
@@ -575,6 +557,114 @@
 .select option {
   color: #eef2f8;
   background: #0c1018;
+}
+
+/* ── PIN button (secondary action in login step) ── */
+
+.pinButton {
+  min-height: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  border: 1px solid rgba(100, 115, 135, 0.18);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.025);
+  color: rgba(200, 210, 228, 0.72);
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+.pinButton:hover {
+  background: rgba(255, 255, 255, 0.055);
+  border-color: rgba(110, 125, 148, 0.28);
+  color: rgba(240, 244, 250, 0.92);
+}
+
+.pinButton:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(120, 155, 210, 0.2);
+}
+
+/* Info message for PIN unavailable cases */
+.pinInfo {
+  padding: 11px 14px;
+  border-radius: 10px;
+  background: rgba(55, 75, 115, 0.12);
+  border: 1px solid rgba(90, 115, 160, 0.18);
+  color: rgba(170, 190, 220, 0.82);
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+/* ── PIN entry step ── */
+
+/* Clickable area that focuses hidden input */
+.pinArea {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  cursor: text;
+  position: relative;
+  padding: 8px 0;
+}
+
+/* Row of 4 dot boxes */
+.pinDots {
+  display: flex;
+  gap: 14px;
+}
+
+/* Individual dot box */
+.pinDot {
+  width: 54px;
+  height: 58px;
+  border-radius: 14px;
+  border: 1.5px solid rgba(100, 115, 135, 0.2);
+  background: rgba(255, 255, 255, 0.025);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 180ms ease, background 180ms ease, box-shadow 180ms ease;
+  position: relative;
+}
+
+/* The filled indicator dot inside each box */
+.pinDot::after {
+  content: '';
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: transparent;
+  transform: scale(0.4);
+  transition: background 180ms ease, transform 200ms ease;
+}
+
+.pinDotFilled {
+  border-color: rgba(140, 175, 230, 0.45);
+  background: rgba(255, 255, 255, 0.055);
+  box-shadow: 0 0 0 3px rgba(100, 145, 210, 0.07);
+}
+
+.pinDotFilled::after {
+  background: rgba(210, 225, 248, 0.9);
+  transform: scale(1);
+}
+
+/* Hidden actual input — accessible but invisible */
+.pinHiddenInput {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+  border: none;
+  outline: none;
 }
 
 /* ── Responsive ── */

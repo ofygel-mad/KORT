@@ -195,24 +195,28 @@ export function CreateOrderModal({ tileId }: Props) {
               <div className={s.section}>
                 <div className={s.sectionLabel}>Параметры заказа</div>
                 <div className={s.row}>
-                  <select
-                    className={s.select}
-                    value={priority}
-                    onChange={e => setPriority(e.target.value as OrderPriority)}
-                  >
-                    {(Object.keys(PRIORITY_LABEL) as OrderPriority[]).map(p => (
-                      <option key={p} value={p}>{PRIORITY_LABEL[p]}</option>
-                    ))}
-                  </select>
                   <div className={s.dateWrapper}>
+                    <span className={s.fieldLabel}>Приоритет</span>
+                    <select
+                      className={s.select}
+                      value={priority}
+                      onChange={e => setPriority(e.target.value as OrderPriority)}
+                    >
+                      {(Object.keys(PRIORITY_LABEL) as OrderPriority[]).map(p => (
+                        <option key={p} value={p}>{PRIORITY_LABEL[p]}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className={s.dateWrapper}>
+                    <span className={s.fieldLabel}>Срок сдачи</span>
                     <input
-                      className={`${s.input} ${!dueDate ? s.inputWarn : ''}`}
+                      className={s.input}
                       type="date"
                       value={dueDate}
                       onChange={e => setDueDate(e.target.value)}
                     />
                     {!dueDate && (
-                      <span className={s.datePlaceholder}>Срок сдачи (рекомендуется)</span>
+                      <span className={s.fieldHelper}>Рекомендуется указать, чтобы избежать просрочки</span>
                     )}
                   </div>
                 </div>

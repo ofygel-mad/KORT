@@ -11,6 +11,7 @@ export function EditorialCursor() {
   const hoveredClickableRef = useRef<Element | null>(null);
   const target   = useRef({ x: -200, y: -200 });
   const current  = useRef({ x: -200, y: -200 });
+  const loopRunning = useRef(false);
   const [active,  setActive]  = useState(false);
   const [compact, setCompact] = useState(false);
   const [label,   setLabel]   = useState('');
@@ -22,13 +23,20 @@ export function EditorialCursor() {
     const updateHoverState = (el: Element | null) => {
       setActive(Boolean(el));
       setCompact(Boolean(el?.closest('input, textarea, select')));
-      // Метка только если явно задана через data-cursor-label — не дефолтный "Open"
       setLabel(el?.getAttribute('data-cursor-label') ?? '');
+    };
+
+    const startLoop = () => {
+      if (!loopRunning.current) {
+        loopRunning.current = true;
+        rafRef.current = requestAnimationFrame(loop);
+      }
     };
 
     const onMove = (e: MouseEvent) => {
       target.current.x = e.clientX;
       target.current.y = e.clientY;
+      startLoop();
     };
 
     const onHover = (e: MouseEvent) => {
@@ -43,16 +51,24 @@ export function EditorialCursor() {
       hoveredClickableRef.current = null;
       target.current = { x: -200, y: -200 };
       updateHoverState(null);
+      startLoop();
     };
 
     const loop = () => {
-      current.current.x += (target.current.x - current.current.x) * 0.16;
-      current.current.y += (target.current.y - current.current.y) * 0.16;
+      const dx = target.current.x - current.current.x;
+      const dy = target.current.y - current.current.y;
+      current.current.x += dx * 0.16;
+      current.current.y += dy * 0.16;
       if (outerRef.current) {
         outerRef.current.style.transform = `translate3d(${current.current.x}px,${current.current.y}px,0)`;
       }
       if (innerRef.current) {
         innerRef.current.style.transform = `translate3d(${target.current.x}px,${target.current.y}px,0)`;
+      }
+      // Stop looping when cursor has converged (< 0.5px difference)
+      if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) {
+        loopRunning.current = false;
+        return;
       }
       rafRef.current = requestAnimationFrame(loop);
     };
@@ -60,13 +76,13 @@ export function EditorialCursor() {
     window.addEventListener('mousemove', onMove, { passive: true });
     window.addEventListener('mouseover', onHover, { passive: true });
     document.addEventListener('mouseleave', onLeave, { passive: true });
-    rafRef.current = requestAnimationFrame(loop);
 
     return () => {
       delete document.body.dataset.cursor;
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseover', onHover);
       document.removeEventListener('mouseleave', onLeave);
+      loopRunning.current = false;
       cancelAnimationFrame(rafRef.current);
     };
   }, []);

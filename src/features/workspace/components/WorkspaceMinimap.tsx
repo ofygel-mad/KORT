@@ -40,7 +40,7 @@ export function WorkspaceMinimap() {
   }, [worldW, worldH, viewportSize, setViewport]);
 
   return (
-    <div className={styles.minimapContainer}>
+    <div className={styles.minimapContainer} data-workspace-ui="true">
       <button
         className={styles.minimapToggle}
         onClick={() => setVisible(v => !v)}

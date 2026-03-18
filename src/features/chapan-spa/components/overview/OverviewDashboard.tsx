@@ -101,12 +101,12 @@ export function OverviewDashboard({ tileId }: Props) {
         <div className={s.stretchSep} />
         <div className={s.finItem}>
           <span className={s.finLbl}>Ждёт оплаты</span>
-          <span className={s.finVal}>{(data.pendingPayment / 1000).toFixed(0)}K ₸</span>
+          <span className={s.finVal}>{data.pendingPayment.toLocaleString('ru-RU')} ₸</span>
         </div>
         <div className={s.sep} />
         <div className={s.finItem}>
           <span className={s.finLbl}>Выручка</span>
-          <span className={s.finVal}>{(data.totalRevenue / 1000).toFixed(0)}K ₸</span>
+          <span className={s.finVal}>{data.totalRevenue.toLocaleString('ru-RU')} ₸</span>
         </div>
       </div>
 
@@ -171,7 +171,7 @@ export function OverviewDashboard({ tileId }: Props) {
                           {due.label}
                         </span>
                       )}
-                      <span className={s.rowAmt}>{(o.totalAmount / 1000).toFixed(0)}K ₸</span>
+                      <span className={s.rowAmt}>{o.totalAmount.toLocaleString('ru-RU')} ₸</span>
                     </button>
                     <button className={s.qBtn} onClick={() => confirmOrder(o.id)}>
                       Подтвердить

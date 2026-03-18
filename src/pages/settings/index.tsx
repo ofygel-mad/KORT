@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
-import { WorkspaceThemeModal } from '../../features/workspace/components/WorkspaceThemeModal';
 import { useLeadsRbac } from '../../features/leads-spa/model/rbac.store';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -12,6 +11,7 @@ import { CSS } from '@dnd-kit/utilities';
 import {
   GripVertical, Pencil, Trash2, Building2, Users, GitBranch,
   Shield, Globe, Zap, Key, Copy, Plus, MessageSquare, MonitorCog, Check, Palette, Layers3, Sparkles,
+  ShieldCheck, Smartphone, KeyRound, X as XIcon,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { api } from '../../shared/api/client';
@@ -24,6 +24,7 @@ import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { useRole } from '../../shared/hooks/useRole';
 import { useCapabilities } from '../../shared/hooks/useCapabilities';
+import { usePinStore, getDeviceId } from '../../shared/stores/pin';
 import { useDocumentTitle } from '../../shared/hooks/useDocumentTitle';
 import { useUIStore, type ThemePack } from '../../shared/stores/ui';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -38,7 +39,7 @@ interface OrgData { id: string; name: string; mode: string; industry: string; co
 interface UserItem { id: string; full_name: string; email: string; status: string; role?: string; }
 
 /* ── Section nav ─────────────────────────────────────────────── */
-type SectionKey = 'organization' | 'appearance' | 'pipelines' | 'templates' | 'team' | 'mode' | 'integrations' | 'webhooks' | 'api';
+type SectionKey = 'organization' | 'appearance' | 'security' | 'pipelines' | 'templates' | 'team' | 'mode' | 'integrations' | 'webhooks' | 'api';
 
 interface SettingsSection {
   key: SectionKey;
@@ -51,6 +52,7 @@ interface SettingsSection {
 const SECTIONS: SettingsSection[] = [
   { key: 'organization', label: 'Организация', icon: <Building2 size={15} /> },
   { key: 'appearance', label: 'Оформление', icon: <MonitorCog size={15} /> },
+  { key: 'security', label: 'Безопасность', icon: <ShieldCheck size={15} /> },
   { key: 'pipelines', label: 'Воронки', icon: <GitBranch size={15} /> },
   { key: 'templates', label: 'Шаблоны сообщений', icon: <MessageSquare size={15} /> },
   { key: 'team', label: 'Команда', icon: <Users size={15} />, capability: 'team.manage', adminOnly: true },
@@ -442,7 +444,6 @@ function PipelinesSection() {
 
 function AppearanceSection() {
   const { themePack, setThemePack } = useUIStore();
-  const [wsThemeOpen, setWsThemeOpen] = useState(false);
 
   return (
     <div className={s.section}>
@@ -497,7 +498,6 @@ function AppearanceSection() {
               <button
                 className={s.themeModeBtnActive}
                 style={{ flexShrink: 0, whiteSpace: 'nowrap', padding: '0 16px', height: 36, borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 7, border: '1px solid rgba(160,104,56,0.45)', background: 'rgba(160,104,56,0.12)', color: 'rgba(210,160,90,0.95)' }}
-                onClick={() => setWsThemeOpen(true)}
               >
                 <Palette size={14} />
                 Выбрать фон
@@ -519,7 +519,6 @@ function AppearanceSection() {
         </div>
       </div>
 
-      <WorkspaceThemeModal open={wsThemeOpen} onClose={() => setWsThemeOpen(false)} />
     </div>
   );
 }
@@ -622,6 +621,172 @@ function PlannedSection({
   );
 }
 
+/* ── Security section ────────────────────────────────────────── */
+function SecuritySection() {
+  const { pin, isTrustedDevice, setPin, clearPin } = usePinStore();
+  const [mode, setMode] = useState<'idle' | 'set' | 'change'>('idle');
+  const [newPin, setNewPin] = useState('');
+  const [confirmPin, setConfirmPin] = useState('');
+  const [pinError, setPinError] = useState('');
+  const deviceId = getDeviceId();
+
+  const resetForm = () => {
+    setMode('idle');
+    setNewPin('');
+    setConfirmPin('');
+    setPinError('');
+  };
+
+  const savePin = () => {
+    if (newPin.length !== 4) { setPinError('PIN-код должен содержать 4 цифры'); return; }
+    if (!/^\d{4}$/.test(newPin)) { setPinError('PIN-код может содержать только цифры'); return; }
+    if (newPin !== confirmPin) { setPinError('PIN-коды не совпадают'); return; }
+    setPin(newPin);
+    toast.success('PIN-код установлен');
+    resetForm();
+  };
+
+  const removePin = () => {
+    clearPin();
+    toast.success('PIN-код удалён');
+  };
+
+  return (
+    <div className={s.section}>
+      <div className={s.sectionHeader}>
+        <div>
+          <div className={s.sectionTitle}>Безопасность входа</div>
+          <div className={s.sectionSubtitle}>PIN-код для быстрого входа и управление доверенными устройствами</div>
+        </div>
+      </div>
+
+      <div className={s.sectionBody}>
+        {/* Device trust status */}
+        <div className={s.securityCard}>
+          <div className={s.securityCardIcon}>
+            <Smartphone size={18} />
+          </div>
+          <div className={s.securityCardBody}>
+            <div className={s.securityCardTitle}>Это устройство</div>
+            <div className={s.securityCardMeta}>
+              ID: <code className={s.deviceId}>{deviceId.slice(0, 18)}…</code>
+            </div>
+            <div className={s.securityCardStatus}>
+              {isTrustedDevice ? (
+                <span className={s.statusTrusted}>
+                  <ShieldCheck size={13} /> Распознано — PIN-код доступен
+                </span>
+              ) : (
+                <span className={s.statusUntrusted}>
+                  Не распознано — войдите через логин и пароль, чтобы активировать PIN
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* PIN status & controls */}
+        <div className={s.securityCard}>
+          <div className={s.securityCardIcon}>
+            <KeyRound size={18} />
+          </div>
+          <div className={s.securityCardBody}>
+            <div className={s.securityCardTitle}>PIN-код для быстрого входа</div>
+            <div className={s.securityCardMeta}>4-значный код вместо пароля при разблокировке</div>
+            <div className={s.securityCardStatus}>
+              {pin ? (
+                <span className={s.statusTrusted}><Check size={13} /> Установлен</span>
+              ) : (
+                <span className={s.statusNeutral}>Не установлен</span>
+              )}
+            </div>
+
+            {mode === 'idle' && isTrustedDevice && (
+              <div className={s.securityActions}>
+                <button
+                  className={s.securityBtn}
+                  onClick={() => setMode(pin ? 'change' : 'set')}
+                >
+                  {pin ? 'Изменить PIN' : 'Установить PIN'}
+                </button>
+                {pin && (
+                  <button className={`${s.securityBtn} ${s.securityBtnDanger}`} onClick={removePin}>
+                    Удалить PIN
+                  </button>
+                )}
+              </div>
+            )}
+
+            {!isTrustedDevice && mode === 'idle' && (
+              <p className={s.securityHint}>
+                Войдите в аккаунт через логин и пароль хотя бы один раз, чтобы это устройство стало доверенным и PIN-код стал доступен.
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Inline PIN setup form */}
+        <AnimatePresence>
+          {(mode === 'set' || mode === 'change') && (
+            <motion.div
+              className={s.pinSetupCard}
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <div className={s.pinSetupHeader}>
+                <div className={s.pinSetupTitle}>
+                  {mode === 'change' ? 'Изменить PIN-код' : 'Установить PIN-код'}
+                </div>
+                <button className={s.pinSetupClose} onClick={resetForm} aria-label="Отмена">
+                  <XIcon size={15} />
+                </button>
+              </div>
+
+              <div className={s.pinSetupFields}>
+                <div className={s.field}>
+                  <label className={s.fieldLabel}>Новый PIN-код (4 цифры)</label>
+                  <input
+                    className="kort-input"
+                    type="password"
+                    inputMode="numeric"
+                    maxLength={4}
+                    value={newPin}
+                    onChange={(e) => { setNewPin(e.target.value.replace(/\D/g, '').slice(0, 4)); setPinError(''); }}
+                    placeholder="• • • •"
+                    autoFocus
+                  />
+                </div>
+                <div className={s.field}>
+                  <label className={s.fieldLabel}>Повторите PIN-код</label>
+                  <input
+                    className="kort-input"
+                    type="password"
+                    inputMode="numeric"
+                    maxLength={4}
+                    value={confirmPin}
+                    onChange={(e) => { setConfirmPin(e.target.value.replace(/\D/g, '').slice(0, 4)); setPinError(''); }}
+                    placeholder="• • • •"
+                    onKeyDown={(e) => { if (e.key === 'Enter') savePin(); }}
+                  />
+                </div>
+              </div>
+
+              {pinError && <div className={s.pinError}>{pinError}</div>}
+
+              <div className={s.pinSetupActions}>
+                <button className={s.securityBtn} onClick={savePin}>Сохранить</button>
+                <button className={`${s.securityBtn} ${s.securityBtnSecondary}`} onClick={resetForm}>Отмена</button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
+  );
+}
+
 /* ── Main page ───────────────────────────────────────────────── */
 export default function SettingsPage() {
   useDocumentTitle('Настройки');
@@ -708,6 +873,7 @@ export default function SettingsPage() {
             />
           )}
           {!sectionLocked && section === 'organization' && <OrgSection />}
+          {!sectionLocked && section === 'security'     && <SecuritySection />}
           {!sectionLocked && section === 'team'         && <TeamSection />}
           {!sectionLocked && section === 'pipelines'    && <PipelinesSection />}
           {!sectionLocked && section === 'appearance'   && <AppearanceSection />}

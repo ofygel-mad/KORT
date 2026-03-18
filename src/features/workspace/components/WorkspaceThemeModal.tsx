@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
-import { X, Check, Play, Grid3X3 } from 'lucide-react';
+import { X, Check, Grid3X3 } from 'lucide-react';
 import { useWorkspaceTheme, WORKSPACE_BG_OPTIONS, type WorkspaceBg } from '../model/workspaceTheme';
 import styles from './WorkspaceTheme.module.css';
 
@@ -60,25 +60,15 @@ export function WorkspaceThemeModal({ open, onClose }: Props) {
                     >
                       {/* Preview thumbnail */}
                       <div className={styles.preview}>
-                        {bg.isVideo ? (
-                          <>
-                            <video
-                              className={styles.previewVideo}
-                              autoPlay
-                              loop
-                              muted
-                              playsInline
-                            >
-                              <source src={`/workspace-bgs/${bg.filename}`} type="video/mp4" />
-                            </video>
-                            <div className={styles.previewPlayIcon}>
-                              <Play size={14} fill="currentColor" />
-                            </div>
-                          </>
-                        ) : (
+                        {bg.id === 'grid' ? (
                           <div className={styles.previewGrid}>
                             <Grid3X3 size={22} strokeWidth={1.2} />
                           </div>
+                        ) : (
+                          <div
+                            className={styles.previewEffect}
+                            style={{ background: bg.previewColor }}
+                          />
                         )}
 
                         {isActive && (

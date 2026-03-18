@@ -6,12 +6,39 @@ import { clearTileLeadsUI } from '../../leads-spa/model/tile-ui.store';
 import { clearTileDealsUI } from '../../deals-spa/model/tile-ui.store';
 import { clearTileTasksUI } from '../../tasks-spa/model/tile-ui.store';
 import { clearTileChapanUI } from '../../chapan-spa/model/tile-ui.store';
-import type { WorkspaceModalSize, WorkspaceTile, WorkspaceViewport, WorkspaceWidgetKind } from './types';
+import type {
+  WorkspaceEuler3D,
+  WorkspaceModalSize,
+  WorkspaceSceneMode,
+  WorkspaceSceneTerrainMode,
+  WorkspaceSceneTheme,
+  WorkspaceTile,
+  WorkspaceTileDistance,
+  WorkspaceTileStatus,
+  WorkspaceViewport,
+  WorkspaceWidgetKind,
+} from './types';
 
 export const WORLD_FACTOR = 3;
 export const ZOOM_MIN = 0.35;
 export const ZOOM_MAX = 1.8;
 export const ZOOM_STEP = 0.08;
+export const WORKSPACE_TILE_IDLE_MS = 15_000;
+
+const VALID_WIDGET_KINDS = new Set<WorkspaceWidgetKind>([
+  'customers',
+  'deals',
+  'tasks',
+  'reports',
+  'imports',
+  'chapan',
+]);
+
+const VALID_MODAL_SIZES = new Set<WorkspaceModalSize>(['compact', 'default', 'wide']);
+const VALID_SCENE_THEMES = new Set<WorkspaceSceneTheme>(['default', 'morning', 'overcast', 'dusk', 'night']);
+const VALID_SCENE_TERRAIN_MODES = new Set<WorkspaceSceneTerrainMode>(['full', 'calm', 'void']);
+const VALID_TILE_DISTANCES = new Set<WorkspaceTileDistance>(['near', 'mid', 'far']);
+const VALID_TILE_STATUSES = new Set<WorkspaceTileStatus>(['floating', 'drifting', 'idle']);
 
 const DEFAULT_TILE_SIZE: Record<WorkspaceWidgetKind, { width: number; height: number }> = {
   customers: { width: 280, height: 175 },
@@ -37,6 +64,16 @@ interface ContextMenuState {
   y: number;
 }
 
+interface PersistedWorkspaceState {
+  tiles?: unknown;
+  viewport?: unknown;
+  viewportReady?: unknown;
+  zoom?: unknown;
+  topZIndex?: unknown;
+  sceneTheme?: unknown;
+  sceneTerrainMode?: unknown;
+}
+
 interface WorkspaceStore {
   tiles: WorkspaceTile[];
   viewport: WorkspaceViewport;
@@ -45,9 +82,14 @@ interface WorkspaceStore {
   activeTileId: string | null;
   settingsTileId: string | null;
   recentTileId: string | null;
+  hoveredTileId: string | null;
   zoom: number;
   contextMenu: ContextMenuState | null;
   topZIndex: number;
+  sceneTheme: WorkspaceSceneTheme;
+  sceneThemeAuto: boolean;
+  sceneMode: WorkspaceSceneMode;
+  sceneTerrainMode: WorkspaceSceneTerrainMode;
 
   addTile: (kind: WorkspaceWidgetKind) => string;
   duplicateTile: (id: string) => string | null;
@@ -70,12 +112,212 @@ interface WorkspaceStore {
   zoomOut: () => void;
   resetZoom: () => void;
   pinTile: (id: string) => void;
+  setTileDistance: (id: string, distance: WorkspaceTileDistance) => void;
+  nudgeTileDistance: (id: string, direction: -1 | 1) => void;
+  setHoveredTile: (id: string | null) => void;
+  markTileActive: (id: string, opts?: { rotation3D?: Partial<WorkspaceEuler3D>; status?: WorkspaceTileStatus }) => void;
+  updateIdleTiles: () => void;
   openContextMenu: (tileId: string, x: number, y: number) => void;
   closeContextMenu: () => void;
+  setSceneTheme: (theme: WorkspaceSceneTheme) => void;
+  setSceneThemeAuto: (auto: boolean) => void;
+  setSceneMode: (mode: WorkspaceSceneMode) => void;
+  setSceneTerrainMode: (mode: WorkspaceSceneTerrainMode) => void;
 }
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
+}
+
+function isWorkspaceWidgetKind(value: unknown): value is WorkspaceWidgetKind {
+  return typeof value === 'string' && VALID_WIDGET_KINDS.has(value as WorkspaceWidgetKind);
+}
+
+function isWorkspaceModalSize(value: unknown): value is WorkspaceModalSize {
+  return typeof value === 'string' && VALID_MODAL_SIZES.has(value as WorkspaceModalSize);
+}
+
+function isWorkspaceSceneTheme(value: unknown): value is WorkspaceSceneTheme {
+  return typeof value === 'string' && VALID_SCENE_THEMES.has(value as WorkspaceSceneTheme);
+}
+
+function isWorkspaceSceneTerrainMode(value: unknown): value is WorkspaceSceneTerrainMode {
+  return typeof value === 'string' && VALID_SCENE_TERRAIN_MODES.has(value as WorkspaceSceneTerrainMode);
+}
+
+function isWorkspaceTileDistance(value: unknown): value is WorkspaceTileDistance {
+  return typeof value === 'string' && VALID_TILE_DISTANCES.has(value as WorkspaceTileDistance);
+}
+
+function isWorkspaceTileStatus(value: unknown): value is WorkspaceTileStatus {
+  return typeof value === 'string' && VALID_TILE_STATUSES.has(value as WorkspaceTileStatus);
+}
+
+function toFiniteNumber(value: unknown, fallback: number) {
+  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+}
+
+function toPositiveNumber(value: unknown, fallback: number) {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : fallback;
+}
+
+function toIsoString(value: unknown, fallback: string) {
+  return typeof value === 'string' && !Number.isNaN(new Date(value).getTime()) ? value : fallback;
+}
+
+function getDefaultModalSize(kind: WorkspaceWidgetKind): WorkspaceModalSize {
+  return kind === 'customers' || kind === 'deals' ? 'wide' : 'default';
+}
+
+function shiftTileDistance(distance: WorkspaceTileDistance, direction: -1 | 1): WorkspaceTileDistance {
+  const order: WorkspaceTileDistance[] = ['near', 'mid', 'far'];
+  const index = order.indexOf(distance);
+  return order[clamp(index + direction, 0, order.length - 1)];
+}
+
+function deriveTile3DRotation(status: WorkspaceTileStatus): WorkspaceEuler3D {
+  if (status === 'drifting') {
+    return { x: -0.14, y: 0.12, z: -0.04 };
+  }
+
+  if (status === 'idle') {
+    return { x: -0.08, y: 0.02, z: 0 };
+  }
+
+  return { x: -0.03, y: 0, z: 0 };
+}
+
+
+function sanitizeEuler3D(value: unknown, fallback: WorkspaceEuler3D): WorkspaceEuler3D {
+  if (!value || typeof value !== 'object') {
+    return fallback;
+  }
+
+  const next = value as Partial<WorkspaceEuler3D>;
+  return {
+    x: toFiniteNumber(next.x, fallback.x),
+    y: toFiniteNumber(next.y, fallback.y),
+    z: toFiniteNumber(next.z, fallback.z),
+  };
+}
+
+function nowIsoString() {
+  return new Date().toISOString();
+}
+
+function buildTile3DState(tile: Pick<WorkspaceTile, 'x' | 'y'> & Partial<Pick<WorkspaceTile, 'status'>>) {
+  const status = tile.status ?? 'floating';
+  return {
+    status,
+    rotation3D: deriveTile3DRotation(status),
+  };
+}
+
+function getWorldBounds(width: number, height: number) {
+  return {
+    width: Math.max(0, width * WORLD_FACTOR),
+    height: Math.max(0, height * WORLD_FACTOR),
+  };
+}
+
+function clampAxisWithinWorld(value: number, itemSize: number, worldSize: number) {
+  return clamp(value, 0, Math.max(0, worldSize - itemSize));
+}
+
+export function clampViewportToBounds(viewport: WorkspaceViewport, width: number, height: number): WorkspaceViewport {
+  return {
+    x: clamp(viewport.x, -(Math.max(0, width) * (WORLD_FACTOR - 1)), 0),
+    y: clamp(viewport.y, -(Math.max(0, height) * (WORLD_FACTOR - 1)), 0),
+  };
+}
+
+export function clampTileToWorldBounds(tile: WorkspaceTile, width: number, height: number): WorkspaceTile {
+  const world = getWorldBounds(width, height);
+  const nextX = clampAxisWithinWorld(tile.x, tile.width, world.width);
+  const nextY = clampAxisWithinWorld(tile.y, tile.height, world.height);
+
+  if (nextX === tile.x && nextY === tile.y) {
+    return tile;
+  }
+
+  return {
+    ...tile,
+    x: nextX,
+    y: nextY,
+  };
+}
+
+function sanitizeTile(rawTile: unknown, fallbackZIndex: number): WorkspaceTile | null {
+  if (!rawTile || typeof rawTile !== 'object') return null;
+
+  const tile = rawTile as Partial<WorkspaceTile>;
+  if (!isWorkspaceWidgetKind(tile.kind)) return null;
+
+  const size = DEFAULT_TILE_SIZE[tile.kind];
+  const fallbackCreatedAt = new Date().toISOString();
+  const zIndex = Math.max(1, Math.round(toFiniteNumber(tile.zIndex, fallbackZIndex)));
+  const status = isWorkspaceTileStatus(tile.status) ? tile.status : 'floating';
+  const fallbackRotation3D = deriveTile3DRotation(status);
+
+  return {
+    id: typeof tile.id === 'string' && tile.id.trim() ? tile.id : nanoid(),
+    kind: tile.kind,
+    title: typeof tile.title === 'string' && tile.title.trim() ? tile.title : TITLES[tile.kind],
+    x: Math.max(0, toFiniteNumber(tile.x, 20)),
+    y: Math.max(0, toFiniteNumber(tile.y, 20)),
+    width: Math.max(160, toPositiveNumber(tile.width, size.width)),
+    height: Math.max(120, toPositiveNumber(tile.height, size.height)),
+    modalSize: isWorkspaceModalSize(tile.modalSize) ? tile.modalSize : getDefaultModalSize(tile.kind),
+    version: Math.max(1, Math.round(toFiniteNumber(tile.version, 1))),
+    createdAt: toIsoString(tile.createdAt, fallbackCreatedAt),
+    lastInteractionAt: toIsoString(tile.lastInteractionAt, fallbackCreatedAt),
+    status,
+    rotation3D: sanitizeEuler3D(tile.rotation3D, fallbackRotation3D),
+    distance3D: isWorkspaceTileDistance(tile.distance3D) ? tile.distance3D : 'mid',
+    pinned: typeof tile.pinned === 'boolean' ? tile.pinned : false,
+    zIndex,
+  };
+}
+
+function sanitizeTiles(rawTiles: unknown): WorkspaceTile[] {
+  if (!Array.isArray(rawTiles)) return [];
+
+  return rawTiles
+    .map((tile, index) => sanitizeTile(tile, 10 + index))
+    .filter((tile): tile is WorkspaceTile => tile !== null);
+}
+
+function sanitizeViewport(rawViewport: unknown): WorkspaceViewport {
+  if (!rawViewport || typeof rawViewport !== 'object') {
+    return { x: 0, y: 0 };
+  }
+
+  const viewport = rawViewport as Partial<WorkspaceViewport>;
+  return {
+    x: toFiniteNumber(viewport.x, 0),
+    y: toFiniteNumber(viewport.y, 0),
+  };
+}
+
+function sanitizeTopZIndex(rawTopZIndex: unknown, tiles: WorkspaceTile[]) {
+  const persistedTopZIndex = Math.round(toFiniteNumber(rawTopZIndex, 10));
+  const tileTopZIndex = tiles.reduce((max, tile) => Math.max(max, tile.zIndex ?? 10), 10);
+  return Math.max(10, persistedTopZIndex, tileTopZIndex);
+}
+
+export function sanitizeWorkspacePersistedState(persistedState: unknown) {
+  const persisted = (persistedState ?? {}) as PersistedWorkspaceState;
+  const tiles = sanitizeTiles(persisted.tiles);
+
+  return {
+    tiles,
+    viewport: sanitizeViewport(persisted.viewport),
+    viewportReady: typeof persisted.viewportReady === 'boolean' ? persisted.viewportReady : false,
+    zoom: clamp(toFiniteNumber(persisted.zoom, 1), ZOOM_MIN, ZOOM_MAX),
+    topZIndex: sanitizeTopZIndex(persisted.topZIndex, tiles),
+    sceneTheme: isWorkspaceSceneTheme(persisted.sceneTheme) ? persisted.sceneTheme : 'morning',
+    sceneTerrainMode: isWorkspaceSceneTerrainMode(persisted.sceneTerrainMode) ? persisted.sceneTerrainMode : 'full',
+  };
 }
 
 export const useWorkspaceStore = create<WorkspaceStore>()(
@@ -88,13 +330,19 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
       activeTileId: null,
       settingsTileId: null,
       recentTileId: null,
+      hoveredTileId: null,
       zoom: 1,
       contextMenu: null,
       topZIndex: 10,
+      sceneTheme: 'morning',
+      sceneThemeAuto: false,
+      sceneMode: 'surface',
+      sceneTerrainMode: 'full',
 
       addTile: (kind) => {
         const { viewport, viewportSize, topZIndex } = get();
         const size = DEFAULT_TILE_SIZE[kind];
+        const world = getWorldBounds(viewportSize.width, viewportSize.height);
         const visibleCenterX = -viewport.x + viewportSize.width / 2 - size.width / 2;
         const visibleCenterY = -viewport.y + viewportSize.height / 2 - size.height / 2;
         const scatter = get().tiles.length;
@@ -102,13 +350,23 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
         const offsetY = Math.floor(scatter / 4) * 24 - 12;
         const id = nanoid();
         const newZ = topZIndex + 1;
+        const createdAt = nowIsoString();
+        const maxX = Math.max(0, world.width - size.width);
+        const maxY = Math.max(0, world.height - size.height);
+        const baseX = clamp(visibleCenterX + offsetX, Math.min(20, maxX), maxX);
+        const baseY = clamp(visibleCenterY + offsetY, Math.min(20, maxY), maxY);
+        const tile3D = buildTile3DState({ x: baseX, y: baseY, status: 'floating' });
         const tile: WorkspaceTile = {
           id, kind, title: TITLES[kind],
-          x: Math.max(20, visibleCenterX + offsetX),
-          y: Math.max(20, visibleCenterY + offsetY),
+          x: baseX,
+          y: baseY,
           width: size.width, height: size.height,
           modalSize: (kind === 'customers' || kind === 'deals') ? 'wide' : 'default',
-          version: 1, createdAt: new Date().toISOString(),
+          version: 1, createdAt,
+          lastInteractionAt: createdAt,
+          status: tile3D.status,
+          rotation3D: tile3D.rotation3D,
+          distance3D: 'mid',
           pinned: false, zIndex: newZ,
         };
         set((state) => ({ tiles: [...state.tiles, tile], recentTileId: id, topZIndex: newZ }));
@@ -120,11 +378,26 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
         const state = get();
         const src = state.tiles.find(t => t.id === id);
         if (!src) return null;
+        const world = getWorldBounds(state.viewportSize.width, state.viewportSize.height);
         const newId = nanoid();
         const newZ = state.topZIndex + 1;
+        const createdAt = nowIsoString();
+        const nextX = clampAxisWithinWorld(src.x + 32, src.width, world.width);
+        const nextY = clampAxisWithinWorld(src.y + 32, src.height, world.height);
+        const tile3D = buildTile3DState({ x: nextX, y: nextY, status: 'floating' });
         const dup: WorkspaceTile = {
-          ...src, id: newId, x: src.x + 32, y: src.y + 32,
-          version: 1, createdAt: new Date().toISOString(), pinned: false, zIndex: newZ,
+          ...src,
+          id: newId,
+          x: nextX,
+          y: nextY,
+          version: 1,
+          createdAt,
+          lastInteractionAt: createdAt,
+          status: tile3D.status,
+          rotation3D: tile3D.rotation3D,
+          distance3D: src.distance3D,
+          pinned: false,
+          zIndex: newZ,
         };
         set((s) => ({ tiles: [...s.tiles, dup], recentTileId: newId, topZIndex: newZ }));
         setTimeout(() => { set((s) => (s.recentTileId === newId ? { recentTileId: null } : {})); }, 3000);
@@ -169,13 +442,30 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
       },
 
       setTilePosition: (id, x, y) => set((state) => ({
-        tiles: state.tiles.map((t) => (t.id === id ? { ...t, x, y } : t)),
+        tiles: state.tiles.map((t) => (t.id === id
+          ? {
+              ...t,
+              x,
+              y,
+              lastInteractionAt: nowIsoString(),
+              status: 'floating',
+              rotation3D: deriveTile3DRotation('floating'),
+            }
+          : t)),
       })),
 
       bringToFront: (id) => {
         const newZ = get().topZIndex + 1;
         set((state) => ({
-          tiles: state.tiles.map((t) => (t.id === id ? { ...t, zIndex: newZ } : t)),
+          tiles: state.tiles.map((t) => (t.id === id
+            ? {
+                ...t,
+                zIndex: newZ,
+                lastInteractionAt: nowIsoString(),
+                status: 'floating',
+                rotation3D: deriveTile3DRotation('floating'),
+              }
+            : t)),
           topZIndex: newZ,
         }));
       },
@@ -186,6 +476,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
           tiles: state.tiles.filter((t) => t.id !== id),
           activeTileId: state.activeTileId === id ? null : state.activeTileId,
           settingsTileId: state.settingsTileId === id ? null : state.settingsTileId,
+          hoveredTileId: state.hoveredTileId === id ? null : state.hoveredTileId,
           contextMenu: state.contextMenu?.tileId === id ? null : state.contextMenu,
         }));
       },
@@ -199,7 +490,9 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
       })),
 
       reloadTile: (id) => set((state) => ({
-        tiles: state.tiles.map((t) => (t.id === id ? { ...t, version: t.version + 1 } : t)),
+        tiles: state.tiles.map((t) => (t.id === id
+          ? { ...t, version: t.version + 1, lastInteractionAt: nowIsoString(), status: 'floating' }
+          : t)),
       })),
 
       openTile: (id) => {
@@ -219,7 +512,10 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
       initializeViewport: (width, height) => {
         set((s) => ({
           viewportSize: { width, height },
-          viewport: s.viewportReady ? s.viewport : { x: 0, y: 0 },
+          viewport: clampViewportToBounds(s.viewportReady ? s.viewport : { x: 0, y: 0 }, width, height),
+          tiles: width > 0 && height > 0
+            ? s.tiles.map((tile) => clampTileToWorldBounds(tile, width, height))
+            : s.tiles,
           viewportReady: true,
         }));
       },
@@ -230,11 +526,77 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
       resetZoom: () => set({ zoom: 1 }),
 
       pinTile: (id) => set((state) => ({
-        tiles: state.tiles.map((t) => (t.id === id ? { ...t, pinned: !t.pinned } : t)),
+        tiles: state.tiles.map((t) => (t.id === id
+          ? { ...t, pinned: !t.pinned, lastInteractionAt: nowIsoString(), status: 'floating' }
+          : t)),
       })),
 
+      setTileDistance: (id, distance) => set((state) => ({
+        tiles: state.tiles.map((tile) => (
+          tile.id === id
+            ? { ...tile, distance3D: distance, lastInteractionAt: nowIsoString(), status: 'floating' }
+            : tile
+        )),
+      })),
+
+      nudgeTileDistance: (id, direction) => set((state) => ({
+        tiles: state.tiles.map((tile) => (
+          tile.id === id
+            ? {
+                ...tile,
+                distance3D: shiftTileDistance(tile.distance3D, direction),
+                lastInteractionAt: nowIsoString(),
+                status: 'floating',
+              }
+            : tile
+        )),
+      })),
+
+      setHoveredTile: (id) => set({ hoveredTileId: id }),
+      markTileActive: (id, opts) => set((state) => ({
+        tiles: state.tiles.map((tile) => {
+          if (tile.id !== id) return tile;
+
+          const nextStatus = opts?.status ?? 'floating';
+          return {
+            ...tile,
+            lastInteractionAt: nowIsoString(),
+            status: nextStatus,
+            rotation3D: {
+              ...deriveTile3DRotation(nextStatus),
+              ...opts?.rotation3D,
+            },
+          };
+        }),
+      })),
+      updateIdleTiles: () => set((state) => {
+        const now = Date.now();
+        let changed = false;
+        const tiles = state.tiles.map((tile) => {
+          const elapsed = now - new Date(tile.lastInteractionAt).getTime();
+          const nextStatus: WorkspaceTileStatus =
+            tile.pinned ? 'idle' : elapsed >= WORKSPACE_TILE_IDLE_MS ? 'drifting' : 'floating';
+
+          if (nextStatus === tile.status) {
+            return tile;
+          }
+
+          changed = true;
+          return {
+            ...tile,
+            status: nextStatus,
+            rotation3D: deriveTile3DRotation(nextStatus),
+          };
+        });
+
+        return changed ? { tiles } : state;
+      }),
       openContextMenu: (tileId, x, y) => set({ contextMenu: { tileId, x, y } }),
       closeContextMenu: () => set({ contextMenu: null }),
+      setSceneTheme: (sceneTheme) => set({ sceneTheme, sceneThemeAuto: false }),
+      setSceneThemeAuto: (sceneThemeAuto) => set({ sceneThemeAuto }),
+      setSceneMode: (sceneMode) => set({ sceneMode }),
+      setSceneTerrainMode: (sceneTerrainMode) => set({ sceneTerrainMode }),
     }),
     {
       name: 'kort-workspace',
@@ -244,6 +606,12 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
         viewportReady: state.viewportReady,
         zoom: state.zoom,
         topZIndex: state.topZIndex,
+        sceneTheme: state.sceneTheme,
+        sceneTerrainMode: state.sceneTerrainMode,
+      }),
+      merge: (persistedState, currentState) => ({
+        ...currentState,
+        ...sanitizeWorkspacePersistedState(persistedState),
       }),
     },
   ),

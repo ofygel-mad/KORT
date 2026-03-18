@@ -9,55 +9,270 @@
   height: 100%;
   overflow: hidden;
   border: none;
-  background:
-    radial-gradient(ellipse at 50% 0%, rgba(140, 90, 40, 0.08) 0%, transparent 55%),
-    linear-gradient(180deg, #161820 0%, #12141b 100%);
+  background: linear-gradient(180deg, #081120 0%, #04070f 100%);
   cursor: grab;
   user-select: none;
   -webkit-user-select: none;
+  perspective: 1800px;
+  perspective-origin: 50% 38%;
+  --scene-sky-top: #091221;
+  --scene-sky-bottom: #314867;
+  --scene-hud-border: rgba(255,255,255,0.12);
+  --scene-hud-fill: rgba(9,16,29,0.72);
+  --scene-hud-text: #eff5ff;
 }
 
 .workspaceViewport:active {
   cursor: grabbing;
 }
 
-/* When video bg is active, darken canvas slightly so tiles pop */
-.workspaceViewportVideo {
+/* When a Three.js effect is active, viewport background is transparent */
+.workspaceViewportEffect {
   background: transparent;
 }
 
+.workspaceViewportFlight {
+  cursor: default;
+}
+
 /* ═══════════════════════════════════════════════
-   VIDEO BG LAYER — behind world canvas
+   EFFECT BG LAYER — Three.js canvas behind world
    ═══════════════════════════════════════════════ */
 .workspaceBgLayer {
   position: absolute;
   inset: 0;
   z-index: 0;
-  pointer-events: none;
   overflow: hidden;
   width: 100%;
   height: 100%;
+  background:
+    radial-gradient(circle at 50% 16%, rgba(255,255,255,0.08), transparent 28%),
+    linear-gradient(180deg, var(--scene-sky-top) 0%, color-mix(in srgb, var(--scene-sky-top) 52%, var(--scene-sky-bottom)) 42%, var(--scene-sky-bottom) 100%);
+  transition: background 320ms ease;
+  pointer-events: none;
 }
 
-.workspaceBgVideoFill,
-.workspaceBgVideoMain {
+.workspaceBgCanvas {
   position: absolute;
   inset: 0;
-  width: 100%;
-  height: 100%;
-  object-position: center center;
-  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  opacity: 1;
+  filter: saturate(1.08);
+  pointer-events: none;
 }
 
-/* Fill side gaps softly when source/video aspect differs from viewport. */
-.workspaceBgVideoFill {
-  display: none;
+.workspaceBgLayer::before,
+.workspaceBgLayer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
 }
 
-/* Fill the workspace viewport edge-to-edge without side blur bands. */
-.workspaceBgVideoMain {
-  object-fit: cover;
+.workspaceBgLayer::before {
+  background:
+    radial-gradient(circle at 50% 78%, rgba(255,255,255,0.1), transparent 34%),
+    radial-gradient(circle at 50% 30%, rgba(118, 173, 255, 0.06), transparent 42%);
+  mix-blend-mode: screen;
+}
+
+.workspaceBgLayer::after {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.05) 0%, transparent 26%),
+    radial-gradient(circle at 50% 0%, rgba(255,255,255,0.04), transparent 44%);
+  opacity: 0.12;
+}
+
+.workspaceBgLayerFlight .workspaceBgCanvas {
+  pointer-events: auto;
+}
+
+.sceneControlDock {
+  position: absolute;
+  top: 22px;
+  right: 22px;
+  z-index: 60;
+  display: grid;
+  gap: 12px;
+  pointer-events: auto;
+}
+
+.sceneControlToggle,
+.sceneControlPanel {
+  border: 1px solid var(--scene-hud-border);
+  background: var(--scene-hud-fill);
+  color: var(--scene-hud-text);
+  backdrop-filter: blur(8px) saturate(135%);
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255,255,255,0.05);
+}
+
+.sceneControlToggle {
+  min-width: 248px;
+  min-height: 58px;
+  padding: 0 16px 0 18px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  cursor: pointer;
+  transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+}
+
+.sceneControlToggle:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--scene-hud-border) 52%, white);
+}
+
+.sceneControlMeta {
+  display: grid;
+  gap: 3px;
+  text-align: left;
+}
+
+.sceneControlTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.sceneControlIndicator {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.16),
+    0 0 14px rgba(255,255,255,0.18);
+  flex-shrink: 0;
+}
+
+.sceneControlSub {
+  font-size: 12px;
+  color: color-mix(in srgb, var(--scene-hud-text) 64%, transparent);
+}
+
+.sceneControlChevron {
+  flex-shrink: 0;
   opacity: 0.72;
+  transition: transform 180ms ease, opacity 180ms ease;
+}
+
+.sceneControlChevronOpen {
+  transform: rotate(-90deg);
+  opacity: 1;
+}
+
+.sceneControlPanel {
+  width: min(320px, calc(100vw - 48px));
+  padding: 16px;
+  border-radius: 24px;
+  display: none;
+  gap: 16px;
+  opacity: 0;
+  transform: translateY(-8px) scale(0.98);
+  pointer-events: none;
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.sceneControlPanelOpen {
+  display: grid;
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+.sceneControlHeader,
+.sceneControlSection {
+  display: grid;
+  gap: 10px;
+}
+
+.sceneControlSectionTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.sceneControlSectionSub,
+.sceneControlHint {
+  color: color-mix(in srgb, var(--scene-hud-text) 64%, transparent);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.sceneControlThemeGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.sceneControlTerrainGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.sceneControlThemeButton,
+.sceneControlFlightButton,
+.sceneControlTerrainButton {
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.06);
+  background: rgba(255,255,255,0.05);
+  color: var(--scene-hud-text);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+
+.sceneControlThemeButton:hover,
+.sceneControlFlightButton:hover,
+.sceneControlTerrainButton:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255,255,255,0.12);
+}
+
+.sceneControlThemeButtonActive {
+  background: rgba(196, 226, 255, 0.14);
+  border-color: rgba(196, 226, 255, 0.22);
+}
+
+.sceneControlTerrainButtonActive {
+  background: rgba(196, 226, 255, 0.14);
+  border-color: rgba(196, 226, 255, 0.22);
+}
+
+.sceneControlTerrainButtonVoid {
+  background: rgba(255,255,255,0.04);
+}
+
+.sceneControlTerrainButtonVoid.sceneControlTerrainButtonActive {
+  background: rgba(170, 205, 255, 0.18);
+  border-color: rgba(170, 205, 255, 0.28);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.03), 0 0 18px rgba(122, 168, 255, 0.12);
+}
+
+.sceneControlFlightButton {
+  width: 100%;
+}
+
+.sceneControlFlightButtonActive {
+  background: rgba(196, 226, 255, 0.16);
+  border-color: rgba(196, 226, 255, 0.22);
 }
 
 /* ═══════════════════════════════════════════════
@@ -74,15 +289,34 @@
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
   transform-style: preserve-3d;
+  transition: opacity 220ms ease;
 }
 
-/* Dot grid — more visible now */
+.workspaceViewportFlight .workspaceWorld {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.workspaceViewportFlight .zoomHud,
+.workspaceViewportFlight .minimapContainer {
+  opacity: 0.18;
+  pointer-events: none;
+}
+
+.flightTileField {
+  position: absolute;
+  inset: 0;
+  z-index: 12;
+  pointer-events: none;
+}
+
+/* Dot grid — subtle structural guide, not decorative wallpaper */
 .workspaceGrid {
   position: absolute;
   inset: 0;
-  background-image: radial-gradient(circle, rgba(255,255,255,0.22) 1px, transparent 1px);
-  background-size: 26px 26px;
-  opacity: 0.55;
+  background-image: radial-gradient(circle, rgba(255,255,255,0.18) 1px, transparent 1px);
+  background-size: 28px 28px;
+  opacity: 0.28;
   pointer-events: none;
 }
 
@@ -98,18 +332,68 @@
   gap: 6px;
   padding: 8px;
   border-radius: 16px;
-  border: 1px solid rgba(255,255,255,0.09);
-  background: linear-gradient(158deg, rgba(28,22,16,0.88) 0%, rgba(12,10,8,0.94) 100%);
-  backdrop-filter: blur(20px) saturate(120%);
+  border: 1px solid rgba(169,205,255,0.1);
+  background: linear-gradient(158deg, rgba(16,20,27,0.86) 0%, rgba(8,11,17,0.94) 100%);
+  backdrop-filter: blur(8px) saturate(124%);
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,0.05),
-    0 6px 20px rgba(0,0,0,0.4);
+    0 12px 32px rgba(0,0,0,0.35),
+    0 0 0 1px rgba(59,115,189,0.06);
   cursor: grab;
   touch-action: none;
-  transition: border-color 180ms ease, box-shadow 180ms ease, opacity 180ms;
+  transition: transform 220ms ease, border-color 180ms ease, box-shadow 180ms ease, opacity 220ms ease;
   will-change: transform;
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
+  transform-style: preserve-3d;
+}
+
+.tileSurface {
+  --tile-surface-scale: 1;
+}
+
+.tileFlight {
+  --tile-flight-scale: 0.84;
+  --tile-flight-opacity: 0.92;
+  --tile-flight-blur: 0px;
+  --tile-flight-lift: 0px;
+  --tile-flight-focus-scale: 1;
+  pointer-events: auto;
+  transform: translate(-50%, calc(-50% + var(--tile-flight-lift))) scale(calc(var(--tile-flight-scale) * var(--tile-flight-focus-scale)));
+  opacity: var(--tile-flight-opacity);
+  /* Flight blur removed for performance — opacity handles depth cue */
+  backdrop-filter: blur(8px) saturate(128%);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.06),
+    0 24px 56px rgba(0,0,0,0.42),
+    0 0 0 1px rgba(88,130,196,0.08);
+}
+
+.tileFlight::after {
+  opacity: 0.4;
+}
+
+.tile::before,
+.tile::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.tile::before {
+  background: radial-gradient(circle at 50% 16%, rgba(255,255,255,0.14), transparent 58%);
+  opacity: 0.55;
+  transform: translateZ(12px);
+}
+
+.tile::after {
+  inset: 8px 10px 10px;
+  background: radial-gradient(circle at 50% 50%, rgba(84,137,214,0.18), transparent 72%);
+  filter: blur(12px);
+  opacity: 0.54;
+  transform: translate3d(0, 16px, -28px) scale(0.9);
 }
 
 /* Active (being dragged) state */
@@ -127,16 +411,63 @@
     0 10px 28px rgba(0,0,0,0.46);
 }
 
-/* ── Freshly created tile glows green→navy ─── */
+.tileHovered3d {
+  border-color: rgba(140, 205, 255, 0.28);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.09),
+    0 18px 42px rgba(0,0,0,0.48),
+    0 0 0 1px rgba(111, 192, 255, 0.18);
+}
+
+.tileActive {
+  border-color: rgba(208, 168, 102, 0.34);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.09),
+    0 22px 46px rgba(0,0,0,0.52),
+    0 0 0 1px rgba(208, 168, 102, 0.18);
+}
+
+.tileFlight.tileHovered3d,
+.tileFlight.tileActive {
+  --tile-flight-lift: -10px;
+  --tile-flight-focus-scale: 1.04;
+}
+
+.tileDrifting {
+  opacity: 0.92;
+}
+
+.tileDragging {
+  cursor: grabbing;
+  transition: none;
+}
+
+.tileFlightHidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.tileDistanceNear {
+  border-color: rgba(169,205,255,0.13);
+}
+
+.tileDistanceMid {
+  border-color: rgba(169,205,255,0.1);
+}
+
+.tileDistanceFar {
+  border-color: rgba(169,205,255,0.08);
+}
+
+/* ── Freshly created tile — accent ring fades out ─── */
 @keyframes newTileGlow {
-  0%   { box-shadow: 0 0 0 2px rgba(34,197,94,0.7),  0 6px 20px rgba(0,0,0,0.4); border-color: rgba(34,197,94,0.55); }
-  40%  { box-shadow: 0 0 0 2px rgba(34,197,94,0.4),  0 6px 20px rgba(0,0,0,0.4); border-color: rgba(34,197,94,0.3); }
-  70%  { box-shadow: 0 0 0 2px rgba(29,78,216,0.5),  0 6px 20px rgba(0,0,0,0.4); border-color: rgba(29,78,216,0.35); }
-  100% { box-shadow: 0 0 0 0px rgba(29,78,216,0),    0 6px 20px rgba(0,0,0,0.4); border-color: rgba(255,255,255,0.09); }
+  0%   { box-shadow: 0 0 0 2px rgba(160,104,56,0.65), 0 6px 20px rgba(0,0,0,0.4); border-color: rgba(160,104,56,0.5); }
+  55%  { box-shadow: 0 0 0 2px rgba(160,104,56,0.3),  0 6px 20px rgba(0,0,0,0.4); border-color: rgba(160,104,56,0.28); }
+  100% { box-shadow: 0 0 0 0px rgba(160,104,56,0),    0 6px 20px rgba(0,0,0,0.4); border-color: rgba(255,255,255,0.09); }
 }
 
 .tileNew {
-  animation: newTileGlow 3s ease-out forwards;
+  animation: newTileGlow 2.8s ease-out forwards;
 }
 
 /* ── Tile inner parts ─────────────────────── */
@@ -213,11 +544,9 @@
 }
 
 .tileTitle {
-  font-size: 11px;
-  font-weight: 700;
+  font-size: 12px;
+  font-weight: 600;
   color: var(--text-primary);
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -237,7 +566,8 @@
   border: 1px solid rgba(255,255,255,0.05);
   background: rgba(5,6,8,0.96);
   overflow: hidden;
-  pointer-events: none;
+  pointer-events: auto;
+  cursor: pointer;
 }
 
 .tileMonitorViewport {
@@ -248,6 +578,15 @@
   pointer-events: none;
 }
 
+.tileFlight .tileMonitor {
+  background: rgba(5, 6, 8, 0.98);
+}
+
+.tileFlight .tileMonitorViewport {
+  transform: scale(0.64);
+  width: 156.25%;
+}
+
 /* ═══════════════════════════════════════════════
    MODAL — portal to <body>, truly full-screen
    ═══════════════════════════════════════════════ */
@@ -255,7 +594,7 @@
   position: fixed;
   inset: 0;
   background: rgba(4, 3, 8, 0.65);
-  backdrop-filter: blur(14px) saturate(80%);
+  backdrop-filter: blur(6px) saturate(80%);
   z-index: 200;
   cursor: default;
   border: none;
@@ -422,7 +761,7 @@
   box-shadow: 0 20px 56px rgba(0,0,0,0.6), 0 0 0 1px rgba(160,104,56,0.1);
   display: grid;
   gap: 10px;
-  backdrop-filter: blur(24px);
+  backdrop-filter: blur(8px);
 }
 
 .tileSettingsHeader {
@@ -542,7 +881,7 @@
   border-radius: 22px;
   border: 1px solid rgba(255,255,255,0.08);
   background: linear-gradient(158deg, rgba(24,18,11,0.99) 0%, rgba(10,8,5,0.99) 100%);
-  backdrop-filter: blur(32px);
+  backdrop-filter: blur(8px);
   box-shadow:
     0 0 0 1px rgba(125,78,37,0.1),
     0 40px 90px rgba(0,0,0,0.58);
@@ -566,9 +905,9 @@
 
 .menuEyebrow {
   font-size: 10px;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: rgba(180,120,60,0.8);
+  color: rgba(255,255,255,0.28);
   font-weight: 600;
 }
 
@@ -619,10 +958,10 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: rgba(160,104,56,0.16);
-  color: rgba(210,160,90,0.9);
+  background: rgba(255,255,255,0.05);
+  color: rgba(210,160,90,0.85);
   flex-shrink: 0;
-  border: 1px solid rgba(160,104,56,0.2);
+  border: 1px solid rgba(255,255,255,0.07);
 }
 
 .menuCardBody {
@@ -769,6 +1108,19 @@
    RESPONSIVE
    ═══════════════════════════════════════════════ */
 @media (max-width: 980px) {
+  .sceneControlDock {
+    top: 14px;
+    right: 10px;
+    left: 10px;
+  }
+  .sceneControlToggle,
+  .sceneControlPanel {
+    width: 100%;
+    min-width: 0;
+  }
+  .sceneControlThemeGrid {
+    grid-template-columns: 1fr;
+  }
   .menuGrid { grid-template-columns: 1fr; }
   .tileModalShell {
     align-items: stretch;
@@ -846,7 +1198,7 @@
     0 0 0 1px rgba(125, 78, 37, 0.12),
     0 24px 60px rgba(0, 0, 0, 0.65),
     0 6px 16px rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(24px);
+  backdrop-filter: blur(8px);
   display: grid;
   gap: 1px;
 }
@@ -922,7 +1274,7 @@
   box-shadow:
     0 0 0 1px rgba(100, 60, 20, 0.1),
     0 6px 18px rgba(0, 0, 0, 0.42);
-  backdrop-filter: blur(12px);
+  backdrop-filter: blur(6px);
 }
 
 .zoomBtn {
@@ -999,7 +1351,7 @@
   justify-content: center;
   cursor: pointer;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
-  backdrop-filter: blur(12px);
+  backdrop-filter: blur(6px);
   transition: border-color 150ms, color 150ms;
 }
 
@@ -1013,7 +1365,7 @@
   border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(8, 6, 4, 0.88);
-  backdrop-filter: blur(16px);
+  backdrop-filter: blur(8px);
   box-shadow:
     0 0 0 1px rgba(100, 60, 20, 0.1),
     0 12px 32px rgba(0, 0, 0, 0.5);
@@ -1062,7 +1414,7 @@
     0 0 0 1px rgba(130, 80, 30, 0.15),
     0 40px 100px rgba(0, 0, 0, 0.7),
     0 8px 24px rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(32px);
+  backdrop-filter: blur(8px);
   z-index: 701;
   overflow: hidden;
   display: flex;

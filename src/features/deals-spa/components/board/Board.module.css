@@ -50,7 +50,7 @@
 
 .colValue {
   font-size: 10px; font-weight: 700;
-  color: rgba(134,239,172,0.6);
+  color: rgba(210,160,90,0.65);
 }
 
 .colCards {
@@ -61,7 +61,7 @@
 .colEmpty {
   flex: 1; min-height: 60px;
   display: flex; align-items: center; justify-content: center;
-  border: 1px dashed rgba(255,255,255,0.07); border-radius: 9px;
+  border: 1px solid rgba(255,255,255,0.06); border-radius: 9px;
   font-size: 11px; color: rgba(255,255,255,0.16);
   pointer-events: none;
 }
@@ -121,7 +121,7 @@
 
 .valueAmt {
   font-size: 13px; font-weight: 700;
-  color: rgba(134,239,172,0.85);
+  color: rgba(210,160,90,0.9);
 }
 
 .valuePct {
@@ -145,11 +145,12 @@
   display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 0;
 }
 
+/* source chip — neutral metadata, no semantic color */
 .cardSource {
   font-size: 9px; font-weight: 700; letter-spacing: 0.04em;
-  background: rgba(59,130,246,0.12); color: rgba(147,197,253,0.75);
+  background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.38);
   border-radius: 999px; padding: 1px 6px;
-  border: 1px solid rgba(59,130,246,0.18);
+  border: 1px solid rgba(255,255,255,0.09);
 }
 
 .cardDays {
@@ -199,8 +200,8 @@
 }
 .cardAction:hover { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.85); }
 
-.cardActionWon { border-color: rgba(34,197,94,0.2); color: rgba(134,239,172,0.6); }
-.cardActionWon:hover { background: rgba(34,197,94,0.12) !important; color: rgba(134,239,172,0.95) !important; }
+.cardActionWon { border-color: rgba(16,185,129,0.22); color: rgba(52,211,153,0.65); }
+.cardActionWon:hover { background: rgba(16,185,129,0.1) !important; color: rgba(52,211,153,0.95) !important; }
 
 .cardActionLost { border-color: rgba(239,68,68,0.2); color: rgba(252,165,165,0.5); }
 .cardActionLost:hover { background: rgba(239,68,68,0.1) !important; color: rgba(252,165,165,0.95) !important; }

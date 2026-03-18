@@ -7,9 +7,10 @@ interface TooltipProps {
   children: ReactNode;
   side?: 'right' | 'top' | 'bottom' | 'left';
   disabled?: boolean;
+  stretch?: boolean;
 }
 
-export function Tooltip({ content, children, side = 'right', disabled = false }: TooltipProps) {
+export function Tooltip({ content, children, side = 'right', disabled = false, stretch = false }: TooltipProps) {
   const [visible, setVisible] = useState(false);
   const timerRef = useRef<number | null>(null);
   const tooltipId = useId();
@@ -34,7 +35,7 @@ export function Tooltip({ content, children, side = 'right', disabled = false }:
 
   return (
     <span
-      className={s.root}
+      className={[s.root, stretch ? s.stretch : ''].join(' ')}
       onMouseEnter={show}
       onMouseLeave={hide}
       onFocus={show}

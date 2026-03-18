@@ -51,7 +51,7 @@
   flex-shrink: 0;
   gap: 12px;
   background: color-mix(in srgb, var(--bg-surface-elevated) 84%, transparent);
-  backdrop-filter: blur(14px);
+  backdrop-filter: blur(6px);
 }
 
 .titleBlock { flex: 1; min-width: 0; }
@@ -111,7 +111,7 @@
   border-top: 1px solid var(--border-subtle);
   flex-shrink: 0;
   background: var(--drawer-footer-bg);
-  backdrop-filter: blur(12px);
+  backdrop-filter: blur(6px);
 }
 
 .footer > * {

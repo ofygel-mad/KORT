@@ -2,7 +2,7 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(180deg, #0d1014, #090b10);
+  background: linear-gradient(180deg, #120e0b, #0d0a08);
   color: var(--text-primary);
   overflow: hidden;
   font-size: 14px;
@@ -86,8 +86,8 @@
 }
 
 .statPill {
-  background: rgba(59, 130, 246, 0.1);
-  color: rgba(59, 130, 246, 0.7);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.35);
 }
 
 .statPillProd {

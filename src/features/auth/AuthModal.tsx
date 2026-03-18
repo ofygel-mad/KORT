@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowLeft, Building2, ChevronRight, Eye, EyeOff, User, X } from 'lucide-react';
+import { ArrowLeft, Building2, ChevronRight, Eye, EyeOff, KeyRound, User, X } from 'lucide-react';
 import { MOCK_AUTH_RESPONSE } from '../../shared/api/mock-data';
 import { useAuthStore } from '../../shared/stores/auth';
+import { usePinStore } from '../../shared/stores/pin';
 import styles from './AuthModal.module.css';
 
-type Step = 'login' | 'choose-type' | 'employee' | 'company';
+type Step = 'login' | 'pin' | 'choose-type' | 'employee' | 'company';
 
 type OrgType = 'ИП' | 'ТОО' | 'АО';
 
@@ -13,6 +14,7 @@ interface AuthModalProps {
   open: boolean;
   onClose: () => void;
   onAuthSuccess: () => void;
+  initialStep?: Step;
 }
 
 const ORG_TYPES: OrgType[] = ['ИП', 'ТОО', 'АО'];
@@ -267,13 +269,115 @@ function PasswordField({
   );
 }
 
+/* ── PIN Step ── */
+
+function StepPin({ onSuccess, onUsePassword }: { onSuccess: () => void; onUsePassword: () => void }) {
+  const storedPin = usePinStore(s => s.pin);
+  const user = useAuthStore(s => s.user);
+  const [digits, setDigits] = useState('');
+  const [error, setError] = useState('');
+  const [shake, setShake] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const PIN_LENGTH = storedPin?.length ?? 4;
+
+  useEffect(() => {
+    const timer = setTimeout(() => inputRef.current?.focus(), 80);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const verify = (value: string) => {
+    if (value === storedPin) {
+      onSuccess();
+    } else {
+      setShake(true);
+      setError('Неверный PIN-код. Попробуйте ещё раз.');
+      setDigits('');
+      setTimeout(() => { setShake(false); inputRef.current?.focus(); }, 500);
+    }
+  };
+
+  const handleChange = (e: { target: HTMLInputElement }) => {
+    const val = e.target.value.replace(/\D/g, '').slice(0, PIN_LENGTH);
+    setDigits(val);
+    setError('');
+    if (val.length === PIN_LENGTH) verify(val);
+  };
+
+  const firstName = user?.full_name?.split(' ')[0] ?? '';
+
+  return (
+    <div className={styles.stepContent}>
+      <div className={styles.stepHeader}>
+        <h2 className={styles.title}>
+          {firstName ? `Привет, ${firstName}` : 'Введите PIN-код'}
+        </h2>
+        <p className={styles.subtitle}>
+          Используйте PIN-код для быстрого входа в рабочее пространство.
+        </p>
+      </div>
+
+      <div
+        className={styles.pinArea}
+        onClick={() => inputRef.current?.focus()}
+        role="button"
+        tabIndex={-1}
+        aria-label="Поле ввода PIN-кода"
+      >
+        <motion.div
+          className={styles.pinDots}
+          animate={shake ? { x: [0, -10, 10, -7, 7, -4, 4, 0] } : {}}
+          transition={{ duration: 0.42 }}
+        >
+          {Array.from({ length: PIN_LENGTH }, (_, i) => (
+            <div
+              key={i}
+              className={`${styles.pinDot} ${digits.length > i ? styles.pinDotFilled : ''}`}
+            />
+          ))}
+        </motion.div>
+
+        <input
+          ref={inputRef}
+          type="password"
+          inputMode="numeric"
+          autoComplete="off"
+          value={digits}
+          onChange={handleChange}
+          className={styles.pinHiddenInput}
+          aria-label="PIN-код"
+        />
+      </div>
+
+      {error && (
+        <div className={styles.errorMessage}>{error}</div>
+      )}
+
+      <button type="button" className={styles.linkButton} onClick={onUsePassword}>
+        Войти с паролем →
+      </button>
+    </div>
+  );
+}
+
 /* ── Auth Steps ── */
 
-function StepLogin({ onCreateAccount, onSuccess }: { onCreateAccount: () => void; onSuccess: () => void }) {
-  const setAuth = useAuthStore((state) => state.setAuth);
+function StepLogin({
+  onCreateAccount,
+  onSuccess,
+  onPinStep,
+}: {
+  onCreateAccount: () => void;
+  onSuccess: () => void;
+  onPinStep: () => void;
+}) {
+  const setAuth = useAuthStore(s => s.setAuth);
+  const trustDevice = usePinStore(s => s.trustDevice);
+  const { pin, isTrustedDevice } = usePinStore();
+  const user = useAuthStore(s => s.user);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [pinInfo, setPinInfo] = useState('');
 
   const submit = () => {
     const normalizedEmail = email.trim();
@@ -296,8 +400,22 @@ function StepLogin({ onCreateAccount, onSuccess }: { onCreateAccount: () => void
       MOCK_AUTH_RESPONSE.capabilities,
       MOCK_AUTH_RESPONSE.role,
     );
+    trustDevice();
     setError('');
     onSuccess();
+  };
+
+  const handlePinClick = () => {
+    setPinInfo('');
+    if (pin && isTrustedDevice && user) {
+      onPinStep();
+    } else if (!user && !isTrustedDevice) {
+      setPinInfo('Сначала создайте аккаунт или войдите через логин и пароль.');
+    } else if (!isTrustedDevice) {
+      setPinInfo('PIN-код доступен только с устройства, где ранее выполнялся вход.');
+    } else {
+      setPinInfo('Установите PIN-код в разделе «Настройки → Безопасность».');
+    }
   };
 
   return (
@@ -342,23 +460,38 @@ function StepLogin({ onCreateAccount, onSuccess }: { onCreateAccount: () => void
 
       <div className={styles.divider}><span>или через рабочий аккаунт</span></div>
 
-      <div className={styles.formFields}>
-        <input
-          className={styles.input}
-          type="email"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          placeholder="Эл. почта"
-          autoComplete="email"
-        />
-        <PasswordField value={password} onChange={setPassword} placeholder="Пароль" autoComplete="current-password" />
-      </div>
+      <form
+        onSubmit={(e) => { e.preventDefault(); submit(); }}
+        style={{ display: 'contents' }}
+      >
+        <div className={styles.formFields}>
+          <input
+            className={styles.input}
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            placeholder="Эл. почта"
+            autoComplete="email"
+            autoFocus
+          />
+          <PasswordField value={password} onChange={setPassword} placeholder="Пароль" autoComplete="current-password" />
+        </div>
 
-      {error && <div className={styles.errorMessage}>{error}</div>}
+        {error && <div className={styles.errorMessage}>{error}</div>}
 
-      <button type="button" className={styles.primaryButton} onClick={submit}>
-        Войти <ChevronRight size={16} />
+        <button type="submit" className={styles.primaryButton}>
+          Войти <ChevronRight size={16} />
+        </button>
+      </form>
+
+      <button type="button" className={styles.pinButton} onClick={handlePinClick}>
+        <KeyRound size={15} />
+        Войти по PIN-коду
       </button>
+
+      {pinInfo && (
+        <div className={styles.pinInfo}>{pinInfo}</div>
+      )}
 
       <div className={styles.footerRow}>
         <span>Нет аккаунта?</span>
@@ -395,7 +528,8 @@ function StepChooseType({ onSelect }: { onSelect: (value: 'employee' | 'company'
 }
 
 function StepEmployee({ onSuccess }: { onSuccess: () => void }) {
-  const setAuth = useAuthStore((state) => state.setAuth);
+  const setAuth = useAuthStore(s => s.setAuth);
+  const trustDevice = usePinStore(s => s.trustDevice);
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
@@ -407,30 +541,11 @@ function StepEmployee({ onSuccess }: { onSuccess: () => void }) {
     const normalizedName = normalizeName(fullName);
     const normalizedEmail = email.trim();
 
-    if (!normalizedName) {
-      setError('Введите ФИО');
-      return;
-    }
-
-    if (!phone.trim()) {
-      setError('Введите номер телефона');
-      return;
-    }
-
-    if (!normalizedEmail) {
-      setError('Введите эл. почту');
-      return;
-    }
-
-    if (password.length < 6) {
-      setError('Пароль должен содержать не менее 6 символов');
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      setError('Пароли не совпадают');
-      return;
-    }
+    if (!normalizedName) { setError('Введите ФИО'); return; }
+    if (!phone.trim()) { setError('Введите номер телефона'); return; }
+    if (!normalizedEmail) { setError('Введите эл. почту'); return; }
+    if (password.length < 6) { setError('Пароль должен содержать не менее 6 символов'); return; }
+    if (password !== confirmPassword) { setError('Пароли не совпадают'); return; }
 
     setAuth(
       {
@@ -440,16 +555,13 @@ function StepEmployee({ onSuccess }: { onSuccess: () => void }) {
         phone: phone.trim(),
         email: normalizedEmail,
       },
-      {
-        ...MOCK_AUTH_RESPONSE.org,
-        name: 'Личный рабочий аккаунт',
-        slug: 'personal-workspace',
-      },
+      { ...MOCK_AUTH_RESPONSE.org, name: 'Личный рабочий аккаунт', slug: 'personal-workspace' },
       MOCK_AUTH_RESPONSE.access,
       MOCK_AUTH_RESPONSE.refresh,
       MOCK_AUTH_RESPONSE.capabilities,
       'manager',
     );
+    trustDevice();
     setError('');
     onSuccess();
   };
@@ -461,25 +573,28 @@ function StepEmployee({ onSuccess }: { onSuccess: () => void }) {
         <p className={styles.subtitle}>Создайте доступ для сотрудника без лишних шагов.</p>
       </div>
 
-      <div className={styles.formFields}>
-        <input className={styles.input} type="text" value={fullName} onChange={(event) => setFullName(event.target.value)} placeholder="ФИО" />
-        <input className={styles.input} type="tel" value={phone} onChange={(event) => setPhone(trimPhone(event.target.value))} placeholder="Номер телефона" autoComplete="tel" />
-        <input className={styles.input} type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="Эл. почта" autoComplete="email" />
-        <PasswordField value={password} onChange={setPassword} placeholder="Пароль, минимум 6 символов" autoComplete="new-password" />
-        <PasswordField value={confirmPassword} onChange={setConfirmPassword} placeholder="Повторите пароль" autoComplete="new-password" />
-      </div>
+      <form onSubmit={(e) => { e.preventDefault(); submit(); }} style={{ display: 'contents' }}>
+        <div className={styles.formFields}>
+          <input className={styles.input} type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="ФИО" autoFocus />
+          <input className={styles.input} type="tel" value={phone} onChange={(e) => setPhone(trimPhone(e.target.value))} placeholder="Номер телефона" autoComplete="tel" />
+          <input className={styles.input} type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Эл. почта" autoComplete="email" />
+          <PasswordField value={password} onChange={setPassword} placeholder="Пароль, минимум 6 символов" autoComplete="new-password" />
+          <PasswordField value={confirmPassword} onChange={setConfirmPassword} placeholder="Повторите пароль" autoComplete="new-password" />
+        </div>
 
-      {error && <div className={styles.errorMessage}>{error}</div>}
+        {error && <div className={styles.errorMessage}>{error}</div>}
 
-      <button type="button" className={styles.primaryButton} onClick={submit}>
-        Создать аккаунт <ChevronRight size={16} />
-      </button>
+        <button type="submit" className={styles.primaryButton}>
+          Создать аккаунт <ChevronRight size={16} />
+        </button>
+      </form>
     </div>
   );
 }
 
 function StepCompany({ onSuccess }: { onSuccess: () => void }) {
-  const setAuth = useAuthStore((state) => state.setAuth);
+  const setAuth = useAuthStore(s => s.setAuth);
+  const trustDevice = usePinStore(s => s.trustDevice);
   const [orgType, setOrgType] = useState<OrgType>('ТОО');
   const [companyName, setCompanyName] = useState('');
   const [iinBin, setIinBin] = useState('');
@@ -497,35 +612,12 @@ function StepCompany({ onSuccess }: { onSuccess: () => void }) {
   const submit = () => {
     const normalizedEmail = email.trim();
 
-    if (!normalizeName(companyName)) {
-      setError('Введите название компании');
-      return;
-    }
-
-    if (iinBin.length < 12) {
-      setError('Укажите корректный БИН/ИИН из 12 цифр');
-      return;
-    }
-
-    if (!role) {
-      setError('Выберите должность');
-      return;
-    }
-
-    if (!phone.trim()) {
-      setError('Введите рабочий номер телефона');
-      return;
-    }
-
-    if (!normalizedEmail) {
-      setError('Введите рабочую эл. почту');
-      return;
-    }
-
-    if (password.length < 6) {
-      setError('Пароль должен содержать не менее 6 символов');
-      return;
-    }
+    if (!normalizeName(companyName)) { setError('Введите название компании'); return; }
+    if (iinBin.length < 12) { setError('Укажите корректный БИН/ИИН из 12 цифр'); return; }
+    if (!role) { setError('Выберите должность'); return; }
+    if (!phone.trim()) { setError('Введите рабочий номер телефона'); return; }
+    if (!normalizedEmail) { setError('Введите рабочую эл. почту'); return; }
+    if (password.length < 6) { setError('Пароль должен содержать не менее 6 символов'); return; }
 
     setAuth(
       {
@@ -545,6 +637,7 @@ function StepCompany({ onSuccess }: { onSuccess: () => void }) {
       MOCK_AUTH_RESPONSE.capabilities,
       'owner',
     );
+    trustDevice();
     setError('');
     onSuccess();
   };
@@ -556,59 +649,62 @@ function StepCompany({ onSuccess }: { onSuccess: () => void }) {
         <p className={styles.subtitle}>Юридическая форма автоматически дописывается к названию организации.</p>
       </div>
 
-      <div className={styles.formFields}>
-        <div className={styles.orgTypeRow}>
-          {ORG_TYPES.map((value) => (
-            <button
-              key={value}
-              type="button"
-              className={[styles.orgTypeButton, orgType === value ? styles.orgTypeButtonActive : ''].join(' ')}
-              onClick={() => setOrgType(value)}
-            >
-              {value}
-            </button>
-          ))}
-        </div>
+      <form onSubmit={(e) => { e.preventDefault(); submit(); }} style={{ display: 'contents' }}>
+        <div className={styles.formFields}>
+          <div className={styles.orgTypeRow}>
+            {ORG_TYPES.map((value) => (
+              <button
+                key={value}
+                type="button"
+                className={[styles.orgTypeButton, orgType === value ? styles.orgTypeButtonActive : ''].join(' ')}
+                onClick={() => setOrgType(value)}
+              >
+                {value}
+              </button>
+            ))}
+          </div>
 
-        <div className={styles.companyNameBlock}>
+          <div className={styles.companyNameBlock}>
+            <input
+              className={styles.input}
+              type="text"
+              value={companyName}
+              onChange={(e) => setCompanyName(e.target.value)}
+              placeholder="Название компании"
+              autoFocus
+            />
+            <div className={styles.legalPreview}>{legalName || `${orgType} ...`}</div>
+          </div>
+
           <input
             className={styles.input}
             type="text"
-            value={companyName}
-            onChange={(event) => setCompanyName(event.target.value)}
-            placeholder="Название компании"
+            value={iinBin}
+            onChange={(e) => setIinBin(e.target.value.replace(/\D/g, '').slice(0, 12))}
+            placeholder="БИН / ИИН"
+            inputMode="numeric"
           />
-          <div className={styles.legalPreview}>{legalName || `${orgType} ...`}</div>
+
+          <div className={styles.selectWrap}>
+            <select className={styles.select} value={role} onChange={(e) => setRole(e.target.value)}>
+              <option value="" disabled>Выберите должность</option>
+              {COMPANY_ROLES.map((value) => (
+                <option key={value} value={value}>{value}</option>
+              ))}
+            </select>
+          </div>
+
+          <input className={styles.input} type="tel" value={phone} onChange={(e) => setPhone(trimPhone(e.target.value))} placeholder="Рабочий номер" autoComplete="tel" />
+          <input className={styles.input} type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Рабочая эл. почта" autoComplete="email" />
+          <PasswordField value={password} onChange={setPassword} placeholder="Пароль, минимум 6 символов" autoComplete="new-password" />
         </div>
 
-        <input
-          className={styles.input}
-          type="text"
-          value={iinBin}
-          onChange={(event) => setIinBin(event.target.value.replace(/\D/g, '').slice(0, 12))}
-          placeholder="БИН / ИИН"
-          inputMode="numeric"
-        />
+        {error && <div className={styles.errorMessage}>{error}</div>}
 
-        <div className={styles.selectWrap}>
-          <select className={styles.select} value={role} onChange={(event) => setRole(event.target.value)}>
-            <option value="" disabled>Выберите должность</option>
-            {COMPANY_ROLES.map((value) => (
-              <option key={value} value={value}>{value}</option>
-            ))}
-          </select>
-        </div>
-
-        <input className={styles.input} type="tel" value={phone} onChange={(event) => setPhone(trimPhone(event.target.value))} placeholder="Рабочий номер" autoComplete="tel" />
-        <input className={styles.input} type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="Рабочая эл. почта" autoComplete="email" />
-        <PasswordField value={password} onChange={setPassword} placeholder="Пароль, минимум 6 символов" autoComplete="new-password" />
-      </div>
-
-      {error && <div className={styles.errorMessage}>{error}</div>}
-
-      <button type="button" className={styles.primaryButton} onClick={submit}>
-        Зарегистрировать компанию <ChevronRight size={16} />
-      </button>
+        <button type="submit" className={styles.primaryButton}>
+          Зарегистрировать компанию <ChevronRight size={16} />
+        </button>
+      </form>
     </div>
   );
 }
@@ -618,8 +714,8 @@ function StepCompany({ onSuccess }: { onSuccess: () => void }) {
 const SLIDE_COUNT = 3;
 const SLIDE_INTERVAL = 5000;
 
-export function AuthModal({ open, onClose, onAuthSuccess }: AuthModalProps) {
-  const [step, setStep] = useState<Step>('login');
+export function AuthModal({ open, onClose, onAuthSuccess, initialStep }: AuthModalProps) {
+  const [step, setStep] = useState<Step>(initialStep ?? 'login');
   const [slide, setSlide] = useState(0);
   const slideTimer = useRef<ReturnType<typeof setInterval>>();
 
@@ -635,13 +731,13 @@ export function AuthModal({ open, onClose, onAuthSuccess }: AuthModalProps) {
       if (slideTimer.current) clearInterval(slideTimer.current);
       return;
     }
-    setStep('login');
+    setStep(initialStep ?? 'login');
     setSlide(0);
     resetSlideTimer();
     return () => {
       if (slideTimer.current) clearInterval(slideTimer.current);
     };
-  }, [open, resetSlideTimer]);
+  }, [open, resetSlideTimer, initialStep]);
 
   const goToSlide = useCallback((index: number) => {
     setSlide(index);
@@ -649,14 +745,12 @@ export function AuthModal({ open, onClose, onAuthSuccess }: AuthModalProps) {
   }, [resetSlideTimer]);
 
   const goBack = () => {
-    if (step === 'choose-type') {
-      setStep('login');
-      return;
-    }
-    if (step === 'employee' || step === 'company') {
-      setStep('choose-type');
-    }
+    if (step === 'pin') { setStep('login'); return; }
+    if (step === 'choose-type') { setStep('login'); return; }
+    if (step === 'employee' || step === 'company') { setStep('choose-type'); }
   };
+
+  const showBack = step !== 'login';
 
   return (
     <AnimatePresence>
@@ -712,7 +806,7 @@ export function AuthModal({ open, onClose, onAuthSuccess }: AuthModalProps) {
               <div className={styles.formHeader}>
                 <div className={styles.headerLeft}>
                   <AnimatePresence>
-                    {step !== 'login' && (
+                    {showBack && (
                       <motion.button
                         type="button"
                         className={styles.backButton}
@@ -742,7 +836,19 @@ export function AuthModal({ open, onClose, onAuthSuccess }: AuthModalProps) {
                     exit={{ opacity: 0, x: -24 }}
                     transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
                   >
-                    {step === 'login' && <StepLogin onCreateAccount={() => setStep('choose-type')} onSuccess={onAuthSuccess} />}
+                    {step === 'login' && (
+                      <StepLogin
+                        onCreateAccount={() => setStep('choose-type')}
+                        onSuccess={onAuthSuccess}
+                        onPinStep={() => setStep('pin')}
+                      />
+                    )}
+                    {step === 'pin' && (
+                      <StepPin
+                        onSuccess={onAuthSuccess}
+                        onUsePassword={() => setStep('login')}
+                      />
+                    )}
                     {step === 'choose-type' && <StepChooseType onSelect={(value) => setStep(value)} />}
                     {step === 'employee' && <StepEmployee onSuccess={onAuthSuccess} />}
                     {step === 'company' && <StepCompany onSuccess={onAuthSuccess} />}

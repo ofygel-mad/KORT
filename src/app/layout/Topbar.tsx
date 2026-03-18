@@ -213,6 +213,7 @@ export function Topbar() {
   const { canUseAdminMode } = useCapabilities();
   const dynamic    = useDynamicCrumb();
   const crumb      = BREADCRUMBS[location.pathname] ?? location.pathname.slice(1);
+  const isDashboard = location.pathname === '/';
   const showBack = location.pathname !== '/' && location.pathname !== '/onboarding';
   const backTarget = resolveBackTarget(location.pathname);
 
@@ -226,25 +227,29 @@ export function Topbar() {
             {!isMobile && <span>Назад</span>}
           </button>
         )}
-        <nav className={styles.breadcrumb} aria-label="breadcrumb">
-          {!isMobile && <span className={styles.crumbRoot}>KORT</span>}
-          {!isMobile && <ChevronRight size={12} className={styles.crumbSep} />}
+        {isDashboard ? (
+          <div className={styles.dashboardWordmark} aria-label="Название продукта">KORT</div>
+        ) : (
+          <nav className={styles.breadcrumb} aria-label="breadcrumb">
+            {!isMobile && <span className={styles.crumbRoot}>KORT</span>}
+            {!isMobile && <ChevronRight size={12} className={styles.crumbSep} />}
 
-          {dynamic ? (
-            <>
-              <button
-                className={styles.crumbParent}
-                onClick={() => navigate(dynamic.parentPath)}
-              >
-                {dynamic.parent}
-              </button>
-              <ChevronRight size={12} className={styles.crumbSep} />
-              <span className={styles.crumbCurrent}>{dynamic.current}</span>
-            </>
-          ) : (
-            <span className={styles.crumbCurrent}>{crumb}</span>
-          )}
-        </nav>
+            {dynamic ? (
+              <>
+                <button
+                  className={styles.crumbParent}
+                  onClick={() => navigate(dynamic.parentPath)}
+                >
+                  {dynamic.parent}
+                </button>
+                <ChevronRight size={12} className={styles.crumbSep} />
+                <span className={styles.crumbCurrent}>{dynamic.current}</span>
+              </>
+            ) : (
+              <span className={styles.crumbCurrent}>{crumb}</span>
+            )}
+          </nav>
+        )}
       </div>
 
       {/* Actions */}

@@ -65,7 +65,6 @@ export function ChapanSPA({ tileId }: Props) {
         <div className={s.headerLeft}>
           <Factory size={18} className={s.headerIcon} />
           <span className={s.headerTitle}>Чапан</span>
-          <span className={s.headerBadge}>Workzone</span>
           {activeCount > 0 && (
             <span className={s.statPill}>{activeCount} заказов</span>
           )}
@@ -177,9 +176,6 @@ export function ChapanSPA({ tileId }: Props) {
 
       {/* ── Status bar ── */}
       <div className={s.statusBar}>
-        <span className={s.statusDot} />
-        <span>Workzone активна</span>
-        <span className={s.statusSep} />
         <span className={s.statusCount}>
           {activeCount} активных · {readyCount > 0 ? `${readyCount} готово к выдаче · ` : ''}{orders.flatMap(o => o.productionTasks).length} заданий
         </span>

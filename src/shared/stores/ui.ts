@@ -27,6 +27,7 @@ interface UIStore {
   sidebarCollapsed: boolean;
   focusMode: boolean;
   adminMode: boolean;
+  workspaceAddMenuOpen: boolean;
   createCustomerRequest: ActionRequest<undefined>;
   createDealRequest: ActionRequest<CreateDealPayload | undefined>;
   createTaskRequest: ActionRequest<CreateTaskPayload | undefined>;
@@ -37,6 +38,8 @@ interface UIStore {
   toggleAdminMode: () => void;
   toggleSidebar: () => void;
   toggleFocusMode: () => void;
+  openWorkspaceAddMenu: () => void;
+  closeWorkspaceAddMenu: () => void;
   openCreateCustomer: () => void;
   openCreateDeal: (payload?: CreateDealPayload) => void;
   openCreateTask: (payload?: CreateTaskPayload) => void;
@@ -61,6 +64,7 @@ export const useUIStore = create<UIStore>()(
       sidebarCollapsed: false,
       focusMode: false,
       adminMode: false,
+      workspaceAddMenuOpen: false,
       createCustomerRequest: { nonce: 0, payload: undefined },
       createDealRequest: { nonce: 0, payload: undefined },
       createTaskRequest: { nonce: 0, payload: undefined },
@@ -77,6 +81,8 @@ export const useUIStore = create<UIStore>()(
       toggleAdminMode: () => set((s) => ({ adminMode: !s.adminMode })),
       toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
       toggleFocusMode: () => set((s) => ({ focusMode: !s.focusMode })),
+      openWorkspaceAddMenu: () => set({ workspaceAddMenuOpen: true }),
+      closeWorkspaceAddMenu: () => set({ workspaceAddMenuOpen: false }),
       openCreateCustomer: () => set((s) => ({
         createCustomerRequest: { nonce: s.createCustomerRequest.nonce + 1, payload: undefined },
       })),

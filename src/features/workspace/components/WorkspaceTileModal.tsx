@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { WORKSPACE_WIDGET_MAP } from '../registry';
 import { useWorkspaceStore } from '../model/store';
 import type { WorkspaceSnapshot, WorkspaceTile } from '../model/types';
+import { TILE_DISTANCE_OPTIONS } from '../scene/sceneConfig';
 import styles from './Workspace.module.css';
 
 interface Props { tile: WorkspaceTile; snapshot?: WorkspaceSnapshot; }
@@ -26,10 +27,12 @@ export function WorkspaceTileModal({ tile, snapshot }: Props) {
   const settingsTileId = useWorkspaceStore((s) => s.settingsTileId);
   const renameTile     = useWorkspaceStore((s) => s.renameTile);
   const resizeModal    = useWorkspaceStore((s) => s.resizeModal);
+  const setTileDistance = useWorkspaceStore((s) => s.setTileDistance);
   const reloadTile     = useWorkspaceStore((s) => s.reloadTile);
   const removeTile     = useWorkspaceStore((s) => s.removeTile);
   const duplicateTile  = useWorkspaceStore((s) => s.duplicateTile);
   const definition     = WORKSPACE_WIDGET_MAP[tile.kind];
+  if (!definition) return null;
   const Icon           = definition.icon;
   const [draft, setDraft] = useState(tile.title);
   const settingsOpen   = settingsTileId === tile.id;
@@ -174,6 +177,22 @@ export function WorkspaceTileModal({ tile, snapshot }: Props) {
                   key={opt.value}
                   className={`${styles.tileSettingsSegment} ${tile.modalSize === opt.value ? styles.tileSettingsSegmentActive : ''}`}
                   onClick={() => resizeModal(tile.id, opt.value)}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className={styles.tileSettingsField}>
+            <span>Глубина на ландшафте</span>
+            <div className={styles.tileSettingsSegmented}>
+              {TILE_DISTANCE_OPTIONS.map((opt) => (
+                <button
+                  key={opt.id}
+                  className={`${styles.tileSettingsSegment} ${tile.distance3D === opt.id ? styles.tileSettingsSegmentActive : ''}`}
+                  onClick={() => setTileDistance(tile.id, opt.id)}
+                  title={opt.hint}
                 >
                   {opt.label}
                 </button>

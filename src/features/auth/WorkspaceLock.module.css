@@ -1,230 +1,93 @@
+/* ── WorkspaceLock — Enterprise overlay ───────────────────────────────────── */
+
 .root {
   position: absolute;
   inset: 0;
   z-index: 40;
-  overflow: hidden;
   display: grid;
   place-items: center;
-  cursor: default;
   isolation: isolate;
 }
 
-.backgroundVideo {
+/* Semi-transparent blurred backdrop — shows the workspace beneath, muted */
+.backdrop {
   position: absolute;
   inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  opacity: 0.62;
-  filter: saturate(0.92) contrast(1.08) brightness(0.78);
-  pointer-events: none;
-  transform: scale(1.035);
+  background: color-mix(in srgb, var(--bg-overlay) 56%, transparent);
+  backdrop-filter: blur(6px) saturate(0.7);
+  -webkit-backdrop-filter: blur(6px) saturate(0.7);
 }
 
-.scrim {
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(circle at 50% 50%, rgba(214, 222, 234, 0.05), transparent 24%),
-    linear-gradient(180deg, rgba(7, 10, 15, 0.12), rgba(7, 10, 15, 0.16));
-  backdrop-filter: blur(3px) saturate(1.02);
-  transition: opacity 220ms ease, backdrop-filter 220ms ease, background 220ms ease;
-}
-
-.rootHovered .scrim {
-  background:
-    radial-gradient(circle at 50% 50%, rgba(214, 222, 234, 0.065), transparent 25%),
-    linear-gradient(180deg, rgba(7, 10, 15, 0.07), rgba(7, 10, 15, 0.09));
-  backdrop-filter: blur(1.6px) saturate(1.03);
-}
-
-.rootReleasing .scrim {
-  background:
-    radial-gradient(circle at 50% 50%, rgba(214, 222, 234, 0.03), transparent 20%),
-    linear-gradient(180deg, rgba(7, 10, 15, 0.03), rgba(7, 10, 15, 0.05));
-  backdrop-filter: blur(1px) saturate(1.01);
-}
-
-.centerGlow {
-  position: absolute;
-  inset: 29%;
-  background: radial-gradient(circle, rgba(190, 200, 214, 0.14), transparent 62%);
-  filter: blur(36px);
-  opacity: 0.42;
-  pointer-events: none;
-  transition: opacity 280ms ease;
-}
-
-.rootHovered .centerGlow {
-  opacity: 0.6;
-}
-
-/* ── Premium glow rings ── */
-
-.glowRings {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  pointer-events: none;
+/* Centered status panel */
+.panel {
+  position: relative;
   z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  padding: 28px 40px;
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xl);
+  min-width: 280px;
 }
 
-.glowRing {
-  position: absolute;
-  border-radius: 50%;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  transition: border-color 300ms ease, box-shadow 300ms ease;
+/* Lock icon + label row */
+.statusRow {
+  display: flex;
+  align-items: center;
+  gap: 9px;
 }
 
-.glowRing1 {
-  width: 190px;
-  height: 190px;
-  border: 1px solid rgba(175, 190, 215, 0.1);
-  box-shadow: 0 0 18px rgba(175, 190, 215, 0.04), inset 0 0 18px rgba(175, 190, 215, 0.02);
-  animation: pulseRing1 4s ease-in-out infinite;
+.lockIcon {
+  color: var(--text-tertiary);
+  flex-shrink: 0;
 }
 
-.glowRing2 {
-  width: 270px;
-  height: 270px;
-  border: 1px solid rgba(175, 190, 215, 0.06);
-  box-shadow: 0 0 28px rgba(175, 190, 215, 0.03), inset 0 0 28px rgba(175, 190, 215, 0.015);
-  animation: pulseRing2 5s ease-in-out infinite 0.6s;
+.statusLabel {
+  font-size: var(--text-size-md);
+  font-weight: 500;
+  color: var(--text-secondary);
+  letter-spacing: -0.01em;
 }
 
-.glowRing3 {
-  width: 370px;
-  height: 370px;
-  border: 1px solid rgba(175, 190, 215, 0.035);
-  box-shadow: 0 0 38px rgba(175, 190, 215, 0.02), inset 0 0 38px rgba(175, 190, 215, 0.01);
-  animation: pulseRing3 6s ease-in-out infinite 1.2s;
-}
-
-.rootHovered .glowRing1 {
-  border-color: rgba(175, 190, 215, 0.18);
-  box-shadow: 0 0 26px rgba(175, 190, 215, 0.08), inset 0 0 26px rgba(175, 190, 215, 0.03);
-}
-
-.rootHovered .glowRing2 {
-  border-color: rgba(175, 190, 215, 0.12);
-  box-shadow: 0 0 34px rgba(175, 190, 215, 0.06), inset 0 0 34px rgba(175, 190, 215, 0.025);
-}
-
-.rootHovered .glowRing3 {
-  border-color: rgba(175, 190, 215, 0.07);
-  box-shadow: 0 0 44px rgba(175, 190, 215, 0.035), inset 0 0 44px rgba(175, 190, 215, 0.015);
-}
-
-/* Release: rings expand outward with stagger */
-.rootReleasing .glowRing1 {
-  animation: releaseRing 0.6s ease-out forwards;
-}
-
-.rootReleasing .glowRing2 {
-  animation: releaseRing 0.7s ease-out 0.05s forwards;
-}
-
-.rootReleasing .glowRing3 {
-  animation: releaseRing 0.8s ease-out 0.1s forwards;
-}
-
-@keyframes pulseRing1 {
-  0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.6; }
-  50% { transform: translate(-50%, -50%) scale(1.06); opacity: 1; }
-}
-
-@keyframes pulseRing2 {
-  0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.5; }
-  50% { transform: translate(-50%, -50%) scale(1.04); opacity: 0.85; }
-}
-
-@keyframes pulseRing3 {
-  0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.4; }
-  50% { transform: translate(-50%, -50%) scale(1.03); opacity: 0.7; }
-}
-
-@keyframes releaseRing {
-  0% { transform: translate(-50%, -50%) scale(1); opacity: 0.6; }
-  50% { transform: translate(-50%, -50%) scale(1.5); opacity: 0.25; }
-  100% { transform: translate(-50%, -50%) scale(2); opacity: 0; }
-}
-
-/* ── Lock button & glyph ── */
-
-.lockButton {
-  position: relative;
-  z-index: 2;
-  width: 150px;
-  height: 150px;
-  display: inline-grid;
-  place-items: center;
-  border: 0;
-  background: transparent;
+/* Primary unlock button — authoritative, not decorative */
+.unlockBtn {
+  min-height: 40px;
+  padding: 0 28px;
+  background: var(--fill-accent);
+  color: var(--text-on-accent);
+  border: none;
+  border-radius: var(--radius-md);
+  font: inherit;
+  font-size: var(--text-size-md);
+  font-weight: 600;
   cursor: pointer;
-  padding: 0;
+  letter-spacing: -0.01em;
+  transition:
+    opacity var(--motion-fast) var(--motion-ease),
+    transform var(--motion-fast) var(--motion-ease);
 }
 
-.lockAura {
-  position: absolute;
-  inset: 16px;
-  border-radius: 999px;
-  background: radial-gradient(circle, rgba(190, 205, 228, 0.15), rgba(190, 205, 228, 0.04) 50%, transparent 72%);
-  filter: blur(16px);
-  animation: auraPulse 3s ease-in-out infinite;
+.unlockBtn:hover {
+  opacity: 0.86;
 }
 
-@keyframes auraPulse {
-  0%, 100% { opacity: 0.4; transform: scale(1); }
-  50% { opacity: 0.7; transform: scale(1.1); }
+.unlockBtn:active {
+  transform: scale(0.98);
 }
 
-.lockSvg {
-  position: relative;
-  width: 118px;
-  height: 132px;
-  overflow: visible;
-  filter: drop-shadow(0 8px 22px rgba(5, 8, 14, 0.4)) drop-shadow(0 2px 6px rgba(5, 8, 14, 0.22));
+.unlockBtn:focus-visible {
+  outline: none;
+  box-shadow: var(--brand-focus-ring);
 }
 
-.lockHint {
-  position: absolute;
-  left: 50%;
-  bottom: calc(50% - 114px);
-  z-index: 2;
-  transform: translateX(-50%);
-  max-width: min(360px, calc(100% - 32px));
-  padding: 10px 14px;
-  border: 1px solid rgba(123, 132, 145, 0.22);
-  border-radius: 14px;
-  background: rgba(9, 12, 18, 0.5);
-  color: rgba(229, 234, 242, 0.88);
-  text-align: center;
-  font-size: 12px;
-  line-height: 1.35;
-  backdrop-filter: blur(8px);
-}
-
-/* ── Responsive ── */
-
-@media (max-width: 768px) {
-  .backgroundVideo {
-    opacity: 0.52;
+/* Mobile */
+@media (max-width: 480px) {
+  .panel {
+    padding: 22px 28px;
+    min-width: 240px;
   }
-
-  .lockButton {
-    width: 126px;
-    height: 126px;
-  }
-
-  .lockSvg {
-    width: 100px;
-    height: 112px;
-  }
-
-  .glowRing1 { width: 160px; height: 160px; }
-  .glowRing2 { width: 230px; height: 230px; }
-  .glowRing3 { width: 310px; height: 310px; }
 }

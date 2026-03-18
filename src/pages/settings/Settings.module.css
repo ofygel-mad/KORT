@@ -13,7 +13,7 @@
   position: sticky;
   top: 12px;
   z-index: 4;
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(6px);
   display: flex;
   gap: 2px;
   margin-bottom: var(--space-section-gap);
@@ -314,6 +314,9 @@
   text-align: center;
   color: var(--text-tertiary);
   font-size: 13px;
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface-inset);
+  border: 1px solid var(--border-subtle);
 }
 
 /* ── Mobile ──────────────────────────────────────────────────── */
@@ -380,13 +383,14 @@
 .navTab:active { transform: var(--feedback-soft-press); }
 .section { box-shadow: var(--surface-shadow-rest); }
 .teamTable tr { transition: background var(--motion-fast) var(--motion-ease); }
-.emptyPipeline { padding: clamp(30px, 6vw, 54px) var(--space-card-padding); border: 1px dashed var(--border-default); border-radius: var(--radius-lg); background: var(--bg-surface-inset); }
+.emptyPipeline { padding: clamp(30px, 6vw, 54px) var(--space-card-padding); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); background: var(--bg-surface-inset); }
 .emptyHint { line-height: 1.55; }
 
 
 .appearanceStack { display: grid; gap: var(--space-section-gap); }
 .appearanceBlock { display: flex; flex-direction: column; gap: 12px; }
 .appearanceLabel { font-size: 12px; font-weight: 700; letter-spacing: 0.03em; color: var(--text-secondary); text-transform: uppercase; }
+.appearanceStack > .appearanceBlock:nth-of-type(2) { display: none; }
 .themeModeRow { display: flex; flex-wrap: wrap; gap: 8px; }
 .themeModeBtn { min-height: 38px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--border-subtle); background: var(--bg-surface); color: var(--text-secondary); display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 600; transition: transform var(--motion-fast) var(--motion-ease), border-color var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease), background var(--motion-fast) var(--motion-ease), box-shadow var(--motion-fast) var(--motion-ease); }
 .themeModeBtn:hover { transform: var(--feedback-raise-hover); color: var(--text-primary); background: var(--bg-hover); }
@@ -410,13 +414,204 @@
 .themeTileCheck { width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: var(--fill-accent); color: var(--text-inverse); flex-shrink: 0; }
 .themeTileMeta { display: flex; flex-wrap: wrap; gap: 8px; }
 .themeMetaChip { display: inline-flex; align-items: center; gap: 6px; min-height: 28px; padding: 0 10px; border-radius: 999px; background: var(--journey-chip-bg); border: 1px solid var(--journey-chip-border); color: var(--text-secondary); font-size: 11px; font-weight: 700; }
-.appearanceAside { display: flex; }
+.appearanceAside { display: grid; gap: 12px; }
 .appearanceHintCard { width: 100%; padding: 16px; border-radius: 16px; border: 1px solid var(--brand-panel-border); background: color-mix(in srgb, var(--brand-surface-2) 90%, transparent); box-shadow: var(--surface-shadow-rest); }
 .appearanceHintTitle { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--text-primary); }
 .appearanceHintList { margin: 12px 0 0 18px; color: var(--text-secondary); display: grid; gap: 6px; }
 .appearanceHintText { margin-top: 12px; font-size: 12px; line-height: 1.6; color: var(--text-tertiary); }
 @media (max-width: 820px) { .themeGrid { grid-template-columns: 1fr; } }
 
+
+/* ── Security section ───────────────────────────────────────────────────── */
+
+.securityCard {
+  display: flex;
+  gap: 16px;
+  padding: 16px 18px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface-inset);
+}
+
+.securityCardIcon {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  background: var(--fill-accent-soft);
+  border: 1px solid color-mix(in srgb, var(--fill-accent) 20%, var(--border-subtle));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--fill-accent);
+}
+
+.securityCardBody {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.securityCardTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.securityCardMeta {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+.deviceId {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.securityCardStatus {
+  margin-top: 6px;
+  font-size: 12px;
+}
+
+.statusTrusted {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--fill-positive-text);
+  font-weight: 500;
+}
+
+.statusUntrusted {
+  color: var(--text-tertiary);
+}
+
+.statusNeutral {
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
+.securityActions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.securityBtn {
+  min-height: 34px;
+  padding: 0 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-default);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background var(--motion-fast) var(--motion-ease),
+    border-color var(--motion-fast) var(--motion-ease);
+}
+
+.securityBtn:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-strong);
+}
+
+.securityBtnDanger {
+  color: var(--fill-negative-text);
+  border-color: color-mix(in srgb, var(--fill-negative-text) 30%, var(--border-subtle));
+}
+
+.securityBtnDanger:hover {
+  background: var(--fill-negative-soft);
+  border-color: color-mix(in srgb, var(--fill-negative-text) 45%, transparent);
+}
+
+.securityBtnSecondary {
+  color: var(--text-secondary);
+}
+
+.securityHint {
+  margin-top: 8px;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--text-tertiary);
+}
+
+/* PIN setup form */
+.pinSetupCard {
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+  overflow: hidden;
+}
+
+.pinSetupHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.pinSetupTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.pinSetupClose {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease);
+}
+
+.pinSetupClose:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.pinSetupFields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 16px 18px;
+}
+
+.pinError {
+  margin: 0 18px;
+  padding: 9px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid color-mix(in srgb, var(--fill-negative-text) 25%, var(--border-subtle));
+  background: var(--fill-negative-soft);
+  color: var(--fill-negative-text);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.pinSetupActions {
+  display: flex;
+  gap: 8px;
+  padding: 14px 18px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+@media (max-width: 600px) {
+  .pinSetupFields { grid-template-columns: 1fr; }
+  .securityCard { flex-direction: column; gap: 10px; }
+}
 
 /* ── Theme pack final pass ───────────────────────────────────────────────── */
 .sectionCard, .themeCard, .teamCard, .integrationsCard, .fieldMapCard { background: var(--rc-detail-surface-bg); border-color: var(--rc-detail-surface-border); box-shadow: var(--brand-panel-shadow); }
@@ -427,5 +622,5 @@
 .adminGateTitle { font-size:14px; font-weight:700; color:var(--text-primary); margin-bottom:4px; }
 .adminGateText { font-size:13px; line-height:1.5; color:var(--text-secondary); }
 
-.lockedTab { opacity: 0.88; border-style: dashed; }
+.lockedTab { opacity: 0.55; pointer-events: none; }
 .tabMeta { margin-left: 8px; font-size: 11px; color: var(--text-tertiary); }

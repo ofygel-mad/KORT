@@ -399,7 +399,7 @@
 
 
 .trigger {
-  backdrop-filter: blur(14px);
+  backdrop-filter: blur(6px);
 }
 
 .panel {

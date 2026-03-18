@@ -34,6 +34,7 @@ type AuthState = {
   setOrg: (org: Partial<Org>) => void;
   clearAuth: () => void;
   unlock: () => void;
+  lock: () => void;   // end session — keeps user data, just locks workspace
 };
 
 export const useAuthStore = create<AuthState>()(
@@ -55,6 +56,7 @@ export const useAuthStore = create<AuthState>()(
       clearAuth: () =>
         set({ user: null, org: null, token: null, refreshToken: null, role: 'viewer', capabilities: [], isUnlocked: false }),
       unlock: () => set({ isUnlocked: true }),
+      lock: () => set({ isUnlocked: false }),
     }),
     {
       name: 'kort-auth',

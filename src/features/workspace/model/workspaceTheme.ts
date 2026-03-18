@@ -15,24 +15,28 @@ export interface WorkspaceBgDefinition {
   id: WorkspaceBg;
   label: string;
   description: string;
-  isVideo: boolean;
-  filename?: string;  // relative to /workspace-bgs/
+  /** CSS value used as static preview thumbnail in the theme modal. */
+  previewColor: string;
 }
 
 export const WORKSPACE_BG_OPTIONS: WorkspaceBgDefinition[] = [
-  { id: 'grid',  label: 'Сетка',          description: 'Дефолтный точечный фон',        isVideo: false },
-  { id: 'bg01',  label: 'Абстракция',     description: 'Плавные цветовые волны',         isVideo: true, filename: 'bg01.mp4' },
-  { id: 'bg02',  label: 'Туман',          description: 'Атмосферный медленный дрейф',    isVideo: true, filename: 'bg02.mp4' },
-  { id: 'bg03',  label: 'Сияние',         description: 'Тихое звёздное движение',        isVideo: true, filename: 'bg03.mp4' },
-  { id: 'bg04',  label: 'Геометрия',      description: 'Анимированные формы',            isVideo: true, filename: 'bg04.mp4' },
-  { id: 'bg05',  label: 'Огонь',          description: 'Тлеющие угли и свет',           isVideo: true, filename: 'bg05.mp4' },
-  { id: 'bg06',  label: 'Матрица',        description: 'Цифровой поток данных',          isVideo: true, filename: 'bg06.mp4' },
-  { id: 'bg07',  label: 'Поток',          description: 'Медитативные волны',             isVideo: true, filename: 'bg07.mp4' },
+  { id: 'grid',  label: 'Сетка',      description: 'Дефолтный точечный фон',     previewColor: '' },
+  { id: 'bg01',  label: 'Абстракция', description: 'Плавные цветовые волны',      previewColor: 'linear-gradient(135deg, #1a0a2e 0%, #2d1a6b 50%, #0a1a2e 100%)' },
+  { id: 'bg02',  label: 'Туман',      description: 'Атмосферный медленный дрейф', previewColor: 'linear-gradient(135deg, #0f1623 0%, #1e2f45 50%, #0a0f1a 100%)' },
+  { id: 'bg03',  label: 'Сияние',     description: 'Тихое звёздное движение',     previewColor: 'linear-gradient(135deg, #05081a 0%, #0a0f30 50%, #02030e 100%)' },
+  { id: 'bg04',  label: 'Геометрия',  description: 'Анимированные формы',         previewColor: 'linear-gradient(135deg, #0a1414 0%, #0f2828 50%, #040a0a 100%)' },
+  { id: 'bg05',  label: 'Огонь',      description: 'Тлеющие угли и свет',         previewColor: 'linear-gradient(135deg, #1f0600 0%, #3d1000 50%, #1a0500 100%)' },
+  { id: 'bg06',  label: 'Матрица',    description: 'Цифровой поток данных',        previewColor: 'linear-gradient(135deg, #001500 0%, #003300 50%, #000a00 100%)' },
+  { id: 'bg07',  label: 'Поток',      description: 'Медитативные волны',           previewColor: 'linear-gradient(135deg, #001a1a 0%, #003535 50%, #000e0e 100%)' },
 ];
 
 interface WorkspaceThemeStore {
   activeBg: WorkspaceBg;
   setActiveBg: (bg: WorkspaceBg) => void;
+}
+
+function isWorkspaceBg(value: unknown): value is WorkspaceBg {
+  return typeof value === 'string' && WORKSPACE_BG_OPTIONS.some((bg) => bg.id === value);
 }
 
 export const useWorkspaceTheme = create<WorkspaceThemeStore>()(
@@ -41,6 +45,15 @@ export const useWorkspaceTheme = create<WorkspaceThemeStore>()(
       activeBg: 'grid',
       setActiveBg: (bg) => set({ activeBg: bg }),
     }),
-    { name: 'kort-workspace-theme' },
+    {
+      name: 'kort-workspace-theme',
+      merge: (persistedState, currentState) => {
+        const persisted = persistedState as Partial<WorkspaceThemeStore> | undefined;
+        return {
+          ...currentState,
+          activeBg: isWorkspaceBg(persisted?.activeBg) ? persisted.activeBg : currentState.activeBg,
+        };
+      },
+    },
   ),
 );

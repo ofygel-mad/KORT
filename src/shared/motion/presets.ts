@@ -53,9 +53,9 @@ export const spring = {
  * Использовать в AnimatePresence > motion.div
  */
 export const pageTransition = {
-  initial:    { opacity: 0, y: 10, filter: 'blur(4px)' },
-  animate:    { opacity: 1, y: 0, filter: 'blur(0px)' },
-  exit:       { opacity: 0, y: -8, filter: 'blur(4px)' },
+  initial:    { opacity: 0, y: 10 },
+  animate:    { opacity: 1, y: 0 },
+  exit:       { opacity: 0, y: -8 },
   transition: { duration: duration.page / 1000, ease: easing.standard },
 } as const;
 
@@ -69,20 +69,17 @@ export const popoverVariants = {
     opacity: 0,
     scale:   0.975,
     y:       6,
-    filter: 'blur(4px)',
   },
   visible: {
     opacity: 1,
     scale:   1,
     y:       0,
-    filter: 'blur(0px)',
     transition: { duration: duration.fast / 1000, ease: easing.standard },
   },
   exit: {
     opacity: 0,
     scale:   0.975,
     y:       6,
-    filter: 'blur(4px)',
     transition: { duration: (duration.fast - 20) / 1000, ease: easing.exit },
   },
 } as const;
@@ -123,9 +120,9 @@ export const sheetVariantsLeft = {
 } as const;
 
 export const overlayVariants = {
-  hidden:  { opacity: 0, backdropFilter: 'blur(0px)' },
-  visible: { opacity: 1, backdropFilter: 'blur(6px)', transition: { duration: duration.base / 1000 } },
-  exit:    { opacity: 0, backdropFilter: 'blur(0px)', transition: { duration: (duration.base - 60) / 1000 } },
+  hidden:  { opacity: 0 },
+  visible: { opacity: 1, transition: { duration: duration.base / 1000 } },
+  exit:    { opacity: 0, transition: { duration: (duration.base - 60) / 1000 } },
 } as const;
 
 // ─── List stagger ─────────────────────────────────────────────────────────────
@@ -221,20 +218,20 @@ export const t = {
 
 
 export const successBurst = {
-  hidden: { opacity: 0, scale: 0.96, y: 10, filter: 'blur(6px)' },
-  visible: { opacity: 1, scale: 1, y: 0, filter: 'blur(0px)', transition: { duration: (duration.slow + 20) / 1000, ease: easing.standard } },
-  exit: { opacity: 0, scale: 0.98, y: -6, filter: 'blur(4px)', transition: { duration: duration.fast / 1000, ease: easing.exit } },
+  hidden: { opacity: 0, scale: 0.96, y: 10 },
+  visible: { opacity: 1, scale: 1, y: 0, transition: { duration: (duration.slow + 20) / 1000, ease: easing.standard } },
+  exit: { opacity: 0, scale: 0.98, y: -6, transition: { duration: duration.fast / 1000, ease: easing.exit } },
 } as const;
 
 export const commandInvoke = {
-  hidden: { opacity: 0, scale: 0.97, y: 10, filter: 'blur(8px)' },
-  visible: { opacity: 1, scale: 1, y: 0, filter: 'blur(0px)', transition: { duration: (duration.fast + 20) / 1000, ease: easing.standard } },
-  exit: { opacity: 0, scale: 0.98, y: 8, filter: 'blur(6px)', transition: { duration: duration.fast / 1000, ease: easing.exit } },
+  hidden: { opacity: 0, scale: 0.97, y: 10 },
+  visible: { opacity: 1, scale: 1, y: 0, transition: { duration: (duration.fast + 20) / 1000, ease: easing.standard } },
+  exit: { opacity: 0, scale: 0.98, y: 8, transition: { duration: duration.fast / 1000, ease: easing.exit } },
 } as const;
 
 export const assistantReply = {
-  hidden: { opacity: 0, y: 8, scale: 0.99, filter: 'blur(4px)' },
-  visible: { opacity: 1, y: 0, scale: 1, filter: 'blur(0px)', transition: { duration: duration.base / 1000, ease: easing.standard } },
+  hidden: { opacity: 0, y: 8, scale: 0.99 },
+  visible: { opacity: 1, y: 0, scale: 1, transition: { duration: duration.base / 1000, ease: easing.standard } },
 } as const;
 
 export const drawerActionFeedback = {
@@ -245,19 +242,17 @@ export const drawerActionFeedback = {
 
 
 export const completionPulse = {
-  hidden: { opacity: 0, y: 8, scale: 0.98, filter: 'blur(4px)' },
+  hidden: { opacity: 0, y: 8, scale: 0.98 },
   visible: {
     opacity: 1,
     y: 0,
     scale: 1,
-    filter: 'blur(0px)',
     transition: { duration: duration.base / 1000, ease: easing.standard },
   },
   exit: {
     opacity: 0,
     y: -6,
     scale: 0.985,
-    filter: 'blur(4px)',
     transition: { duration: duration.fast / 1000, ease: easing.exit },
   },
 } as const;
@@ -295,15 +290,14 @@ export const saveCommit = {
 } as const;
 
 export const routeHandoff = {
-  hidden: { opacity: 0, y: 8, scale: 0.992, filter: 'blur(4px)' },
+  hidden: { opacity: 0, y: 8, scale: 0.992 },
   visible: {
     opacity: 1,
     y: 0,
     scale: 1,
-    filter: 'blur(0px)',
     transition: { duration: (duration.base + 30) / 1000, ease: easing.standard },
   },
-  exit: { opacity: 0, y: -6, scale: 0.992, filter: 'blur(4px)', transition: { duration: duration.fast / 1000, ease: easing.exit } },
+  exit: { opacity: 0, y: -6, scale: 0.992, transition: { duration: duration.fast / 1000, ease: easing.exit } },
 } as const;
 
 export const recoveryConfirm = {

@@ -7,6 +7,6 @@
   padding: 8px;
   border-radius: var(--radius-xl);
   background: color-mix(in srgb, var(--bg-canvas) 78%, transparent);
-  backdrop-filter: blur(14px);
+  backdrop-filter: blur(6px);
   box-shadow: var(--shadow-md);
 }

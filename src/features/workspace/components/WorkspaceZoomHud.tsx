@@ -13,7 +13,7 @@ export function WorkspaceZoomHud() {
   const isDefault = Math.abs(zoom - 1) < 0.01;
 
   return (
-    <div className={styles.zoomHud}>
+    <div className={styles.zoomHud} data-workspace-ui="true">
       <button
         className={styles.zoomBtn}
         onClick={zoomOut}

@@ -3,6 +3,13 @@
   display: inline-flex;
 }
 
+.stretch {
+  display: flex;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
 .tip {
   position: absolute;
   z-index: 1000;

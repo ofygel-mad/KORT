@@ -1,12 +1,7 @@
-/**
- * WorkspaceSpotlight — Cmd/Ctrl+K quick launcher.
- * Killer feature: keyboard-driven tile creation & navigation
- * from anywhere on the workspace.
- */
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
-import { Search, Plus, LayoutGrid, ZoomIn, ZoomOut, RotateCcw, Layers } from 'lucide-react';
+import { Search, LayoutGrid, RotateCcw, ZoomIn, ZoomOut } from 'lucide-react';
 import { useWorkspaceStore } from '../model/store';
 import { WORKSPACE_WIDGETS } from '../registry';
 import styles from './Workspace.module.css';
@@ -23,107 +18,124 @@ interface SpotlightAction {
 interface Props {
   open: boolean;
   onClose: () => void;
-  onOpenTheme: () => void;
 }
 
-export function WorkspaceSpotlight({ open, onClose, onOpenTheme }: Props) {
+export function WorkspaceSpotlight({ open, onClose }: Props) {
   const [query, setQuery] = useState('');
+  const [selectedIdx, setSelectedIdx] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const store = useWorkspaceStore();
 
   const allActions: SpotlightAction[] = [
-    // Widget creation
-    ...WORKSPACE_WIDGETS.map(w => ({
-      id: `create-${w.kind}`,
-      label: `Создать плитку: ${w.title}`,
-      description: w.description,
-      icon: w.icon,
-      action: () => { store.addTile(w.kind); onClose(); },
-      tags: ['создать', 'плитка', w.title.toLowerCase(), w.kind],
+    ...WORKSPACE_WIDGETS.map((widget) => ({
+      id: `create-${widget.kind}`,
+      label: `Создать плитку: ${widget.title}`,
+      description: widget.description,
+      icon: widget.icon,
+      action: () => {
+        store.addTile(widget.kind);
+        onClose();
+      },
+      tags: ['создать', 'плитка', widget.title.toLowerCase(), widget.kind],
     })),
-    // Workspace actions
     {
       id: 'align',
       label: 'Выровнять плитки по сетке',
       icon: LayoutGrid,
-      action: () => { store.alignTilesToGrid(); onClose(); },
-      tags: ['выровнять', 'сетка', 'grid'],
+      action: () => {
+        store.alignTilesToGrid();
+        onClose();
+      },
+      tags: ['выровнять', 'grid', 'сетка'],
     },
     {
       id: 'zoom-reset',
       label: 'Сбросить масштаб (100%)',
       icon: RotateCcw,
-      action: () => { store.resetZoom(); onClose(); },
-      tags: ['масштаб', 'zoom', 'сброс'],
+      action: () => {
+        store.resetZoom();
+        onClose();
+      },
+      tags: ['масштаб', 'сброс', 'zoom'],
     },
     {
       id: 'zoom-in',
       label: 'Приблизить',
       icon: ZoomIn,
-      action: () => { store.zoomIn(); onClose(); },
+      action: () => {
+        store.zoomIn();
+        onClose();
+      },
       tags: ['увеличить', 'zoom in'],
     },
     {
       id: 'zoom-out',
       label: 'Отдалить',
       icon: ZoomOut,
-      action: () => { store.zoomOut(); onClose(); },
+      action: () => {
+        store.zoomOut();
+        onClose();
+      },
       tags: ['уменьшить', 'zoom out'],
     },
-    {
-      id: 'theme',
-      label: 'Сменить тему рабочего поля',
-      icon: Layers,
-      action: () => { onOpenTheme(); onClose(); },
-      tags: ['тема', 'фон', 'theme', 'background'],
-    },
-    // Open existing tiles
-    ...store.tiles.map(t => ({
-      id: `open-${t.id}`,
-      label: `Открыть: ${t.title}`,
-      description: `Плитка на рабочем поле`,
-      icon: WORKSPACE_WIDGETS.find(w => w.kind === t.kind)?.icon ?? Search,
-      action: () => { store.openTile(t.id); onClose(); },
-      tags: ['открыть', t.title.toLowerCase(), t.kind],
+    ...store.tiles.map((tile) => ({
+      id: `open-${tile.id}`,
+      label: `Открыть: ${tile.title}`,
+      description: 'Плитка на рабочем поле',
+      icon: WORKSPACE_WIDGETS.find((widget) => widget.kind === tile.kind)?.icon ?? Search,
+      action: () => {
+        store.openTile(tile.id);
+        onClose();
+      },
+      tags: ['открыть', tile.title.toLowerCase(), tile.kind],
     })),
   ];
 
   const filtered = query.trim()
-    ? allActions.filter(a => {
+    ? allActions.filter((action) => {
         const q = query.toLowerCase();
-        return a.label.toLowerCase().includes(q) ||
-               a.description?.toLowerCase().includes(q) ||
-               a.tags?.some(t => t.includes(q));
+        return action.label.toLowerCase().includes(q)
+          || action.description?.toLowerCase().includes(q)
+          || action.tags?.some((tag) => tag.includes(q));
       })
     : allActions.slice(0, 10);
 
-  const [selectedIdx, setSelectedIdx] = useState(0);
-
   useEffect(() => {
-    if (open) {
-      setQuery('');
-      setSelectedIdx(0);
-      setTimeout(() => inputRef.current?.focus(), 60);
-    }
+    if (!open) return;
+    setQuery('');
+    setSelectedIdx(0);
+    const timeoutId = window.setTimeout(() => inputRef.current?.focus(), 60);
+    return () => window.clearTimeout(timeoutId);
   }, [open]);
 
-  useEffect(() => { setSelectedIdx(0); }, [query]);
+  useEffect(() => {
+    setSelectedIdx(0);
+  }, [query]);
 
-  const handleKey = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      setSelectedIdx(i => Math.min(i + 1, filtered.length - 1));
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      setSelectedIdx(i => Math.max(i - 1, 0));
-    } else if (e.key === 'Enter') {
+  const handleKey = useCallback((event: React.KeyboardEvent) => {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      setSelectedIdx((index) => Math.min(index + 1, filtered.length - 1));
+      return;
+    }
+
+    if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      setSelectedIdx((index) => Math.max(index - 1, 0));
+      return;
+    }
+
+    if (event.key === 'Enter') {
       filtered[selectedIdx]?.action();
-    } else if (e.key === 'Escape') {
+      return;
+    }
+
+    if (event.key === 'Escape') {
       onClose();
     }
-  }, [filtered, selectedIdx, onClose]);
+  }, [filtered, onClose, selectedIdx]);
 
-  const content = (
+  return createPortal(
     <AnimatePresence>
       {open && (
         <>
@@ -149,7 +161,7 @@ export function WorkspaceSpotlight({ open, onClose, onOpenTheme }: Props) {
                 className={styles.spotlightInput}
                 placeholder="Поиск действий, плиток, команд..."
                 value={query}
-                onChange={e => setQuery(e.target.value)}
+                onChange={(event) => setQuery(event.target.value)}
                 onKeyDown={handleKey}
               />
               <kbd className={styles.spotlightEsc}>ESC</kbd>
@@ -157,14 +169,14 @@ export function WorkspaceSpotlight({ open, onClose, onOpenTheme }: Props) {
 
             {filtered.length > 0 ? (
               <div className={styles.spotlightList}>
-                {filtered.map((action, idx) => {
+                {filtered.map((action, index) => {
                   const Icon = action.icon;
                   return (
                     <button
                       key={action.id}
-                      className={`${styles.spotlightItem} ${idx === selectedIdx ? styles.spotlightItemActive : ''}`}
+                      className={`${styles.spotlightItem} ${index === selectedIdx ? styles.spotlightItemActive : ''}`}
                       onClick={action.action}
-                      onMouseEnter={() => setSelectedIdx(idx)}
+                      onMouseEnter={() => setSelectedIdx(index)}
                     >
                       <span className={styles.spotlightItemIcon}><Icon size={15} /></span>
                       <span className={styles.spotlightItemBody}>
@@ -173,9 +185,7 @@ export function WorkspaceSpotlight({ open, onClose, onOpenTheme }: Props) {
                           <span className={styles.spotlightItemDesc}>{action.description}</span>
                         )}
                       </span>
-                      {idx === selectedIdx && (
-                        <kbd className={styles.spotlightEnterHint}>↵</kbd>
-                      )}
+                      {index === selectedIdx && <kbd className={styles.spotlightEnterHint}>↵</kbd>}
                     </button>
                   );
                 })}
@@ -194,8 +204,7 @@ export function WorkspaceSpotlight({ open, onClose, onOpenTheme }: Props) {
           </motion.div>
         </>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body,
   );
-
-  return createPortal(content, document.body);
 }

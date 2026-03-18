@@ -9,8 +9,6 @@
   pointer-events: none;
   z-index: 99999;
   will-change: transform;
-  /* mix-blend-mode: difference делает курсор видимым на любом фоне */
-  mix-blend-mode: difference;
 }
 
 /* Внешнее кольцо — следует с плавным запаздыванием */
@@ -27,11 +25,12 @@
   justify-content: center;
   transform: translate3d(-200px, -200px, 0);
   transition:
-    width 150ms ease,
-    height 150ms ease,
-    margin 150ms ease,
-    border-color 150ms ease,
-    background-color 150ms ease;
+    width 120ms ease,
+    height 120ms ease,
+    margin 120ms ease,
+    border-color 120ms ease,
+    background-color 120ms ease;
+  contain: layout style;
 }
 
 .outerActive {
@@ -59,7 +58,8 @@
   border-radius: 50%;
   background: #fff;
   transform: translate3d(-200px, -200px, 0);
-  transition: width 150ms ease, height 150ms ease, margin 150ms ease;
+  transition: width 120ms ease, height 120ms ease, margin 120ms ease;
+  contain: layout style;
 }
 
 .innerActive {

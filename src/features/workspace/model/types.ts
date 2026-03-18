@@ -1,4 +1,8 @@
 export type WorkspaceWidgetKind = 'customers' | 'deals' | 'tasks' | 'reports' | 'imports' | 'chapan';
+export type WorkspaceSceneTheme = 'default' | 'morning' | 'overcast' | 'dusk' | 'night';
+export type WorkspaceSceneMode = 'surface' | 'flight';
+export type WorkspaceSceneTerrainMode = 'full' | 'calm' | 'void';
+export type WorkspaceTileDistance = 'near' | 'mid' | 'far';
 
 export interface WorkspaceViewport {
   x: number;
@@ -6,6 +10,13 @@ export interface WorkspaceViewport {
 }
 
 export type WorkspaceModalSize = 'compact' | 'default' | 'wide';
+export type WorkspaceTileStatus = 'floating' | 'drifting' | 'idle';
+
+export interface WorkspaceEuler3D {
+  x: number;
+  y: number;
+  z: number;
+}
 
 export interface WorkspaceTile {
   id: string;
@@ -18,6 +29,10 @@ export interface WorkspaceTile {
   modalSize: WorkspaceModalSize;
   version: number;
   createdAt: string;
+  lastInteractionAt: string;
+  status: WorkspaceTileStatus;
+  rotation3D: WorkspaceEuler3D;
+  distance3D: WorkspaceTileDistance;
   pinned?: boolean;
   zIndex?: number;
 }
