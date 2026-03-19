@@ -33,8 +33,6 @@ export interface WorkspaceSceneRuntimeState {
 export interface WorkspaceSceneRuntimeOptions {
   canvas: HTMLCanvasElement;
   host: HTMLElement;
-  onShellHover?: (tileId: string | null) => void;
-  onShellActivate?: (tileId: string) => void;
   onFlightTileProjection?: (tiles: WorkspaceSceneFlightTileProjection[]) => void;
 }
 

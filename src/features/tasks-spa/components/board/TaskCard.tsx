@@ -1,6 +1,7 @@
 /**
  * features/tasks-spa/components/board/TaskCard.tsx
  */
+import { memo } from 'react';
 import { Calendar, Link2, CheckSquare, AlertCircle } from 'lucide-react';
 import type { Task } from '../../api/types';
 import {
@@ -28,7 +29,7 @@ const ENTITY_TYPE_LABEL: Record<string, string> = {
   standalone: '',
 };
 
-export function TaskCard({ task, onDragStart, onDragEnd, onOpenDrawer }: {
+export const TaskCard = memo(function TaskCard({ task, onDragStart, onDragEnd, onOpenDrawer }: {
   task: Task;
   onDragStart: () => void;
   onDragEnd: () => void;
@@ -103,4 +104,4 @@ export function TaskCard({ task, onDragStart, onDragEnd, onOpenDrawer }: {
       </div>
     </div>
   );
-}
+});

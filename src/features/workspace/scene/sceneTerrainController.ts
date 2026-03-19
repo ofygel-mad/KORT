@@ -1,6 +1,7 @@
 import * as THREE from 'three';
-import type { ImpactWave, ShellRuntime, TerrainInfluence, WorkspaceSceneRuntimeState } from './sceneTypes';
-import { clamp, easeOutCubic, terrainMotion, terrainMotionSurface } from './sceneHelpers';
+import type { ImpactWave, TerrainInfluence, WorkspaceSceneRuntimeState } from './sceneTypes';
+import { clamp, easeOutCubic, terrainMotion } from './sceneHelpers';
+import { getFieldPositionForTile } from './sceneShells';
 import { trimExpiredWavesInPlace } from './sceneTerrain';
 import {
   DOWN,
@@ -23,7 +24,6 @@ interface WorkspaceSceneTerrainControllerOptions {
   fogInteractionPoints: THREE.Vector3[];
   fogInteractionWeights: number[];
   waves: ImpactWave[];
-  shells: Map<string, ShellRuntime>;
   pointer: THREE.Vector2;
   peakBeaconIndices: Uint32Array;
   peakBeaconPositionsAttribute: THREE.BufferAttribute;
@@ -55,7 +55,6 @@ export class WorkspaceSceneTerrainController {
   private readonly fogInteractionPoints: THREE.Vector3[];
   private readonly fogInteractionWeights: number[];
   private readonly waves: ImpactWave[];
-  private readonly shells: Map<string, ShellRuntime>;
   private readonly pointer: THREE.Vector2;
   private readonly peakBeaconIndices: Uint32Array;
   private readonly peakBeaconPositionsAttribute: THREE.BufferAttribute;
@@ -73,6 +72,8 @@ export class WorkspaceSceneTerrainController {
   private readonly projectedRayOrigin = new THREE.Vector3();
   private peakBeaconsEnabled = true;
   private amplitudePulse = 1.0;
+  private readonly influencePool: TerrainInfluence[] = [];
+  private static readonly EMPTY_INFLUENCES: TerrainInfluence[] = [];
   private terrainMode: WorkspaceSceneRuntimeState['terrainMode'];
   private transitionActive = false;
   private transitionStartedAt = 0;
@@ -102,7 +103,6 @@ export class WorkspaceSceneTerrainController {
     this.fogInteractionPoints = options.fogInteractionPoints;
     this.fogInteractionWeights = options.fogInteractionWeights;
     this.waves = options.waves;
-    this.shells = options.shells;
     this.pointer = options.pointer;
     this.peakBeaconIndices = options.peakBeaconIndices;
     this.peakBeaconPositionsAttribute = options.peakBeaconPositionsAttribute;
@@ -260,7 +260,7 @@ export class WorkspaceSceneTerrainController {
       const edgeBlend = THREE.MathUtils.smoothstep(radialDistance, TERRAIN_RADIUS * 0.72, TERRAIN_RADIUS);
       const edgeFactor = THREE.MathUtils.smoothstep(radialDistance, TERRAIN_RADIUS * 0.54, TERRAIN_RADIUS * 0.98);
       const baseMotion = motionAmplitude > 0.001
-        ? (isSurface ? terrainMotionSurface(baseX, baseY, time) : terrainMotion(baseX, baseY, time)) * motionAmplitude
+        ? terrainMotion(baseX, baseY, time, isSurface) * motionAmplitude
         : 0;
 
       let nextX = baseX;
@@ -579,38 +579,59 @@ export class WorkspaceSceneTerrainController {
     this.terrainGroup.worldToLocal(this.terrainLocalPointer);
   }
 
+  private getPooledInfluence(index: number): TerrainInfluence {
+    if (index < this.influencePool.length) {
+      return this.influencePool[index];
+    }
+    const influence: TerrainInfluence = {
+      localPoint: new THREE.Vector3(),
+      radius: 0,
+      depth: 0,
+      ripple: 0,
+      wobble: 0,
+    };
+    this.influencePool.push(influence);
+    return influence;
+  }
+
   private collectTerrainInfluences(time: number, flightMode: boolean) {
     if (this.terrainMode !== 'full' || this.motionFactor < 0.05) {
-      return [];
+      return WorkspaceSceneTerrainController.EMPTY_INFLUENCES;
     }
 
-    const influences: TerrainInfluence[] = [];
+    let count = 0;
 
     if (this.hasPointerInfluence()) {
-      influences.push({
-        localPoint: this.terrainLocalPointer,
-        radius: flightMode ? 30 : 38,
-        depth: flightMode ? 6.2 : 9.4,
-        ripple: flightMode ? 0.9 : 1.35,
-        wobble: flightMode ? 8.2 : 8.8,
-      });
+      const inf = this.getPooledInfluence(count);
+      inf.localPoint = this.terrainLocalPointer;
+      inf.radius = flightMode ? 30 : 38;
+      inf.depth = flightMode ? 6.2 : 9.4;
+      inf.ripple = flightMode ? 0.9 : 1.35;
+      inf.wobble = flightMode ? 8.2 : 8.8;
+      count += 1;
     }
 
-    this.shells.forEach((shell) => {
-      const introAge = time - shell.introAt;
+    const tiles = this.getState().tiles;
+    for (let index = 0; index < tiles.length; index += 1) {
+      const tile = tiles[index];
+      const field = getFieldPositionForTile(tile);
+      const createdAt = Date.parse(tile.createdAt);
+      const introAge = Number.isNaN(createdAt) ? 999 : (Date.now() - createdAt) / 1000;
       const introProgress = clamp(introAge / 1.9, 0, 1);
       const introStrength = introProgress < 1 ? Math.pow(1 - introProgress, 2.1) : 0;
-      const focusBoost = shell.descriptor.isFocused ? 0.12 : 0;
-      const pinnedBoost = shell.descriptor.isPinned ? 0.06 : 0;
-      influences.push({
-        localPoint: shell.terrainLocalPoint,
-        radius: 5.4 + shell.depth * 0.8 + introStrength * 9.5,
-        depth: 0.34 + shell.depth * 0.085 + introStrength * 2.2 + focusBoost + pinnedBoost,
-        ripple: 0.06 + introStrength * 0.32,
-        wobble: 4.6 + shell.seed * 0.16,
-      });
-    });
+      const focusBoost = tile.isFocused ? 0.12 : 0;
+      const pinnedBoost = tile.isPinned ? 0.06 : 0;
+      const wobbleSeed = tile.id.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
+      const inf = this.getPooledInfluence(count);
+      inf.localPoint.set(field.x, field.y, 0);
+      inf.radius = 5.4 + field.depth * 0.8 + introStrength * 9.5;
+      inf.depth = 0.34 + field.depth * 0.085 + introStrength * 2.2 + focusBoost + pinnedBoost;
+      inf.ripple = 0.06 + introStrength * 0.32;
+      inf.wobble = 4.6 + (wobbleSeed % 37) * 0.16 + index * 0.03;
+      count += 1;
+    }
 
-    return influences;
+    // Return a view of the pool up to `count` entries (no allocation)
+    return this.influencePool.slice(0, count);
   }
 }

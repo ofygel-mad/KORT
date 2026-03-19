@@ -46,5 +46,5 @@ export const TERRAIN_SEGMENTS_SURFACE = 152;
 /** Low-detail geometry used when flight mode is ON (full terrain updated) */
 export const TERRAIN_SEGMENTS_FLIGHT = 96;
 /** Radius in terrain-local units within which vertices animate in surface mode */
-export const TERRAIN_SURFACE_VISIBLE_RADIUS = 82;
+export const TERRAIN_SURFACE_VISIBLE_RADIUS = TERRAIN_RADIUS * 1.1;
 export const NEON_EDGE_BASE_COLOR = new THREE.Color(0x7ed0ff);

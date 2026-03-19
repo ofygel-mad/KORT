@@ -224,10 +224,65 @@ function clampAxisWithinWorld(value: number, itemSize: number, worldSize: number
   return clamp(value, 0, Math.max(0, worldSize - itemSize));
 }
 
-export function clampViewportToBounds(viewport: WorkspaceViewport, width: number, height: number): WorkspaceViewport {
+export function getVisibleWorldRect(
+  viewport: WorkspaceViewport,
+  viewportSize: { width: number; height: number },
+  zoom: number,
+) {
+  const world = getWorldBounds(viewportSize.width, viewportSize.height);
+  const safeZoom = Math.max(zoom, 0.001);
+
+  const left = clamp(-viewport.x / safeZoom, 0, world.width);
+  const top = clamp(-viewport.y / safeZoom, 0, world.height);
+  const right = clamp((viewportSize.width - viewport.x) / safeZoom, 0, world.width);
+  const bottom = clamp((viewportSize.height - viewport.y) / safeZoom, 0, world.height);
+
   return {
-    x: clamp(viewport.x, -(Math.max(0, width) * (WORLD_FACTOR - 1)), 0),
-    y: clamp(viewport.y, -(Math.max(0, height) * (WORLD_FACTOR - 1)), 0),
+    left,
+    top,
+    right,
+    bottom,
+    width: Math.max(0, right - left),
+    height: Math.max(0, bottom - top),
+  };
+}
+
+export function getTileViewportBounds(
+  viewport: WorkspaceViewport,
+  viewportSize: { width: number; height: number },
+  zoom: number,
+  tileSize: { width: number; height: number },
+) {
+  const world = getWorldBounds(viewportSize.width, viewportSize.height);
+  const visible = getVisibleWorldRect(viewport, viewportSize, zoom);
+  const maxX = Math.max(0, world.width - tileSize.width);
+  const maxY = Math.max(0, world.height - tileSize.height);
+  const minX = clamp(visible.left, 0, maxX);
+  const minY = clamp(visible.top, 0, maxY);
+  const visibleMaxX = clamp(visible.right - tileSize.width, 0, maxX);
+  const visibleMaxY = clamp(visible.bottom - tileSize.height, 0, maxY);
+
+  return {
+    minX: Math.min(minX, visibleMaxX),
+    maxX: Math.max(minX, visibleMaxX),
+    minY: Math.min(minY, visibleMaxY),
+    maxY: Math.max(minY, visibleMaxY),
+  };
+}
+
+export function clampViewportToBounds(
+  viewport: WorkspaceViewport,
+  width: number,
+  height: number,
+  zoom = 1,
+): WorkspaceViewport {
+  const world = getWorldBounds(width, height);
+  const minX = Math.min(0, width - world.width * zoom);
+  const minY = Math.min(0, height - world.height * zoom);
+
+  return {
+    x: clamp(viewport.x, minX, 0),
+    y: clamp(viewport.y, minY, 0),
   };
 }
 
@@ -340,21 +395,20 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
       sceneTerrainMode: 'full',
 
       addTile: (kind) => {
-        const { viewport, viewportSize, topZIndex } = get();
+        const { viewport, viewportSize, topZIndex, zoom } = get();
         const size = DEFAULT_TILE_SIZE[kind];
-        const world = getWorldBounds(viewportSize.width, viewportSize.height);
-        const visibleCenterX = -viewport.x + viewportSize.width / 2 - size.width / 2;
-        const visibleCenterY = -viewport.y + viewportSize.height / 2 - size.height / 2;
+        const visibleRect = getVisibleWorldRect(viewport, viewportSize, zoom);
+        const visibleBounds = getTileViewportBounds(viewport, viewportSize, zoom, size);
         const scatter = get().tiles.length;
         const offsetX = (scatter % 4) * 24 - 36;
         const offsetY = Math.floor(scatter / 4) * 24 - 12;
         const id = nanoid();
         const newZ = topZIndex + 1;
         const createdAt = nowIsoString();
-        const maxX = Math.max(0, world.width - size.width);
-        const maxY = Math.max(0, world.height - size.height);
-        const baseX = clamp(visibleCenterX + offsetX, Math.min(20, maxX), maxX);
-        const baseY = clamp(visibleCenterY + offsetY, Math.min(20, maxY), maxY);
+        const visibleCenterX = visibleRect.left + visibleRect.width / 2 - size.width / 2;
+        const visibleCenterY = visibleRect.top + visibleRect.height / 2 - size.height / 2;
+        const baseX = clamp(visibleCenterX + offsetX, visibleBounds.minX, visibleBounds.maxX);
+        const baseY = clamp(visibleCenterY + offsetY, visibleBounds.minY, visibleBounds.maxY);
         const tile3D = buildTile3DState({ x: baseX, y: baseY, status: 'floating' });
         const tile: WorkspaceTile = {
           id, kind, title: TITLES[kind],
@@ -378,12 +432,12 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
         const state = get();
         const src = state.tiles.find(t => t.id === id);
         if (!src) return null;
-        const world = getWorldBounds(state.viewportSize.width, state.viewportSize.height);
+        const visibleBounds = getTileViewportBounds(state.viewport, state.viewportSize, state.zoom, src);
         const newId = nanoid();
         const newZ = state.topZIndex + 1;
         const createdAt = nowIsoString();
-        const nextX = clampAxisWithinWorld(src.x + 32, src.width, world.width);
-        const nextY = clampAxisWithinWorld(src.y + 32, src.height, world.height);
+        const nextX = clamp(src.x + 32, visibleBounds.minX, visibleBounds.maxX);
+        const nextY = clamp(src.y + 32, visibleBounds.minY, visibleBounds.maxY);
         const tile3D = buildTile3DState({ x: nextX, y: nextY, status: 'floating' });
         const dup: WorkspaceTile = {
           ...src,
@@ -418,7 +472,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
       },
 
       alignTilesToGrid: () => {
-        const { tiles, viewport, viewportSize } = get();
+        const { tiles, viewport, viewportSize, zoom } = get();
         if (!tiles.length || viewportSize.width <= 0 || viewportSize.height <= 0) return;
         const maxTileWidth = Math.max(...tiles.map((t) => t.width));
         const maxTileHeight = Math.max(...tiles.map((t) => t.height));
@@ -427,8 +481,9 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
         const columns = Math.max(1, Math.floor((viewportSize.width - outerPadding * 2 + gap) / colWidth));
         const worldWidth = viewportSize.width * WORLD_FACTOR;
         const worldHeight = viewportSize.height * WORLD_FACTOR;
-        const startX = clamp(-viewport.x + outerPadding, 0, Math.max(0, worldWidth - maxTileWidth));
-        const startY = clamp(-viewport.y + outerPadding, 0, Math.max(0, worldHeight - maxTileHeight));
+        const visibleRect = getVisibleWorldRect(viewport, viewportSize, zoom);
+        const startX = clamp(visibleRect.left + outerPadding, 0, Math.max(0, worldWidth - maxTileWidth));
+        const startY = clamp(visibleRect.top + outerPadding, 0, Math.max(0, worldHeight - maxTileHeight));
         set((state) => ({
           tiles: state.tiles.map((tile, index) => {
             const col = index % columns, row = Math.floor(index / columns);
@@ -508,11 +563,13 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
       minimizeTile: () => set({ activeTileId: null, settingsTileId: null }),
       openSettings: (id) => set({ settingsTileId: id }),
       closeSettings: () => set({ settingsTileId: null }),
-      setViewport: (x, y) => set({ viewport: { x, y } }),
+      setViewport: (x, y) => set((state) => ({
+        viewport: clampViewportToBounds({ x, y }, state.viewportSize.width, state.viewportSize.height, state.zoom),
+      })),
       initializeViewport: (width, height) => {
         set((s) => ({
           viewportSize: { width, height },
-          viewport: clampViewportToBounds(s.viewportReady ? s.viewport : { x: 0, y: 0 }, width, height),
+          viewport: clampViewportToBounds(s.viewportReady ? s.viewport : { x: 0, y: 0 }, width, height, s.zoom),
           tiles: width > 0 && height > 0
             ? s.tiles.map((tile) => clampTileToWorldBounds(tile, width, height))
             : s.tiles,
@@ -520,10 +577,31 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
         }));
       },
 
-      setZoom: (zoom) => set({ zoom: clamp(zoom, ZOOM_MIN, ZOOM_MAX) }),
-      zoomIn:  () => set((s) => ({ zoom: clamp(+(s.zoom + ZOOM_STEP).toFixed(2), ZOOM_MIN, ZOOM_MAX) })),
-      zoomOut: () => set((s) => ({ zoom: clamp(+(s.zoom - ZOOM_STEP).toFixed(2), ZOOM_MIN, ZOOM_MAX) })),
-      resetZoom: () => set({ zoom: 1 }),
+      setZoom: (zoom) => set((state) => {
+        const nextZoom = clamp(zoom, ZOOM_MIN, ZOOM_MAX);
+        return {
+          zoom: nextZoom,
+          viewport: clampViewportToBounds(state.viewport, state.viewportSize.width, state.viewportSize.height, nextZoom),
+        };
+      }),
+      zoomIn:  () => set((state) => {
+        const nextZoom = clamp(+(state.zoom + ZOOM_STEP).toFixed(2), ZOOM_MIN, ZOOM_MAX);
+        return {
+          zoom: nextZoom,
+          viewport: clampViewportToBounds(state.viewport, state.viewportSize.width, state.viewportSize.height, nextZoom),
+        };
+      }),
+      zoomOut: () => set((state) => {
+        const nextZoom = clamp(+(state.zoom - ZOOM_STEP).toFixed(2), ZOOM_MIN, ZOOM_MAX);
+        return {
+          zoom: nextZoom,
+          viewport: clampViewportToBounds(state.viewport, state.viewportSize.width, state.viewportSize.height, nextZoom),
+        };
+      }),
+      resetZoom: () => set((state) => ({
+        zoom: 1,
+        viewport: clampViewportToBounds(state.viewport, state.viewportSize.width, state.viewportSize.height, 1),
+      })),
 
       pinTile: (id) => set((state) => ({
         tiles: state.tiles.map((t) => (t.id === id
@@ -553,22 +631,29 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
       })),
 
       setHoveredTile: (id) => set({ hoveredTileId: id }),
-      markTileActive: (id, opts) => set((state) => ({
-        tiles: state.tiles.map((tile) => {
-          if (tile.id !== id) return tile;
+      markTileActive: (id, opts) => set((state) => {
+        const target = state.tiles.find(t => t.id === id);
+        if (!target) return state;
 
-          const nextStatus = opts?.status ?? 'floating';
-          return {
-            ...tile,
-            lastInteractionAt: nowIsoString(),
-            status: nextStatus,
-            rotation3D: {
-              ...deriveTile3DRotation(nextStatus),
-              ...opts?.rotation3D,
-            },
-          };
-        }),
-      })),
+        const nextStatus = opts?.status ?? 'floating';
+        // Skip update if tile already has the target status and no custom rotation
+        if (target.status === nextStatus && !opts?.rotation3D) return state;
+
+        return {
+          tiles: state.tiles.map((tile) => {
+            if (tile.id !== id) return tile;
+            return {
+              ...tile,
+              lastInteractionAt: nowIsoString(),
+              status: nextStatus,
+              rotation3D: {
+                ...deriveTile3DRotation(nextStatus),
+                ...opts?.rotation3D,
+              },
+            };
+          }),
+        };
+      }),
       updateIdleTiles: () => set((state) => {
         const now = Date.now();
         let changed = false;

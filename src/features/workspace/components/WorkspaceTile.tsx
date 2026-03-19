@@ -3,7 +3,7 @@ import type { CSSProperties } from 'react';
 import { Pin } from 'lucide-react';
 import { WORKSPACE_WIDGET_MAP } from '../registry';
 import { useBadgeStore } from '../../shared-bus/badge.store';
-import { useWorkspaceStore, WORLD_FACTOR } from '../model/store';
+import { getTileViewportBounds, useWorkspaceStore } from '../model/store';
 import type { WorkspaceSnapshot, WorkspaceTile as WorkspaceTileType } from '../model/types';
 import styles from './Workspace.module.css';
 
@@ -38,23 +38,20 @@ export const WorkspaceTile = memo(function WorkspaceTile({
   const bringToFront     = useWorkspaceStore((s) => s.bringToFront);
   const markTileActive   = useWorkspaceStore((s) => s.markTileActive);
   const openContextMenu  = useWorkspaceStore((s) => s.openContextMenu);
-  const hoveredTileId    = useWorkspaceStore((s) => s.hoveredTileId);
   const setHoveredTile   = useWorkspaceStore((s) => s.setHoveredTile);
-  const activeTileId     = useWorkspaceStore((s) => s.activeTileId);
   const sceneMode        = useWorkspaceStore((s) => s.sceneMode);
-  const recentTileId     = useWorkspaceStore((s) => s.recentTileId);
-  const viewportSize     = useWorkspaceStore((s) => s.viewportSize);
-  const zoom             = useWorkspaceStore((s) => s.zoom);
+  // Derived booleans — only re-render when THIS tile's state changes, not when ANY tile is hovered/active.
+  const isHovered        = useWorkspaceStore((s) => s.hoveredTileId === tile.id);
+  const isActive         = useWorkspaceStore((s) => s.activeTileId === tile.id);
+  const isNew            = useWorkspaceStore((s) => s.recentTileId === tile.id);
+  // viewport, viewportSize, zoom — read at drag-start only (no subscription needed).
   const definition       = WORKSPACE_WIDGET_MAP[tile.kind];
   if (!definition) return null;
   const Icon             = definition.icon;
   const isFlightPresentation = presentation === 'flight';
-  const isNew            = recentTileId === tile.id;
   const badge            = useBadgeStore(s => s.getBadge(tile.kind));
   const showBadge        = badge > 0;
   const isPinned         = tile.pinned ?? false;
-  const isHovered        = hoveredTileId === tile.id;
-  const isActive         = activeTileId === tile.id;
   const tileDistanceClass =
     tile.distance3D === 'near'
       ? styles.tileDistanceNear
@@ -69,7 +66,7 @@ export const WorkspaceTile = memo(function WorkspaceTile({
       return;
     }
     if (sceneMode === 'flight') return;
-    if (activeTileId) return;
+    if (useWorkspaceStore.getState().activeTileId) return;
     if (e.button === 2) return; // let context menu handle right-click
     if ((e.target as HTMLElement).closest('[data-workspace-tile-screen="true"]')) return;
     e.stopPropagation();
@@ -82,8 +79,8 @@ export const WorkspaceTile = memo(function WorkspaceTile({
     el.setPointerCapture(e.pointerId);
     el.style.cursor = 'grabbing';
 
-    const worldW = viewportSize.width  * WORLD_FACTOR;
-    const worldH = viewportSize.height * WORLD_FACTOR;
+    const { viewport, viewportSize, zoom } = useWorkspaceStore.getState();
+    const visibleBounds = getTileViewportBounds(viewport, viewportSize, zoom, tile);
 
     const onMove = (me: PointerEvent) => {
       if (isPinned) return;
@@ -95,8 +92,8 @@ export const WorkspaceTile = memo(function WorkspaceTile({
       }
       if (dragged) setTilePos(
         tile.id,
-        Math.max(0, Math.min(originX + dx, worldW - tile.width)),
-        Math.max(0, Math.min(originY + dy, worldH - tile.height)),
+        Math.max(visibleBounds.minX, Math.min(originX + dx, visibleBounds.maxX)),
+        Math.max(visibleBounds.minY, Math.min(originY + dy, visibleBounds.maxY)),
       );
     };
     const onUp = () => {
@@ -163,7 +160,7 @@ export const WorkspaceTile = memo(function WorkspaceTile({
       onPointerEnter={() => {
         if (sceneMode === 'flight' && !isFlightPresentation) return;
         setHoveredTile(tile.id);
-        if (!isFlightPresentation) {
+        if (!isFlightPresentation && tile.status !== 'floating') {
           markTileActive(tile.id, { status: 'floating' });
         }
       }}

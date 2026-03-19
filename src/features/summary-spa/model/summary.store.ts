@@ -77,7 +77,8 @@ export const useSummaryStore = create<SummaryState>((set, get) => ({
       else if (snap.source === 'tasks') set({ tasksSnap: snap as TasksSnapshot });
       else {
         // Unknown future source — store generically
-        set(s => ({ extraSnaps: { ...s.extraSnaps, [snap.source]: snap } }));
+        const unknownSnap = snap as { source: string };
+        set(s => ({ extraSnaps: { ...s.extraSnaps, [unknownSnap.source]: unknownSnap } }));
       }
     }
   },

@@ -2,7 +2,7 @@
  * Generic Kanban board. Each column is a stage bucket.
  * Uses pointer-capture drag (no external DnD lib).
  */
-import { useRef, useState } from 'react';
+import { useRef, useState, useMemo } from 'react';
 import { useLeadsStore } from '../../model/leads.store';
 import type { Lead, LeadStage } from '../../api/types';
 import { LeadCard } from './LeadCard';
@@ -38,10 +38,23 @@ export function KanbanBoard({ columns, leads, onOpenDrawer, onOpenHandoff }: Pro
     setOverCol(null);
   };
 
+  // Pre-group leads by stage — avoids N×M filter calls on every render
+  const leadsByStage = useMemo(() => {
+    const map: Record<string, Lead[]> = {};
+    for (const col of columns) {
+      map[col.stage] = [];
+    }
+    for (const lead of leads) {
+      const bucket = map[lead.stage];
+      if (bucket) bucket.push(lead);
+    }
+    return map;
+  }, [leads, columns]);
+
   return (
     <div className={s.board}>
       {columns.map(col => {
-        const colLeads = leads.filter(l => l.stage === col.stage);
+        const colLeads = leadsByStage[col.stage] ?? [];
         const isOver = overCol === col.stage;
         return (
           <div

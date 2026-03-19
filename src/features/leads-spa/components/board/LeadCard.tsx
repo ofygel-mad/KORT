@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Phone, MessageCircle, Clock, AlertTriangle, MoveRight } from 'lucide-react';
 import type { Lead } from '../../api/types';
 import s from './Board.module.css';
@@ -26,7 +27,7 @@ function getLastNote(lead: Lead): string | null {
   return meaningful?.comment ?? (meaningful?.action !== 'Взято в работу' ? meaningful?.action ?? null : null);
 }
 
-export function LeadCard({ lead, onDragStart, onDragEnd, onOpenDrawer, onOpenHandoff }: Props) {
+export const LeadCard = memo(function LeadCard({ lead, onDragStart, onDragEnd, onOpenDrawer, onOpenHandoff }: Props) {
   const stale   = isStaleLead(lead);
   const lastNote = getLastNote(lead);
 
@@ -88,4 +89,4 @@ export function LeadCard({ lead, onDragStart, onDragEnd, onOpenDrawer, onOpenHan
       </div>
     </div>
   );
-}
+});

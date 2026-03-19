@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useDealsStore } from '../../model/deals.store';
 import type { Deal, DealStage } from '../../api/types';
 import { STAGE_LABEL, STAGE_ACCENT, ACTIVE_STAGES } from '../../api/types';
@@ -28,11 +28,26 @@ export function DealKanbanBoard({ deals, onOpenDrawer, onOpenLostModal, onOpenWo
 
   const get = (id: string) => deals.find(d => d.id === id);
 
+  // Pre-group deals by stage — avoids N×M filter calls on every render
+  const dealsByStage = useMemo(() => {
+    const map: Record<string, { deals: Deal[]; value: number }> = {};
+    for (const stage of columns) {
+      map[stage] = { deals: [], value: 0 };
+    }
+    for (const deal of deals) {
+      const bucket = map[deal.stage];
+      if (bucket) {
+        bucket.deals.push(deal);
+        bucket.value += deal.value * (deal.probability / 100);
+      }
+    }
+    return map;
+  }, [deals, columns]);
+
   return (
     <div className={s.board}>
       {columns.map(stage => {
-        const colDeals = deals.filter(d => d.stage === stage);
-        const colValue = colDeals.reduce((a, d) => a + d.value * (d.probability / 100), 0);
+        const { deals: colDeals, value: colValue } = dealsByStage[stage];
         const isOver   = overCol === stage;
 
         return (

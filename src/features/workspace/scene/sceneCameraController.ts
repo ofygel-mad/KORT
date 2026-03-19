@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import type { ShellRuntime, WorkspaceSceneRuntimeState } from './sceneTypes';
+import type { WorkspaceSceneRuntimeState } from './sceneTypes';
 import { clamp } from './sceneHelpers';
 import { computePresentationMetrics, computeSurfaceOrbitPosition } from './sceneCamera';
 import { getFieldPositionForTile } from './sceneShells';
@@ -28,8 +28,6 @@ interface WorkspaceSceneCameraControllerOptions {
   camera: THREE.PerspectiveCamera;
   clock: THREE.Clock;
   terrainGroup: THREE.Group;
-  shells: Map<string, ShellRuntime>;
-  pointer: THREE.Vector2;
   getState: () => WorkspaceSceneRuntimeState;
   getDragging: () => boolean;
   terrainController: WorkspaceSceneTerrainController;
@@ -39,8 +37,6 @@ export class WorkspaceSceneCameraController {
   private readonly camera: THREE.PerspectiveCamera;
   private readonly clock: THREE.Clock;
   private readonly terrainGroup: THREE.Group;
-  private readonly shells: Map<string, ShellRuntime>;
-  private readonly pointer: THREE.Vector2;
   private readonly getState: () => WorkspaceSceneRuntimeState;
   private readonly getDragging: () => boolean;
   private readonly terrainController: WorkspaceSceneTerrainController;
@@ -84,14 +80,12 @@ export class WorkspaceSceneCameraController {
     this.camera = options.camera;
     this.clock = options.clock;
     this.terrainGroup = options.terrainGroup;
-    this.shells = options.shells;
-    this.pointer = options.pointer;
     this.getState = options.getState;
     this.getDragging = options.getDragging;
     this.terrainController = options.terrainController;
   }
 
-  update(delta: number, time: number, horizonMesh: THREE.Mesh, mistMesh: THREE.Mesh, themeId: WorkspaceSceneRuntimeState['theme']) {
+  update(delta: number, time: number) {
     if (this.getState().flightMode) {
       this.updateFlightCamera(delta, time);
       return;
@@ -122,8 +116,6 @@ export class WorkspaceSceneCameraController {
     this.surfaceOrbitTheta += (this.surfaceOrbitTargetTheta - this.surfaceOrbitTheta) * Math.min(1, delta * 6);
     this.surfaceOrbitPhi += (this.surfaceOrbitTargetPhi - this.surfaceOrbitPhi) * Math.min(1, delta * 6);
 
-    const pointerX = this.pointer.x;
-    const pointerY = this.pointer.y;
     computeSurfaceOrbitPosition(
       this.presentationCameraPosition,
       this.presentationCameraTarget,
@@ -131,20 +123,7 @@ export class WorkspaceSceneCameraController {
       this.surfaceOrbitPhi,
       this.desiredCameraPosition,
     );
-
-    const ambientSwayX = Math.sin(time * 0.1) * 0.10 + Math.cos(time * 0.17) * 0.045;
-    const ambientSwayY = Math.sin(time * 0.23) * 0.025 + Math.cos(time * 0.11) * 0.012;
-    const ambientSwayZ = Math.cos(time * 0.08) * 0.08 + Math.sin(time * 0.16) * 0.03;
-    this.desiredCameraPosition.set(
-      this.desiredCameraPosition.x + ambientSwayX + pointerX * 1.05,
-      this.desiredCameraPosition.y + ambientSwayY + pointerY * 0.24,
-      this.desiredCameraPosition.z + ambientSwayZ,
-    );
-    this.desiredCameraTarget.set(
-      this.presentationCameraTarget.x + pointerX * 0.34,
-      this.presentationCameraTarget.y + Math.sin(time * 0.18) * 0.04 + pointerY * 0.08,
-      this.presentationCameraTarget.z + Math.cos(time * 0.1) * 0.08,
-    );
+    this.desiredCameraTarget.copy(this.presentationCameraTarget);
 
     this.camera.position.lerp(this.desiredCameraPosition, delta * SURFACE_CAMERA_LERP);
     this.cameraTarget.lerp(this.desiredCameraTarget, delta * SURFACE_TARGET_LERP);
@@ -153,10 +132,6 @@ export class WorkspaceSceneCameraController {
     this.applySmoothedSurfaceClearance(this.camera.position, MIN_SURFACE_CAMERA_CLEARANCE, delta, false);
     this.camera.lookAt(this.cameraTarget);
 
-    horizonMesh.position.x += (pointerX * 1.1 - horizonMesh.position.x) * 0.016;
-    horizonMesh.position.y += (((themeId === 'overcast' ? 4.2 : 3.4) + pointerY * 0.18) - horizonMesh.position.y) * 0.02;
-    mistMesh.position.x += (pointerX * 0.8 - mistMesh.position.x) * 0.012;
-    mistMesh.position.y += ((((themeId === 'overcast' ? 9.8 : (themeId === 'morning' || themeId === 'night') ? 8.8 : 7.9) + pointerY * 0.14)) - mistMesh.position.y) * 0.016;
   }
 
   applyFlightMode(enabled: boolean) {
@@ -424,23 +399,10 @@ export class WorkspaceSceneCameraController {
   }
 
   private computePresentationPose() {
-    if (!this.shells.size) {
-      this.presentationFocusLocal.set(0, 8, 0);
-      this.terrainController.sampleTerrainPoint(
-        this.presentationFocusLocal.x,
-        this.presentationFocusLocal.y,
-        this.presentationFocusWorld,
-        this.presentationFocusNormal,
-      );
-      // Smooth the raw raycast result to absorb per-frame wave-induced jitter
-      this.smoothedFocusWorld.lerp(this.presentationFocusWorld, 0.08);
-      this.smoothedFocusNormal.lerp(this.presentationFocusNormal, 0.06).normalize();
-      this.presentationCameraTarget.copy(this.smoothedFocusWorld).addScaledVector(this.smoothedFocusNormal, 4.6);
-      this.presentationCameraPosition.set(
-        this.presentationCameraTarget.x,
-        this.presentationCameraTarget.y + 10.8,
-        this.presentationCameraTarget.z + 72,
-      );
+    const tiles = this.getState().tiles;
+    if (!tiles.length) {
+      this.presentationCameraTarget.set(0, 3.2, 0);
+      this.presentationCameraPosition.set(0, 12.8, 72);
       this.presentationLookDirection.copy(this.presentationCameraTarget).sub(this.presentationCameraPosition).normalize();
       return;
     }
@@ -453,14 +415,16 @@ export class WorkspaceSceneCameraController {
     let maxY = -Infinity;
     let count = 0;
 
-    this.shells.forEach((shell) => {
-      const field = getFieldPositionForTile(shell.descriptor);
+    tiles.forEach((tile) => {
+      const field = getFieldPositionForTile(tile);
+      const widthSpread = THREE.MathUtils.mapLinear(tile.width, 220, 320, 1.55, 2.75);
+      const depthSpread = THREE.MathUtils.mapLinear(tile.height, 150, 190, 0.95, 1.7);
       sumX += field.x;
       sumY += field.y;
-      minX = Math.min(minX, field.x - shell.body.scale.x * 0.52);
-      maxX = Math.max(maxX, field.x + shell.body.scale.x * 0.52);
-      minY = Math.min(minY, field.y - shell.body.scale.y * 0.28);
-      maxY = Math.max(maxY, field.y + shell.body.scale.y * 0.28);
+      minX = Math.min(minX, field.x - widthSpread);
+      maxX = Math.max(maxX, field.x + widthSpread);
+      minY = Math.min(minY, field.y - depthSpread);
+      maxY = Math.max(maxY, field.y + depthSpread);
       count += 1;
     });
 

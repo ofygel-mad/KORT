@@ -4,7 +4,7 @@
  * Tasks SPA — connected to useTasksStore.
  * Reads from the real store, NOT from workspace snapshot.
  */
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useSyncExternalStore } from 'react';
 import {
   CheckSquare, Square, Plus, Clock, AlertTriangle,
   Trash2, Bell, BellOff, X, Timer,
@@ -15,6 +15,26 @@ import { PRIORITY_META_MAP, TASK_TYPE_LABEL, TASK_TYPE_ICON } from './tasksMeta'
 import { useSharedBus } from '../../../../shared-bus';
 import type { Task, TaskType, TaskPriority } from '../../../../tasks-spa/api/types';
 import s from './TasksSPA.module.css';
+
+// Shared 1-second tick so all TimerBadge instances share a single setInterval
+let _tickCount = 0;
+let _tickListeners: Set<() => void> = new Set();
+let _tickInterval: ReturnType<typeof setInterval> | null = null;
+
+function subscribeToTick(cb: () => void) {
+  _tickListeners.add(cb);
+  if (!_tickInterval) {
+    _tickInterval = setInterval(() => { _tickCount += 1; _tickListeners.forEach((fn) => fn()); }, 1000);
+  }
+  return () => {
+    _tickListeners.delete(cb);
+    if (_tickListeners.size === 0 && _tickInterval) {
+      clearInterval(_tickInterval);
+      _tickInterval = null;
+    }
+  };
+}
+function getTickSnapshot() { return _tickCount; }
 
 function formatCountdown(deadline: string): { label: string; overdue: boolean } {
   const diff = new Date(deadline).getTime() - Date.now();
@@ -201,11 +221,7 @@ function CreateModal({ onClose, preset }: CreateModalProps) {
 }
 
 function TimerBadge({ deadline, warning }: { deadline: string; warning: boolean }) {
-  const [, setTick] = useState(0);
-  useEffect(() => {
-    const id = setInterval(() => setTick(t => t + 1), 1000);
-    return () => clearInterval(id);
-  }, []);
+  useSyncExternalStore(subscribeToTick, getTickSnapshot);
   const { label, overdue } = formatCountdown(deadline);
   return (
     <span
@@ -257,9 +273,12 @@ export function TasksSPA({ tileId }: Props) {
     return () => clearInterval(id);
   }, [openCreateModal]);
 
+  const tasksRef = useRef(tasks);
+  tasksRef.current = tasks;
+
   useEffect(() => {
     const interval = setInterval(() => {
-      for (const task of tasks) {
+      for (const task of tasksRef.current) {
         if (
           task.timerEnabled &&
           task.timerDeadline &&
@@ -286,7 +305,7 @@ export function TasksSPA({ tileId }: Props) {
       }
     }, 5000);
     return () => clearInterval(interval);
-  }, [tasks]);
+  }, []);
 
   const FILTER_LABEL: Record<Filter, string> = {
     all: 'Все',

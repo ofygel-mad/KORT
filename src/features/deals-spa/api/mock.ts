@@ -4,7 +4,7 @@
  * Replace each function body with fetch() to connect real backend.
  */
 import { nanoid } from 'nanoid';
-import type { Deal, DealStage, DealActivity, ActivityType } from './types';
+import type { Deal, DealStage, DealActivity, DealTask, ActivityType } from './types';
 import { STAGE_PROBABILITY } from './types';
 
 const delay = (ms = 100) => new Promise(r => setTimeout(r, ms));

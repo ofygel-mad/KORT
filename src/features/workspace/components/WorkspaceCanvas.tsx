@@ -1,7 +1,7 @@
 import type { PointerEvent as ReactPointerEvent, WheelEvent } from 'react';
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
-import { useWorkspaceStore, WORLD_FACTOR, ZOOM_MIN, ZOOM_MAX } from '../model/store';
+import { useWorkspaceStore, ZOOM_MIN, ZOOM_MAX } from '../model/store';
 import { useWorkspaceSnapshot } from '../model/useWorkspaceSnapshot';
 import type { WorkspaceTile as WorkspaceTileType } from '../model/types';
 import type { WorkspaceSceneFlightTileProjection } from '../scene/sceneRuntime';
@@ -9,8 +9,6 @@ import { WorkspaceTile, type WorkspaceFlightTileLayout } from './WorkspaceTile';
 import { WorkspaceTileModal } from './WorkspaceTileModal';
 import { WorkspaceBgEffect } from './WorkspaceBgEffect';
 import { WorkspaceTileContextMenu } from './WorkspaceTileContextMenu';
-import { WorkspaceMinimap } from './WorkspaceMinimap';
-import { WorkspaceZoomHud } from './WorkspaceZoomHud';
 import styles from './Workspace.module.css';
 
 function clamp(v: number, lo: number, hi: number) {
@@ -48,11 +46,26 @@ export function WorkspaceCanvas() {
   useEffect(() => {
     const node = viewportRef.current;
     if (!node) return;
-    const update = () => initializeViewport(node.clientWidth, node.clientHeight);
-    update();
-    const ro = new ResizeObserver(update);
+    let frameHandle = 0;
+    const update = () => {
+      frameHandle = 0;
+      initializeViewport(node.clientWidth, node.clientHeight);
+    };
+    const scheduleUpdate = () => {
+      if (frameHandle) {
+        cancelAnimationFrame(frameHandle);
+      }
+      frameHandle = requestAnimationFrame(update);
+    };
+    scheduleUpdate();
+    const ro = new ResizeObserver(scheduleUpdate);
     ro.observe(node);
-    return () => ro.disconnect();
+    return () => {
+      ro.disconnect();
+      if (frameHandle) {
+        cancelAnimationFrame(frameHandle);
+      }
+    };
   }, [initializeViewport]);
 
   // Ctrl + Wheel zoom — pinch-to-zoom feeling
@@ -165,17 +178,11 @@ export function WorkspaceCanvas() {
     const startY  = e.clientY;
     const originX = viewport.x;
     const originY = viewport.y;
-    const vpW     = node.clientWidth;
-    const vpH     = node.clientHeight;
-
     node.setPointerCapture(e.pointerId);
     node.style.cursor = 'grabbing';
 
     const onMove = (me: PointerEvent) => {
-      setViewport(
-        clamp(originX + (me.clientX - startX), -(vpW * (WORLD_FACTOR - 1)), 0),
-        clamp(originY + (me.clientY - startY), -(vpH * (WORLD_FACTOR - 1)), 0),
-      );
+      setViewport(originX + (me.clientX - startX), originY + (me.clientY - startY));
     };
     const onUp = () => {
       node.style.cursor = '';
@@ -245,10 +252,6 @@ export function WorkspaceCanvas() {
           <WorkspaceTileModal key={activeTile.id} tile={activeTile} snapshot={snapshot} />
         )}
       </AnimatePresence>
-
-      {/* HUD overlays */}
-      <WorkspaceZoomHud />
-      <WorkspaceMinimap />
     </div>
   );
 }

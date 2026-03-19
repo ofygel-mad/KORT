@@ -95,6 +95,8 @@
   z-index: 60;
   display: grid;
   gap: 12px;
+  justify-items: end;
+  max-height: calc(100% - 44px);
   pointer-events: auto;
 }
 
@@ -110,6 +112,7 @@
 }
 
 .sceneControlToggle {
+  width: min(320px, calc(100vw - 48px));
   min-width: 248px;
   min-height: 58px;
   padding: 0 16px 0 18px;
@@ -130,6 +133,8 @@
 .sceneControlMeta {
   display: grid;
   gap: 3px;
+  min-width: 0;
+  flex: 1;
   text-align: left;
 }
 
@@ -154,6 +159,7 @@
 
 .sceneControlSub {
   font-size: 12px;
+  line-height: 1.45;
   color: color-mix(in srgb, var(--scene-hud-text) 64%, transparent);
 }
 
@@ -170,6 +176,7 @@
 
 .sceneControlPanel {
   width: min(320px, calc(100vw - 48px));
+  max-height: min(720px, calc(100dvh - 118px));
   padding: 16px;
   border-radius: 24px;
   display: none;
@@ -177,6 +184,9 @@
   opacity: 0;
   transform: translateY(-8px) scale(0.98);
   pointer-events: none;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
   transition: opacity 180ms ease, transform 180ms ease;
 }
 
@@ -233,8 +243,12 @@
   align-items: center;
   gap: 8px;
   justify-content: center;
+  min-width: 0;
   font-size: 13px;
   font-weight: 600;
+  line-height: 1.35;
+  text-align: center;
+  white-space: normal;
   cursor: pointer;
   transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
 }
@@ -294,12 +308,6 @@
 
 .workspaceViewportFlight .workspaceWorld {
   opacity: 0;
-  pointer-events: none;
-}
-
-.workspaceViewportFlight .zoomHud,
-.workspaceViewportFlight .minimapContainer {
-  opacity: 0.18;
   pointer-events: none;
 }
 
@@ -1112,11 +1120,16 @@
     top: 14px;
     right: 10px;
     left: 10px;
+    max-height: calc(100% - 28px);
   }
   .sceneControlToggle,
   .sceneControlPanel {
     width: 100%;
     min-width: 0;
+  }
+  .sceneControlPanel {
+    max-height: calc(100dvh - 96px);
+    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
   }
   .sceneControlThemeGrid {
     grid-template-columns: 1fr;
@@ -1162,6 +1175,36 @@
     right: 10px;
     top: 54px;
     width: min(300px, calc(100vw - 20px));
+  }
+}
+
+@media (max-height: 760px) {
+  .sceneControlDock {
+    top: 14px;
+  }
+
+  .sceneControlPanel {
+    gap: 12px;
+    padding: 14px;
+    max-height: calc(100dvh - 92px);
+  }
+
+  .sceneControlHeader,
+  .sceneControlSection {
+    gap: 8px;
+  }
+
+  .sceneControlSectionSub,
+  .sceneControlHint {
+    font-size: 11px;
+    line-height: 1.5;
+  }
+
+  .sceneControlThemeButton,
+  .sceneControlFlightButton,
+  .sceneControlTerrainButton {
+    min-height: 40px;
+    padding: 0 12px;
   }
 }
 
@@ -1259,137 +1302,9 @@
 /* ═══════════════════════════════════════════════
    ZOOM HUD — bottom-left
    ═══════════════════════════════════════════════ */
-.zoomHud {
-  position: absolute;
-  bottom: 18px;
-  left: 18px;
-  z-index: 50;
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  padding: 4px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  background: linear-gradient(135deg, rgba(22, 16, 8, 0.94), rgba(14, 10, 5, 0.96));
-  box-shadow:
-    0 0 0 1px rgba(100, 60, 20, 0.1),
-    0 6px 18px rgba(0, 0, 0, 0.42);
-  backdrop-filter: blur(6px);
-}
-
-.zoomBtn {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  border: none;
-  background: transparent;
-  color: rgba(255, 255, 255, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: background 130ms, color 130ms;
-}
-
-.zoomBtn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.07);
-  color: rgba(255, 255, 255, 0.9);
-}
-
-.zoomBtn:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-}
-
-.zoomPct {
-  min-width: 46px;
-  height: 28px;
-  padding: 0 6px;
-  border-radius: 8px;
-  border: none;
-  background: transparent;
-  color: rgba(255, 255, 255, 0.55);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  cursor: pointer;
-  transition: background 130ms, color 130ms;
-}
-
-.zoomPct:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.85);
-}
-
-.zoomPctActive {
-  color: rgba(210, 160, 90, 0.9) !important;
-}
-
 /* ═══════════════════════════════════════════════
    MINIMAP — bottom-right
    ═══════════════════════════════════════════════ */
-.minimapContainer {
-  position: absolute;
-  bottom: 18px;
-  right: 18px;
-  z-index: 50;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 6px;
-}
-
-.minimapToggle {
-  width: 32px;
-  height: 32px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  background: linear-gradient(135deg, rgba(22, 16, 8, 0.94), rgba(14, 10, 5, 0.96));
-  color: rgba(200, 150, 80, 0.75);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
-  backdrop-filter: blur(6px);
-  transition: border-color 150ms, color 150ms;
-}
-
-.minimapToggle:hover {
-  border-color: rgba(160, 104, 56, 0.4);
-  color: rgba(230, 180, 100, 0.95);
-}
-
-.minimapBoard {
-  position: relative;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(8, 6, 4, 0.88);
-  backdrop-filter: blur(8px);
-  box-shadow:
-    0 0 0 1px rgba(100, 60, 20, 0.1),
-    0 12px 32px rgba(0, 0, 0, 0.5);
-  overflow: hidden;
-  cursor: crosshair;
-}
-
-.minimapTile {
-  position: absolute;
-  border-radius: 2px;
-  background: rgba(160, 104, 56, 0.55);
-  border: 1px solid rgba(210, 160, 90, 0.25);
-  pointer-events: none;
-}
-
-.minimapViewport {
-  position: absolute;
-  border-radius: 2px;
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  background: rgba(255, 255, 255, 0.06);
-  pointer-events: none;
-}
-
-
 /* ═══════════════════════════════════════════════
    SPOTLIGHT — Cmd+K quick launcher
    ═══════════════════════════════════════════════ */

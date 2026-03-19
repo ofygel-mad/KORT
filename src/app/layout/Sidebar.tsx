@@ -1,3 +1,4 @@
+import { useCallback, useEffect, useRef } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -48,6 +49,8 @@ interface SidebarProps {
 }
 
 export function Sidebar({ onNavigate }: SidebarProps = {}) {
+  const asideRef = useRef<HTMLElement | null>(null);
+  const collapseTimerRef = useRef<number | null>(null);
   const { can, canUseAdminMode } = useCapabilities();
   const { isAdmin } = useRole();
   const { sidebarCollapsed, toggleSidebar, adminMode, toggleAdminMode, openWorkspaceAddMenu } = useUIStore();
@@ -70,11 +73,52 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
   const navItemClass = ({ isActive }: { isActive: boolean }) =>
     [styles.navItem, isActive ? styles.navItemActive : ''].join(' ');
 
+  const clearAutoCollapse = useCallback(() => {
+    if (collapseTimerRef.current !== null) {
+      window.clearTimeout(collapseTimerRef.current);
+      collapseTimerRef.current = null;
+    }
+  }, []);
+
+  const scheduleAutoCollapse = useCallback(() => {
+    clearAutoCollapse();
+    collapseTimerRef.current = window.setTimeout(() => {
+      collapseTimerRef.current = null;
+      const state = useUIStore.getState();
+      if (!state.sidebarCollapsed) {
+        state.toggleSidebar();
+      }
+    }, 5000);
+  }, [clearAutoCollapse]);
+
+  useEffect(() => {
+    if (collapsed) {
+      clearAutoCollapse();
+      return;
+    }
+
+    const sidebarNode = asideRef.current;
+    if (sidebarNode?.matches(':hover')) {
+      clearAutoCollapse();
+      return;
+    }
+
+    scheduleAutoCollapse();
+    return clearAutoCollapse;
+  }, [collapsed, clearAutoCollapse, scheduleAutoCollapse]);
+
   return (
     <motion.aside
+      ref={asideRef}
       className={styles.sidebar}
       animate={{ width: collapsed ? 64 : 220 }}
       transition={{ type: 'spring', stiffness: 340, damping: 34 }}
+      onPointerEnter={clearAutoCollapse}
+      onPointerLeave={() => {
+        if (!collapsed) {
+          scheduleAutoCollapse();
+        }
+      }}
     >
       {/* Logo */}
       <div className={styles.logo}>

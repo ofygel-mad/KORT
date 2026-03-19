@@ -151,7 +151,7 @@ export function ProductionQueue() {
                   const dueDays = parentOrder?.dueDate
                     ? Math.ceil((new Date(parentOrder.dueDate).getTime() - Date.now()) / 86_400_000)
                     : null;
-                  const isDefectEditing = taskId => defectInputs[taskId] !== undefined;
+                  const isDefectEditing = (taskId: string) => defectInputs[taskId] !== undefined;
 
                   return (
                     <div

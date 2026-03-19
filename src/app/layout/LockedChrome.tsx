@@ -5,7 +5,8 @@ import styles from './LockedChrome.module.css';
 
 function getCurrentLabel(pathname: string) {
   if (pathname === '/' || pathname === '/dashboard') return 'Главная';
-  const raw = pathname.split('/').filter(Boolean).at(-1) ?? 'Главная';
+  const parts = pathname.split('/').filter(Boolean);
+  const raw = (parts.length > 0 ? parts[parts.length - 1] : undefined) ?? 'Главная';
   return raw.charAt(0).toUpperCase() + raw.slice(1);
 }
 

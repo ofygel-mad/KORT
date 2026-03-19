@@ -3,7 +3,7 @@
  * Tasks SPA shell — mounts inside the workspace tile modal.
  * Communicates only via shared-bus; never imports Leads/Deals SPA.
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import {
   CheckSquare, List, LayoutGrid, Plus, Search,
   Filter, SortAsc, RefreshCw,
@@ -60,12 +60,18 @@ export function TasksSPA({ tileId }: Props) {
     return () => clearInterval(id);
   }, [openCreateModal]);
 
-  // Quick stats
-  const total      = tasks.length;
-  const overdue    = tasks.filter(t => t.status !== 'done' && t.dueAt && new Date(t.dueAt) < new Date()).length;
-  const inProgress = tasks.filter(t => t.status === 'in_progress').length;
-  const done       = tasks.filter(t => t.status === 'done').length;
-  const critical   = tasks.filter(t => t.priority === 'critical' && t.status !== 'done').length;
+  // Quick stats — computed in a single pass
+  const { total, overdue, inProgress, done, critical } = useMemo(() => {
+    let _overdue = 0, _inProgress = 0, _done = 0, _critical = 0;
+    const now = Date.now();
+    for (const t of tasks) {
+      if (t.status === 'done') { _done += 1; continue; }
+      if (t.status === 'in_progress') _inProgress += 1;
+      if (t.dueAt && new Date(t.dueAt).getTime() < now) _overdue += 1;
+      if (t.priority === 'critical') _critical += 1;
+    }
+    return { total: tasks.length, overdue: _overdue, inProgress: _inProgress, done: _done, critical: _critical };
+  }, [tasks]);
 
   const fmtPct = (n: number, of: number) => of > 0 ? Math.round((n / of) * 100) : 0;
 

@@ -64,7 +64,6 @@ export function WorkspaceBgEffect({ onFlightTileProjection }: WorkspaceBgEffectP
 
   const tiles = useWorkspaceStore((state) => state.tiles);
   const viewportSize = useWorkspaceStore((state) => state.viewportSize);
-  const hoveredTileId = useWorkspaceStore((state) => state.hoveredTileId);
   const activeTileId = useWorkspaceStore((state) => state.activeTileId);
   const sceneTheme = useWorkspaceStore((state) => state.sceneTheme);
   const sceneThemeAuto = useWorkspaceStore((state) => state.sceneThemeAuto);
@@ -106,8 +105,6 @@ export function WorkspaceBgEffect({ onFlightTileProjection }: WorkspaceBgEffectP
     const runtime = new WorkspaceSceneRuntime({
       canvas: canvasRef.current,
       host: layerRef.current,
-      onShellHover: (tileId) => useWorkspaceStore.getState().setHoveredTile(tileId),
-      onShellActivate: (tileId) => useWorkspaceStore.getState().openTile(tileId),
       onFlightTileProjection,
     });
     runtimeRef.current = runtime;
@@ -148,18 +145,32 @@ export function WorkspaceBgEffect({ onFlightTileProjection }: WorkspaceBgEffectP
       return;
     }
 
-    const resize = () => runtime.resize(node.clientWidth, node.clientHeight);
-    resize();
+    let frameHandle = 0;
+    const resize = () => {
+      frameHandle = 0;
+      runtime.resize(node.clientWidth, node.clientHeight);
+    };
+    const scheduleResize = () => {
+      if (frameHandle) {
+        cancelAnimationFrame(frameHandle);
+      }
+      frameHandle = requestAnimationFrame(resize);
+    };
+    scheduleResize();
 
-    const observer = new ResizeObserver(resize);
+    const observer = new ResizeObserver(scheduleResize);
     observer.observe(node);
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      if (frameHandle) {
+        cancelAnimationFrame(frameHandle);
+      }
+    };
   }, [sceneMode]);
 
-  const focusTileId = activeTileId ?? hoveredTileId;
   const sceneTiles = useMemo(
-    () => getSceneTiles(tiles, viewportSize, focusTileId),
-    [tiles, viewportSize, focusTileId],
+    () => getSceneTiles(tiles, viewportSize, activeTileId),
+    [tiles, viewportSize, activeTileId],
   );
 
   useEffect(() => {
@@ -171,6 +182,27 @@ export function WorkspaceBgEffect({ onFlightTileProjection }: WorkspaceBgEffectP
       tiles: sceneTiles,
     });
   }, [sceneTheme, sceneThemeAuto, sceneMode, sceneTerrainMode, sceneTiles]);
+
+  // Push hoveredTileId focus to scene without causing React re-renders.
+  // Uses Zustand subscribe to bypass React reconciliation entirely.
+  useEffect(() => {
+    let prevHovered: string | null = useWorkspaceStore.getState().hoveredTileId;
+    return useWorkspaceStore.subscribe((state) => {
+      if (state.hoveredTileId === prevHovered) return;
+      prevHovered = state.hoveredTileId;
+      const runtime = runtimeRef.current;
+      if (!runtime) return;
+      // Only update focus if no modal is open (activeTileId takes precedence)
+      if (state.activeTileId) return;
+      runtime.setState({
+        theme: state.sceneTheme,
+        themeAuto: state.sceneThemeAuto,
+        flightMode: state.sceneMode === 'flight',
+        terrainMode: state.sceneTerrainMode,
+        tiles: getSceneTiles(state.tiles, state.viewportSize, state.hoveredTileId),
+      });
+    });
+  }, []);
 
   const theme = WORKSPACE_SCENE_THEMES[sceneTheme];
   const themeLabel = sceneThemeAuto ? 'Авто' : theme.label;

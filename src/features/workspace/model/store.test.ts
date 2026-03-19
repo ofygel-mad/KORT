@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { ZOOM_MAX, clampTileToWorldBounds, clampViewportToBounds, sanitizeWorkspacePersistedState } from './store';
+import {
+  ZOOM_MAX,
+  clampTileToWorldBounds,
+  clampViewportToBounds,
+  getTileViewportBounds,
+  getVisibleWorldRect,
+  sanitizeWorkspacePersistedState,
+} from './store';
 
 describe('sanitizeWorkspacePersistedState', () => {
   it('drops unsupported tiles and normalizes malformed persisted values', () => {
@@ -100,5 +107,32 @@ describe('sanitizeWorkspacePersistedState', () => {
     expect(viewport).toEqual({ x: -1600, y: 0 });
     expect(tile.x).toBe(2140);
     expect(tile.y).toBe(1630);
+  });
+
+  it('uses zoom-aware viewport limits and visible workspace bounds', () => {
+    const viewport = clampViewportToBounds({ x: -5000, y: -5000 }, 800, 600, 1.5);
+    const visible = getVisibleWorldRect({ x: -900, y: -450 }, { width: 1200, height: 800 }, 1.5);
+    const tileBounds = getTileViewportBounds(
+      { x: -900, y: -450 },
+      { width: 1200, height: 800 },
+      1.5,
+      { width: 260, height: 170 },
+    );
+
+    expect(viewport).toEqual({ x: -2800, y: -2100 });
+    expect(visible).toEqual({
+      left: 600,
+      top: 300,
+      right: 1400,
+      bottom: 833.3333333333334,
+      width: 800,
+      height: 533.3333333333334,
+    });
+    expect(tileBounds).toEqual({
+      minX: 600,
+      maxX: 1140,
+      minY: 300,
+      maxY: 663.3333333333334,
+    });
   });
 });

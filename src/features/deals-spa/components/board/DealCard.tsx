@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Phone, MessageCircle, Trophy, XCircle, Clock, CheckSquare } from 'lucide-react';
 import type { Deal } from '../../api/types';
 import { STAGE_ACCENT } from '../../api/types';
@@ -30,7 +31,7 @@ function isOverdue(dueAt?: string): boolean {
   return new Date(dueAt).getTime() < Date.now();
 }
 
-export function DealCard({ deal, onDragStart, onDragEnd, onOpenDrawer, onOpenLostModal, onOpenWonModal }: {
+export const DealCard = memo(function DealCard({ deal, onDragStart, onDragEnd, onOpenDrawer, onOpenLostModal, onOpenWonModal }: {
   deal: Deal;
   onDragStart: () => void;
   onDragEnd: () => void;
@@ -133,4 +134,4 @@ export function DealCard({ deal, onDragStart, onDragEnd, onOpenDrawer, onOpenLos
       </div>
     </div>
   );
-}
+});

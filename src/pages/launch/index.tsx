@@ -52,7 +52,7 @@ export function LaunchScreen() {
 
   const titleVisible    = phase === 'title';
   const subtitleVisible = phase === 'subtitle';
-  const lifting         = phase === 'lift' || phase === 'done';
+  const lifting         = phase === 'lift';
 
   return (
     <div className={s.root}>

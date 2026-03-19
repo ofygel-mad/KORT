@@ -29,21 +29,19 @@ const PERIOD_OPTIONS: { value: PeriodFilter; label: string }[] = [
 export function SummarySPA() {
   const {
     period, setPeriod,
-    processSnapshots, processEventQueues,
     leadsSnap, dealsSnap, tasksSnap,
     reportSections, extraSnaps,
   } = useSummaryStore();
 
   // Poll bus for new data
   useEffect(() => {
-    // Initial sweep
-    processSnapshots();
-    processEventQueues();
-
-    const id = setInterval(() => {
-      processSnapshots();
-      processEventQueues();
-    }, 3000);
+    const poll = () => {
+      const s = useSummaryStore.getState();
+      s.processSnapshots();
+      s.processEventQueues();
+    };
+    poll();
+    const id = setInterval(poll, 3000);
     return () => clearInterval(id);
   }, []);
 

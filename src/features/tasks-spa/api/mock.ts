@@ -229,12 +229,8 @@ export const tasksApi = {
   createTask: async (data: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'activities'>): Promise<Task> => {
     await delay(120);
     const now = new Date().toISOString();
-    const payload = data as Partial<Task>;
     const task: Task = {
-      taskType: 'manual',
-      timerEnabled: false,
-      timerWarning: false,
-      ...payload,
+      ...data,
       id: nanoid(),
       createdAt: now,
       updatedAt: now,

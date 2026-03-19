@@ -3,7 +3,7 @@
  * 4-column Kanban: Todo / In Progress / Review / Done
  * Supports drag-and-drop between columns.
  */
-import { useRef, useState } from 'react';
+import { useRef, useState, useMemo } from 'react';
 import { Plus } from 'lucide-react';
 import { useTasksStore } from '../../model/tasks.store';
 import { useTileTasksUI } from '../../model/tile-ui.store';
@@ -22,20 +22,29 @@ export function TaskKanbanBoard({ tileId }: { tileId: string }) {
   const dragTaskRef = useRef<Task | null>(null);
 
 
-  const filtered = tasks.filter(t => {
-    if (filterStatus   !== 'all' && t.status   !== filterStatus)   return false;
-    if (filterAssignee !== 'all' && t.assignedName !== filterAssignee) return false;
-    if (filterPriority !== 'all' && t.priority !== filterPriority) return false;
-    if (searchQuery && !t.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-    return true;
-  });
+  const columns = useMemo(() => {
+    const filtered = tasks.filter(t => {
+      if (filterStatus   !== 'all' && t.status   !== filterStatus)   return false;
+      if (filterAssignee !== 'all' && t.assignedName !== filterAssignee) return false;
+      if (filterPriority !== 'all' && t.priority !== filterPriority) return false;
+      if (searchQuery && !t.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+      return true;
+    });
 
-  const columns = STATUS_ORDER.map(st => ({
-    status: st,
-    label: STATUS_LABEL[st],
-    color: STATUS_COLOR[st],
-    tasks: filtered.filter(t => t.status === st),
-  }));
+    // Group into columns in a single pass
+    const byStatus: Record<string, Task[]> = {};
+    for (const st of STATUS_ORDER) byStatus[st] = [];
+    for (const t of filtered) {
+      const bucket = byStatus[t.status];
+      if (bucket) bucket.push(t);
+    }
+    return STATUS_ORDER.map(st => ({
+      status: st,
+      label: STATUS_LABEL[st],
+      color: STATUS_COLOR[st],
+      tasks: byStatus[st],
+    }));
+  }, [tasks, filterStatus, filterAssignee, filterPriority, searchQuery]);
 
   return (
     <div className={s.board}>

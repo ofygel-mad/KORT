@@ -22,68 +22,40 @@ export function seedFromId(id: string) {
 }
 
 /**
- * Flight-mode motion — covers the full 96-seg terrain every frame.
- * Same structural approach as surface (zone amp, spatial phase, large undulation)
- * but stops at 9 octaves to stay fast on the full vertex set.
+ * Unified terrain motion — shared base with 9 octaves (flight) or 13 (surface).
+ * Surface mode adds 4 extra octaves and slightly higher amplitudes on 3 shared
+ * terms for richer close-up detail on the 152-seg geometry.
  */
-export function terrainMotion(x: number, y: number, time: number) {
-  // Position-based phase — breaks synchronized grid in flight mode (+20 % shuffle)
+export function terrainMotion(x: number, y: number, time: number, surface = false) {
   const spatialPhase = Math.sin(x * 0.031 + y * 0.024) * 1.4 + Math.cos(x * 0.022 - y * 0.028) * 1.1;
-
-  // Zone amplitude modulation (+20 % variation)
   const zoneAmp = 0.80 + Math.sin(x * 0.016 + y * 0.013 + 1.8) * Math.cos(y * 0.019 - x * 0.011 + 0.6) * 0.26;
 
-  return (
+  let z =
     // ── Primary swell (phase-shuffled per zone) ──────────────────────────────
     Math.sin(time * 0.78 + x * 0.073 + spatialPhase * 0.29) * 1.82 * zoneAmp
     + Math.cos(time * 0.46 + y * 0.074 + spatialPhase * 0.24) * 1.74 * zoneAmp
-    // ── Large-scale slow undulation — hills/valleys visible in flight ─────────
+    // ── Large-scale slow undulation ──────────────────────────────────────────
     + Math.sin(time * 0.09 + x * 0.010 + y * 0.013) * 1.32
     + Math.cos(time * 0.07 - x * 0.012 + y * 0.009) * 1.08
-    // ── Mid-range varied octaves ──────────────────────────────────────────────
+    // ── Mid-range varied octaves ─────────────────────────────────────────────
     + Math.sin(time * 1.34 + x * 0.168) * 0.16
     + Math.cos(time * 0.62 + (x - y) * 0.048) * 0.24
-    + Math.sin(time * 0.31 + (x + y) * 0.042) * 0.62
-    // ── Non-axis-aligned rolling ──────────────────────────────────────────────
-    + Math.cos(time * 0.19 + (x - y * 0.46) * 0.028) * 0.46
-    // ── Irrational-ratio frequency — prevents repeating grid cell pattern ─────
-    + Math.sin(time * 0.44 + x * 0.056 + y * 0.038) * 0.34
-  );
-}
+    // ── Amplitude-split octaves (surface carries more energy) ────────────────
+    + Math.sin(time * 0.31 + (x + y) * 0.042) * (surface ? 0.70 : 0.62)
+    // ── Non-axis-aligned rolling ─────────────────────────────────────────────
+    + Math.cos(time * 0.19 + (x - y * 0.46) * 0.028) * (surface ? 0.48 : 0.46)
+    // ── Irrational-ratio frequency ───────────────────────────────────────────
+    + Math.sin(time * 0.44 + x * 0.056 + y * 0.038) * (surface ? 0.41 : 0.34);
 
-/**
- * Surface-mode motion — visible zone only (152-seg geometry, quality priority).
- * Combines zone amplitude, spatial-phase shuffle, large undulation, and 13 octaves
- * of varied directions. All +20 % shuffle vs. previous version.
- */
-export function terrainMotionSurface(x: number, y: number, time: number) {
-  // Position-based phase shifts (+20 % applied to primary swell multipliers)
-  const spatialPhase = Math.sin(x * 0.031 + y * 0.024) * 1.4 + Math.cos(x * 0.022 - y * 0.028) * 1.1;
+  if (surface) {
+    z +=
+      Math.cos(time * 0.54 + x * 0.029 + y * 0.038) * 0.53
+      + Math.sin(time * 0.97 + (x * 0.78 - y * 0.62) * 0.057) * 0.34
+      + Math.cos(time * 0.29 + x * 0.041 - y * 0.052) * 0.35
+      + Math.sin(time * 1.58 + (x * 0.9 + y * 1.1) * 0.072) * 0.09;
+  }
 
-  // Zone amplitude modulation (+20 % variation range)
-  const zoneAmp = 0.80 + Math.sin(x * 0.016 + y * 0.013 + 1.8) * Math.cos(y * 0.019 - x * 0.011 + 0.6) * 0.26;
-
-  return (
-    // ── Primary swell (+20 % shuffle: 0.24→0.29, 0.20→0.24) ─────────────────
-    Math.sin(time * 0.78 + x * 0.073 + spatialPhase * 0.29) * 1.82 * zoneAmp
-    + Math.cos(time * 0.46 + y * 0.074 + spatialPhase * 0.24) * 1.74 * zoneAmp
-    // ── Large-scale slow undulation (+20 %: 1.1→1.32, 0.9→1.08) ─────────────
-    + Math.sin(time * 0.09 + x * 0.010 + y * 0.013) * 1.32
-    + Math.cos(time * 0.07 - x * 0.012 + y * 0.009) * 1.08
-    // ── Mid-range varied octaves (+20 % on cross terms) ──────────────────────
-    + Math.sin(time * 1.34 + x * 0.168) * 0.16
-    + Math.cos(time * 0.62 + (x - y) * 0.048) * 0.24
-    + Math.sin(time * 0.31 + (x + y) * 0.042) * 0.70
-    + Math.cos(time * 0.54 + x * 0.029 + y * 0.038) * 0.53
-    // ── Non-axis-aligned rolling (+20 %: 0.28→0.34, 0.40→0.48) ─────────────
-    + Math.sin(time * 0.97 + (x * 0.78 - y * 0.62) * 0.057) * 0.34
-    + Math.cos(time * 0.19 + (x - y * 0.46) * 0.028) * 0.48
-    // ── Irrational-ratio frequencies (+20 %: 0.34→0.41, 0.29→0.35) ──────────
-    + Math.sin(time * 0.44 + x * 0.056 + y * 0.038) * 0.41
-    + Math.cos(time * 0.29 + x * 0.041 - y * 0.052) * 0.35
-    // ── Fine surface ripple ───────────────────────────────────────────────────
-    + Math.sin(time * 1.58 + (x * 0.9 + y * 1.1) * 0.072) * 0.09
-  );
+  return z;
 }
 
 export function getNeonEdgeStrength(themeName: WorkspaceSceneTheme) {

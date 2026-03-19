@@ -103,7 +103,7 @@ export const useUIStore = create<UIStore>()(
         theme: state.theme,
         themePack: state.themePack,
         sidebarCollapsed: state.sidebarCollapsed,
-        focusModeActive: state.focusModeActive,
+        focusMode: state.focusMode,
       }),
     },
   ),
