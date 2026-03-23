@@ -5,36 +5,49 @@
 import { useSummaryStore } from '../../model/summary.store';
 import s from './Widgets.module.css';
 
+type Tone = 'muted' | 'info' | 'danger' | 'warning' | 'positive' | 'violet' | 'magenta' | 'accent';
+
 const STAGE_LABEL: Record<string, string> = {
-  new:              'Новые',
-  in_progress:      'В работе',
-  no_answer:        'Нет ответа',
-  thinking:         'Думают',
-  meeting_set:      'Встреча назначена',
-  junk:             'Мусор',
+  new: 'Новые',
+  in_progress: 'В работе',
+  no_answer: 'Нет ответа',
+  thinking: 'Думают',
+  meeting_set: 'Встреча назначена',
+  junk: 'Мусор',
   awaiting_meeting: 'Ожидает встречи',
-  meeting_done:     'Встреча проведена',
-  proposal:         'КП',
-  contract:         'Договор',
+  meeting_done: 'Встреча проведена',
+  proposal: 'КП',
+  contract: 'Договор',
   awaiting_payment: 'Оплата',
 };
 
-const STAGE_COLOR: Record<string, string> = {
-  new:              '#6b7280',
-  in_progress:      '#3b82f6',
-  no_answer:        '#ef4444',
-  thinking:         '#f59e0b',
-  meeting_set:      '#22c55e',
-  junk:             '#374151',
-  awaiting_meeting: '#8b5cf6',
-  meeting_done:     '#ec4899',
-  proposal:         '#f97316',
-  contract:         '#f59e0b',
-  awaiting_payment: '#22c55e',
+const STAGE_TONE: Record<string, Tone> = {
+  new: 'muted',
+  in_progress: 'info',
+  no_answer: 'danger',
+  thinking: 'warning',
+  meeting_set: 'positive',
+  junk: 'muted',
+  awaiting_meeting: 'violet',
+  meeting_done: 'magenta',
+  proposal: 'accent',
+  contract: 'warning',
+  awaiting_payment: 'positive',
+};
+
+const TONE_CLASS: Record<Tone, string> = {
+  muted: s.toneMuted,
+  info: s.toneInfo,
+  danger: s.toneDanger,
+  warning: s.toneWarning,
+  positive: s.tonePositive,
+  violet: s.toneViolet,
+  magenta: s.toneMagenta,
+  accent: s.toneAccent,
 };
 
 export function LeadsWidget() {
-  const leadsSnap = useSummaryStore(s => s.leadsSnap);
+  const leadsSnap = useSummaryStore((state) => state.leadsSnap);
 
   if (!leadsSnap) {
     return (
@@ -46,38 +59,29 @@ export function LeadsWidget() {
   }
 
   const stages = Object.entries(leadsSnap.byStage).sort(([, a], [, b]) => b - a);
-  const total  = leadsSnap.totalLeads || 1;
+  const total = leadsSnap.totalLeads || 1;
+  const convPct = total > 0 ? Math.round((leadsSnap.convertedThisMonth / total) * 100) : 0;
 
-  // Conversion rate: converted / total
-  const convPct = total > 0
-    ? Math.round((leadsSnap.convertedThisMonth / total) * 100)
-    : 0;
-
-  // SVG donut
-  const R = 36;
-  const CIRC = 2 * Math.PI * R;
-  const greenLen = CIRC * (convPct / 100);
+  const radius = 36;
+  const circumference = 2 * Math.PI * radius;
+  const progressLength = circumference * (convPct / 100);
 
   return (
     <div className={s.chartCard}>
       <div className={s.chartTitle}>Лиды</div>
 
       <div className={s.conversionWrap}>
-        {/* Donut */}
         <div className={s.donutWrap}>
-          <svg
-            className={s.donutSvg}
-            width={100}
-            height={100}
-            viewBox="0 0 100 100"
-          >
-            <circle cx={50} cy={50} r={R} fill="none" stroke="rgba(255,255,255,.08)" strokeWidth={10} />
+          <svg className={s.donutSvg} width={100} height={100} viewBox="0 0 100 100">
+            <circle cx={50} cy={50} r={radius} fill="none" className={s.donutTrackCircle} strokeWidth={10} />
             <circle
-              cx={50} cy={50} r={R}
+              cx={50}
+              cy={50}
+              r={radius}
               fill="none"
-              stroke="#22c55e"
+              className={s.donutProgressCircle}
               strokeWidth={10}
-              strokeDasharray={`${greenLen} ${CIRC - greenLen}`}
+              strokeDasharray={`${progressLength} ${circumference - progressLength}`}
               strokeLinecap="round"
             />
           </svg>
@@ -87,7 +91,6 @@ export function LeadsWidget() {
           </div>
         </div>
 
-        {/* Stats */}
         <div className={s.conversionStats}>
           <div className={s.conversionStat}>
             <span>Всего лидов</span>
@@ -95,15 +98,14 @@ export function LeadsWidget() {
           </div>
           <div className={s.conversionStat}>
             <span>Передано в сделки</span>
-            <span className={s.conversionStatValue} style={{ color: '#22c55e' }}>
+            <span className={`${s.conversionStatValue} ${s.conversionPositive} ${s.tonePositive}`}>
               {leadsSnap.convertedThisMonth}
             </span>
           </div>
         </div>
       </div>
 
-      {/* Stage breakdown */}
-      <div className={s.funnelList} style={{ marginTop: 8 }}>
+      <div className={`${s.funnelList} ${s.funnelListSpaced}`}>
         {stages.map(([stage, count]) => (
           <div key={stage} className={s.funnelRow}>
             <div className={s.funnelRowHeader}>
@@ -112,11 +114,8 @@ export function LeadsWidget() {
             </div>
             <div className={s.funnelTrack}>
               <div
-                className={s.funnelFill}
-                style={{
-                  width: `${(count / total) * 100}%`,
-                  background: STAGE_COLOR[stage] ?? '#6b7280',
-                }}
+                className={`${s.funnelFill} ${TONE_CLASS[STAGE_TONE[stage] ?? 'muted']}`}
+                style={{ width: `${(count / total) * 100}%` }}
               />
             </div>
           </div>

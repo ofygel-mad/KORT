@@ -9,22 +9,8 @@ import { X, Phone, MessageCircle, Clock, CheckSquare, Square, User, Tag, Send, C
 import { useLeadsStore } from '../../model/leads.store';
 import { useTileLeadsUI } from '../../model/tile-ui.store';
 import { CONTRACT_CHECKLIST } from '../../api/types';
+import { getLeadStageMeta } from '../../model/stage-meta';
 import s from './Drawer.module.css';
-
-const STAGE_LABELS: Record<string, string> = {
-  new:'Новый', in_progress:'В работе', no_answer:'Недозвон', thinking:'Думает',
-  meeting_set:'Встреча назначена', junk:'Брак',
-  awaiting_meeting:'Ожидает встречи', meeting_done:'Встреча проведена',
-  proposal:'Подготовка КП', contract:'Договор',
-  awaiting_payment:'Ожидание оплаты', won:'Успешно', lost:'Слив',
-};
-
-const STAGE_COLOR: Record<string, string> = {
-  new:'#3b82f6', in_progress:'#8b5cf6', no_answer:'#f59e0b',
-  thinking:'#ec4899', meeting_set:'#22c55e', junk:'#6b7280',
-  awaiting_meeting:'#3b82f6', meeting_done:'#8b5cf6', proposal:'#f59e0b',
-  contract:'#ec4899', awaiting_payment:'#f97316', won:'#22c55e', lost:'#ef4444',
-};
 
 const SOURCE_LABEL: Record<string, string> = {
   instagram:'Instagram', site:'Сайт', referral:'Реферал', ad:'Реклама',
@@ -45,6 +31,7 @@ export function LeadDrawer({ tileId }: Props) {
   const { leads, toggleChecklist, addComment } = useLeadsStore();
   const { drawerOpen, activeLeadId, closeDrawer } = useTileLeadsUI(tileId);
   const lead = leads.find(l => l.id === activeLeadId);
+  const stageMeta = lead ? getLeadStageMeta(lead.stage) : null;
   const [commentText, setCommentText] = useState('');
   const [sending, setSending] = useState(false);
   const feedEndRef = useRef<HTMLDivElement>(null);
@@ -84,9 +71,9 @@ export function LeadDrawer({ tileId }: Props) {
                 <div className={s.avatar}>{lead.fullName[0]}</div>
                 <div>
                   <div className={s.name}>{lead.fullName}</div>
-                  <div className={s.stagePill} style={{ color: STAGE_COLOR[lead.stage] ?? '#6b7280' }}>
-                    <span className={s.stageDot} style={{ background: STAGE_COLOR[lead.stage] ?? '#6b7280' }} />
-                    {STAGE_LABELS[lead.stage] ?? lead.stage}
+                  <div className={s.stagePill} data-tone={stageMeta?.tone}>
+                    <span className={s.stageDot} />
+                    {stageMeta?.label ?? lead.stage}
                   </div>
                 </div>
               </div>
@@ -172,8 +159,8 @@ export function LeadDrawer({ tileId }: Props) {
                         return (
                           <button key={item.id} className={s.checkItem} onClick={() => toggleChecklist(lead.id, item.id)}>
                             {done
-                              ? <CheckSquare size={14} color="rgba(34,197,94,0.8)" />
-                              : <Square size={14} color="rgba(255,255,255,0.2)" />}
+                              ? <CheckSquare size={14} className={`${s.checkIcon} ${s.checkIconDone}`} />
+                              : <Square size={14} className={`${s.checkIcon} ${s.checkIconEmpty}`} />}
                             <span className={done ? s.checkDone : ''}>{item.label}</span>
                           </button>
                         );

@@ -1,128 +1,171 @@
-/* ═══════════════════════════════════════════════════════════════
-   FEED PAGE — CSS Module
-   ═══════════════════════════════════════════════════════════════ */
-
 .page {
-  padding: 24px 28px;
-  max-width: 760px;
+  max-width: 820px;
+  display: grid;
+  gap: 18px;
+  padding: var(--space-page-y) var(--space-page-x);
 }
 
-/* ── Feed item ───────────────────────────────────────────────── */
-.feedItem {
-  display: flex;
+.feedList {
+  display: grid;
   gap: 12px;
-  padding: 14px 0;
-  border-bottom: 1px solid var(--border-subtle);
 }
 
-.feedItem:last-child { border-bottom: none; }
+.feedItem,
+.skeletonItem {
+  display: flex;
+  gap: 14px;
+  padding: 16px 18px;
+  border-radius: calc(var(--surface-radius-tight) + 2px);
+  border: 1px solid var(--rc-detail-surface-border);
+  background: var(--rc-detail-surface-bg);
+  box-shadow: var(--surface-shadow-rest);
+  transition:
+    transform var(--motion-fast) var(--motion-ease),
+    box-shadow var(--motion-fast) var(--motion-ease),
+    border-color var(--motion-fast) var(--motion-ease);
+}
 
-/* ── Icon dot ────────────────────────────────────────────────── */
-.iconDot {
-  width: 36px;
-  height: 36px;
+.feedItem:hover {
+  transform: var(--feedback-raise-hover);
+  border-color: var(--brand-panel-border);
+  box-shadow: var(--brand-panel-shadow);
+}
+
+.iconDot,
+.skeletonDot {
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   flex-shrink: 0;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: var(--feed-icon-bg, var(--bg-surface-inset));
-  color: var(--feed-icon-color, var(--text-tertiary));
+}
+
+.iconDot {
+  background: var(--bg-surface-inset);
+  color: var(--text-tertiary);
+}
+
+.toneAccent {
+  background: var(--fill-accent-soft);
+  color: var(--fill-accent);
+}
+
+.tonePositive {
+  background: var(--fill-positive-soft);
+  color: var(--fill-positive-text);
+}
+
+.toneInfo {
+  background: var(--fill-info-soft);
+  color: var(--fill-info-text);
+}
+
+.toneWarning {
+  background: var(--fill-warning-soft);
+  color: var(--fill-warning-text);
+}
+
+.toneMuted {
+  background: var(--bg-surface-inset);
+  color: var(--text-tertiary);
+}
+
+.skeletonDot {
+  background: color-mix(in srgb, var(--bg-surface-inset) 92%, white 8%);
 }
 
 .iconSvg {
   color: inherit;
 }
 
-/* ── Feed body ───────────────────────────────────────────────── */
-.feedBody {
+.feedBody,
+.skeletonBody {
   flex: 1;
   min-width: 0;
 }
 
 .feedText {
-  font-size: 13px;
   color: var(--text-primary);
-  line-height: 1.5;
+  font-size: 13px;
+  line-height: 1.6;
 }
 
 .feedActor {
-  font-weight: 600;
   color: var(--text-primary);
+  font-weight: 700;
 }
 
 .feedType {
   color: var(--text-secondary);
 }
 
-/* Entity link buttons within feed text */
 .feedLink {
-  background: none;
-  border: none;
-  cursor: pointer;
   padding: 0;
-  font-weight: 600;
-  font-size: 13px;
+  border: none;
+  background: none;
   color: var(--fill-accent);
-  text-decoration: none;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
   transition: opacity var(--motion-duration-fast) var(--motion-ease-standard);
 }
 
-.feedLink:hover { opacity: 0.75; text-decoration: underline; }
+.feedLink:hover {
+  opacity: 0.75;
+  text-decoration: underline;
+}
+
+.feedLink:focus-visible {
+  outline: none;
+  border-radius: 8px;
+  box-shadow: var(--rc-focus-ring);
+}
 
 .feedPreview {
-  font-size: 12px;
-  color: var(--text-tertiary);
-  margin-top: 4px;
+  margin-top: 6px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: var(--text-secondary);
+  font-size: 12px;
 }
 
 .feedTime {
-  font-size: 11px;
+  margin-top: 6px;
   color: var(--text-tertiary);
-  margin-top: 4px;
+  font-size: 11px;
 }
 
-/* ── Skeleton ────────────────────────────────────────────────── */
 .skeletonList {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  margin-top: 24px;
-}
-
-.skeletonItem {
-  display: flex;
+  display: grid;
   gap: 12px;
-  align-items: flex-start;
-}
-
-.skeletonDot {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: var(--bg-surface-inset);
-  flex-shrink: 0;
-}
-
-.skeletonBody { flex: 1; }
-
-/* ── Mobile ──────────────────────────────────────────────────── */
-@media (max-width: 768px) {
-  .page { padding: 14px 16px; }
 }
 
 .skeletonTitle {
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
-.feedList {
-  margin-top: 8px;
+.skeletonLinePrimary {
+  width: 60%;
+  height: 14px;
 }
 
+.skeletonLineSecondary {
+  width: 35%;
+  height: 11px;
+}
 
-.feedItem { background: var(--rc-detail-surface-bg); border-color: var(--rc-detail-surface-border); box-shadow: var(--shadow-xs); }
-.feedItem:hover { box-shadow: var(--brand-panel-shadow); }
-.feedLink:focus-visible { outline: none; box-shadow: var(--rc-focus-ring); border-radius: 8px; }
+@media (max-width: 768px) {
+  .page {
+    padding: 14px 16px;
+  }
+}
+
+@media (max-width: 640px) {
+  .feedItem,
+  .skeletonItem {
+    padding: 14px;
+  }
+}

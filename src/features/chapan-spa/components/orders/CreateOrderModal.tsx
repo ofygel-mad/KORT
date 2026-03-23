@@ -1,4 +1,4 @@
-import { useState, Fragment } from 'react';
+import { useEffect, useState, Fragment } from 'react';
 import { X, Plus, Trash2, ChevronRight, ChevronLeft, AlertTriangle } from 'lucide-react';
 import { useChapanStore } from '../../model/chapan.store';
 import { useTileChapanUI } from '../../model/tile-ui.store';
@@ -24,12 +24,16 @@ interface DraftItem {
 }
 
 let _key = 0;
-function emptyItem(): DraftItem {
+function emptyItem(
+  productCatalog: readonly string[],
+  fabricCatalog: readonly string[],
+  sizeCatalog: readonly string[],
+): DraftItem {
   return {
     key: ++_key,
-    productName: PRODUCT_CATALOG[0],
-    fabric: FABRIC_CATALOG[0],
-    size: 'L',
+    productName: productCatalog[0] ?? PRODUCT_CATALOG[0],
+    fabric: fabricCatalog[0] ?? FABRIC_CATALOG[0],
+    size: sizeCatalog[3] ?? sizeCatalog[0] ?? SIZE_OPTIONS[0],
     quantity: 1,
     unitPrice: 0,
     notes: '',
@@ -38,8 +42,20 @@ function emptyItem(): DraftItem {
 }
 
 export function CreateOrderModal({ tileId }: Props) {
-  const { createModalOpen, closeCreateModal } = useTileChapanUI(tileId);
-  const { clients, createOrder, addPayment } = useChapanStore();
+  const {
+    createModalOpen,
+    createPrefill,
+    closeCreateModal,
+    clearCreatePrefill,
+  } = useTileChapanUI(tileId);
+  const {
+    clients,
+    createOrder,
+    addPayment,
+    productCatalog,
+    fabricCatalog,
+    sizeCatalog,
+  } = useChapanStore();
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
 
@@ -51,7 +67,9 @@ export function CreateOrderModal({ tileId }: Props) {
   // Step 2: Order params + items
   const [priority, setPriority] = useState<OrderPriority>('normal');
   const [dueDate, setDueDate]   = useState('');
-  const [items, setItems]       = useState<DraftItem[]>([emptyItem()]);
+  const [items, setItems]       = useState<DraftItem[]>([
+    emptyItem(PRODUCT_CATALOG, FABRIC_CATALOG, SIZE_OPTIONS),
+  ]);
 
   // Step 3: Advance payment
   const [advance, setAdvance]             = useState<number>(0);
@@ -59,14 +77,58 @@ export function CreateOrderModal({ tileId }: Props) {
 
   const [saving, setSaving] = useState(false);
 
+  useEffect(() => {
+    if (!createModalOpen) return;
+
+    const draftItem = () => emptyItem(productCatalog, fabricCatalog, sizeCatalog);
+
+    if (createPrefill) {
+      setStep(1);
+      setClientId('');
+      setClientName(createPrefill.clientName ?? '');
+      setClientPhone(createPrefill.clientPhone ?? '');
+      setPriority(createPrefill.priority ?? 'normal');
+      setDueDate(createPrefill.dueDate ?? '');
+      setItems(
+        createPrefill.items.length
+          ? createPrefill.items.map((item) => {
+              const base = draftItem();
+              return {
+                ...base,
+                productName: item.productName ?? base.productName,
+                fabric: item.fabric ?? base.fabric,
+                size: item.size ?? base.size,
+                quantity: item.quantity ?? 1,
+                workshopNotes: item.workshopNotes ?? '',
+              };
+            })
+          : [draftItem()],
+      );
+      setAdvance(0);
+      setAdvanceMethod('cash');
+      return;
+    }
+
+    setStep(1);
+    setClientId('');
+    setClientName('');
+    setClientPhone('');
+    setPriority('normal');
+    setDueDate('');
+    setItems([draftItem()]);
+    setAdvance(0);
+    setAdvanceMethod('cash');
+  }, [createModalOpen, createPrefill, fabricCatalog, productCatalog, sizeCatalog]);
+
   if (!createModalOpen) return null;
 
   const handleClose = () => {
     closeCreateModal();
+    clearCreatePrefill();
     setStep(1);
     setClientId(''); setClientName(''); setClientPhone('');
     setPriority('normal'); setDueDate('');
-    setItems([emptyItem()]);
+    setItems([emptyItem(productCatalog, fabricCatalog, sizeCatalog)]);
     setAdvance(0); setAdvanceMethod('cash');
   };
 
@@ -92,15 +154,19 @@ export function CreateOrderModal({ tileId }: Props) {
   const canStep1 = clientName.trim().length > 0 && clientPhone.trim().length > 0;
   const itemErrors = items.map(i => i.unitPrice <= 0);
   const canStep2 = items.length > 0 && itemErrors.every(e => !e);
+  const footerHint = step === 1 && !canStep1
+    ? 'Для перехода дальше заполните имя и телефон клиента.'
+    : step === 2 && !canStep2
+      ? 'Для перехода дальше укажите цену для каждого изделия.'
+      : '';
 
   const handleSave = async () => {
     if (!canStep1 || !canStep2 || saving) return;
     setSaving(true);
     const orderId = await createOrder({
-      clientId: clientId || '',
+      clientId: clientId || undefined,
       clientName: clientName.trim(),
       clientPhone: clientPhone.trim(),
-      isNewClient,
       priority,
       items: items.map(({ productName, fabric, size, quantity, unitPrice, notes, workshopNotes }) => ({
         productName, fabric, size, quantity, unitPrice,
@@ -108,6 +174,7 @@ export function CreateOrderModal({ tileId }: Props) {
         workshopNotes: workshopNotes || undefined,
       })),
       dueDate: dueDate || undefined,
+      sourceRequestId: createPrefill?.sourceRequestId,
     });
     if (advance > 0) {
       await addPayment(orderId, advance, advanceMethod);
@@ -234,29 +301,29 @@ export function CreateOrderModal({ tileId }: Props) {
                       )}
                     </div>
                     <div className={s.row}>
-                      <select
-                        className={s.select}
+                      <input
+                        className={s.input}
+                        list={`chapan-products-${tileId}`}
                         value={item.productName}
+                        placeholder="Изделие"
                         onChange={e => updateItem(item.key, { productName: e.target.value })}
-                      >
-                        {PRODUCT_CATALOG.map(p => <option key={p} value={p}>{p}</option>)}
-                      </select>
-                      <select
-                        className={s.select}
+                      />
+                      <input
+                        className={s.input}
+                        list={`chapan-fabrics-${tileId}`}
                         value={item.fabric}
+                        placeholder="Ткань / материал"
                         onChange={e => updateItem(item.key, { fabric: e.target.value })}
-                      >
-                        {FABRIC_CATALOG.map(f => <option key={f} value={f}>{f}</option>)}
-                      </select>
+                      />
                     </div>
                     <div className={s.row}>
-                      <select
-                        className={s.select}
+                      <input
+                        className={s.input}
+                        list={`chapan-sizes-${tileId}`}
                         value={item.size}
+                        placeholder="Размер / вариант"
                         onChange={e => updateItem(item.key, { size: e.target.value })}
-                      >
-                        {SIZE_OPTIONS.map(sz => <option key={sz} value={sz}>{sz}</option>)}
-                      </select>
+                      />
                       <input
                         className={s.input}
                         type="number"
@@ -286,7 +353,19 @@ export function CreateOrderModal({ tileId }: Props) {
                     />
                   </div>
                 ))}
-                <button className={s.addItemBtn} onClick={() => setItems(prev => [...prev, emptyItem()])}>
+                <datalist id={`chapan-products-${tileId}`}>
+                  {productCatalog.map(product => <option key={product} value={product} />)}
+                </datalist>
+                <datalist id={`chapan-fabrics-${tileId}`}>
+                  {fabricCatalog.map(fabric => <option key={fabric} value={fabric} />)}
+                </datalist>
+                <datalist id={`chapan-sizes-${tileId}`}>
+                  {sizeCatalog.map(size => <option key={size} value={size} />)}
+                </datalist>
+                <button
+                  className={s.addItemBtn}
+                  onClick={() => setItems(prev => [...prev, emptyItem(productCatalog, fabricCatalog, sizeCatalog)])}
+                >
                   <Plus size={13} />
                   Добавить изделие
                 </button>
@@ -359,33 +438,44 @@ export function CreateOrderModal({ tileId }: Props) {
 
         {/* Footer */}
         <div className={s.footer}>
-          {step === 1 ? (
-            <button className={s.cancelBtn} onClick={handleClose}>Отмена</button>
-          ) : (
-            <button className={s.cancelBtn} onClick={() => setStep(prev => (prev - 1) as 1 | 2 | 3)}>
-              <ChevronLeft size={14} />
-              Назад
-            </button>
-          )}
+          <div className={s.footerHint} aria-live="polite">
+            {footerHint}
+          </div>
 
-          {step < 3 ? (
-            <button
-              className={s.saveBtn}
-              disabled={step === 1 ? !canStep1 : !canStep2}
-              onClick={() => setStep(prev => (prev + 1) as 1 | 2 | 3)}
-            >
-              Далее
-              <ChevronRight size={14} />
-            </button>
-          ) : (
-            <button
-              className={s.saveBtn}
-              disabled={!canStep1 || !canStep2 || saving}
-              onClick={handleSave}
-            >
-              {saving ? 'Создание...' : 'Создать заказ'}
-            </button>
-          )}
+          <div className={s.footerActions}>
+            {step === 1 ? (
+              <button className={s.cancelBtn} onClick={handleClose}>Отмена</button>
+            ) : (
+              <button className={s.cancelBtn} onClick={() => setStep(prev => (prev - 1) as 1 | 2 | 3)}>
+                <ChevronLeft size={14} />
+                Назад
+              </button>
+            )}
+
+            {step < 3 ? (
+              <button
+                className={s.saveBtn}
+                disabled={step === 1 ? !canStep1 : !canStep2}
+                title={step === 1 && !canStep1
+                  ? 'Заполните имя и телефон'
+                  : step === 2 && !canStep2
+                    ? 'Укажите цену для каждого изделия'
+                    : undefined}
+                onClick={() => setStep(prev => (prev + 1) as 1 | 2 | 3)}
+              >
+                Далее
+                <ChevronRight size={14} />
+              </button>
+            ) : (
+              <button
+                className={s.saveBtn}
+                disabled={!canStep1 || !canStep2 || saving}
+                onClick={handleSave}
+              >
+                {saving ? 'Создание...' : 'Создать заказ'}
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>

@@ -1,13 +1,19 @@
 /**
- * DealsTilePreview — живой экран-превью сделок.
+ * DealsTilePreview — live preview surface for the deals workspace tile.
  *
- * РЕЖИМ DRAWER: drawer открыт → мини-карточка сделки
- * РЕЖИМ BOARD:  drawer закрыт → мини-пайплайн + активный таб
+ * Drawer mode: focused deal summary
+ * Board mode: compact pipeline snapshot
  */
 import { useEffect } from 'react';
 import { useDealsStore } from '../../../deals-spa/model/deals.store';
 import { useTileDealsUI } from '../../../deals-spa/model/tile-ui.store';
-import { STAGE_LABEL, STAGE_ACCENT, ACTIVE_STAGES } from '../../../deals-spa/api/types';
+import {
+  STAGE_LABEL,
+  STAGE_TONE,
+  ACTIVITY_TONE,
+  ACTIVE_STAGES,
+  getDealProbabilityTone,
+} from '../../../deals-spa/api/types';
 import s from './DealsTilePreview.module.css';
 
 function fmtShort(n: number) {
@@ -23,7 +29,6 @@ const TAB_LABELS: Record<string, string> = {
 
 export function DealsTilePreview({ tileId }: { tileId: string }) {
   const { deals, loading, load } = useDealsStore();
-  // ↓ читаем ВСЕ нужные поля из tile-ui.store
   const { activeId, drawerOpen, currentTab } = useTileDealsUI(tileId);
   const activeDeal = deals.find(d => d.id === activeId);
 
@@ -50,41 +55,32 @@ export function DealsTilePreview({ tileId }: { tileId: string }) {
     );
   }
 
-  // ══════════════════════════════════════════════════════════
-  //  РЕЖИМ 1: DRAWER ОТКРЫТ — мини-карточка сделки
-  // ══════════════════════════════════════════════════════════
   if (drawerOpen && activeDeal) {
-    const accent = STAGE_ACCENT[activeDeal.stage] ?? '#6b7280';
     const stageLabel = STAGE_LABEL[activeDeal.stage] ?? activeDeal.stage;
+    const stageTone = STAGE_TONE[activeDeal.stage];
     const lastActivity = activeDeal.activities?.[activeDeal.activities.length - 1];
 
     return (
       <div className={s.root}>
-        {/* Индикатор экрана */}
         <div className={s.screenBadge}>
           <span className={s.screenDot} />
           <span className={s.screenLabel}>Карточка сделки</span>
         </div>
 
         <div className={s.drawerPreview}>
-          {/* Шапка */}
           <div className={s.drawerHeader}>
             <div className={s.drawerAvatar}>{activeDeal.fullName[0]}</div>
             <div className={s.drawerMeta}>
               <div className={s.drawerName}>{activeDeal.fullName}</div>
-              <span
-                className={s.drawerStage}
-                style={{ color: accent, borderColor: `${accent}55` }}
-              >
+              <span className={s.drawerStage} data-tone={stageTone}>
                 {stageLabel}
               </span>
             </div>
           </div>
 
-          {/* Сумма + вероятность */}
           <div className={s.drawerRow}>
             <span className={s.drawerRowLabel}>Сумма</span>
-            <span className={s.drawerRowValue} style={{ color: 'rgba(134,239,172,0.85)' }}>
+            <span className={`${s.drawerRowValue} ${s.drawerRowValueAccent}`}>
               {fmtShort(activeDeal.value)} ₸
             </span>
           </div>
@@ -93,22 +89,12 @@ export function DealsTilePreview({ tileId }: { tileId: string }) {
             <span className={s.drawerRowValue}>{activeDeal.probability}%</span>
           </div>
 
-          {/* Мини-полоска вероятности */}
-          <div className={s.probTrack}>
-            <div
-              className={s.probFill}
-              style={{
-                width: `${activeDeal.probability}%`,
-                background:
-                  activeDeal.probability >= 75 ? '#22c55e' :
-                    activeDeal.probability >= 45 ? '#f59e0b' : '#ef4444',
-              }}
-            />
+          <div className={s.probTrack} data-tone={getDealProbabilityTone(activeDeal.probability)}>
+            <div className={s.probFill} style={{ width: `${activeDeal.probability}%` }} />
           </div>
 
-          {/* Последнее activity */}
           {lastActivity && (
-            <div className={s.drawerEvent}>
+            <div className={s.drawerEvent} data-tone={ACTIVITY_TONE[lastActivity.type]}>
               <span className={s.drawerEventDot} />
               <span className={s.drawerEventText}>{lastActivity.content}</span>
             </div>
@@ -118,12 +104,8 @@ export function DealsTilePreview({ tileId }: { tileId: string }) {
     );
   }
 
-  // ══════════════════════════════════════════════════════════
-  //  РЕЖИМ 2: BOARD — мини-пайплайн + таб-индикатор
-  // ══════════════════════════════════════════════════════════
   return (
     <div className={s.root}>
-      {/* Таб-индикатор */}
       <div className={s.tabBar}>
         {(['pipeline', 'all'] as const).map(tab => (
           <span
@@ -135,44 +117,36 @@ export function DealsTilePreview({ tileId }: { tileId: string }) {
         ))}
       </div>
 
-      {/* Stats bar */}
       <div className={s.statsBar}>
-        <div className={s.chip}>
-          <span className={s.chipDot} style={{ background: '#8b5cf6' }} />
+        <div className={s.chip} data-tone="accent">
+          <span className={s.chipDot} />
           <span className={s.chipNum}>{active.length}</span>
           <span className={s.chipLabel}>активных</span>
         </div>
         {totalWeighted > 0 && (
-          <div className={s.chip}>
-            <span className={s.chipDot} style={{ background: '#22c55e' }} />
-            <span className={s.chipNum} style={{ color: 'rgba(134,239,172,0.85)' }}>
-              ~{fmtShort(totalWeighted)} ₸
-            </span>
+          <div className={s.chip} data-tone="success">
+            <span className={s.chipDot} />
+            <span className={`${s.chipNum} ${s.chipNumAccent}`}>~{fmtShort(totalWeighted)} ₸</span>
             <span className={s.chipLabel}>взвеш.</span>
           </div>
         )}
         {won.length > 0 && (
-          <div className={s.chip}>
-            <span className={s.chipDot} style={{ background: '#f59e0b' }} />
+          <div className={s.chip} data-tone="warning">
+            <span className={s.chipDot} />
             <span className={s.chipNum}>{won.length}</span>
             <span className={s.chipLabel}>закрыто</span>
           </div>
         )}
       </div>
 
-      {/* Mini pipeline */}
       <div className={s.pipeline}>
         {ACTIVE_STAGES.map(stage => {
           const col = active.filter(d => d.stage === stage);
           const colVal = col.reduce((a, d) => a + d.value * (d.probability / 100), 0);
           return (
-            <div
-              key={stage}
-              className={s.col}
-              style={{ '--acc': STAGE_ACCENT[stage] } as React.CSSProperties}
-            >
+            <div key={stage} className={s.col} data-tone={STAGE_TONE[stage]}>
               <div className={s.colTop}>
-                <span className={s.dot} style={{ background: STAGE_ACCENT[stage] }} />
+                <span className={s.dot} />
                 <span className={s.colLabel}>{STAGE_LABEL[stage]}</span>
                 <span className={s.colN}>{col.length}</span>
               </div>
@@ -186,7 +160,6 @@ export function DealsTilePreview({ tileId }: { tileId: string }) {
                   col.slice(0, 2).map(deal => (
                     <div
                       key={deal.id}
-                      // ↓ подсвечиваем последнюю просмотренную сделку
                       className={`${s.card} ${deal.id === activeId ? s.cardActive : ''}`}
                     >
                       <div className={s.cardAv}>{deal.fullName[0]}</div>
@@ -194,16 +167,8 @@ export function DealsTilePreview({ tileId }: { tileId: string }) {
                         <div className={s.cardName}>{deal.fullName.split(' ')[0]}</div>
                         <div className={s.cardAmt}>{fmtShort(deal.value)} ₸</div>
                       </div>
-                      <div className={s.miniBar}>
-                        <div
-                          className={s.miniBarFill}
-                          style={{
-                            width: `${deal.probability}%`,
-                            background:
-                              deal.probability >= 75 ? '#22c55e' :
-                                deal.probability >= 45 ? '#f59e0b' : '#ef4444',
-                          }}
-                        />
+                      <div className={s.miniBar} data-tone={getDealProbabilityTone(deal.probability)}>
+                        <div className={s.miniBarFill} style={{ width: `${deal.probability}%` }} />
                       </div>
                     </div>
                   ))

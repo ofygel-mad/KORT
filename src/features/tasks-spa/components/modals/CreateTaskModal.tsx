@@ -1,31 +1,43 @@
-/**
- * features/tasks-spa/components/modals/CreateTaskModal.tsx
- * Modal for creating a new task. Supports preset from bus request.
- */
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import { useTasksStore } from '../../model/tasks.store';
 import { useTileTasksUI } from '../../model/tile-ui.store';
-import { PRIORITY_ORDER, PRIORITY_LABEL, STATUS_ORDER, STATUS_LABEL, TAGS } from '../../api/types';
-import type { TaskPriority, TaskStatus } from '../../api/types';
-import { ASSIGNEES } from '../../api/mock';
+import {
+  PRIORITY_LABEL,
+  PRIORITY_ORDER,
+  STATUS_LABEL,
+  STATUS_ORDER,
+  TAGS,
+} from '../../api/types';
+import type { TaskPriority, TaskStatus, TaskTone } from '../../api/types';
+import { ASSIGNEES } from '../../api/client';
 import s from './Modals.module.css';
 
-interface Props { tileId: string; }
+const TONE_CLASS: Record<TaskTone, string> = {
+  muted: s.toneMuted,
+  info: s.toneInfo,
+  warning: s.toneWarning,
+  danger: s.toneDanger,
+  success: s.toneSuccess,
+  accent: s.toneAccent,
+};
+
+interface Props {
+  tileId: string;
+}
 
 export function CreateTaskModal({ tileId }: Props) {
   const { createTask } = useTasksStore();
   const { createModalOpen, createPreset, closeCreateModal } = useTileTasksUI(tileId);
 
-  const [title,      setTitle]      = useState('');
-  const [desc,       setDesc]       = useState('');
-  const [priority,   setPriority]   = useState<TaskPriority>('medium');
-  const [status,     setStatus]     = useState<TaskStatus>('todo');
-  const [assignee,   setAssignee]   = useState('');
-  const [dueAt,      setDueAt]      = useState('');
-  const [tags,       setTags]       = useState<string[]>([]);
+  const [title, setTitle] = useState('');
+  const [desc, setDesc] = useState('');
+  const [priority, setPriority] = useState<TaskPriority>('medium');
+  const [status, setStatus] = useState<TaskStatus>('todo');
+  const [assignee, setAssignee] = useState('');
+  const [dueAt, setDueAt] = useState('');
+  const [tags, setTags] = useState<string[]>([]);
 
-  // Apply preset when modal opens
   useEffect(() => {
     if (createModalOpen && createPreset) {
       setTitle(createPreset.title ?? '');
@@ -33,10 +45,17 @@ export function CreateTaskModal({ tileId }: Props) {
       setStatus(createPreset.status ?? 'todo');
       setAssignee(createPreset.assignedName ?? '');
       setDueAt(createPreset.dueAt ? new Date(createPreset.dueAt).toISOString().slice(0, 16) : '');
-    } else if (!createModalOpen) {
-      // Reset on close
-      setTitle(''); setDesc(''); setPriority('medium'); setStatus('todo');
-      setAssignee(''); setDueAt(''); setTags([]);
+      return;
+    }
+
+    if (!createModalOpen) {
+      setTitle('');
+      setDesc('');
+      setPriority('medium');
+      setStatus('todo');
+      setAssignee('');
+      setDueAt('');
+      setTags([]);
     }
   }, [createModalOpen, createPreset]);
 
@@ -62,8 +81,9 @@ export function CreateTaskModal({ tileId }: Props) {
     closeCreateModal();
   };
 
-  const toggleTag = (id: string) =>
-    setTags(prev => prev.includes(id) ? prev.filter(t => t !== id) : [...prev, id]);
+  const toggleTag = (id: string) => {
+    setTags((prev) => (prev.includes(id) ? prev.filter((tag) => tag !== id) : [...prev, id]));
+  };
 
   return (
     <>
@@ -71,7 +91,9 @@ export function CreateTaskModal({ tileId }: Props) {
       <div className={s.modal}>
         <div className={s.modalHeader}>
           <span className={s.modalTitle}>Новая задача</span>
-          <button className={s.closeBtn} onClick={closeCreateModal}><X size={15} /></button>
+          <button className={s.closeBtn} onClick={closeCreateModal} aria-label="Закрыть форму">
+            <X size={15} />
+          </button>
         </div>
 
         {createPreset?.linkedEntity && (
@@ -88,8 +110,8 @@ export function CreateTaskModal({ tileId }: Props) {
               value={title}
               autoFocus
               placeholder="Что нужно сделать?"
-              onChange={e => setTitle(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleSubmit()}
+              onChange={(event) => setTitle(event.target.value)}
+              onKeyDown={(event) => event.key === 'Enter' && handleSubmit()}
             />
           </div>
 
@@ -99,21 +121,29 @@ export function CreateTaskModal({ tileId }: Props) {
               className={s.textarea}
               value={desc}
               placeholder="Дополнительные детали..."
-              onChange={e => setDesc(e.target.value)}
+              onChange={(event) => setDesc(event.target.value)}
             />
           </div>
 
           <div className={s.formRow}>
             <div className={s.formGroup}>
               <label className={s.label}>Приоритет</label>
-              <select className={s.select} value={priority} onChange={e => setPriority(e.target.value as TaskPriority)}>
-                {PRIORITY_ORDER.map(p => <option key={p} value={p}>{PRIORITY_LABEL[p]}</option>)}
+              <select className={s.select} value={priority} onChange={(event) => setPriority(event.target.value as TaskPriority)}>
+                {PRIORITY_ORDER.map((item) => (
+                  <option key={item} value={item}>
+                    {PRIORITY_LABEL[item]}
+                  </option>
+                ))}
               </select>
             </div>
             <div className={s.formGroup}>
               <label className={s.label}>Статус</label>
-              <select className={s.select} value={status} onChange={e => setStatus(e.target.value as TaskStatus)}>
-                {STATUS_ORDER.map(st => <option key={st} value={st}>{STATUS_LABEL[st]}</option>)}
+              <select className={s.select} value={status} onChange={(event) => setStatus(event.target.value as TaskStatus)}>
+                {STATUS_ORDER.map((item) => (
+                  <option key={item} value={item}>
+                    {STATUS_LABEL[item]}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
@@ -121,33 +151,33 @@ export function CreateTaskModal({ tileId }: Props) {
           <div className={s.formRow}>
             <div className={s.formGroup}>
               <label className={s.label}>Исполнитель</label>
-              <select className={s.select} value={assignee} onChange={e => setAssignee(e.target.value)}>
+              <select className={s.select} value={assignee} onChange={(event) => setAssignee(event.target.value)}>
                 <option value="">— Не назначен —</option>
-                {ASSIGNEES.map(a => <option key={a} value={a}>{a}</option>)}
+                {ASSIGNEES.map((item) => (
+                  <option key={item} value={item}>
+                    {item}
+                  </option>
+                ))}
               </select>
             </div>
             <div className={s.formGroup}>
               <label className={s.label}>Срок</label>
-              <input type="datetime-local" className={s.input} value={dueAt} onChange={e => setDueAt(e.target.value)} />
+              <input type="datetime-local" className={s.input} value={dueAt} onChange={(event) => setDueAt(event.target.value)} />
             </div>
           </div>
 
           <div className={s.formGroup}>
             <label className={s.label}>Метки</label>
             <div className={s.tagsWrap}>
-              {TAGS.map(tg => {
-                const active = tags.includes(tg.id);
+              {TAGS.map((tag) => {
+                const active = tags.includes(tag.id);
                 return (
                   <button
-                    key={tg.id}
-                    className={s.tagBtn}
-                    style={active
-                      ? { background: tg.color + '28', color: tg.color, borderColor: tg.color + '60' }
-                      : { background: 'transparent', color: '#6b7280', borderColor: 'rgba(255,255,255,.1)' }
-                    }
-                    onClick={() => toggleTag(tg.id)}
+                    key={tag.id}
+                    className={`${s.tagBtn} ${active ? TONE_CLASS[tag.tone] : s.tagBtnInactive}`}
+                    onClick={() => toggleTag(tag.id)}
                   >
-                    {tg.label}
+                    {tag.label}
                   </button>
                 );
               })}

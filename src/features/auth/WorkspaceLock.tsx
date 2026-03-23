@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Lock } from 'lucide-react';
 import { AuthModal } from './AuthModal';
+import { DEV_RUNTIME_BLOCKERS_DISABLED } from '../../shared/config/devAccess';
 import { useAuthStore } from '../../shared/stores/auth';
 import styles from './WorkspaceLock.module.css';
 
@@ -10,6 +11,10 @@ interface WorkspaceLockProps {
 }
 
 export function WorkspaceLock({ onUnlocked }: WorkspaceLockProps) {
+  if (DEV_RUNTIME_BLOCKERS_DISABLED) {
+    return null;
+  }
+
   const unlock = useAuthStore((state) => state.unlock);
   const [releasing, setReleasing] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -26,7 +31,9 @@ export function WorkspaceLock({ onUnlocked }: WorkspaceLockProps) {
     }, 1120);
   }, [onUnlocked, unlock]);
 
-  if (hidden) return null;
+  if (hidden) {
+    return null;
+  }
 
   return (
     <>
@@ -56,14 +63,18 @@ export function WorkspaceLock({ onUnlocked }: WorkspaceLockProps) {
         >
           <div className={styles.statusRow}>
             <Lock size={15} className={styles.lockIcon} aria-hidden="true" />
-            <span className={styles.statusLabel}>Рабочая область защищена</span>
+            <span className={styles.statusLabel}>Рабочее пространство заблокировано</span>
           </div>
 
           <button
             type="button"
             className={styles.unlockBtn}
-            onClick={() => { if (!releasing) setModalOpen(true); }}
-            aria-label="Разблокировать рабочую область"
+            onClick={() => {
+              if (!releasing) {
+                setModalOpen(true);
+              }
+            }}
+            aria-label="Разблокировать рабочее пространство"
           >
             Разблокировать
           </button>

@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Search, Users, Briefcase, CheckSquare, Settings,
   BarChart2, Zap, Upload, Shield, Clock, Loader2,
-  ArrowRight, Plus, Activity, MessageSquare, Sparkles, Command, Wand2, CornerDownLeft,
+  ArrowRight, Plus, Activity, MessageSquare, Sparkles, Command, Wand2, CornerDownLeft, X,
 } from 'lucide-react';
 import { useCommandPalette } from '../../shared/stores/commandPalette';
 import { useUIStore } from '../../shared/stores/ui';
@@ -31,11 +31,11 @@ const NAV_COMMANDS = [
   { id: 'go-deals', label: 'Сделки', sub: 'Перейти', icon: <Briefcase size={14} />, path: '/deals' },
   { id: 'go-tasks', label: 'Задачи', sub: 'Перейти', icon: <CheckSquare size={14} />, path: '/tasks' },
   { id: 'go-feed', label: 'Лента событий', sub: 'Перейти', icon: <Activity size={14} />, path: '/feed' },
-  { id: 'go-templates', label: 'Шаблоны сообщений', sub: 'Перейти', icon: <MessageSquare size={14} />, path: '/settings?tab=templates' },
+  { id: 'go-templates', label: 'Шаблоны сообщений', sub: 'Перейти', icon: <MessageSquare size={14} />, path: '/settings/templates' },
   { id: 'go-reports', label: 'Отчёты', sub: 'Перейти', icon: <BarChart2 size={14} />, path: '/reports' },
   { id: 'go-settings', label: 'Настройки', sub: 'Перейти', icon: <Settings size={14} />, path: '/settings' },
   { id: 'go-auto', label: 'Автоматизации', sub: 'Перейти', icon: <Zap size={14} />, path: '/automations' },
-  { id: 'go-import', label: 'Импорт', sub: 'Перейти', icon: <Upload size={14} />, path: '/imports' },
+  { id: 'go-import', label: 'Импорт', sub: 'Перейти', icon: <Upload size={14} />, path: '/crm/customers' },
   { id: 'go-audit', label: 'Аудит', sub: 'Перейти', icon: <Shield size={14} />, path: '/audit' },
 ];
 
@@ -83,7 +83,7 @@ export function CommandPalette() {
   const ui = useUIStore();
   const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement>(null);
-  const { canManageTeam, canUseAdminMode, canViewAudit, canRunAutomations, can } = useCapabilities();
+  const { canManageTeam, canViewAudit, canRunAutomations, can, hasCompanyAccess } = useCapabilities();
 
   const [query, setQuery] = useState('');
   const [apiRes, setApiRes] = useState<Result[]>([]);
@@ -93,10 +93,10 @@ export function CommandPalette() {
   const dq = useDebounce(query.trim(), 200);
 
   const actionCommands = useMemo(() => ([
-    { id: 'new-customer', label: 'Новый клиент', icon: <Plus size={14} />, color: 'var(--fill-info-text)', visible: can('customers:write'), action: () => ui.openCreateCustomer() },
-    { id: 'new-deal', label: 'Новая сделка', icon: <Plus size={14} />, color: 'var(--fill-warning-text)', visible: can('deals:write'), action: () => ui.openCreateDeal() },
-    { id: 'new-task', label: 'Новая задача', icon: <Plus size={14} />, color: 'var(--text-accent)', visible: can('tasks:write'), action: () => ui.openCreateTask() },
-    { id: 'open-import', label: 'Открыть импорт', icon: <Upload size={14} />, color: 'var(--text-secondary)', visible: can('customers.import'), action: () => navigate('/imports') },
+    { id: 'new-customer', label: 'Новый клиент', icon: <Plus size={14} />, color: 'var(--fill-info-text)', visible: can('customers:write'), action: () => { navigate('/crm/customers'); close(); } },
+    { id: 'new-deal', label: 'Новая сделка', icon: <Plus size={14} />, color: 'var(--fill-warning-text)', visible: can('deals:write'), action: () => { navigate('/crm/deals'); close(); } },
+    { id: 'new-task', label: 'Новая задача', icon: <Plus size={14} />, color: 'var(--text-accent)', visible: can('tasks:write'), action: () => { navigate('/crm/tasks'); close(); } },
+    { id: 'open-import', label: 'Открыть импорт', icon: <Upload size={14} />, color: 'var(--text-secondary)', visible: can('customers.import'), action: () => navigate('/crm/customers') },
   ].filter((item) => item.visible)), [can, navigate, ui]);
 
   const { cleanQuery, filterType } = useMemo(() => {
@@ -115,7 +115,7 @@ export function CommandPalette() {
 
   useEffect(() => {
     const effectiveQ = cleanQuery.trim();
-    if (!effectiveQ || effectiveQ.length < 2 || query.startsWith('/')) {
+    if (!hasCompanyAccess || !effectiveQ || effectiveQ.length < 2 || query.startsWith('/')) {
       setApiRes([]);
       return;
     }
@@ -156,16 +156,16 @@ export function CommandPalette() {
       .catch(() => setApiRes([]))
       .finally(() => { if (!cancelled) setSearching(false); });
     return () => { cancelled = true; };
-  }, [dq, cleanQuery, query, filterType, navigate]);
+  }, [dq, cleanQuery, query, filterType, hasCompanyAccess, navigate]);
 
   const results: (Result & { _section?: string })[] = [];
   const isSlash = query.startsWith('/');
   const slashMatch = isSlash ? query.slice(1).toLowerCase() : '';
   const slashMap = [
-    { keys: ['клиент', 'client', 'customer', 'new-customer', 'к'], visible: can('customers:write'), label: 'Создать клиента', color: 'var(--fill-info-text)', action: () => ui.openCreateCustomer() },
-    { keys: ['сделка', 'deal', 'new-deal', 'с'], visible: can('deals:write'), label: 'Создать сделку', color: 'var(--fill-warning-text)', action: () => ui.openCreateDeal() },
-    { keys: ['задача', 'task', 'new-task', 'з'], visible: can('tasks:write'), label: 'Создать задачу', color: 'var(--text-accent)', action: () => ui.openCreateTask() },
-    { keys: ['импорт', 'import', 'и'], visible: can('customers.import'), label: 'Открыть импорт', color: 'var(--text-secondary)', action: () => navigate('/imports') },
+    { keys: ['клиент', 'client', 'customer', 'new-customer', 'к'], visible: can('customers:write'), label: 'Создать клиента', color: 'var(--fill-info-text)', action: () => { navigate('/crm/customers'); close(); } },
+    { keys: ['сделка', 'deal', 'new-deal', 'с'], visible: can('deals:write'), label: 'Создать сделку', color: 'var(--fill-warning-text)', action: () => { navigate('/crm/deals'); close(); } },
+    { keys: ['задача', 'task', 'new-task', 'з'], visible: can('tasks:write'), label: 'Создать задачу', color: 'var(--text-accent)', action: () => { navigate('/crm/tasks'); close(); } },
+    { keys: ['импорт', 'import', 'и'], visible: can('customers.import'), label: 'Открыть импорт', color: 'var(--text-secondary)', action: () => navigate('/crm/customers') },
     { keys: ['copilot', 'ai', 'ассистент'], visible: true, label: 'Спросить ассистента', color: 'var(--fill-positive-text)', action: () => ui.openAssistantPrompt('Какой следующий шаг по текущему контексту?') },
   ].filter((item) => item.visible);
 
@@ -192,7 +192,7 @@ export function CommandPalette() {
 
     NAV_COMMANDS.filter((n) => {
       if (n.path === '/automations') return canRunAutomations;
-      if (n.path === '/imports') return can('customers.import');
+      if (n.path === '/crm/customers') return can('customers.import');
       if (n.path === '/audit') return canViewAudit;
       return true;
     }).forEach((n, i) => results.push({
@@ -221,7 +221,7 @@ export function CommandPalette() {
 
     NAV_COMMANDS.filter((n) => n.label.toLowerCase().includes(query.toLowerCase())).filter((n) => {
       if (n.path === '/automations') return canRunAutomations;
-      if (n.path === '/imports') return can('customers.import');
+      if (n.path === '/crm/customers') return can('customers.import');
       if (n.path === '/audit') return canViewAudit;
       return true;
     }).forEach((n, i) => results.push({
@@ -303,10 +303,12 @@ export function CommandPalette() {
           {filterType && (
             <span className={styles.filterChip} style={filterChipVars(filterType)}>
               {filterType === 'customer' ? 'Клиенты' : filterType === 'deal' ? 'Сделки' : 'Задачи'}
-              <span onClick={() => setQuery('')} className={styles.filterChipClear}>✕</span>
+              <button onClick={() => setQuery('')} className={styles.filterChipClear} aria-label="Сбросить фильтр">
+                <X size={12} />
+              </button>
             </span>
           )}
-          {query && <button className={styles.clearBtn} onClick={() => setQuery('')}>✕</button>}
+          {query && <button className={styles.clearBtn} onClick={() => setQuery('')} aria-label="Очистить запрос"><X size={12} /></button>}
         </div>
 
         {!query && (

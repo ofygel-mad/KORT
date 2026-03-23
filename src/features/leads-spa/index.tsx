@@ -78,7 +78,7 @@ export function LeadsSPA({ tileId }: Props) {
           <button className={s.addBtn} onClick={() => setCreatePanelOpen(!addOpen)}>
             <Plus size={14} />
             Добавить лида
-            <ChevronDown size={12} style={{ opacity: 0.6, transform: addOpen ? 'rotate(180deg)' : '', transition: 'transform 200ms' }} />
+            <ChevronDown size={12} className={`${s.chevron} ${addOpen ? s.chevronOpen : ''}`} />
           </button>
         </div>
       </header>

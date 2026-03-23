@@ -8,8 +8,10 @@
   position: fixed;
   inset: 0;
   z-index: 800;
-  background: rgba(0, 0, 0, 0.85);
-  backdrop-filter: blur(6px);
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--fill-accent) 14%, transparent) 0%, transparent 34%),
+    color-mix(in srgb, var(--bg-overlay) 94%, black 6%);
+  backdrop-filter: blur(10px);
 }
 
 /* ── Panel ───────────────────────────────────────────────────── */
@@ -21,10 +23,11 @@
   z-index: 801;
   width: 480px;
   max-width: calc(100vw - 32px);
-  background: var(--bg-surface-elevated);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--bg-surface-elevated) 96%, transparent) 0%, color-mix(in srgb, var(--bg-surface) 96%, transparent) 100%);
   border-radius: var(--radius-xl);
-  border: 1px solid var(--border-subtle);
-  box-shadow: var(--shadow-xl);
+  border: 1px solid var(--brand-panel-border);
+  box-shadow: var(--brand-panel-shadow-strong);
   overflow: hidden;
 }
 
@@ -34,7 +37,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 16px 20px;
-  border-bottom: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--brand-panel-border);
 }
 
 .headerLeft {
@@ -71,8 +74,9 @@
 /* ── Pomodoro timer ──────────────────────────────────────────── */
 .timerSection {
   padding: 24px 20px 16px;
-  border-bottom: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--brand-panel-border);
   text-align: center;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--fill-accent-soft) 28%, transparent) 0%, transparent 100%);
 }
 
 .timerDisplay {
@@ -103,7 +107,7 @@
   gap: 6px;
   padding: 8px 20px;
   border-radius: var(--radius-md);
-  background: var(--fill-accent);
+  background: var(--fill-accent-gradient);
   border: none;
   cursor: pointer;
   color: var(--text-inverse);
@@ -169,9 +173,9 @@
   gap: 10px;
   padding: 9px 12px;
   margin-bottom: 6px;
-  background: var(--bg-surface-inset);
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border-subtle);
+  background: color-mix(in srgb, var(--bg-surface-inset) 84%, transparent);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--brand-panel-border);
   transition: border-color var(--motion-duration-fast) var(--motion-ease-standard);
 }
 

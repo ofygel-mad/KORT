@@ -8,6 +8,13 @@ import type {
   Order, OrderItem, ProductionTask, Payment, Transfer,
   OrderActivity, Client, OrderStatus, PaymentStatus,
   ProductionStatus, OrderPriority, PaymentMethod,
+  ClientRequest, WorkzoneProfile,
+} from './types';
+import {
+  PRODUCT_CATALOG,
+  FABRIC_CATALOG,
+  SIZE_OPTIONS,
+  DEFAULT_WORKERS,
 } from './types';
 
 const delay = (ms = 80) => new Promise(r => setTimeout(r, ms));
@@ -23,7 +30,13 @@ function later(days: number): string {
 
 let _orderCounter = 8;
 function nextOrderNumber(): string {
-  return `ЧП-${String(++_orderCounter).padStart(3, '0')}`;
+  const prefix = (_profile?.orderPrefix || 'ЧП').trim().slice(0, 6).toUpperCase();
+  return `${prefix}-${String(++_orderCounter).padStart(3, '0')}`;
+}
+
+let _requestCounter = 2;
+function nextRequestNumber(): string {
+  return `RQ-${String(++_requestCounter).padStart(3, '0')}`;
 }
 
 function act(
@@ -240,7 +253,247 @@ const _orders: Order[] = [
 
 // ─── API shims ───────────────────────────────────────────────
 
+const STORAGE_KEY = 'kort-workzone-db-v2';
+
+const _requests: ClientRequest[] = [
+  {
+    id: 'rq-1',
+    requestNumber: 'RQ-001',
+    customerName: 'Салтанат Есимова',
+    phone: '+7 707 321 1122',
+    messengers: ['whatsapp'],
+    city: 'Шымкент',
+    deliveryMethod: 'Доставка по Казахстану',
+    leadSource: 'Instagram',
+    preferredContact: 'whatsapp',
+    desiredDate: later(12),
+    notes: 'Нужен комплект к семейному мероприятию, важна мягкая посадка и быстрая обратная связь.',
+    source: 'public_form',
+    status: 'new',
+    items: [
+      { id: 'rqi-1', productName: 'Чапан праздничный', fabricPreference: 'Бархат бордовый', size: 'L', quantity: 1, notes: 'Сделать богаче отделку по вороту' },
+      { id: 'rqi-2', productName: 'Камзол', fabricPreference: 'Парча золотая', size: 'M', quantity: 1 },
+    ],
+    createdAt: ago(0, 8),
+    updatedAt: ago(0, 8),
+  },
+  {
+    id: 'rq-2',
+    requestNumber: 'RQ-002',
+    customerName: 'Ермек Шынгысов',
+    phone: '+7 701 444 8899',
+    messengers: ['telegram'],
+    city: 'Астана',
+    deliveryMethod: 'Самовывоз',
+    leadSource: 'WhatsApp',
+    preferredContact: 'telegram',
+    desiredDate: later(20),
+    notes: 'Хочет базовый вариант без спешки, но просит заранее согласовать цену.',
+    source: 'whatsapp',
+    status: 'reviewed',
+    items: [
+      { id: 'rqi-3', productName: 'Чапан классический', fabricPreference: 'Бархат синий', size: 'XL', quantity: 2 },
+    ],
+    createdAt: ago(1, 6),
+    updatedAt: ago(0, 14),
+  },
+];
+
+let _profile: WorkzoneProfile = {
+  displayName: 'Чапан',
+  descriptor: '',
+  orderPrefix: 'ЧП',
+  publicIntakeTitle: 'Оставьте заявку на пошив',
+  publicIntakeDescription: '',
+  publicIntakeEnabled: true,
+  supportLabel: '',
+};
+
+let _productCatalog: string[] = [...PRODUCT_CATALOG];
+let _fabricCatalog: string[] = [...FABRIC_CATALOG];
+let _sizeCatalog: string[] = [...SIZE_OPTIONS];
+let _workers: string[] = [...DEFAULT_WORKERS];
+
+function replaceArray<T>(target: T[], source: T[]) {
+  target.splice(0, target.length, ...source);
+}
+
+function persistState() {
+  if (typeof window === 'undefined') return;
+
+  const payload = {
+    orderCounter: _orderCounter,
+    requestCounter: _requestCounter,
+    clients: _clients,
+    orders: _orders,
+    requests: _requests,
+    profile: _profile,
+    productCatalog: _productCatalog,
+    fabricCatalog: _fabricCatalog,
+    sizeCatalog: _sizeCatalog,
+    workers: _workers,
+  };
+
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+}
+
+function hydrateState() {
+  if (typeof window === 'undefined') return;
+
+  const raw = window.localStorage.getItem(STORAGE_KEY);
+  if (!raw) return;
+
+  try {
+    const payload = JSON.parse(raw) as Partial<{
+      orderCounter: number;
+      requestCounter: number;
+      clients: Client[];
+      orders: Order[];
+      requests: ClientRequest[];
+      profile: WorkzoneProfile;
+      productCatalog: string[];
+      fabricCatalog: string[];
+      sizeCatalog: string[];
+      workers: string[];
+    }>;
+
+    if (typeof payload.orderCounter === 'number') _orderCounter = payload.orderCounter;
+    if (typeof payload.requestCounter === 'number') _requestCounter = payload.requestCounter;
+    if (Array.isArray(payload.clients)) replaceArray(_clients, payload.clients);
+    if (Array.isArray(payload.orders)) replaceArray(_orders, payload.orders);
+    if (Array.isArray(payload.requests)) replaceArray(_requests, payload.requests);
+    if (payload.profile) _profile = { ..._profile, ...payload.profile };
+    if (Array.isArray(payload.productCatalog)) _productCatalog = [...payload.productCatalog];
+    if (Array.isArray(payload.fabricCatalog)) _fabricCatalog = [...payload.fabricCatalog];
+    if (Array.isArray(payload.sizeCatalog)) _sizeCatalog = [...payload.sizeCatalog];
+    if (Array.isArray(payload.workers)) _workers = [...payload.workers];
+  } catch {
+    // Keep seed data if persisted payload is corrupted.
+  }
+}
+
+hydrateState();
+
 export const chapanApi = {
+  getProfile: async (): Promise<WorkzoneProfile> => {
+    await delay(40);
+    return { ..._profile };
+  },
+
+  updateProfile: async (patch: Partial<WorkzoneProfile>): Promise<WorkzoneProfile> => {
+    await delay(80);
+    _profile = { ..._profile, ...patch };
+    persistState();
+    return { ..._profile };
+  },
+
+  getCatalogs: async (): Promise<{ productCatalog: string[]; fabricCatalog: string[]; sizeCatalog: string[]; workers: string[] }> => {
+    await delay(40);
+    return {
+      productCatalog: [..._productCatalog],
+      fabricCatalog: [..._fabricCatalog],
+      sizeCatalog: [..._sizeCatalog],
+      workers: [..._workers],
+    };
+  },
+
+  saveCatalogs: async (data: {
+    productCatalog?: string[];
+    fabricCatalog?: string[];
+    sizeCatalog?: string[];
+    workers?: string[];
+  }): Promise<void> => {
+    await delay(80);
+
+    if (Array.isArray(data.productCatalog)) {
+      _productCatalog = [...new Set(data.productCatalog.map((item) => item.trim()).filter(Boolean))];
+    }
+    if (Array.isArray(data.fabricCatalog)) {
+      _fabricCatalog = [...new Set(data.fabricCatalog.map((item) => item.trim()).filter(Boolean))];
+    }
+    if (Array.isArray(data.sizeCatalog)) {
+      _sizeCatalog = [...new Set(data.sizeCatalog.map((item) => item.trim()).filter(Boolean))];
+    }
+    if (Array.isArray(data.workers)) {
+      _workers = [...new Set(data.workers.map((item) => item.trim()).filter(Boolean))];
+    }
+
+    persistState();
+  },
+
+  getRequests: async (): Promise<ClientRequest[]> => {
+    await delay(50);
+    return _requests.map((request) => ({
+      ...request,
+      items: request.items.map((item) => ({ ...item })),
+    }));
+  },
+
+  submitClientRequest: async (data: {
+    customerName: string;
+    phone: string;
+    messengers?: Array<'whatsapp' | 'telegram'>;
+    city?: string;
+    deliveryMethod?: string;
+    leadSource?: string;
+    preferredContact: 'phone' | 'whatsapp' | 'telegram';
+    desiredDate?: string;
+    notes?: string;
+    source?: ClientRequest['source'];
+    items: Array<{
+      productName: string;
+      fabricPreference?: string;
+      size?: string;
+      quantity: number;
+      notes?: string;
+    }>;
+  }): Promise<ClientRequest> => {
+    await delay(120);
+    const now = new Date().toISOString();
+    const request: ClientRequest = {
+      id: nanoid(),
+      requestNumber: nextRequestNumber(),
+      customerName: data.customerName.trim(),
+      phone: data.phone.trim(),
+      messengers: data.messengers?.length ? [...new Set(data.messengers)] : undefined,
+      city: data.city?.trim() || undefined,
+      deliveryMethod: data.deliveryMethod?.trim() || undefined,
+      leadSource: data.leadSource?.trim() || undefined,
+      preferredContact: data.preferredContact,
+      desiredDate: data.desiredDate,
+      notes: data.notes?.trim() || undefined,
+      source: data.source ?? 'public_form',
+      status: 'new',
+      items: data.items.map((item) => ({
+        id: nanoid(),
+        productName: item.productName.trim(),
+        fabricPreference: item.fabricPreference?.trim() || undefined,
+        size: item.size?.trim() || undefined,
+        quantity: Math.max(1, item.quantity),
+        notes: item.notes?.trim() || undefined,
+      })),
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    _requests.unshift(request);
+    persistState();
+
+    return {
+      ...request,
+      items: request.items.map((item) => ({ ...item })),
+    };
+  },
+
+  updateRequestStatus: async (requestId: string, status: ClientRequest['status'], createdOrderId?: string): Promise<void> => {
+    await delay(60);
+    const request = _requests.find((item) => item.id === requestId);
+    if (!request) return;
+    request.status = status;
+    request.updatedAt = new Date().toISOString();
+    request.createdOrderId = createdOrderId ?? request.createdOrderId;
+    persistState();
+  },
   // ── Orders ──────────────────────────────────────────────
   getOrders: async (): Promise<Order[]> => {
     await delay();
@@ -260,19 +513,34 @@ export const chapanApi = {
   },
 
   createOrder: async (data: {
-    clientId: string;
+    clientId?: string;
     clientName: string;
     clientPhone: string;
     priority: OrderPriority;
     items: Omit<OrderItem, 'id'>[];
     dueDate?: string;
+    sourceRequestId?: string;
   }): Promise<Order> => {
     await delay(120);
     const now = new Date().toISOString();
+    const existingClient = data.clientId
+      ? _clients.find((client) => client.id === data.clientId)
+      : _clients.find((client) => client.phone === data.clientPhone);
+    const clientId = existingClient?.id ?? nanoid();
+
+    if (!existingClient) {
+      _clients.unshift({
+        id: clientId,
+        fullName: data.clientName,
+        phone: data.clientPhone,
+        createdAt: now,
+      });
+    }
+
     const order: Order = {
       id: nanoid(),
       orderNumber: nextOrderNumber(),
-      clientId: data.clientId,
+      clientId,
       clientName: data.clientName,
       clientPhone: data.clientPhone,
       status: 'new',
@@ -291,6 +559,15 @@ export const chapanApi = {
       updatedAt: now,
     };
     _orders.unshift(order);
+    if (data.sourceRequestId) {
+      const request = _requests.find((item) => item.id === data.sourceRequestId);
+      if (request) {
+        request.status = 'converted';
+        request.createdOrderId = order.id;
+        request.updatedAt = now;
+      }
+    }
+    persistState();
     return { ...order, items: [...order.items], activities: [...order.activities] };
   },
 
@@ -302,6 +579,7 @@ export const chapanApi = {
       o.updatedAt = new Date().toISOString();
       if (status === 'completed') o.completedAt = o.updatedAt;
       if (status === 'cancelled') o.cancelledAt = o.updatedAt;
+      persistState();
     }
   },
 
@@ -325,6 +603,7 @@ export const chapanApi = {
       isBlocked: false,
     }));
     o.productionTasks = newTasks;
+    persistState();
   },
 
   addPayment: async (orderId: string, amount: number, method: PaymentMethod, notes?: string): Promise<Payment> => {
@@ -343,6 +622,7 @@ export const chapanApi = {
       o.paidAmount += amount;
       o.paymentStatus = o.paidAmount >= o.totalAmount ? 'paid' : 'partial';
       o.updatedAt = new Date().toISOString();
+      persistState();
     }
     return { ...payment };
   },
@@ -357,6 +637,7 @@ export const chapanApi = {
         if (status !== 'pending' && !pt.startedAt) pt.startedAt = new Date().toISOString();
         if (status === 'done') pt.completedAt = new Date().toISOString();
         o.updatedAt = new Date().toISOString();
+        persistState();
         break;
       }
     }
@@ -366,7 +647,7 @@ export const chapanApi = {
     await delay(60);
     for (const o of _orders) {
       const pt = o.productionTasks.find(t => t.id === taskId);
-      if (pt) { pt.assignedTo = worker; break; }
+      if (pt) { pt.assignedTo = worker; persistState(); break; }
     }
   },
 
@@ -380,7 +661,7 @@ export const chapanApi = {
       confirmedByClient: false,
     };
     const o = _orders.find(o => o.id === orderId);
-    if (o) { o.transfer = t; o.updatedAt = new Date().toISOString(); }
+    if (o) { o.transfer = t; o.updatedAt = new Date().toISOString(); persistState(); }
     return { ...t };
   },
 
@@ -395,6 +676,7 @@ export const chapanApi = {
       o.status = 'transferred';
     }
     o.updatedAt = new Date().toISOString();
+    persistState();
   },
 
   // ── Task flags & defects ────────────────────────────────
@@ -402,7 +684,7 @@ export const chapanApi = {
     await delay(60);
     for (const o of _orders) {
       const pt = o.productionTasks.find(t => t.id === taskId);
-      if (pt) { pt.isBlocked = true; pt.blockReason = reason; o.updatedAt = new Date().toISOString(); break; }
+      if (pt) { pt.isBlocked = true; pt.blockReason = reason; o.updatedAt = new Date().toISOString(); persistState(); break; }
     }
   },
 
@@ -410,7 +692,7 @@ export const chapanApi = {
     await delay(60);
     for (const o of _orders) {
       const pt = o.productionTasks.find(t => t.id === taskId);
-      if (pt) { pt.isBlocked = false; pt.blockReason = undefined; o.updatedAt = new Date().toISOString(); break; }
+      if (pt) { pt.isBlocked = false; pt.blockReason = undefined; o.updatedAt = new Date().toISOString(); persistState(); break; }
     }
   },
 
@@ -418,7 +700,7 @@ export const chapanApi = {
     await delay(60);
     for (const o of _orders) {
       const pt = o.productionTasks.find(t => t.id === taskId);
-      if (pt) { pt.defects = defect || undefined; o.updatedAt = new Date().toISOString(); break; }
+      if (pt) { pt.defects = defect || undefined; o.updatedAt = new Date().toISOString(); persistState(); break; }
     }
   },
 
@@ -427,7 +709,7 @@ export const chapanApi = {
     await delay(60);
     const a: OrderActivity = { ...entry, id: nanoid() };
     const o = _orders.find(o => o.id === orderId);
-    if (o) { o.activities.push(a); o.updatedAt = new Date().toISOString(); }
+    if (o) { o.activities.push(a); o.updatedAt = new Date().toISOString(); persistState(); }
     return a;
   },
 
@@ -436,6 +718,7 @@ export const chapanApi = {
     await delay(80);
     const c: Client = { ...data, id: nanoid(), createdAt: new Date().toISOString() };
     _clients.unshift(c);
+    persistState();
     return { ...c };
   },
 };

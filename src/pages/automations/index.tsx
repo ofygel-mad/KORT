@@ -5,7 +5,7 @@ import {
   Zap, Plus, Play, Pause, Trash2, ChevronRight,
   UserPlus, TrendingUp, CheckSquare, AlertCircle, ArrowRight,
   MessageSquare, Bell, Globe, RefreshCw, X,
-  Filter, Layers,
+  Filter, Layers, ChevronUp, ChevronDown,
 } from 'lucide-react';
 import { api } from '../../shared/api/client';
 import { PageHeader } from '../../shared/ui/PageHeader';
@@ -49,14 +49,26 @@ interface AutomationRule {
   created_at: string;
 }
 
+type Tone = 'default' | 'success' | 'info' | 'warning' | 'danger' | 'accent';
+type BadgeVariant = 'default' | 'success' | 'warning' | 'danger' | 'info' | 'accent';
+
+const TONE_COLOR: Record<Tone, string> = {
+  default: 'var(--text-tertiary)',
+  success: 'var(--fill-positive)',
+  info: 'var(--fill-info)',
+  warning: 'var(--fill-warning)',
+  danger: 'var(--fill-negative)',
+  accent: 'var(--fill-accent)',
+};
+
 const TRIGGERS = [
-  { value: 'customer.created', label: 'Клиент создан', icon: UserPlus, color: '#10B981' },
-  { value: 'deal.created', label: 'Сделка создана', icon: TrendingUp, color: '#3B82F6' },
-  { value: 'deal.stage_changed', label: 'Сделка сменила этап', icon: ArrowRight, color: '#F59E0B' },
-  { value: 'deal.stalled', label: 'Сделка зависла (5+ дней)', icon: AlertCircle, color: '#EF4444' },
-  { value: 'task.created', label: 'Задача создана', icon: CheckSquare, color: '#8B5CF6' },
-  { value: 'task.overdue', label: 'Задача просрочена', icon: AlertCircle, color: '#EF4444' },
-  { value: 'customer.follow_up_due', label: 'Follow-up просрочен', icon: Bell, color: '#D97706' },
+  { value: 'customer.created', label: 'Клиент создан', icon: UserPlus, tone: 'success' as Tone },
+  { value: 'deal.created', label: 'Сделка создана', icon: TrendingUp, tone: 'info' as Tone },
+  { value: 'deal.stage_changed', label: 'Сделка сменила этап', icon: ArrowRight, tone: 'warning' as Tone },
+  { value: 'deal.stalled', label: 'Сделка зависла (5+ дней)', icon: AlertCircle, tone: 'danger' as Tone },
+  { value: 'task.created', label: 'Задача создана', icon: CheckSquare, tone: 'accent' as Tone },
+  { value: 'task.overdue', label: 'Задача просрочена', icon: AlertCircle, tone: 'danger' as Tone },
+  { value: 'customer.follow_up_due', label: 'Follow-up просрочен', icon: Bell, tone: 'warning' as Tone },
 ];
 
 const FIELDS_BY_TRIGGER: Record<string, { value: string; label: string; type: 'text' | 'number' | 'select' }[]> = {
@@ -93,39 +105,39 @@ const OPERATORS_BY_TYPE = {
 
 const ACTION_TYPES = [
   {
-    value: 'create_task', label: 'Создать задачу', icon: CheckSquare, color: '#3B82F6',
+    value: 'create_task', label: 'Создать задачу', icon: CheckSquare, tone: 'info' as Tone,
     fields: [{ key: 'title_template', label: 'Заголовок задачи', placeholder: 'Связаться с {{customer.full_name}}' },
       { key: 'due_in_hours', label: 'Срок (часов)', placeholder: '24', type: 'number' }],
   },
   {
-    value: 'create_note', label: 'Добавить заметку', icon: MessageSquare, color: '#8B5CF6',
+    value: 'create_note', label: 'Добавить заметку', icon: MessageSquare, tone: 'accent' as Tone,
     fields: [{ key: 'body_template', label: 'Текст заметки', placeholder: 'Автоматически создано' }],
   },
   {
-    value: 'send_internal_notification', label: 'Уведомить пользователя', icon: Bell, color: '#F59E0B',
+    value: 'send_internal_notification', label: 'Уведомить пользователя', icon: Bell, tone: 'warning' as Tone,
     fields: [{ key: 'title_template', label: 'Заголовок', placeholder: 'Новое событие' },
       { key: 'body_template', label: 'Текст', placeholder: 'Сделка {{deal.title}} обновлена' }],
   },
   {
-    value: 'update_field', label: 'Обновить поле', icon: RefreshCw, color: '#10B981',
+    value: 'update_field', label: 'Обновить поле', icon: RefreshCw, tone: 'success' as Tone,
     fields: [{ key: 'field', label: 'Поле', placeholder: 'status' },
       { key: 'value', label: 'Значение', placeholder: 'hot' }],
   },
   {
-    value: 'change_deal_stage', label: 'Сменить этап сделки', icon: ArrowRight, color: '#EF4444',
+    value: 'change_deal_stage', label: 'Сменить этап сделки', icon: ArrowRight, tone: 'danger' as Tone,
     fields: [{ key: 'stage_id', label: 'ID этапа', placeholder: 'uuid этапа' }],
   },
   {
-    value: 'webhook', label: 'Вебхук', icon: Globe, color: '#6B7280',
+    value: 'webhook', label: 'Вебхук', icon: Globe, tone: 'default' as Tone,
     fields: [{ key: 'url', label: 'URL', placeholder: 'https://...' }],
   },
 ];
 
-const STATUS_CFG: Record<string, { label: string; bg: string; color: string }> = {
-  active: { label: 'Активна', bg: '#D1FAE5', color: '#065F46' },
-  paused: { label: 'Пауза', bg: '#FEF3C7', color: '#92400E' },
-  draft: { label: 'Черновик', bg: '#F3F4F6', color: '#6B7280' },
-  archived: { label: 'Архив', bg: '#F3F4F6', color: '#6B7280' },
+const STATUS_CFG: Record<string, { label: string; variant: BadgeVariant }> = {
+  active: { label: 'Активна', variant: 'success' },
+  paused: { label: 'Пауза', variant: 'warning' },
+  draft: { label: 'Черновик', variant: 'default' },
+  archived: { label: 'Архив', variant: 'default' },
 };
 
 function cx(...parts: Array<string | false | null | undefined>) {
@@ -155,7 +167,7 @@ function TriggerSelector({ value, onChange }: { value: string; onChange: (v: str
             onClick={() => onChange(t.value)}
             whileTap={{ scale: 0.98 }}
             className={cx(styles.selectorButton, active && styles.selectorButtonActive)}
-            style={{ '--trigger-color': t.color } as CSSProperties}
+            style={{ '--trigger-color': TONE_COLOR[t.tone] } as CSSProperties}
           >
             <div className={styles.selectorIcon}>
               <Icon size={14} />
@@ -311,10 +323,14 @@ function ActionCard({
     >
       <div className={styles.actionHeader}>
         <div className={styles.actionMove}>
-          <button type="button" onClick={onMoveUp} disabled={isFirst} className={styles.moveButton}>▲</button>
-          <button type="button" onClick={onMoveDown} disabled={isLast} className={styles.moveButton}>▼</button>
+          <button type="button" onClick={onMoveUp} disabled={isFirst} className={styles.moveButton}>
+            <ChevronUp size={12} />
+          </button>
+          <button type="button" onClick={onMoveDown} disabled={isLast} className={styles.moveButton}>
+            <ChevronDown size={12} />
+          </button>
         </div>
-        <div className={styles.actionIconWrap} style={{ '--action-color': cfg.color } as CSSProperties}>
+        <div className={styles.actionIconWrap} style={{ '--action-color': TONE_COLOR[cfg.tone] } as CSSProperties}>
           <Icon size={13} />
         </div>
         <span className={styles.actionOrder}>{index + 1}. {cfg.label}</span>
@@ -393,7 +409,7 @@ function ActionBuilder({
                     onClick={() => { onChange([...actions, emptyAction(t.value)]); setAddOpen(false); }}
                     whileTap={{ scale: 0.97 }}
                     className={styles.actionPickerButton}
-                    style={{ '--action-color': t.color } as CSSProperties}
+                    style={{ '--action-color': TONE_COLOR[t.tone] } as CSSProperties}
                   >
                     <div className={styles.actionPickerIcon}>
                       <Icon size={12} />
@@ -687,7 +703,7 @@ export default function AutomationsPage() {
               >
                 <div
                   className={cx(styles.ruleIcon, rule.status === 'active' && styles.ruleIconActive)}
-                  style={{ '--trigger-color': trigger?.color ?? 'var(--fill-positive)' } as CSSProperties}
+                  style={{ '--trigger-color': TONE_COLOR[trigger?.tone ?? 'success'] } as CSSProperties}
                 >
                   <TIcon size={16} />
                 </div>
@@ -717,7 +733,7 @@ export default function AutomationsPage() {
                   </div>
                 </div>
 
-                <Badge bg={st.bg} color={st.color}>{st.label}</Badge>
+                <Badge variant={st.variant} dot>{st.label}</Badge>
 
                 <div className={styles.ruleActions}>
                   <Button

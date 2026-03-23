@@ -7,7 +7,14 @@ import {
 } from 'lucide-react';
 import { useDealsStore } from '../../model/deals.store';
 import { useTileDealsUI } from '../../model/tile-ui.store';
-import { STAGE_LABEL, STAGE_ACCENT, DEAL_CHECKLIST, ACTIVITY_LABEL, ACTIVITY_COLOR } from '../../api/types';
+import {
+  STAGE_LABEL,
+  STAGE_TONE,
+  DEAL_CHECKLIST,
+  ACTIVITY_LABEL,
+  ACTIVITY_TONE,
+  getDealProbabilityTone,
+} from '../../api/types';
 import type { ActivityType, TaskPriority } from '../../api/types';
 import s from './Drawer.module.css';
 
@@ -41,12 +48,13 @@ const ACTIVITY_ICONS: Record<ActivityType, React.ReactNode> = {
   system:       <FileText size={12} />,
 };
 
-const ACTIVITY_TYPES: { value: ActivityType; label: string }[] = [
-  { value: 'note',    label: 'Заметка' },
-  { value: 'call',    label: 'Звонок' },
-  { value: 'meeting', label: 'Встреча' },
-  { value: 'email',   label: 'Письмо' },
-];
+const ACTIVITY_TYPES: ActivityType[] = ['note', 'call', 'meeting', 'email'];
+
+const TASK_PRIORITY_LABEL: Record<TaskPriority, string> = {
+  low: 'Низ',
+  medium: 'Ср',
+  high: 'Выс',
+};
 
 // ── Component ─────────────────────────────────────────────────
 
@@ -89,6 +97,9 @@ export function DealDrawer({ tileId }: Props) {
   }, [deal?.activities.length]);
 
   if (!deal) return null;
+
+  const stageTone = STAGE_TONE[deal.stage];
+  const probabilityTone = getDealProbabilityTone(deal.probability);
 
   // ── Handlers ─────────────────────────────────────────────
 
@@ -149,8 +160,8 @@ export function DealDrawer({ tileId }: Props) {
                 <div className={s.avatar}>{deal.fullName[0]}</div>
                 <div>
                   <div className={s.dealTitle}>{deal.title}</div>
-                  <div className={s.stagePill} style={{ color: STAGE_ACCENT[deal.stage] }}>
-                    <span className={s.stageDot} style={{ background: STAGE_ACCENT[deal.stage] }} />
+                  <div className={s.stagePill} data-tone={stageTone}>
+                    <span className={s.stageDot} />
                     {STAGE_LABEL[deal.stage]}
                   </div>
                 </div>
@@ -235,11 +246,8 @@ export function DealDrawer({ tileId }: Props) {
                   </div>
                   {/* Prob bar */}
                   <div className={s.probBarWrap}>
-                    <div className={s.probBar}>
-                      <div className={s.probFill} style={{
-                        width: `${deal.probability}%`,
-                        background: deal.probability >= 75 ? '#22c55e' : deal.probability >= 45 ? '#f59e0b' : '#ef4444',
-                      }} />
+                    <div className={s.probBar} data-tone={probabilityTone}>
+                      <div className={s.probFill} style={{ width: `${deal.probability}%` }} />
                     </div>
                   </div>
                 </div>
@@ -309,7 +317,9 @@ export function DealDrawer({ tileId }: Props) {
                       const done = (deal.checklistDone ?? []).includes(item.id);
                       return (
                         <button key={item.id} className={s.checkItem} onClick={() => toggleChecklist(deal.id, item.id)}>
-                          {done ? <CheckSquare size={13} color="rgba(34,197,94,0.8)" /> : <Square size={13} color="rgba(255,255,255,0.2)" />}
+                          {done
+                            ? <CheckSquare size={13} className={`${s.checkIcon} ${s.checkIconDone}`} />
+                            : <Square size={13} className={`${s.checkIcon} ${s.checkIconEmpty}`} />}
                           <span className={done ? s.checkDone : ''}>{item.label}</span>
                         </button>
                       );
@@ -330,7 +340,7 @@ export function DealDrawer({ tileId }: Props) {
                     <div className={s.taskForm}>
                       <input className={s.taskInput} placeholder="Название задачи" value={taskTitle} onChange={e => setTaskTitle(e.target.value)} />
                       <div className={s.taskFormRow}>
-                        <input className={s.taskInput} type="date" value={taskDue} onChange={e => setTaskDue(e.target.value)} style={{ flex: '0 0 auto', width: '130px' }} />
+                        <input className={`${s.taskInput} ${s.taskDateInput}`} type="date" value={taskDue} onChange={e => setTaskDue(e.target.value)} />
                         <select className={s.taskSelect} value={taskPriority} onChange={e => setTaskPriority(e.target.value as TaskPriority)}>
                           <option value="low">Низкий</option>
                           <option value="medium">Средний</option>
@@ -348,8 +358,8 @@ export function DealDrawer({ tileId }: Props) {
                       <div key={task.id} className={s.taskRow}>
                         <button className={s.taskCheck} onClick={() => toggleTask(deal.id, task.id)}>
                           {task.done
-                            ? <CheckSquare size={13} color="rgba(34,197,94,0.7)" />
-                            : <Square size={13} color="rgba(255,255,255,0.25)" />}
+                            ? <CheckSquare size={13} className={`${s.checkIcon} ${s.checkIconDone}`} />
+                            : <Square size={13} className={`${s.checkIcon} ${s.checkIconEmpty}`} />}
                         </button>
                         <div className={s.taskBody}>
                           <span className={`${s.taskTitle} ${task.done ? s.taskDone : ''}`}>{task.title}</span>
@@ -360,7 +370,7 @@ export function DealDrawer({ tileId }: Props) {
                           )}
                         </div>
                         <span className={`${s.taskPriority} ${s[`priority_${task.priority}`]}`}>
-                          {task.priority === 'high' ? '!' : task.priority === 'medium' ? '·' : ''}
+                          {TASK_PRIORITY_LABEL[task.priority]}
                         </span>
                       </div>
                     ))}
@@ -396,17 +406,12 @@ export function DealDrawer({ tileId }: Props) {
                   )}
                   {filteredActs.map((act, i) => (
                     <div key={act.id} className={`${s.feedEntry} ${i === filteredActs.length - 1 ? s.feedLast : ''}`}>
-                      <div
-                        className={s.feedIcon}
-                        style={{ background: `color-mix(in srgb, ${ACTIVITY_COLOR[act.type]} 20%, rgba(255,255,255,0.04))`,
-                                 borderColor: `color-mix(in srgb, ${ACTIVITY_COLOR[act.type]} 40%, rgba(255,255,255,0.1))`,
-                                 color: ACTIVITY_COLOR[act.type] }}
-                      >
+                      <div className={s.feedIcon} data-tone={ACTIVITY_TONE[act.type]}>
                         {ACTIVITY_ICONS[act.type]}
                       </div>
                       <div className={s.feedBody}>
                         <div className={s.feedTypeRow}>
-                          <span className={s.feedType} style={{ color: ACTIVITY_COLOR[act.type] }}>
+                          <span className={s.feedType} data-tone={ACTIVITY_TONE[act.type]}>
                             {ACTIVITY_LABEL[act.type]}
                           </span>
                           {act.durationMin && <span className={s.feedDuration}>{act.durationMin} мин</span>}
@@ -428,13 +433,13 @@ export function DealDrawer({ tileId }: Props) {
                   <div className={s.activityTypeRow}>
                     {ACTIVITY_TYPES.map(t => (
                       <button
-                        key={t.value}
-                        className={`${s.actTypeBtn} ${actType === t.value ? s.actTypeBtnActive : ''}`}
-                        style={actType === t.value ? { color: ACTIVITY_COLOR[t.value], borderColor: `color-mix(in srgb, ${ACTIVITY_COLOR[t.value]} 40%, rgba(255,255,255,0.1))` } : {}}
-                        onClick={() => setActType(t.value)}
+                        key={t}
+                        className={`${s.actTypeBtn} ${actType === t ? s.actTypeBtnActive : ''}`}
+                        data-tone={ACTIVITY_TONE[t]}
+                        onClick={() => setActType(t)}
                       >
-                        {ACTIVITY_ICONS[t.value]}
-                        {t.label}
+                        {ACTIVITY_ICONS[t]}
+                        {ACTIVITY_LABEL[t]}
                       </button>
                     ))}
                   </div>

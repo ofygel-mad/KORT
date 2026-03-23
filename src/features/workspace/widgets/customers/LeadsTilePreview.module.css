@@ -1,150 +1,253 @@
-/* ── Tile preview root ─────────────────────────── */
 .root {
   height: 100%;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 7px 8px;
+  gap: 8px;
+  padding: 8px;
   overflow: hidden;
 }
 
-/* ── Stats bar ─────────────────────────────────── */
-.statsBar {
+.root,
+.col,
+.statChip,
+.drawerStage {
+  --tone-fill: var(--fill-accent);
+  --tone-soft: var(--fill-accent-soft);
+  --tone-text: var(--text-accent);
+}
+
+.col[data-tone='info'],
+.statChip[data-tone='info'],
+.drawerStage[data-tone='info'] {
+  --tone-fill: var(--fill-info);
+  --tone-soft: var(--fill-info-soft);
+  --tone-text: var(--fill-info-text);
+}
+
+.col[data-tone='warning'],
+.statChip[data-tone='warning'],
+.drawerStage[data-tone='warning'] {
+  --tone-fill: var(--fill-warning);
+  --tone-soft: var(--fill-warning-soft);
+  --tone-text: var(--fill-warning-text);
+}
+
+.col[data-tone='success'],
+.statChip[data-tone='success'],
+.drawerStage[data-tone='success'] {
+  --tone-fill: var(--fill-positive);
+  --tone-soft: var(--fill-positive-soft);
+  --tone-text: var(--fill-positive-text);
+}
+
+.col[data-tone='danger'],
+.statChip[data-tone='danger'],
+.drawerStage[data-tone='danger'] {
+  --tone-fill: var(--fill-negative);
+  --tone-soft: var(--fill-negative-soft);
+  --tone-text: var(--fill-negative-text);
+}
+
+.col[data-tone='muted'],
+.statChip[data-tone='muted'],
+.drawerStage[data-tone='muted'] {
+  --tone-fill: var(--text-tertiary);
+  --tone-soft: var(--bg-surface-inset);
+  --tone-text: var(--text-secondary);
+}
+
+.tabBar,
+.statsBar,
+.screenBadge {
   display: flex;
-  gap: 5px;
+  align-items: center;
+  gap: 6px;
   flex-shrink: 0;
+}
+
+.tabBar {
+  flex-wrap: wrap;
+}
+
+.tabPill {
+  min-height: 20px;
+  padding: 0 8px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: color-mix(in srgb, var(--bg-surface) 56%, transparent);
+  color: var(--text-tertiary);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.tabPillActive {
+  background: color-mix(in srgb, var(--fill-accent-soft) 58%, var(--bg-surface));
+  border-color: color-mix(in srgb, var(--fill-accent) 24%, transparent);
+  color: var(--text-primary);
+}
+
+.statsBar {
+  flex-wrap: wrap;
 }
 
 .statChip {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.07);
+  gap: 5px;
+  min-height: 24px;
+  padding: 0 8px;
   border-radius: 999px;
-  padding: 2px 7px 2px 5px;
+  border: 1px solid color-mix(in srgb, var(--tone-fill) 18%, var(--border-subtle));
+  background: color-mix(in srgb, var(--tone-soft) 62%, var(--bg-surface));
 }
 
-.statDot {
+.statDot,
+.colDot,
+.screenDot,
+.drawerEventDot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
   flex-shrink: 0;
 }
 
+.statDot,
+.colDot {
+  background: var(--tone-fill);
+}
+
 .statNum {
+  color: var(--text-primary);
   font-size: 11px;
-  font-weight: 700;
-  color: rgba(255,255,255,0.85);
+  font-weight: 800;
 }
 
 .statLabel {
+  color: var(--text-tertiary);
   font-size: 10px;
-  color: rgba(255,255,255,0.35);
 }
 
-/* ── Mini board ─────────────────────────────────── */
-.board {
+.board,
+.shimmer {
   display: flex;
-  gap: 4px;
+  gap: 6px;
   flex: 1;
   min-height: 0;
   overflow: hidden;
 }
 
-.col {
+.col,
+.shimmerCol {
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  background: rgba(255,255,255,0.02);
-  border: 1px solid rgba(255,255,255,0.05);
-  border-top: 2px solid var(--col-accent, #6b7280);
-  border-radius: 7px;
-  padding: 5px 4px;
-  min-width: 0;
+  gap: 5px;
+  padding: 6px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--tone-fill) 16%, var(--border-subtle));
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--bg-surface) 78%, var(--tone-soft)) 0%,
+    color-mix(in srgb, var(--bg-surface-inset) 46%, transparent) 100%
+  );
+  box-shadow: var(--surface-shadow-rest);
   overflow: hidden;
+}
+
+.col {
+  border-top: 2px solid color-mix(in srgb, var(--tone-fill) 62%, transparent);
 }
 
 .colHead {
   display: flex;
   align-items: center;
-  gap: 3px;
-  margin-bottom: 3px;
-  flex-shrink: 0;
-}
-
-.colDot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.colLabel {
-  font-size: 8px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: rgba(255,255,255,0.4);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  flex: 1;
+  gap: 5px;
   min-width: 0;
 }
 
+.colLabel {
+  flex: 1;
+  min-width: 0;
+  color: var(--text-secondary);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .colCount {
-  font-size: 9px;
-  font-weight: 700;
-  color: rgba(255,255,255,0.3);
-  background: rgba(255,255,255,0.06);
+  min-width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 999px;
-  padding: 0 4px;
-  line-height: 14px;
-  flex-shrink: 0;
+  background: color-mix(in srgb, var(--tone-soft) 58%, var(--bg-surface));
+  color: var(--tone-text);
+  font-size: 9px;
+  font-weight: 800;
 }
 
 .colCards {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 4px;
+  min-height: 0;
   overflow: hidden;
 }
 
 .colEmpty {
-  height: 20px;
-  border: 1px dashed rgba(255,255,255,0.06);
-  border-radius: 5px;
+  height: 22px;
+  border: 1px dashed color-mix(in srgb, var(--tone-fill) 20%, var(--border-subtle));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--bg-surface-inset) 36%, transparent);
 }
 
-/* ── Mini card ──────────────────────────────────── */
 .card {
   display: flex;
   align-items: center;
-  gap: 4px;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.06);
-  border-radius: 5px;
-  padding: 3px 4px;
+  gap: 6px;
   min-width: 0;
+  padding: 5px 6px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--card-border) 88%, transparent);
+  background: color-mix(in srgb, var(--card-bg) 82%, transparent);
 }
 
-.cardAvatar {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: rgba(160,104,56,0.25);
-  color: rgba(210,160,90,0.9);
-  font-size: 8px;
-  font-weight: 700;
+.cardActive {
+  border-color: color-mix(in srgb, var(--fill-accent) 28%, transparent);
+  background: color-mix(in srgb, var(--fill-accent-soft) 48%, var(--card-bg));
+}
+
+.cardAvatar,
+.drawerAvatar,
+.feedAvatar {
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--fill-accent-soft) 78%, transparent);
+  color: var(--text-accent);
+  font-weight: 800;
 }
 
-.cardInfo {
+.cardAvatar {
+  width: 18px;
+  height: 18px;
+  font-size: 8px;
+}
+
+.cardInfo,
+.drawerMeta {
   flex: 1;
   min-width: 0;
   display: flex;
@@ -153,241 +256,172 @@
 }
 
 .cardName {
+  color: var(--text-primary);
   font-size: 9px;
-  font-weight: 600;
-  color: rgba(255,255,255,0.8);
+  font-weight: 700;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .cardSrc {
+  color: var(--text-tertiary);
   font-size: 7px;
-  font-weight: 700;
-  color: rgba(147,197,253,0.65);
-  letter-spacing: 0.03em;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.cardBudget,
+.drawerBudget {
+  color: var(--fill-positive-text);
+  font-weight: 800;
 }
 
 .cardBudget {
-  font-size: 8px;
-  font-weight: 700;
-  color: rgba(134,239,172,0.7);
-  white-space: nowrap;
   flex-shrink: 0;
+  font-size: 8px;
 }
 
-/* ── More chip ──────────────────────────────────── */
 .moreChip {
+  padding: 2px 0 0;
+  color: var(--text-tertiary);
   font-size: 8px;
-  color: rgba(255,255,255,0.25);
   text-align: center;
-  padding: 1px 0;
-}
-
-/* ── Loading shimmer ────────────────────────────── */
-.shimmer {
-  display: flex;
-  gap: 4px;
-  flex: 1;
-}
-
-.shimmerCol {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 4px;
-  background: rgba(255,255,255,0.02);
-  border-radius: 7px;
-  border-top: 2px solid rgba(255,255,255,0.06);
-}
-
-@keyframes shimmerAnim {
-  0%   { opacity: 0.4; }
-  50%  { opacity: 0.8; }
-  100% { opacity: 0.4; }
-}
-
-.shimmerHdr {
-  height: 8px;
-  border-radius: 4px;
-  background: rgba(255,255,255,0.07);
-  animation: shimmerAnim 1.5s ease-in-out infinite;
-}
-
-.shimmerCard {
-  height: 22px;
-  border-radius: 5px;
-  background: rgba(255,255,255,0.05);
-  animation: shimmerAnim 1.5s ease-in-out infinite 0.3s;
-}
-
-/* ── Tab bar (board mode) ────────────────────────── */
-.tabBar {
-  display: flex;
-  gap: 3px;
-  flex-shrink: 0;
-}
-
-.tabPill {
-  font-size: 7px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: rgba(255,255,255,0.22);
-  padding: 1px 5px;
-  border-radius: 999px;
-  border: 1px solid transparent;
-}
-
-.tabPillActive {
-  color: rgba(255,255,255,0.75);
-  background: rgba(255,255,255,0.06);
-  border-color: rgba(255,255,255,0.10);
-}
-
-/* ── Card active highlight ───────────────────────── */
-.cardActive {
-  border-color: rgba(160,104,56,0.45) !important;
-  background: rgba(160,104,56,0.08) !important;
-}
-
-/* ── Screen badge (drawer mode header) ──────────── */
-.screenBadge {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex-shrink: 0;
 }
 
 .screenDot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: rgba(160,104,56,0.8);
-  flex-shrink: 0;
+  background: var(--fill-accent);
 }
 
 .screenLabel {
+  color: var(--text-tertiary);
   font-size: 7px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
+  font-weight: 800;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(255,255,255,0.28);
 }
 
-/* ── Drawer preview (drawer mode body) ──────────── */
 .drawerPreview {
   flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  background: rgba(255,255,255,0.025);
-  border: 1px solid rgba(255,255,255,0.07);
-  border-radius: 9px;
-  padding: 8px 8px 7px;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--fill-accent) 16%, var(--border-subtle));
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--brand-surface-2) 84%, transparent) 0%,
+    color-mix(in srgb, var(--bg-surface) 86%, transparent) 100%
+  );
+  box-shadow: var(--brand-panel-shadow);
   overflow: hidden;
-  min-height: 0;
 }
 
 .drawerHeader {
   display: flex;
   align-items: center;
-  gap: 7px;
-  flex-shrink: 0;
+  gap: 8px;
 }
 
 .drawerAvatar {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: rgba(160,104,56,0.28);
-  color: rgba(210,160,90,0.95);
+  width: 24px;
+  height: 24px;
   font-size: 10px;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.drawerMeta {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
 }
 
 .drawerName {
-  font-size: 10px;
+  color: var(--text-primary);
+  font-size: 11px;
   font-weight: 700;
-  color: rgba(255,255,255,0.9);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .drawerStage {
-  display: inline-block;
-  font-size: 7.5px;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  border: 1px solid;
+  width: fit-content;
+  min-height: 16px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 6px;
   border-radius: 999px;
-  padding: 0 5px;
-  line-height: 14px;
+  border: 1px solid color-mix(in srgb, var(--tone-fill) 24%, transparent);
+  background: color-mix(in srgb, var(--tone-soft) 72%, transparent);
+  color: var(--tone-text);
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
 .drawerRow {
   display: flex;
   align-items: center;
-  gap: 5px;
-  flex-shrink: 0;
+  gap: 6px;
 }
 
 .drawerRowLabel {
+  min-width: 42px;
+  color: var(--text-tertiary);
   font-size: 8px;
-  color: rgba(255,255,255,0.28);
-  flex-shrink: 0;
-  min-width: 38px;
 }
 
 .drawerRowValue {
+  color: var(--text-secondary);
   font-size: 9px;
   font-weight: 600;
-  color: rgba(255,255,255,0.65);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-/* Last event from the feed */
 .drawerEvent {
+  margin-top: auto;
   display: flex;
   align-items: flex-start;
-  gap: 4px;
-  margin-top: auto;
-  padding-top: 5px;
-  border-top: 1px solid rgba(255,255,255,0.05);
-  flex-shrink: 0;
+  gap: 6px;
+  padding-top: 8px;
+  border-top: 1px solid color-mix(in srgb, var(--fill-accent) 12%, var(--border-subtle));
 }
 
 .drawerEventDot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: rgba(160,104,56,0.65);
-  flex-shrink: 0;
-  margin-top: 2px;
+  margin-top: 3px;
+  background: var(--fill-accent);
 }
 
 .drawerEventText {
+  color: var(--text-tertiary);
   font-size: 8px;
-  line-height: 1.4;
-  color: rgba(255,255,255,0.32);
+  line-height: 1.45;
   overflow: hidden;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
+}
+
+.shimmerCol {
+  --tone-fill: var(--fill-accent);
+}
+
+.shimmerHdr,
+.shimmerCard {
+  border-radius: 8px;
+  background: var(--brand-skeleton-shimmer), color-mix(in srgb, var(--bg-surface-inset) 72%, transparent);
+  background-size: 180% 100%;
+  animation: shimmerAnim 1.5s ease-in-out infinite;
+}
+
+.shimmerHdr {
+  height: 10px;
+}
+
+.shimmerCard {
+  height: 24px;
+}
+
+@keyframes shimmerAnim {
+  0% { background-position: 140% 0; }
+  100% { background-position: -40% 0; }
 }

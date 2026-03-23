@@ -34,8 +34,8 @@ export function DeleteConfirmModal({ tileId }: Props) {
               style={{ maxWidth: 400 }}
             >
               <div className={s.header}>
-                <div className={s.iconWrap} style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)' }}>
-                  <Trash2 size={18} color="#f87171" />
+                <div className={`${s.iconWrap} ${s.iconDanger}`}>
+                  <Trash2 size={18} />
                 </div>
                 <div>
                   <div className={s.title}>Удалить сделку?</div>
@@ -44,7 +44,7 @@ export function DeleteConfirmModal({ tileId }: Props) {
                 <button className={s.closeBtn} onClick={closeDeleteConfirm}><X size={14} /></button>
               </div>
               <div className={s.body}>
-                <div className={s.wonMessage} style={{ color: 'rgba(252,165,165,0.7)' }}>
+                <div className={`${s.wonMessage} ${s.warningMessage}`}>
                   Сделка будет удалена безвозвратно. Вся история активности и задачи будут потеряны.
                 </div>
               </div>

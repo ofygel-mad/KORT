@@ -43,7 +43,12 @@
   appearance: none;
 }
 
-.input::placeholder { color: var(--input-placeholder); }
+.input::placeholder {
+  color: color-mix(in srgb, var(--input-text) 50%, var(--input-placeholder));
+  opacity: 1;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
 .input:hover:not(:disabled):not(.error) { border-color: var(--input-border-hover); }
 .input:focus:not(.error) { border-color: var(--input-border-focus); box-shadow: var(--shadow-focus); }
 .input:disabled { opacity: 0.5; cursor: not-allowed; background: var(--bg-muted); }

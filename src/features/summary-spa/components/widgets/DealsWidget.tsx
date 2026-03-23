@@ -5,30 +5,41 @@
 import { useSummaryStore } from '../../model/summary.store';
 import s from './Widgets.module.css';
 
+type Tone = 'info' | 'violet' | 'warning' | 'magenta' | 'accent' | 'muted';
+
 const STAGE_LABEL: Record<string, string> = {
   awaiting_meeting: 'Ожидает встречи',
-  meeting_done:     'Встреча',
-  proposal:         'КП',
-  contract:         'Договор',
+  meeting_done: 'Встреча',
+  proposal: 'КП',
+  contract: 'Договор',
   awaiting_payment: 'Оплата',
 };
 
-const STAGE_COLORS: Record<string, string> = {
-  awaiting_meeting: '#3b82f6',
-  meeting_done:     '#8b5cf6',
-  proposal:         '#f59e0b',
-  contract:         '#ec4899',
-  awaiting_payment: '#f97316',
+const STAGE_TONES: Record<string, Tone> = {
+  awaiting_meeting: 'info',
+  meeting_done: 'violet',
+  proposal: 'warning',
+  contract: 'magenta',
+  awaiting_payment: 'accent',
+};
+
+const TONE_CLASS: Record<Tone, string> = {
+  info: s.toneInfo,
+  violet: s.toneViolet,
+  warning: s.toneWarning,
+  magenta: s.toneMagenta,
+  accent: s.toneAccent,
+  muted: s.toneMuted,
 };
 
 function fmtMoney(n: number): string {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'М ₸';
-  if (n >= 1_000)     return Math.round(n / 1_000) + 'к ₸';
+  if (n >= 1_000) return Math.round(n / 1_000) + 'к ₸';
   return n + ' ₸';
 }
 
 export function DealsFunnelWidget() {
-  const dealsSnap = useSummaryStore(s => s.dealsSnap);
+  const dealsSnap = useSummaryStore((state) => state.dealsSnap);
 
   if (!dealsSnap) {
     return (
@@ -40,13 +51,13 @@ export function DealsFunnelWidget() {
   }
 
   const stages = Object.entries(dealsSnap.byStage)
-    .filter(([k]) => !['won', 'lost'].includes(k))
+    .filter(([key]) => !['won', 'lost'].includes(key))
     .sort(([a], [b]) => {
       const order = ['awaiting_meeting', 'meeting_done', 'proposal', 'contract', 'awaiting_payment'];
       return order.indexOf(a) - order.indexOf(b);
     });
 
-  const maxCount = Math.max(...stages.map(([, v]) => v.count), 1);
+  const maxCount = Math.max(...stages.map(([, value]) => value.count), 1);
 
   return (
     <div className={s.chartCard}>
@@ -55,14 +66,14 @@ export function DealsFunnelWidget() {
           <div className={s.chartTitle}>Воронка сделок</div>
           <div className={s.chartSubtitle}>{dealsSnap.totalActive} активных сделок</div>
         </div>
-        <div style={{ display: 'flex', gap: 12 }}>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 18, fontWeight: 700, color: '#22c55e' }}>{dealsSnap.totalWon}</div>
-            <div style={{ fontSize: 10, color: '#6b7280' }}>выиграно</div>
+        <div className={s.chartStatGroup}>
+          <div className={`${s.chartStat} ${s.tonePositive}`}>
+            <div className={s.chartStatValue}>{dealsSnap.totalWon}</div>
+            <div className={s.chartStatLabel}>выиграно</div>
           </div>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 18, fontWeight: 700, color: '#ef4444' }}>{dealsSnap.totalLost}</div>
-            <div style={{ fontSize: 10, color: '#6b7280' }}>проиграно</div>
+          <div className={`${s.chartStat} ${s.toneDanger}`}>
+            <div className={s.chartStatValue}>{dealsSnap.totalLost}</div>
+            <div className={s.chartStatLabel}>проиграно</div>
           </div>
         </div>
       </div>
@@ -78,11 +89,8 @@ export function DealsFunnelWidget() {
             </div>
             <div className={s.funnelTrack}>
               <div
-                className={s.funnelFill}
-                style={{
-                  width: `${(count / maxCount) * 100}%`,
-                  background: STAGE_COLORS[stage] ?? '#6b7280',
-                }}
+                className={`${s.funnelFill} ${TONE_CLASS[STAGE_TONES[stage] ?? 'muted']}`}
+                style={{ width: `${(count / maxCount) * 100}%` }}
               />
             </div>
           </div>
@@ -93,7 +101,7 @@ export function DealsFunnelWidget() {
 }
 
 export function LostReasonsWidget() {
-  const dealsSnap = useSummaryStore(s => s.dealsSnap);
+  const dealsSnap = useSummaryStore((state) => state.dealsSnap);
 
   if (!dealsSnap || Object.keys(dealsSnap.lostReasonBreakdown).length === 0) {
     return (
@@ -104,9 +112,8 @@ export function LostReasonsWidget() {
     );
   }
 
-  const reasons = Object.entries(dealsSnap.lostReasonBreakdown)
-    .sort(([, a], [, b]) => b - a);
-  const maxCount = Math.max(...reasons.map(([, c]) => c), 1);
+  const reasons = Object.entries(dealsSnap.lostReasonBreakdown).sort(([, a], [, b]) => b - a);
+  const maxCount = Math.max(...reasons.map(([, count]) => count), 1);
 
   return (
     <div className={s.chartCard}>

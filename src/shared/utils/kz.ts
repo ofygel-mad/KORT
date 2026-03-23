@@ -37,12 +37,84 @@ export function formatBinIin(value: string): string {
   return value.replace(/\D/g, '').slice(0, 12);
 }
 
+function readKazakhPhoneDigits(value: string): string {
+  const digits = value.replace(/\D/g, '');
+
+  if (!digits) {
+    return '';
+  }
+
+  if (digits === '7') {
+    return '7';
+  }
+
+  if (digits.startsWith('8')) {
+    return `7${digits.slice(1)}`.slice(0, 11);
+  }
+
+  if (digits.length === 11 && digits.startsWith('7')) {
+    return digits.slice(0, 11);
+  }
+
+  if (digits.length <= 10) {
+    return `7${digits}`.slice(0, 11);
+  }
+
+  return `7${digits.slice(-10)}`.slice(0, 11);
+}
+
+export function formatKazakhPhoneInput(value: string): string {
+  const digits = readKazakhPhoneDigits(value);
+  const national = digits.startsWith('7') ? digits.slice(1) : digits;
+
+  if (!digits.length) {
+    return '';
+  }
+
+  if (!national.length) {
+    return '+7';
+  }
+
+  let formatted = '+7';
+
+  if (national.length > 0) {
+    formatted += ` (${national.slice(0, 3)}`;
+  }
+
+  if (national.length >= 4) {
+    formatted += `) ${national.slice(3, 6)}`;
+  }
+
+  if (national.length >= 7) {
+    formatted += `-${national.slice(6, 8)}`;
+  }
+
+  if (national.length >= 9) {
+    formatted += `-${national.slice(8, 10)}`;
+  }
+
+  return formatted;
+}
+
+export function isKazakhPhoneComplete(value: string): boolean {
+  const digits = readKazakhPhoneDigits(value);
+  return digits.length === 11 && digits.startsWith('7');
+}
+
+export function normalizeKazakhPhone(value: string): string | null {
+  const digits = readKazakhPhoneDigits(value);
+  if (digits.length !== 11 || !digits.startsWith('7')) {
+    return null;
+  }
+
+  return `+${digits}`;
+}
+
 /**
  * Форматирует казахстанский номер телефона для wa.me
  * +7 700 123 45 67 → 77001234567
  */
 export function formatPhoneForWhatsApp(phone: string): string {
-  let p = phone.replace(/\D/g, '');
-  if (p.startsWith('8') && p.length === 11) p = '7' + p.slice(1);
-  return p;
+  const normalized = normalizeKazakhPhone(phone);
+  return normalized ? normalized.slice(1) : phone.replace(/\D/g, '');
 }

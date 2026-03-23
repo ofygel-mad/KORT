@@ -26,6 +26,8 @@ export class SceneInputController {
   private lastPointerY = 0;
   private _pointerInfluenceActive = false;
   private cachedCanvasRect: DOMRect | null = null;
+  private suppressPointerInfluenceUntil = 0;
+  private syncPointerOnNextMove = false;
 
   constructor(options: SceneInputControllerOptions) {
     this.canvas = options.canvas;
@@ -44,6 +46,12 @@ export class SceneInputController {
 
   updateCachedRect(rect: DOMRect) {
     this.cachedCanvasRect = rect;
+  }
+
+  suppressPointerInfluence(durationMs = 260) {
+    this._pointerInfluenceActive = false;
+    this.suppressPointerInfluenceUntil = performance.now() + durationMs;
+    this.syncPointerOnNextMove = true;
   }
 
   resetDrag() {
@@ -116,7 +124,9 @@ export class SceneInputController {
   };
 
   private readonly handleWindowPointerMove = (event: PointerEvent) => {
-    if (this.shouldIgnorePointerTarget(event.target, event.buttons)) {
+    const pointerInfluenceSuppressed = performance.now() < this.suppressPointerInfluenceUntil;
+
+    if (pointerInfluenceSuppressed || this.shouldIgnorePointerTarget(event.target, event.buttons)) {
       this.pointerTarget.set(0, 0);
       this._pointerInfluenceActive = false;
     } else {
@@ -124,7 +134,13 @@ export class SceneInputController {
       if (rect && rect.width > 0 && rect.height > 0) {
         const nx = ((event.clientX - rect.left) / rect.width) * 2 - 1;
         const ny = -(((event.clientY - rect.top) / rect.height) * 2 - 1);
-        this.pointerTarget.set(clamp(nx, -1, 1), clamp(ny, -1, 1));
+        const clampedX = clamp(nx, -1, 1);
+        const clampedY = clamp(ny, -1, 1);
+        if (this.syncPointerOnNextMove) {
+          this.pointer.set(clampedX, clampedY);
+          this.syncPointerOnNextMove = false;
+        }
+        this.pointerTarget.set(clampedX, clampedY);
         this._pointerInfluenceActive = true;
       }
     }

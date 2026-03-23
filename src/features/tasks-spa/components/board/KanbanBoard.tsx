@@ -8,9 +8,18 @@ import { Plus } from 'lucide-react';
 import { useTasksStore } from '../../model/tasks.store';
 import { useTileTasksUI } from '../../model/tile-ui.store';
 import { TaskCard } from './TaskCard';
-import { STATUS_LABEL, STATUS_COLOR, STATUS_ORDER } from '../../api/types';
-import type { TaskStatus, Task } from '../../api/types';
+import { STATUS_LABEL, STATUS_ORDER, STATUS_TONE } from '../../api/types';
+import type { TaskStatus, Task, TaskTone } from '../../api/types';
 import s from './Board.module.css';
+
+const TONE_CLASS: Record<TaskTone, string> = {
+  muted: s.toneMuted,
+  info: s.toneInfo,
+  warning: s.toneWarning,
+  danger: s.toneDanger,
+  success: s.toneSuccess,
+  accent: s.toneAccent,
+};
 
 export function TaskKanbanBoard({ tileId }: { tileId: string }) {
   const tasks       = useTasksStore(st => st.tasks);
@@ -41,7 +50,7 @@ export function TaskKanbanBoard({ tileId }: { tileId: string }) {
     return STATUS_ORDER.map(st => ({
       status: st,
       label: STATUS_LABEL[st],
-      color: STATUS_COLOR[st],
+      toneClass: TONE_CLASS[STATUS_TONE[st]],
       tasks: byStatus[st],
     }));
   }, [tasks, filterStatus, filterAssignee, filterPriority, searchQuery]);
@@ -64,7 +73,7 @@ export function TaskKanbanBoard({ tileId }: { tileId: string }) {
           {/* Header */}
           <div className={s.columnHeader}>
             <div className={s.columnTitleRow}>
-              <div className={s.columnDot} style={{ background: col.color }} />
+              <div className={`${s.columnDot} ${col.toneClass}`} />
               <span className={s.columnTitle}>{col.label}</span>
               <span className={s.columnCount}>{col.tasks.length}</span>
             </div>

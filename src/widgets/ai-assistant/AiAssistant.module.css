@@ -12,14 +12,14 @@
   height: 52px;
   border-radius: 50%;
   z-index: 199;
-  background: linear-gradient(135deg, color-mix(in srgb, #7C3AED 74%, var(--fill-accent) 26%) 0%, var(--brand-accent-strong) 100%);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--fill-info) 36%, var(--fill-accent) 64%) 0%, var(--brand-accent-strong) 100%);
   border: 1px solid color-mix(in srgb, white 16%, transparent);
   cursor: pointer;
-  color: #fff;
+  color: var(--text-inverse);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 16px 34px -18px color-mix(in srgb, #7C3AED 58%, transparent), var(--brand-panel-shadow);
+  box-shadow: 0 16px 34px -18px color-mix(in srgb, var(--fill-accent) 42%, transparent), var(--brand-panel-shadow);
   bottom: var(--trigger-bottom, 24px);
 }
 
@@ -34,18 +34,18 @@
   align-items: center;
   gap: 10px;
   flex-shrink: 0;
-  background: linear-gradient(135deg, #7C3AED11, var(--fill-accent-subtle));
+  background: linear-gradient(135deg, color-mix(in srgb, var(--fill-info-soft) 44%, transparent), var(--fill-accent-subtle));
 }
 
 .headerAvatar {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #7C3AED, var(--fill-accent));
+  background: linear-gradient(135deg, color-mix(in srgb, var(--fill-info) 34%, var(--fill-accent) 66%), var(--fill-accent));
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
+  color: var(--text-inverse);
   flex-shrink: 0;
 }
 
@@ -150,8 +150,8 @@
 }
 
 .msgAvatar.bot {
-  background: linear-gradient(135deg, #7C3AED, var(--fill-accent));
-  color: #fff;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--fill-info) 34%, var(--fill-accent) 66%), var(--fill-accent));
+  color: var(--text-inverse);
 }
 
 .bubble {
@@ -194,7 +194,7 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #7C3AED;
+  background: var(--fill-accent);
 }
 
 /* ── Input area ──────────────────────────────────────────────── */
@@ -244,8 +244,8 @@
 }
 
 .sendBtn.active {
-  background: linear-gradient(135deg, #7C3AED, var(--fill-accent));
-  color: #fff;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--fill-info) 34%, var(--fill-accent) 66%), var(--fill-accent));
+  color: var(--text-inverse);
 }
 
 .sendBtn.inactive {

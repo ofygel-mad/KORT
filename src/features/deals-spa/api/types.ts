@@ -14,6 +14,8 @@ export type DealStage =
   | 'won'
   | 'lost';
 
+export type DealTone = 'accent' | 'info' | 'warning' | 'success' | 'danger' | 'muted';
+
 export const STAGE_LABEL: Record<DealStage, string> = {
   awaiting_meeting:  'Ожидает встречи',
   meeting_done:      'Встреча проведена',
@@ -24,14 +26,24 @@ export const STAGE_LABEL: Record<DealStage, string> = {
   lost:              'Слив',
 };
 
+export const STAGE_TONE: Record<DealStage, DealTone> = {
+  awaiting_meeting:  'info',
+  meeting_done:      'accent',
+  proposal:          'warning',
+  contract:          'accent',
+  awaiting_payment:  'warning',
+  won:               'success',
+  lost:              'danger',
+};
+
 export const STAGE_ACCENT: Record<DealStage, string> = {
-  awaiting_meeting:  '#3b82f6',
-  meeting_done:      '#8b5cf6',
-  proposal:          '#f59e0b',
-  contract:          '#ec4899',
-  awaiting_payment:  '#f97316',
-  won:               '#22c55e',
-  lost:              '#ef4444',
+  awaiting_meeting:  'var(--fill-info)',
+  meeting_done:      'var(--fill-accent)',
+  proposal:          'var(--fill-warning)',
+  contract:          'var(--fill-accent)',
+  awaiting_payment:  'var(--fill-warning)',
+  won:               'var(--fill-positive)',
+  lost:              'var(--fill-negative)',
 };
 
 /** Default win probability % per stage */
@@ -62,14 +74,29 @@ export const ACTIVITY_LABEL: Record<ActivityType, string> = {
   system:       'Система',
 };
 
-export const ACTIVITY_COLOR: Record<ActivityType, string> = {
-  note:         '#8b5cf6',
-  call:         '#22c55e',
-  meeting:      '#3b82f6',
-  email:        '#f59e0b',
-  stage_change: '#ec4899',
-  system:       '#6b7280',
+export const ACTIVITY_TONE: Record<ActivityType, DealTone> = {
+  note:         'accent',
+  call:         'success',
+  meeting:      'info',
+  email:        'warning',
+  stage_change: 'accent',
+  system:       'muted',
 };
+
+export const ACTIVITY_COLOR: Record<ActivityType, string> = {
+  note:         'var(--fill-accent)',
+  call:         'var(--fill-positive)',
+  meeting:      'var(--fill-info)',
+  email:        'var(--fill-warning)',
+  stage_change: 'var(--fill-accent)',
+  system:       'var(--text-tertiary)',
+};
+
+export function getDealProbabilityTone(probability: number): DealTone {
+  if (probability >= 75) return 'success';
+  if (probability >= 45) return 'warning';
+  return 'danger';
+}
 
 export interface DealActivity {
   id: string;

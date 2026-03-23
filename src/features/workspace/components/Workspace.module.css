@@ -586,6 +586,46 @@
   pointer-events: none;
 }
 
+.tileMonitorLocked {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 8px;
+  padding: 18px;
+  text-align: center;
+  background:
+    radial-gradient(circle at 50% 24%, rgba(205, 164, 108, 0.12), transparent 52%),
+    linear-gradient(160deg, rgba(17, 13, 9, 0.98), rgba(8, 6, 4, 0.98));
+}
+
+.tileMonitorLockedIcon {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(210, 160, 90, 0.12);
+  color: rgba(220, 176, 109, 0.92);
+  border: 1px solid rgba(210, 160, 90, 0.18);
+}
+
+.tileMonitorLockedTitle {
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.tileMonitorLockedText {
+  max-width: 250px;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  line-height: 1.55;
+}
+
 .tileFlight .tileMonitor {
   background: rgba(5, 6, 8, 0.98);
 }
@@ -601,8 +641,8 @@
 .tileModalBackdrop {
   position: fixed;
   inset: 0;
-  background: rgba(4, 3, 8, 0.65);
-  backdrop-filter: blur(6px) saturate(80%);
+  background: color-mix(in srgb, var(--bg-overlay) 92%, rgba(0, 0, 0, 0.12));
+  backdrop-filter: blur(10px) saturate(118%);
   z-index: 200;
   cursor: default;
   border: none;
@@ -617,6 +657,7 @@
   align-items: center;
   justify-content: center;
   pointer-events: none;
+  padding: 18px;
 }
 
 .tileModal {
@@ -625,30 +666,27 @@
   display: grid;
   grid-template-rows: auto minmax(0,1fr);
   gap: 0;
-  border-radius: 20px;
-  border: 1px solid rgba(255,255,255,0.12);
-  background: linear-gradient(160deg, #1c1812 0%, #130f0a 100%);
-  box-shadow:
-    0 0 0 1px rgba(160,104,56,0.18),
-    0 0 80px rgba(0,0,0,0.5),
-    0 50px 120px rgba(0,0,0,0.55);
+  border-radius: calc(var(--surface-radius) + 10px);
+  border: 1px solid var(--brand-panel-border);
+  background: var(--brand-surface-3);
+  box-shadow: var(--brand-panel-shadow-strong);
   overflow: hidden;
-  color-scheme: dark;
+  color-scheme: light dark;
 }
 
 .tileModalDefault {
   width:  min(88vw, 1200px);
-  height: min(86vh, 820px);
+  height: min(86dvh, 820px);
 }
 
 .tileModalCompact {
   width:  min(70vw, 940px);
-  height: min(76vh, 660px);
+  height: min(76dvh, 660px);
 }
 
 .tileModalWide {
   width:  min(97vw, 1540px);
-  height: min(94vh, 940px);
+  height: min(94dvh, 940px);
 }
 
 /* Header — glass strip */
@@ -657,10 +695,12 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 10px 14px 10px;
-  border-bottom: 1px solid rgba(255,255,255,0.07);
-  background: rgba(255,255,255,0.025);
-  backdrop-filter: blur(8px);
+  padding: 12px 16px;
+  border-bottom: 1px solid color-mix(in srgb, var(--brand-panel-border) 84%, transparent);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, white 10%, transparent) 0%, transparent 100%),
+    color-mix(in srgb, var(--bg-surface) 88%, transparent);
+  backdrop-filter: blur(12px);
   flex-shrink: 0;
 }
 
@@ -690,42 +730,67 @@
 }
 
 .tileModalAction {
-  width: 32px;
-  height: 32px;
-  border-radius: 9px;
-  border: 1px solid rgba(255,255,255,0.07);
-  background: rgba(255,255,255,0.04);
-  color: rgba(255,255,255,0.45);
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--brand-panel-border) 86%, transparent);
+  background: color-mix(in srgb, var(--bg-surface-elevated) 86%, transparent);
+  color: var(--text-secondary);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: background 140ms, border-color 140ms, color 140ms;
+  transition:
+    transform var(--motion-fast) var(--motion-ease),
+    background var(--motion-fast) var(--motion-ease),
+    border-color var(--motion-fast) var(--motion-ease),
+    color var(--motion-fast) var(--motion-ease),
+    box-shadow var(--motion-fast) var(--motion-ease);
 }
 
 .tileModalAction:hover {
-  background: rgba(255,255,255,0.09);
-  border-color: rgba(255,255,255,0.13);
-  color: rgba(255,255,255,0.8);
+  transform: var(--feedback-raise-hover);
+  background: color-mix(in srgb, var(--bg-hover) 76%, var(--fill-accent-subtle));
+  border-color: color-mix(in srgb, var(--fill-accent) 22%, var(--brand-panel-border));
+  color: var(--text-primary);
+  box-shadow: var(--shadow-sm);
 }
 
 .tileModalActionActive {
-  background: rgba(160,104,56,0.18) !important;
-  border-color: rgba(160,104,56,0.45) !important;
-  color: rgba(210,160,90,0.9) !important;
+  background: color-mix(in srgb, var(--fill-accent-soft) 74%, var(--bg-surface)) !important;
+  border-color: color-mix(in srgb, var(--fill-accent) 34%, var(--brand-panel-border)) !important;
+  color: var(--text-accent) !important;
 }
 
 .tileModalActionClose:hover {
-  background: rgba(239,68,68,0.12) !important;
-  border-color: rgba(239,68,68,0.3) !important;
-  color: #fca5a5 !important;
+  background: color-mix(in srgb, var(--fill-negative-soft) 72%, var(--bg-surface)) !important;
+  border-color: color-mix(in srgb, var(--fill-negative) 24%, var(--border-subtle)) !important;
+  color: var(--fill-negative-text) !important;
 }
 
 /* SPA content — full remaining space, no inner border */
 .tileModalMonitor {
   min-height: 0;
   overflow: hidden;
-  background: transparent;
+  background: color-mix(in srgb, var(--bg-surface-elevated) 92%, transparent);
+}
+
+.tileModalGate {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background:
+    radial-gradient(circle at 50% 22%, color-mix(in srgb, var(--fill-accent) 10%, transparent) 0%, transparent 34%),
+    linear-gradient(160deg, color-mix(in srgb, var(--bg-surface) 94%, transparent), color-mix(in srgb, var(--bg-surface-inset) 96%, transparent));
+}
+
+.tileModalGateHint {
+  margin-top: 10px;
+  color: var(--text-tertiary);
+  font-size: 12px;
+  line-height: 1.6;
 }
 
 /* Legacy — kept for backward compat */
@@ -763,13 +828,13 @@
   /* position/top/right/z-index set inline via JS getPopoverStyle() */
   width: min(300px, calc(100vw - 48px));
   padding: 14px;
-  border-radius: 16px;
-  border: 1px solid rgba(255,255,255,0.1);
-  background: linear-gradient(158deg, rgba(28,22,14,0.99), rgba(14,10,7,0.99));
-  box-shadow: 0 20px 56px rgba(0,0,0,0.6), 0 0 0 1px rgba(160,104,56,0.1);
+  border-radius: calc(var(--surface-radius-tight) + 2px);
+  border: 1px solid var(--brand-panel-border);
+  background: color-mix(in srgb, var(--bg-surface-elevated) 94%, transparent);
+  box-shadow: var(--brand-panel-shadow-strong);
   display: grid;
   gap: 10px;
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(12px);
 }
 
 .tileSettingsHeader {
@@ -794,17 +859,22 @@
   width: 100%;
   height: 38px;
   padding: 0 12px;
-  border-radius: 10px;
-  border: 1px solid rgba(255,255,255,0.07);
-  background: rgba(255,255,255,0.04);
+  border-radius: 12px;
+  border: 1px solid var(--brand-panel-border);
+  background: color-mix(in srgb, var(--bg-surface) 86%, transparent);
   color: var(--text-primary);
   font-size: 14px;
   outline: none;
-  transition: border-color 140ms;
+  transition:
+    border-color var(--motion-fast) var(--motion-ease),
+    background var(--motion-fast) var(--motion-ease),
+    box-shadow var(--motion-fast) var(--motion-ease);
 }
 
 .tileSettingsField input:focus {
-  border-color: rgba(160,104,56,0.5);
+  border-color: color-mix(in srgb, var(--fill-accent) 34%, var(--border-default));
+  background: color-mix(in srgb, var(--bg-surface-elevated) 92%, transparent);
+  box-shadow: var(--brand-focus-ring);
 }
 
 .tileSettingsSegmented {
@@ -839,32 +909,38 @@
 .tileSettingsAction {
   min-height: 38px;
   padding: 0 12px;
-  border-radius: 10px;
-  border: 1px solid rgba(255,255,255,0.06);
-  background: rgba(255,255,255,0.03);
+  border-radius: 12px;
+  border: 1px solid var(--brand-panel-border);
+  background: color-mix(in srgb, var(--bg-surface) 84%, transparent);
   color: var(--text-secondary);
   font-size: 13px;
   display: inline-flex;
   align-items: center;
   gap: 7px;
   cursor: pointer;
-  transition: background 140ms, color 140ms;
+  transition:
+    transform var(--motion-fast) var(--motion-ease),
+    background var(--motion-fast) var(--motion-ease),
+    border-color var(--motion-fast) var(--motion-ease),
+    color var(--motion-fast) var(--motion-ease);
 }
 
 .tileSettingsAction:hover {
-  background: rgba(255,255,255,0.06);
+  transform: var(--feedback-raise-hover);
+  background: color-mix(in srgb, var(--bg-hover) 76%, var(--fill-accent-subtle));
+  border-color: color-mix(in srgb, var(--fill-accent) 22%, var(--brand-panel-border));
   color: var(--text-primary);
 }
 
 .tileSettingsDanger {
-  border-color: rgba(239,68,68,0.2);
-  color: rgba(252,165,165,0.75);
+  border-color: color-mix(in srgb, var(--fill-negative) 16%, var(--border-subtle));
+  color: var(--fill-negative-text);
 }
 
 .tileSettingsDanger:hover {
-  background: rgba(239,68,68,0.08);
-  border-color: rgba(239,68,68,0.38);
-  color: #fca5a5;
+  background: color-mix(in srgb, var(--fill-negative-soft) 74%, var(--bg-surface));
+  border-color: color-mix(in srgb, var(--fill-negative) 24%, var(--border-subtle));
+  color: var(--fill-negative-text);
 }
 
 /* ═══════════════════════════════════════════════
@@ -1478,3 +1554,96 @@
   margin-right: 4px;
   color: rgba(255, 255, 255, 0.5);
 }
+
+/* ── New nav-shortcut tile styles ─────────────────────── */
+.tileHovered {
+  border-color: rgba(169,205,255,0.25);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.08),
+    0 16px 40px rgba(0,0,0,0.45),
+    0 0 0 1px rgba(59,115,189,0.12);
+}
+
+.tileInner {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 8px;
+  gap: 6px;
+}
+
+.tileHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tileIconWrap {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--tile-color, var(--fill-accent)) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--tile-color, var(--fill-accent)) 30%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--tile-color, var(--fill-accent));
+  flex-shrink: 0;
+}
+
+.tileTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tilePinIcon {
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+.tileDesc {
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  flex: 1;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.tileArrow {
+  font-size: 10px;
+  color: color-mix(in srgb, var(--tile-color, var(--fill-accent)) 80%, transparent);
+  letter-spacing: 0.02em;
+  font-weight: 500;
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+
+.tile:hover .tileArrow,
+.tileHovered .tileArrow {
+  opacity: 1;
+}
+
+/* Legacy monitor styles — keep for backward compat canvas rendering */
+.tileMonitorLocked {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 8px;
+  padding: 16px;
+  text-align: center;
+}
+.tileMonitorLockedIcon { color: var(--text-tertiary); }
+.tileMonitorLockedTitle { font-size: 12px; font-weight: 500; color: var(--text-secondary); }
+.tileMonitorLockedText { font-size: 11px; color: var(--text-tertiary); line-height: 1.5; }

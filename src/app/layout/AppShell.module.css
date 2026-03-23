@@ -1,8 +1,11 @@
 .root {
   position: relative;
   display: flex;
-  min-height: 100vh;
-  background: var(--bg-canvas);
+  min-height: 100dvh;
+  background:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--fill-accent) 8%, transparent) 0%, transparent 28%),
+    radial-gradient(circle at bottom right, color-mix(in srgb, var(--fill-info) 7%, transparent) 0%, transparent 30%),
+    linear-gradient(160deg, color-mix(in srgb, var(--bg-canvas) 94%, white 6%) 0%, var(--bg-canvas) 100%);
   isolation: isolate;
 }
 
@@ -13,27 +16,31 @@
   pointer-events: none;
 }
 
-/* Kept at near-zero opacity — data dominates, background is silent */
 .ambientGlow {
-  background: radial-gradient(circle at center, color-mix(in srgb, var(--fill-accent) 6%, transparent), transparent 52%);
-  filter: blur(34px);
-  opacity: 0.14;
+  background:
+    radial-gradient(circle at 18% 10%, color-mix(in srgb, var(--fill-accent) 16%, transparent), transparent 26%),
+    radial-gradient(circle at 78% 22%, color-mix(in srgb, var(--fill-info) 12%, transparent), transparent 28%),
+    radial-gradient(circle at 55% 88%, color-mix(in srgb, var(--fill-positive) 10%, transparent), transparent 24%);
+  filter: blur(42px);
+  opacity: 0.38;
 }
 
 .ambientGrid {
-  opacity: 0.03;
+  opacity: 0.04;
   background-image:
-    linear-gradient(color-mix(in srgb, var(--text-primary) 18%, transparent) 1px, transparent 1px),
-    linear-gradient(90deg, color-mix(in srgb, var(--text-primary) 18%, transparent) 1px, transparent 1px);
+    linear-gradient(color-mix(in srgb, var(--text-primary) 12%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--text-primary) 12%, transparent) 1px, transparent 1px);
   background-size: 48px 48px;
-  mask-image: linear-gradient(180deg, rgba(255,255,255,0.3), transparent 70%);
+  mask-image: linear-gradient(180deg, rgba(255,255,255,0.48), transparent 80%);
 }
 
 .sidebarRail {
   flex-shrink: 0;
   position: sticky;
   top: 0;
-  height: 100vh;
+  height: 100dvh;
+  overflow: visible;
+  z-index: var(--z-sidebar);
 }
 
 .content {
@@ -41,6 +48,8 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
+  position: relative;
+  z-index: 1;
 }
 
 .main {
@@ -48,6 +57,7 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  min-height: 0;
 }
 
 .routeViewport {
@@ -57,23 +67,23 @@
   overflow: hidden;
 }
 
-
-
-
-
 .offlineBanner {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 1200;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 8px 16px;
-  background: var(--fill-warning);
-  color: var(--text-on-accent);
+  min-height: 38px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--fill-warning) 28%, var(--border-default));
+  background: color-mix(in srgb, var(--fill-warning-soft) 88%, var(--bg-surface));
+  color: var(--fill-warning-text);
+  box-shadow: var(--shadow-sm);
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
 }

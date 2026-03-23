@@ -1,13 +1,15 @@
 import axios, { AxiosError } from 'axios';
 import { nanoid } from 'nanoid';
-import { useAuthStore } from '../stores/auth';
+import { toast } from 'sonner';
+import { emitConsoleEvent } from '../../console/events';
+import { DEV_AUTH_BYPASS_ENABLED } from '../config/devAccess';
 import { redirectTo } from '../lib/browser';
+import { useAuthStore } from '../stores/auth';
+import { readApiErrorMessage } from './errors';
 
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api/v1';
 
-// ─── MOCK MODE ────────────────────────────────────────────────────────────────
-// Установи VITE_MOCK_API=true в .env.local чтобы работать без бэкенда
-const IS_MOCK = import.meta.env.VITE_MOCK_API === 'true';
+// Mock API disabled — all data from real backend
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -15,49 +17,132 @@ export const apiClient = axios.create({
   timeout: 30000,
 });
 
-// Подключаем мок-адаптер если VITE_MOCK_API=true
-if (IS_MOCK) {
-  import('./mock-adapter').then(({ installMockAdapter }) => {
-    installMockAdapter(apiClient);
-  });
-  import('./mock-data').then(({ MOCK_AUTH_RESPONSE }) => {
-    import('../stores/auth').then(({ useAuthStore }) => {
-      if (!useAuthStore.getState().token) {
-        useAuthStore.getState().setAuth(MOCK_AUTH_RESPONSE.user, MOCK_AUTH_RESPONSE.org, MOCK_AUTH_RESPONSE.access, MOCK_AUTH_RESPONSE.refresh, MOCK_AUTH_RESPONSE.capabilities, MOCK_AUTH_RESPONSE.role);
-      }
-    });
-  });
+type RequestMeta = {
+  startedAt: number;
+  method: string;
+  url: string;
+};
+
+function summarizePayload(payload: unknown) {
+  if (!payload) {
+    return undefined;
+  }
+
+  if (Array.isArray(payload)) {
+    return `payload: array(${payload.length})`;
+  }
+
+  if (typeof payload === 'object') {
+    const keys = Object.keys(payload as Record<string, unknown>).slice(0, 6);
+    return keys.length > 0 ? `payload keys: ${keys.join(', ')}` : undefined;
+  }
+
+  return undefined;
 }
+
+function getDuration(startedAt?: number) {
+  if (!startedAt) {
+    return 0;
+  }
+
+  return Date.now() - startedAt;
+}
+
+function isSessionEstablishingRequest(url?: string) {
+  const normalized = url ?? '';
+
+  return normalized.includes('/auth/login')
+    || normalized.includes('/auth/register/')
+    || normalized.includes('/auth/set-password')
+    || (normalized.includes('/invites/') && normalized.includes('/accept'));
+}
+
+function shouldSuppressPermissionToast(status: number) {
+  if (status !== 403) {
+    return false;
+  }
+
+  const state = useAuthStore.getState();
+  const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
+
+  return !state.token
+    || state.membership.status !== 'active'
+    || pathname.startsWith('/auth/');
+}
+
+
 
 apiClient.interceptors.request.use((config) => {
   const token = useAuthStore.getState().token;
-  if (token) config.headers.Authorization = `Bearer ${token}`;
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+
+  const selectedOrgId = useAuthStore.getState().selectedOrgId;
+  if (selectedOrgId) {
+    config.headers['X-Org-Id'] = selectedOrgId;
+  }
+
   config.headers['X-Request-ID'] = nanoid();
   if (['post', 'put', 'patch', 'delete'].includes((config.method ?? '').toLowerCase())) {
     config.headers['Idempotency-Key'] = config.headers['Idempotency-Key'] ?? nanoid();
   }
+
+  const nextConfig = config as typeof config & { metadata?: RequestMeta };
+  nextConfig.metadata = {
+    startedAt: Date.now(),
+    method: (config.method ?? 'get').toUpperCase(),
+    url: config.url ?? '/',
+  };
+
+  emitConsoleEvent({
+    source: 'api',
+    level: 'info',
+    message: `REQ ${nextConfig.metadata.method} ${nextConfig.metadata.url}`,
+    details: summarizePayload(config.data),
+  });
+
   return config;
 });
 
 let isRefreshing = false;
-let failedQueue: Array<{ resolve: (v: string) => void; reject: (e: unknown) => void }> = [];
+let failedQueue: Array<{ resolve: (value: string) => void; reject: (error: unknown) => void }> = [];
 
 function processQueue(error: unknown, token: string | null) {
-  failedQueue.forEach((p) => (error ? p.reject(error) : p.resolve(token!)));
+  failedQueue.forEach((item) => (error ? item.reject(error) : item.resolve(token!)));
   failedQueue = [];
 }
 
 apiClient.interceptors.response.use(
-  (r) => r,
+  (response) => {
+    const config = response.config as typeof response.config & { metadata?: RequestMeta };
+    const duration = getDuration(config.metadata?.startedAt);
+
+    emitConsoleEvent({
+      source: 'api',
+      level: 'success',
+      message: `RES ${response.status} ${config.metadata?.method ?? 'GET'} ${config.metadata?.url ?? response.config.url ?? '/'}`,
+      details: `${duration}ms`,
+    });
+
+    return response;
+  },
   async (error: AxiosError) => {
     const originalRequest = error.config as typeof error.config & { _retry?: boolean };
+    const requestUrl = originalRequest?.url ?? '';
 
-    if (error.response?.status === 401 && !originalRequest?._retry) {
+    if (
+      error.response?.status === 401
+      && !originalRequest?._retry
+      && !isSessionEstablishingRequest(requestUrl)
+    ) {
       const refreshToken = useAuthStore.getState().refreshToken;
 
       if (!refreshToken) {
-        useAuthStore.getState().clearAuth();
-        redirectTo('/auth/login');
+        if (!DEV_AUTH_BYPASS_ENABLED) {
+          useAuthStore.getState().clearAuth();
+          redirectTo('/');
+        }
         return Promise.reject(error);
       }
 
@@ -74,51 +159,67 @@ apiClient.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const res = await axios.post(`${API_BASE_URL}/auth/token/refresh/`, {
+        const response = await axios.post(`${API_BASE_URL}/auth/token/refresh/`, {
           refresh: refreshToken,
         });
-        const newAccess: string = res.data.access;
-        const newRefresh: string = res.data.refresh ?? refreshToken;
+        const newAccess: string = response.data.access;
+        const newRefresh: string = response.data.refresh ?? refreshToken;
 
         useAuthStore.getState().setTokens(newAccess, newRefresh);
         processQueue(null, newAccess);
 
         originalRequest!.headers!.Authorization = `Bearer ${newAccess}`;
         return apiClient(originalRequest!);
-      } catch (refreshErr) {
-        processQueue(refreshErr, null);
-        useAuthStore.getState().clearAuth();
-        redirectTo('/auth/login');
-        return Promise.reject(refreshErr);
+      } catch (refreshError) {
+        processQueue(refreshError, null);
+        if (!DEV_AUTH_BYPASS_ENABLED) {
+          useAuthStore.getState().clearAuth();
+          redirectTo('/');
+        }
+        return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;
       }
     }
 
-    if (error.response?.status === 403) {
-      const msg = (error.response.data as any)?.detail ?? 'Недостаточно прав';
-      import('sonner').then(({ toast }) => toast.error(msg));
+    if (
+      error.response?.status === 401
+      && !isSessionEstablishingRequest(requestUrl)
+      && (useAuthStore.getState().token || useAuthStore.getState().refreshToken)
+    ) {
+      if (!DEV_AUTH_BYPASS_ENABLED) {
+        useAuthStore.getState().clearAuth();
+        redirectTo('/');
+      }
+    }
+
+    if (error.response?.status === 403 && !shouldSuppressPermissionToast(403)) {
+      const message = readApiErrorMessage(error, 'You do not have access to this action.');
+      toast.error(message);
     }
 
     if ((error.response?.status ?? 0) >= 500) {
-      import('sonner').then(({ toast }) =>
-        toast.error('Ошибка сервера. Попробуйте позже.')
-      );
+      toast.error('Server error. Try again later.');
     }
+
+    const config = error.config as typeof error.config & { metadata?: RequestMeta };
+    const duration = getDuration(config?.metadata?.startedAt);
+
+    emitConsoleEvent({
+      source: 'api',
+      level: 'error',
+      message: `ERR ${error.response?.status ?? 'NET'} ${config?.metadata?.method ?? 'GET'} ${config?.metadata?.url ?? error.config?.url ?? '/'}`,
+      details: `${duration}ms${error.message ? `\n${error.message}` : ''}`,
+    });
 
     return Promise.reject(error);
   },
 );
 
 export const api = {
-  get: <T>(url: string, params?: object) =>
-    apiClient.get<T>(url, { params }).then((r) => r.data),
-  post: <T>(url: string, data?: object) =>
-    apiClient.post<T>(url, data).then((r) => r.data),
-  patch: <T>(url: string, data?: object) =>
-    apiClient.patch<T>(url, data).then((r) => r.data),
-  put: <T>(url: string, data?: object) =>
-    apiClient.put<T>(url, data).then((r) => r.data),
-  delete: <T>(url: string) =>
-    apiClient.delete<T>(url).then((r) => r.data),
+  get: <T>(url: string, params?: object) => apiClient.get<T>(url, { params }).then((response) => response.data),
+  post: <T>(url: string, data?: object) => apiClient.post<T>(url, data).then((response) => response.data),
+  patch: <T>(url: string, data?: object) => apiClient.patch<T>(url, data).then((response) => response.data),
+  put: <T>(url: string, data?: object) => apiClient.put<T>(url, data).then((response) => response.data),
+  delete: <T>(url: string) => apiClient.delete<T>(url).then((response) => response.data),
 };

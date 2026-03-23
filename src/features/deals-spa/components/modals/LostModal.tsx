@@ -49,8 +49,8 @@ export function LostModal({ tileId }: Props) {
               transition={{ type: 'spring', stiffness: 380, damping: 30 }}
             >
               <div className={s.header}>
-                <div className={s.iconWrap} style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)' }}>
-                  <AlertCircle size={20} color="#f87171" />
+                <div className={`${s.iconWrap} ${s.iconDanger}`}>
+                  <AlertCircle size={20} />
                 </div>
                 <div>
                   <div className={s.title}>Сделка проиграна</div>

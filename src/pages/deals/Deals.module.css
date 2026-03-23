@@ -1,471 +1,156 @@
-/* ═══════════════════════════════════════════════════════════════
-   Deals — Kanban board + List toggle
-   ═══════════════════════════════════════════════════════════════ */
-
 .page {
-  padding: var(--space-page-y) var(--space-page-x);
   width: min(100%, var(--space-page-max));
   margin: 0 auto;
-  max-width: var(--content-max-width);
+  padding: var(--space-page-y) var(--space-page-x);
   display: flex;
   flex-direction: column;
   gap: var(--space-section-gap);
 }
 
-/* ── Header ──────────────────────────────────────────────────── */
-.header {
+.list {
+  display: grid;
+  gap: 10px;
+}
+
+.card {
   display: flex;
   align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-4);
-  flex-wrap: wrap;
-}
-
-.title {
-  font-family: var(--font-display);
-  font-size: var(--text-size-2xl);
-  font-weight: 700;
-  color: var(--text-primary);
-  letter-spacing: -0.02em;
-  margin: 0 0 2px;
-  line-height: 1.2;
-}
-
-.subtitle {
-  font-size: var(--text-size-base);
-  color: var(--text-tertiary);
-  margin: 0;
-}
-
-.headerActions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  flex-shrink: 0;
-}
-
-/* ── Toolbar ──────────────────────────────────────────────────── */
-.toolbar {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  flex-wrap: wrap;
-}
-
-.viewToggle {
-  display: flex;
-  padding: 3px;
-  background: var(--bg-muted);
-  border-radius: var(--radius-md);
-  gap: 2px;
-}
-
-.viewBtn {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  height: 28px;
-  padding: 0 10px;
-  border-radius: var(--radius-sm);
-  border: none;
-  background: none;
-  font-size: var(--text-size-sm);
-  font-weight: 500;
-  color: var(--text-tertiary);
-  cursor: pointer;
-  font-family: var(--font-body);
-  transition:
-    background var(--motion-fast) var(--motion-ease),
-    color var(--motion-fast) var(--motion-ease);
-}
-.viewBtn:hover { color: var(--text-secondary); }
-.viewBtnActive {
-  background: var(--bg-surface);
-  color: var(--text-primary);
-  box-shadow: var(--shadow-sm);
-}
-
-/* ── Pipeline stats ───────────────────────────────────────────── */
-.pipelineStats {
-  display: flex;
-  gap: var(--space-3);
-  flex-wrap: wrap;
-}
-
-.pipelineStat {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 10px var(--space-4);
-  background: var(--card-bg);
-  border: 1px solid var(--card-border);
-  border-radius: var(--radius-md);
-  min-width: 120px;
-}
-
-.pipelineStatLabel {
-  font-size: var(--text-size-xs);
-  color: var(--text-tertiary);
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.pipelineStatValue {
-  font-size: var(--text-size-lg);
-  font-weight: 700;
-  color: var(--text-primary);
-  font-family: var(--font-display);
-  letter-spacing: -0.01em;
-}
-
-/* ── Kanban board ─────────────────────────────────────────────── */
-.kanbanOuter {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  padding-bottom: var(--space-4);
-  scroll-snap-type: x mandatory;
-}
-
-.kanbanBoard {
-  display: flex;
-  gap: var(--space-3);
-  align-items: flex-start;
-  min-width: max-content;
-}
-
-.kanbanCol {
-  width: 270px;
-  flex-shrink: 0;
-  scroll-snap-align: start;
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-}
-
-.kanbanColHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px var(--space-3);
-  margin-bottom: var(--space-2);
-}
-
-.kanbanColName {
-  font-size: var(--text-size-base);
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.kanbanColMeta {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.kanbanColCount {
-  font-size: var(--text-size-sm);
-  color: var(--text-tertiary);
-  font-weight: 500;
-}
-
-.kanbanColAmount {
-  font-size: var(--text-size-sm);
-  font-weight: 600;
-  color: var(--text-accent);
-  font-family: var(--font-display);
-}
-
-.kanbanColIndicator {
-  width: 3px;
-  border-radius: var(--radius-full);
-  height: 100%;
-  min-height: 24px;
-  flex-shrink: 0;
-}
-
-.kanbanCards {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  min-height: 60px;
-}
-
-/* ── Deal card ────────────────────────────────────────────────── */
-.dealCard {
-  background: var(--card-bg);
-  border: 1px solid var(--card-border);
-  border-radius: var(--radius-md);
-  padding: var(--space-3) var(--space-4);
+  gap: 16px;
+  width: 100%;
+  padding: 18px;
+  border: 1px solid var(--brand-panel-border);
+  border-radius: calc(var(--surface-radius) + 4px);
+  background: var(--brand-surface-3);
+  box-shadow: var(--surface-shadow-rest);
+  text-align: left;
   cursor: pointer;
   transition:
+    transform var(--motion-fast) var(--motion-ease),
     box-shadow var(--motion-fast) var(--motion-ease),
     border-color var(--motion-fast) var(--motion-ease),
-    transform var(--motion-fast) var(--motion-ease);
-}
-.dealCard:hover {
-  box-shadow: var(--card-hover-shadow);
-  border-color: var(--card-hover-border);
-  transform: translateY(-1px);
+    background var(--motion-fast) var(--motion-ease);
 }
 
-.dealCardTitle {
-  font-size: var(--text-size-base);
-  font-weight: 500;
-  color: var(--text-primary);
-  margin-bottom: 6px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.card:hover {
+  transform: var(--feedback-raise-hover);
+  box-shadow: var(--brand-panel-shadow);
+  border-color: color-mix(in srgb, var(--fill-accent) 22%, var(--brand-panel-border));
 }
 
-.dealCardMeta {
-  display: flex;
+.card:active {
+  transform: var(--feedback-soft-press);
+}
+
+.avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
+  justify-content: center;
+  background: color-mix(in srgb, var(--fill-accent-subtle) 78%, var(--bg-surface));
+  color: var(--fill-accent);
+  border: 1px solid color-mix(in srgb, var(--fill-accent) 14%, var(--border-subtle));
+  flex-shrink: 0;
 }
 
-.dealCardCustomer {
-  font-size: var(--text-size-xs);
-  color: var(--text-tertiary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.cardBody {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
   flex: 1;
 }
 
-.dealCardAmount {
-  font-size: var(--text-size-sm);
-  font-weight: 700;
-  color: var(--text-accent);
-  font-family: var(--font-display);
-  letter-spacing: -0.01em;
-  flex-shrink: 0;
-}
-
-.dealCardFooter {
+.cardHead {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  margin-top: var(--space-2);
-  gap: var(--space-2);
+  gap: 14px;
 }
 
-.dealCardOwner {
-  font-size: var(--text-size-xs);
-  color: var(--text-tertiary);
+.nameBlock {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
 }
 
-.dealCardAge {
-  font-size: var(--text-size-xs);
-  color: var(--text-tertiary);
-  white-space: nowrap;
+.name {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.2;
 }
 
-/* Stale indicator */
-.dealCardStale {
-  border-left: 3px solid var(--fill-warning) !important;
-}
-.dealCardOverdue {
-  border-left: 3px solid var(--fill-negative) !important;
-}
-
-/* ── Add deal button ──────────────────────────────────────────── */
-.addDealBtn {
-  display: flex;
+.owner {
+  display: inline-flex;
   align-items: center;
   gap: 6px;
-  width: 100%;
-  padding: 8px var(--space-4);
-  border: 1px dashed var(--border-default);
-  border-radius: var(--radius-md);
-  background: none;
-  cursor: pointer;
-  font-size: var(--text-size-sm);
-  color: var(--text-tertiary);
-  font-family: var(--font-body);
-  margin-top: var(--space-2);
-  transition:
-    border-color var(--motion-fast) var(--motion-ease),
-    color var(--motion-fast) var(--motion-ease),
-    background var(--motion-fast) var(--motion-ease);
-}
-.addDealBtn:hover {
-  border-color: var(--fill-accent);
-  color: var(--fill-accent);
-  background: var(--fill-accent-subtle);
+  color: var(--text-secondary);
+  font-size: 12px;
 }
 
-/* ── Empty column ─────────────────────────────────────────────── */
-.colEmpty {
-  padding: var(--space-4);
-  text-align: center;
-  font-size: var(--text-size-sm);
-  color: var(--text-tertiary);
-  background: var(--bg-muted);
-  border-radius: var(--radius-md);
-  border: 1px dashed var(--border-subtle);
-}
-
-/* ── List view ────────────────────────────────────────────────── */
-.listTable {
-  background: var(--card-bg);
-  border: 1px solid var(--card-border);
-  border-radius: var(--surface-radius);
-  overflow: hidden;
-}
-
-.table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.th {
-  padding: 10px var(--space-4);
-  text-align: left;
-  font-size: var(--text-size-xs);
-  font-weight: 600;
-  color: var(--text-tertiary);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  background: var(--table-header-bg);
-  border-bottom: 1px solid var(--table-border);
-}
-
-.tr {
-  border-bottom: 1px solid var(--table-border);
-  cursor: pointer;
-  transition: background var(--motion-fast) var(--motion-ease);
-}
-.tr:last-child { border-bottom: none; }
-.tr:hover { background: var(--table-row-hover-bg); }
-
-.td {
-  padding: 11px var(--space-4);
-  vertical-align: middle;
-  font-size: var(--text-size-base);
-  color: var(--text-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.tdMuted { color: var(--text-tertiary); }
-
-.dealTitle {
-  font-weight: 500;
-  color: var(--text-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.dealCustomer {
-  font-size: var(--text-size-xs);
-  color: var(--text-tertiary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.dealAmountCell {
-  font-weight: 700;
-  color: var(--text-accent);
-  font-family: var(--font-display);
-  letter-spacing: -0.01em;
-}
-
-/* ═══════════════════════════════════════════════════════════════
-   RESPONSIVE
-   ═══════════════════════════════════════════════════════════════ */
-@media (max-width: 768px) {
-  .page { padding: var(--space-4); }
-  .pipelineStats { display: none; }
-}
-
-
-.kanbanColLabel {
+.metaRight {
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-.kanbanSkeletonCard {
-  margin-bottom: 8px;
-}
-
-.kanbanSkeletonBlock {
-  border-radius: 8px;
-}
-
-.listSkeleton {
-  padding: var(--space-5);
-}
-
-.listSkeletonRow {
-  display: flex;
-  gap: var(--space-4);
-  margin-bottom: var(--space-4);
-  align-items: center;
-}
-
-.listEmpty {
-  padding: 48px var(--space-5);
-}
-
-.thDeal { width: 30%; }
-.thCustomer { width: 20%; }
-.thStage { width: 15%; }
-.thAmount { width: 12%; }
-.thOwner { width: 13%; }
-.thCreated { width: 10%; }
-
-
-.viewToggle { border: 1px solid var(--border-subtle); }
-.viewBtn:hover { background: var(--bg-hover); color: var(--text-primary); }
-.viewBtn:active { transform: var(--feedback-soft-press); }
-.board, .listWrap, .statsBar { box-shadow: var(--surface-shadow-rest); }
-.dealCard { transition: box-shadow var(--motion-fast) var(--motion-ease), border-color var(--motion-fast) var(--motion-ease), transform var(--motion-fast) var(--motion-ease); }
-.dealCard:hover { transform: var(--feedback-raise-hover); box-shadow: var(--brand-panel-shadow); }
-.dealCard:active { transform: var(--feedback-soft-press); }
-.tr { transition: background var(--motion-fast) var(--motion-ease), transform var(--motion-fast) var(--motion-ease); }
-.tr:hover { transform: translateY(-1px); }
-
-
-.scenarioRail { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 14px 16px; border-radius: calc(var(--surface-radius-tight) + 2px); border: 1px solid var(--journey-rail-border); background: var(--journey-rail-bg); box-shadow: var(--brand-panel-shadow); }
-.scenarioCopy { display: grid; gap: 4px; max-width: 620px; }
-.scenarioEyebrow { color: var(--text-tertiary); font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
-.scenarioText { color: var(--text-secondary); font-size: 13px; line-height: 1.55; }
-.scenarioChips { display: flex; flex-wrap: wrap; gap: 8px; }
-.scenarioChip { display: inline-flex; align-items: center; min-height: 28px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--journey-chip-border); background: var(--journey-chip-bg); color: var(--text-secondary); font-size: 12px; font-weight: 600; }
-@media (max-width: 760px) { .scenarioRail { flex-direction: column; align-items: stretch; } }
-
-
-.emptyRecoveryRail {
-  display: flex;
-  justify-content: center;
-  gap: 10px;
   flex-wrap: wrap;
-  margin-top: 14px;
+  justify-content: flex-end;
+  flex-shrink: 0;
 }
-.emptyRecoveryBtn {
-  min-height: 34px;
-  padding: 0 14px;
+
+.stage {
+  --stage-color: var(--fill-accent);
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 12px;
   border-radius: 999px;
-  border: 1px solid var(--empty-recovery-border);
-  background: var(--empty-recovery-bg);
-  color: var(--text-secondary);
-  font: inherit;
+  background: color-mix(in srgb, var(--stage-color) 12%, var(--bg-surface));
+  border: 1px solid color-mix(in srgb, var(--stage-color) 20%, var(--border-subtle));
+  color: var(--stage-color);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.amount {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--fill-positive-soft) 74%, var(--bg-surface));
+  border: 1px solid color-mix(in srgb, var(--fill-positive) 18%, var(--border-subtle));
+  color: var(--fill-positive-text);
   font-size: 12px;
   font-weight: 700;
-  cursor: pointer;
-  transition: transform var(--motion-fast) var(--motion-ease), border-color var(--motion-fast) var(--motion-ease), box-shadow var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease);
+  white-space: nowrap;
 }
-.emptyRecoveryBtn:hover { transform: var(--feedback-raise-hover); border-color: var(--fill-accent); box-shadow: var(--shadow-sm); color: var(--text-primary); }
-.emptyRecoveryBtn:active { transform: var(--feedback-soft-press); }
 
+.status {
+  color: var(--text-tertiary);
+  font-size: 12px;
+  line-height: 1.5;
+}
 
-.listTable, .kanbanCol, .dealCard { background: var(--rc-table-shell-bg); border-color: var(--rc-table-shell-border); }
-.tr:hover, .dealCard:hover { background: var(--rc-table-row-hover); }
-.scenarioRail, .listEmpty { box-shadow: var(--journey-rail-shadow); }
+@media (max-width: 768px) {
+  .page {
+    padding: var(--space-4);
+  }
+
+  .card {
+    flex-direction: column;
+  }
+
+  .cardHead {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .metaRight {
+    justify-content: flex-start;
+  }
+}

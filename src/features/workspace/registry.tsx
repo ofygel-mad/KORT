@@ -1,80 +1,64 @@
 import type { LucideIcon } from 'lucide-react';
-import { Briefcase, CheckSquare, DatabaseZap, FolderInput, Users, Factory } from 'lucide-react';
-import type { WorkspaceSnapshot, WorkspaceWidgetKind } from './model/types';
-
-// Tile previews
-import { LeadsTilePreview }  from './widgets/customers/LeadsTilePreview';
-import { DealsTilePreview }   from './widgets/deals/DealsTilePreview';
-import { TasksTilePreview }   from './widgets/tasks/TasksTilePreview';
-import { ReportsTilePreview } from './widgets/reports/ReportsTilePreview';
-import { ImportsTilePreview } from './widgets/imports/ImportsTilePreview';
-import { ChapanTilePreview }  from './widgets/chapan/ChapanTilePreview';
-
-// Full SPA environments
-import { LeadsSPA }   from '../leads-spa';
-import { DealsSPA }   from '../deals-spa';
-import { TasksSPA }   from './widgets/tasks/spa/TasksSPA';
-import { ReportsSPA } from './widgets/reports/spa/ReportsSPA';
-import { ImportsSPA } from './widgets/imports/spa/ImportsSPA';
-import { ChapanSPA }  from './widgets/chapan/spa/ChapanSPA';
+import { Briefcase, CheckSquare, Users, Archive, Layers, User } from 'lucide-react';
+import type { WorkspaceWidgetKind } from './model/types';
 
 export interface WorkspaceWidgetDefinition {
   kind: WorkspaceWidgetKind;
   title: string;
   description: string;
   icon: LucideIcon;
-  renderPreview: (snapshot?: WorkspaceSnapshot, version?: number, tileId?: string) => JSX.Element;
-  renderSPA:     (snapshot?: WorkspaceSnapshot, version?: number, tileId?: string) => JSX.Element;
+  navTo: string;
+  color: string;
 }
 
 export const WORKSPACE_WIDGETS: WorkspaceWidgetDefinition[] = [
   {
-    kind: 'customers',
+    kind: 'leads',
     title: 'Лиды',
-    description: 'CRM воронка: квалификация, передача и закрытие лидов.',
+    description: 'CRM воронка — квалификация и конвертация лидов.',
     icon: Users,
-    renderPreview: (_s, v, tid) => <LeadsTilePreview key={v} tileId={tid ?? 'default'} />,
-    renderSPA:     (_s, v, tid) => <LeadsSPA key={v} tileId={tid ?? 'default'} />,
+    navTo: '/crm/leads',
+    color: 'var(--fill-info)',
   },
   {
     kind: 'deals',
     title: 'Сделки',
     description: 'Воронка сделок: встречи, КП, договоры, оплаты.',
     icon: Briefcase,
-    renderPreview: (_s, v, tid) => <DealsTilePreview key={v} tileId={tid ?? 'default'} />,
-    renderSPA:     (_s, v, tid) => <DealsSPA key={v} tileId={tid ?? 'default'} />,
+    navTo: '/crm/deals',
+    color: 'var(--fill-accent)',
   },
   {
     kind: 'tasks',
     title: 'Задачи',
-    description: 'Локальный центр контроля задач. Можно создать сколько угодно копий.',
+    description: 'Управление задачами — список, статусы, дедлайны.',
     icon: CheckSquare,
-    renderPreview: (s, v, tid) => <TasksTilePreview key={v} snapshot={s} tileId={tid ?? 'default'} />,
-    renderSPA:     (_s, v, tid) => <TasksSPA key={v} tileId={tid ?? 'default'} />,
+    navTo: '/crm/tasks',
+    color: 'var(--fill-positive)',
   },
   {
-    kind: 'reports',
-    title: 'Сводка',
-    description: 'Компактная метрика для тех, кому нужно видеть только нерв системы.',
-    icon: DatabaseZap,
-    renderPreview: (s, v) => <ReportsTilePreview key={v} snapshot={s} />,
-    renderSPA:     (s, v) => <ReportsSPA key={v} snapshot={s} />,
+    kind: 'customers',
+    title: 'Клиенты',
+    description: 'База клиентов с историей взаимодействий.',
+    icon: User,
+    navTo: '/crm/customers',
+    color: 'var(--fill-info)',
   },
   {
-    kind: 'imports',
-    title: 'Импорт',
-    description: 'Центр загрузки, маппинга и синхронизации данных.',
-    icon: FolderInput,
-    renderPreview: (_s, v) => <ImportsTilePreview key={v} />,
-    renderSPA:     (_s, v, tid) => <ImportsSPA key={v} tileId={tid ?? 'default'} />,
+    kind: 'warehouse',
+    title: 'Склад',
+    description: 'Остатки, движения, алерты по минимуму.',
+    icon: Archive,
+    navTo: '/warehouse',
+    color: '#8B6914',
   },
   {
     kind: 'chapan',
-    title: 'Чапан',
-    description: 'Workzone цеха Чапан — производство, заказы и контроль.',
-    icon: Factory,
-    renderPreview: (_s, v) => <ChapanTilePreview key={v} />,
-    renderSPA:     (_s, v, tid) => <ChapanSPA key={v} tileId={tid ?? 'default'} />,
+    title: 'Производство',
+    description: 'Приём заказов, производство, передача.',
+    icon: Layers,
+    navTo: '/workzone/chapan',
+    color: '#C9A84C',
   },
 ];
 

@@ -1,78 +1,87 @@
-import { addDocumentListener } from '../../shared/lib/browser';
-import { useLocation, useNavigate, useMatch } from 'react-router-dom';
-import { Search, ChevronRight, Bell, ArrowLeft, Shield, ShieldCheck } from 'lucide-react';
-import { useCommandPalette } from '../../shared/stores/commandPalette';
-import { useAuthStore } from '../../shared/stores/auth';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useState, useRef, useEffect } from 'react';
-import { api } from '../../shared/api/client';
+import { useEffect, useRef, useState } from 'react';
+import { useLocation, useMatch, useNavigate } from 'react-router-dom';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AnimatePresence, motion } from 'framer-motion';
+import { ArrowLeft, Bell, ChevronRight, Search } from 'lucide-react';
+import { addDocumentListener } from '../../shared/lib/browser';
+import { api } from '../../shared/api/client';
 import { useSSE } from '../../shared/hooks/useSSE';
-import { useUIStore } from '../../shared/stores/ui';
-import { useCapabilities } from '../../shared/hooks/useCapabilities';
 import { useIsMobile } from '../../shared/hooks/useIsMobile';
 import { useT } from '../../shared/i18n';
+import { popoverVariants, t } from '../../shared/motion/presets';
+import { useCommandPalette } from '../../shared/stores/commandPalette';
+import { useAuthStore } from '../../shared/stores/auth';
 import { useSharedBus } from '../../features/shared-bus';
 import type { GlobalNotifEvent } from '../../features/shared-bus';
-import { popoverVariants, overlayVariants, t } from '../../shared/motion/presets';
 import styles from './Topbar.module.css';
 
-interface Notification { id: string; title: string; body: string; is_read: boolean; created_at: string; }
+interface Notification {
+  id: string;
+  title: string;
+  body: string;
+  is_read: boolean;
+  created_at: string;
+}
 
-// ─── Notification Bell ────────────────────────────────────────────────────────
-function NotificationBell() {
-  const qc = useQueryClient();
+function NotificationBell({ enabled }: { enabled: boolean }) {
+  const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
   const [localNotifs, setLocalNotifs] = useState<GlobalNotifEvent[]>([]);
-  const localUnread = useRef(0);
 
   const { data } = useQuery<{ results: Notification[]; count: number }>({
-    queryKey:       ['notifications'],
-    queryFn:        () => api.get('/notifications/'),
-    refetchInterval: 30_000,
+    queryKey: ['notifications'],
+    queryFn: () => api.get('/notifications/'),
+    enabled,
+    refetchInterval: 30000,
   });
 
-  useSSE({ onNotification: () => qc.invalidateQueries({ queryKey: ['notifications'] }) });
+  useSSE({
+    enabled,
+    onNotification: () => queryClient.invalidateQueries({ queryKey: ['notifications'] }),
+  });
 
   const markAllRead = useMutation({
     mutationFn: () => api.post('/notifications/read_all/'),
-    onSuccess:  () => qc.invalidateQueries({ queryKey: ['notifications'] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notifications'] }),
   });
 
-  const apiUnread = (data?.results ?? []).filter(n => !n.is_read).length;
-  const unread = apiUnread + localNotifs.filter(() => !open).length;
+  const unread = (data?.results ?? []).filter((item) => !item.is_read).length + localNotifs.filter(() => !open).length;
 
   useEffect(() => {
-    const h = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    const onMouseDown = (event: MouseEvent) => {
+      if (ref.current && !ref.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
     };
-    return addDocumentListener('mousedown', h);
+    return addDocumentListener('mousedown', onMouseDown);
   }, []);
 
-  // Опрос shared-bus на предмет новых уведомлений от SPA
   useEffect(() => {
-    const id = setInterval(() => {
+    if (!enabled) {
+      return undefined;
+    }
+
+    const intervalId = window.setInterval(() => {
       const items = useSharedBus.getState().consumeGlobalNotifs();
-      if (items.length > 0) {
-        setLocalNotifs(prev => [...items, ...prev].slice(0, 50));
-        localUnread.current += items.length;
-        // Инвалидировать QueryClient чтобы точка обновилась
-        qc.invalidateQueries({ queryKey: ['notifications'] });
-      }
+      if (!items.length) return;
+      setLocalNotifs((prev) => [...items, ...prev].slice(0, 50));
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
     }, 2000);
-    return () => clearInterval(id);
-  }, [qc]);
+
+    return () => window.clearInterval(intervalId);
+  }, [enabled, queryClient]);
+
+  if (!enabled) {
+    return null;
+  }
 
   return (
     <div ref={ref} className={styles.notifRoot}>
       <motion.button
         className={[styles.iconBtn, open ? styles.active : ''].join(' ')}
-        onClick={() => {
-          setOpen(o => !o);
-          if (!open) setLocalNotifs(prev => prev); // панель открылась — можно помечать прочитанными
-        }}
+        onClick={() => setOpen((state) => !state)}
         whileTap={{ scale: 0.93 }}
         transition={t.fast}
         aria-label="Уведомления"
@@ -95,10 +104,7 @@ function NotificationBell() {
             <div className={styles.notifHeader}>
               <span className={styles.notifTitle}>Уведомления</span>
               {unread > 0 && (
-                <button
-                  className={styles.notifMarkAll}
-                  onClick={() => markAllRead.mutate()}
-                >
+                <button className={styles.notifMarkAll} onClick={() => markAllRead.mutate()}>
                   Прочитать все
                 </button>
               )}
@@ -108,35 +114,17 @@ function NotificationBell() {
               <div className={styles.notifEmpty}>Уведомлений нет</div>
             ) : (
               <>
-                {/* ── Локальные уведомления от SPA ── */}
-                {localNotifs.map(n => {
-                  const KIND_ICON: Record<string, string> = {
-                    info: '💬', success: '✅', warning: '⚠️', error: '🔴',
-                  };
-                  const SRC_LABEL: Record<string, string> = {
-                    leads: 'Лиды', deals: 'Сделки', tasks: 'Задачи', system: 'Система',
-                  };
-                  return (
-                    <div key={n.id} className={`${styles.notifItem} ${styles.unread}`}>
-                      <div className={styles.notifItemTitle}>
-                        {KIND_ICON[n.kind] ?? '🔔'} {n.title}
-                        <span style={{ fontSize: 10, opacity: 0.5, marginLeft: 6 }}>
-                          [{SRC_LABEL[n.source] ?? n.source}]
-                        </span>
-                      </div>
-                      <div className={styles.notifItemBody}>{n.body}</div>
-                    </div>
-                  );
-                })}
+                {localNotifs.map((item) => (
+                  <div key={item.id} className={`${styles.notifItem} ${styles.unread}`}>
+                    <div className={styles.notifItemTitle}>{item.title}</div>
+                    <div className={styles.notifItemBody}>{item.body}</div>
+                  </div>
+                ))}
 
-                {/* ── API уведомления ── */}
-                {(data?.results ?? []).map(n => (
-                  <div
-                    key={n.id}
-                    className={[styles.notifItem, !n.is_read ? styles.unread : ''].join(' ')}
-                  >
-                    <div className={styles.notifItemTitle}>{n.title}</div>
-                    <div className={styles.notifItemBody}>{n.body}</div>
+                {(data?.results ?? []).map((item) => (
+                  <div key={item.id} className={[styles.notifItem, !item.is_read ? styles.unread : ''].join(' ')}>
+                    <div className={styles.notifItemTitle}>{item.title}</div>
+                    <div className={styles.notifItemBody}>{item.body}</div>
                   </div>
                 ))}
               </>
@@ -148,51 +136,49 @@ function NotificationBell() {
   );
 }
 
-// ─── Dynamic breadcrumb ────────────────────────────────────────────────────────
-function useDynamicCrumb(): { parent: string; parentPath: string; current: string } | null {
+function useDynamicCrumb(enabled: boolean): { parent: string; parentPath: string; current: string } | null {
   const matchCustomer = useMatch('/customers/:id');
-  const matchDeal     = useMatch('/deals/:id');
-  const matchTask     = useMatch('/tasks/:id');
-  const customerId    = matchCustomer?.params.id;
-  const dealId        = matchDeal?.params.id;
+  const matchDeal = useMatch('/deals/:id');
+  const matchTask = useMatch('/tasks/:id');
+  const customerId = matchCustomer?.params.id;
+  const dealId = matchDeal?.params.id;
 
   const { data: customer } = useQuery({
     queryKey: ['customer-name', customerId],
-    queryFn:  () => api.get(`/customers/${customerId}/`),
-    enabled:  !!customerId,
-    staleTime: 60_000,
-    select:   (d: any) => d.full_name as string,
+    queryFn: () => api.get(`/customers/${customerId}/`),
+    enabled: enabled && Boolean(customerId),
+    staleTime: 60000,
+    select: (data: any) => data.full_name as string,
   });
 
   const { data: deal } = useQuery({
     queryKey: ['deal-name', dealId],
-    queryFn:  () => api.get(`/deals/${dealId}/`),
-    enabled:  !!dealId,
-    staleTime: 60_000,
-    select:   (d: any) => d.title as string,
+    queryFn: () => api.get(`/deals/${dealId}/`),
+    enabled: enabled && Boolean(dealId),
+    staleTime: 60000,
+    select: (data: any) => data.title as string,
   });
 
-  if (customerId) return { parent: 'Лиды', parentPath: '/customers', current: customer ?? '…' };
-  if (dealId)     return { parent: 'Сделки',  parentPath: '/deals',     current: deal     ?? '…' };
-  if (matchTask)  return { parent: 'Задачи',  parentPath: '/tasks',     current: 'Задача' };
+  if (customerId) return { parent: 'Лиды', parentPath: '/customers', current: customer ?? '...' };
+  if (dealId) return { parent: 'Сделки', parentPath: '/deals', current: deal ?? '...' };
+  if (matchTask) return { parent: 'Задачи', parentPath: '/tasks', current: 'Задача' };
   return null;
 }
 
 const BREADCRUMBS: Record<string, string> = {
-  '/':           'Главная',
-  '/feed':       'Лента',
-  '/customers':  'Лиды',
-  '/deals':      'Сделки',
-  '/tasks':      'Задачи',
-  '/reports':    'Отчёты',
-  '/automations':'Автоматизации',
-  '/imports':    'Импорт',
-  '/settings':   'Настройки',
-  '/audit':      'Аудит',
-  '/admin':      'Управление',
+  '/': 'Главная',
+  '/feed': 'Лента',
+  '/customers': 'Лиды',
+  '/deals': 'Сделки',
+  '/tasks': 'Задачи',
+  '/reports': 'Отчёты',
+  '/automations': 'Автоматизации',
+  
+  '/settings': 'Настройки',
+  '/audit': 'Аудит',
+  '/admin': 'Управление',
 };
 
-// ─── Topbar ────────────────────────────────────────────────────────────────────
 function resolveBackTarget(pathname: string) {
   if (pathname.startsWith('/customers/')) return '/customers';
   if (pathname.startsWith('/deals/')) return '/deals';
@@ -204,22 +190,20 @@ function resolveBackTarget(pathname: string) {
 
 export function Topbar() {
   const location = useLocation();
-  const navigate  = useNavigate();
+  const navigate = useNavigate();
   const { toggle } = useCommandPalette();
-  const user       = useAuthStore(s => s.user);
-  const { adminMode, setAdminMode } = useUIStore();
-  const isMobile   = useIsMobile();
+  const user = useAuthStore((state) => state.user);
+  const hasCompanyAccess = useAuthStore((state) => state.membership.status === 'active');
+  const isMobile = useIsMobile();
   const { locale, setLocale } = useT();
-  const { canUseAdminMode } = useCapabilities();
-  const dynamic    = useDynamicCrumb();
-  const crumb      = BREADCRUMBS[location.pathname] ?? location.pathname.slice(1);
+  const dynamic = useDynamicCrumb(hasCompanyAccess);
+  const crumb = BREADCRUMBS[location.pathname] ?? location.pathname.slice(1);
   const isDashboard = location.pathname === '/';
   const showBack = location.pathname !== '/' && location.pathname !== '/onboarding';
   const backTarget = resolveBackTarget(location.pathname);
 
   return (
     <header className={styles.topbar}>
-      {/* Breadcrumb */}
       <div className={styles.left}>
         {showBack && (
           <button className={styles.backBtn} onClick={() => navigate(backTarget)} aria-label="Назад">
@@ -227,6 +211,7 @@ export function Topbar() {
             {!isMobile && <span>Назад</span>}
           </button>
         )}
+
         {isDashboard ? (
           <div className={styles.dashboardWordmark} aria-label="Название продукта">KORT</div>
         ) : (
@@ -236,10 +221,7 @@ export function Topbar() {
 
             {dynamic ? (
               <>
-                <button
-                  className={styles.crumbParent}
-                  onClick={() => navigate(dynamic.parentPath)}
-                >
+                <button className={styles.crumbParent} onClick={() => navigate(dynamic.parentPath)}>
                   {dynamic.parent}
                 </button>
                 <ChevronRight size={12} className={styles.crumbSep} />
@@ -252,39 +234,19 @@ export function Topbar() {
         )}
       </div>
 
-      {/* Actions */}
       <div className={styles.right}>
-        {/* Search */}
         <button className={styles.searchBtn} onClick={toggle} aria-label="Поиск">
           <Search size={14} />
           {!isMobile && <span>Поиск</span>}
           {!isMobile && <kbd className={styles.searchKbd}>⌘K</kbd>}
         </button>
 
-        <NotificationBell />
+        <NotificationBell enabled={hasCompanyAccess} />
 
-        {canUseAdminMode && (
-          <button
-            className={`${styles.adminModeBtn} ${adminMode ? styles.adminModeBtnActive : ''}`}
-            onClick={() => setAdminMode(!adminMode)}
-            aria-label={adminMode ? 'Выйти из режима администратора' : 'Включить режим администратора'}
-            title={adminMode ? 'Режим администратора активен' : 'Включить режим администратора'}
-          >
-            {adminMode ? <ShieldCheck size={14} /> : <Shield size={14} />}
-            {!isMobile && <span>{adminMode ? 'Режим администратора' : 'Рабочий режим'}</span>}
-          </button>
-        )}
-
-        {/* Language */}
-        <button
-          className={styles.langBtn}
-          onClick={() => setLocale(locale === 'ru' ? 'kk' : 'ru')}
-        >
+        <button className={styles.langBtn} onClick={() => setLocale(locale === 'ru' ? 'kk' : 'ru')}>
           {locale === 'ru' ? 'KK' : 'RU'}
         </button>
 
-
-        {/* Avatar */}
         <button
           className={styles.avatarBtn}
           onClick={() => navigate('/settings')}
@@ -297,5 +259,4 @@ export function Topbar() {
   );
 }
 
-// Re-export for convenience
 export { NotificationBell };

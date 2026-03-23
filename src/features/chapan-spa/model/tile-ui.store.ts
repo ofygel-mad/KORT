@@ -7,7 +7,22 @@ import { createStore, useStore } from 'zustand';
 import type { StoreApi } from 'zustand';
 import type { OrderStatus, OrderPriority, PaymentStatus, OrderSortBy, ViewMode } from '../api/types';
 
-export type ChapanSection = 'overview' | 'orders' | 'production' | 'settings';
+export type ChapanSection = 'requests' | 'orders' | 'production' | 'settings';
+
+export interface CreateOrderPrefill {
+  sourceRequestId?: string;
+  clientName?: string;
+  clientPhone?: string;
+  dueDate?: string;
+  priority?: OrderPriority;
+  items: Array<{
+    productName?: string;
+    fabric?: string;
+    size?: string;
+    quantity?: number;
+    workshopNotes?: string;
+  }>;
+}
 
 export interface TileChapanUIState {
   section: ChapanSection;
@@ -26,6 +41,7 @@ export interface TileChapanUIState {
 
   // Modals
   createModalOpen: boolean;
+  createPrefill: CreateOrderPrefill | null;
 
   // Cancel reason modal
   cancelModalOpen: boolean;
@@ -42,7 +58,9 @@ export interface TileChapanUIState {
   openDrawer: (id: string) => void;
   closeDrawer: () => void;
   openCreateModal: () => void;
+  openCreateModalWithPrefill: (prefill: CreateOrderPrefill) => void;
   closeCreateModal: () => void;
+  clearCreatePrefill: () => void;
   openCancelModal: (orderId: string) => void;
   closeCancelModal: () => void;
 }
@@ -51,7 +69,7 @@ const cache = new Map<string, StoreApi<TileChapanUIState>>();
 
 function createTileChapanUI(): StoreApi<TileChapanUIState> {
   return createStore<TileChapanUIState>()((set) => ({
-    section: 'overview',
+    section: 'orders',
     viewMode: 'list',
     sortBy: 'createdAt',
 
@@ -64,6 +82,7 @@ function createTileChapanUI(): StoreApi<TileChapanUIState> {
     drawerOpen: false,
 
     createModalOpen: false,
+    createPrefill: null,
 
     cancelModalOpen: false,
     cancelOrderId: null,
@@ -77,8 +96,10 @@ function createTileChapanUI(): StoreApi<TileChapanUIState> {
     setSearchQuery: (searchQuery) => set({ searchQuery }),
     openDrawer: (id) => set({ activeOrderId: id, drawerOpen: true }),
     closeDrawer: () => set({ drawerOpen: false, activeOrderId: null }),
-    openCreateModal: () => set({ createModalOpen: true }),
-    closeCreateModal: () => set({ createModalOpen: false }),
+    openCreateModal: () => set({ createModalOpen: true, createPrefill: null }),
+    openCreateModalWithPrefill: (createPrefill) => set({ createModalOpen: true, createPrefill }),
+    closeCreateModal: () => set({ createModalOpen: false, createPrefill: null }),
+    clearCreatePrefill: () => set({ createPrefill: null }),
     openCancelModal: (orderId) => set({ cancelModalOpen: true, cancelOrderId: orderId }),
     closeCancelModal: () => set({ cancelModalOpen: false, cancelOrderId: null }),
   }));

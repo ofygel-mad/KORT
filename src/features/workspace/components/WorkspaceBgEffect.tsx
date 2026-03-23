@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { ChevronLeft, Clock, CloudMoon, Plane, Sparkles } from 'lucide-react';
 import { readStorage } from '../../../shared/lib/browser';
@@ -55,7 +55,13 @@ function hasPersistedTerrainMode() {
   }
 }
 
-export function WorkspaceBgEffect({ onFlightTileProjection }: WorkspaceBgEffectProps) {
+/**
+ * ⚠️  ISOLATION BOUNDARY — the 3D scene (Three.js / WebGL) lives here.
+ * This component must NEVER import auth, UI, or any store besides `useWorkspaceStore`.
+ * It is wrapped in React.memo — the parent must pass a stable `onFlightTileProjection`
+ * callback (via useCallback) to avoid unnecessary scene re-initialization.
+ */
+export const WorkspaceBgEffect = memo(function WorkspaceBgEffect({ onFlightTileProjection }: WorkspaceBgEffectProps) {
   const layerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const runtimeRef = useRef<WorkspaceSceneRuntime | null>(null);
@@ -64,7 +70,7 @@ export function WorkspaceBgEffect({ onFlightTileProjection }: WorkspaceBgEffectP
 
   const tiles = useWorkspaceStore((state) => state.tiles);
   const viewportSize = useWorkspaceStore((state) => state.viewportSize);
-  const activeTileId = useWorkspaceStore((state) => state.activeTileId);
+  
   const sceneTheme = useWorkspaceStore((state) => state.sceneTheme);
   const sceneThemeAuto = useWorkspaceStore((state) => state.sceneThemeAuto);
   const sceneMode = useWorkspaceStore((state) => state.sceneMode);
@@ -148,7 +154,11 @@ export function WorkspaceBgEffect({ onFlightTileProjection }: WorkspaceBgEffectP
     let frameHandle = 0;
     const resize = () => {
       frameHandle = 0;
-      runtime.resize(node.clientWidth, node.clientHeight);
+      const w = node.clientWidth;
+      const h = node.clientHeight;
+      if (w > 0 && h > 0) {
+        runtime.resize(w, h);
+      }
     };
     const scheduleResize = () => {
       if (frameHandle) {
@@ -158,10 +168,14 @@ export function WorkspaceBgEffect({ onFlightTileProjection }: WorkspaceBgEffectP
     };
     scheduleResize();
 
+    // Safety: re-check dimensions after layout settles (covers HMR, slow paint, etc.)
+    const safetyTimer = window.setTimeout(scheduleResize, 200);
+
     const observer = new ResizeObserver(scheduleResize);
     observer.observe(node);
     return () => {
       observer.disconnect();
+      window.clearTimeout(safetyTimer);
       if (frameHandle) {
         cancelAnimationFrame(frameHandle);
       }
@@ -169,8 +183,8 @@ export function WorkspaceBgEffect({ onFlightTileProjection }: WorkspaceBgEffectP
   }, [sceneMode]);
 
   const sceneTiles = useMemo(
-    () => getSceneTiles(tiles, viewportSize, activeTileId),
-    [tiles, viewportSize, activeTileId],
+    () => getSceneTiles(tiles, viewportSize, null),
+    [tiles, viewportSize],
   );
 
   useEffect(() => {
@@ -183,6 +197,42 @@ export function WorkspaceBgEffect({ onFlightTileProjection }: WorkspaceBgEffectP
     });
   }, [sceneTheme, sceneThemeAuto, sceneMode, sceneTerrainMode, sceneTiles]);
 
+  // Pause the 3D scene when tab is hidden
+  // or when the browser tab is hidden (Page Visibility API).
+  // The scene is fully invisible in both cases — no reason to burn GPU/CPU cycles.
+  // Resume instantly when visible again (no cold-start cost — WebGL context stays alive).
+  const tabHiddenRef = useRef(false);
+
+  useEffect(() => {
+    const runtime = runtimeRef.current;
+    if (!runtime) return;
+
+    const shouldPause = tabHiddenRef.current;
+    if (shouldPause) {
+      runtime.pause();
+    } else {
+      runtime.resume();
+    }
+  }, []);
+
+  useEffect(() => {
+    const handleVisibility = () => {
+      tabHiddenRef.current = document.hidden;
+      const runtime = runtimeRef.current;
+      if (!runtime) return;
+
+      const shouldPause = document.hidden;
+      if (shouldPause) {
+        runtime.pause();
+      } else {
+        runtime.resume();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, []);
+
   // Push hoveredTileId focus to scene without causing React re-renders.
   // Uses Zustand subscribe to bypass React reconciliation entirely.
   useEffect(() => {
@@ -192,8 +242,7 @@ export function WorkspaceBgEffect({ onFlightTileProjection }: WorkspaceBgEffectP
       prevHovered = state.hoveredTileId;
       const runtime = runtimeRef.current;
       if (!runtime) return;
-      // Only update focus if no modal is open (activeTileId takes precedence)
-      if (state.activeTileId) return;
+      // Update focus on hover
       runtime.setState({
         theme: state.sceneTheme,
         themeAuto: state.sceneThemeAuto,
@@ -347,4 +396,4 @@ export function WorkspaceBgEffect({ onFlightTileProjection }: WorkspaceBgEffectP
       </div>
     </>
   );
-}
+});

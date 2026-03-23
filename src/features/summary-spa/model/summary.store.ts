@@ -15,7 +15,7 @@ import type {
   LeadsSnapshot, DealsSnapshot, TasksSnapshot, DailyDataPoint, ReportSection,
 } from '../api/types';
 import type { DealWonEvent, DealLostEvent, TaskDoneEvent } from '../../shared-bus';
-import { historyData, aggregateLast, previousPeriod } from '../api/mock';
+import { historyData, aggregateLast, previousPeriod } from '../api/client';
 
 // ── Period filter ─────────────────────────────────────────────
 

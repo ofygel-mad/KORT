@@ -4,35 +4,56 @@
  * Manages orders, production tasks, payments, transfers, and workshop config.
  */
 import { create } from 'zustand';
-import { chapanApi } from '../api/mock';
+import { chapanApi } from '../api/client';
 import { useBadgeStore } from '../../shared-bus/badge.store';
 import { useSharedBus } from '../../shared-bus';
 import type { GlobalNotifEvent } from '../../shared-bus';
+import { useAuthStore } from '@/shared/stores/auth';
 import type {
   Order, Client, OrderStatus, ProductionStatus,
   PaymentMethod, OrderPriority, OrderItem, OrderActivity,
+  ClientRequest, WorkzoneProfile,
 } from '../api/types';
-import { ORDER_STATUS_LABEL, PRODUCTION_STATUS_LABEL, DEFAULT_WORKERS } from '../api/types';
+import {
+  ORDER_STATUS_LABEL,
+  PRODUCTION_STATUS_LABEL,
+  DEFAULT_WORKERS,
+  PRODUCT_CATALOG,
+  FABRIC_CATALOG,
+  SIZE_OPTIONS,
+} from '../api/types';
+
+/** Get the current user's display name for activity logs. */
+function getAuthorName(): string {
+  return useAuthStore.getState().user?.full_name ?? 'Менеджер';
+}
 
 interface ChapanState {
   orders: Order[];
   clients: Client[];
+  requests: ClientRequest[];
   workers: string[];
+  productCatalog: string[];
+  fabricCatalog: string[];
+  sizeCatalog: string[];
+  profile: WorkzoneProfile;
   loading: boolean;
 
   // Data actions
   load: () => Promise<void>;
   loadClients: () => Promise<void>;
+  refreshRequests: () => Promise<void>;
+  refreshSettings: () => Promise<void>;
 
   // Order CRUD
   createOrder: (data: {
-    clientId: string;
+    clientId?: string;
     clientName: string;
     clientPhone: string;
-    isNewClient: boolean;
     priority: OrderPriority;
     items: Omit<OrderItem, 'id'>[];
     dueDate?: string;
+    sourceRequestId?: string;
   }) => Promise<string>;
   confirmOrder: (id: string) => Promise<void>;
   moveOrderStatus: (id: string, status: OrderStatus) => Promise<void>;
@@ -56,25 +77,59 @@ interface ChapanState {
   addComment: (orderId: string, content: string, author: string) => Promise<void>;
 
   // Workshop config
-  addWorker: (name: string) => void;
-  removeWorker: (name: string) => void;
+  updateProfile: (patch: Partial<WorkzoneProfile>) => Promise<void>;
+  saveCatalogs: (data: {
+    productCatalog?: string[];
+    fabricCatalog?: string[];
+    sizeCatalog?: string[];
+    workers?: string[];
+  }) => Promise<void>;
+  setRequestStatus: (requestId: string, status: ClientRequest['status'], createdOrderId?: string) => Promise<void>;
+  addWorker: (name: string) => Promise<void>;
+  removeWorker: (name: string) => Promise<void>;
 }
 
 export const useChapanStore = create<ChapanState>((set, get) => ({
   orders: [],
   clients: [],
+  requests: [],
   workers: [...DEFAULT_WORKERS],
+  productCatalog: [...PRODUCT_CATALOG],
+  fabricCatalog: [...FABRIC_CATALOG],
+  sizeCatalog: [...SIZE_OPTIONS],
+  profile: {
+    displayName: 'Чапан',
+    descriptor: '',
+    orderPrefix: 'ЧП',
+    publicIntakeTitle: 'Оставьте заявку на пошив',
+    publicIntakeDescription: '',
+    publicIntakeEnabled: true,
+    supportLabel: '',
+  },
   loading: false,
 
   // ── Load ────────────────────────────────────────────────
 
   load: async () => {
     set({ loading: true });
-    const [orders, clients] = await Promise.all([
+    const [orders, clients, requests, settings, profile] = await Promise.all([
       chapanApi.getOrders(),
       chapanApi.getClients(),
+      chapanApi.getRequests(),
+      chapanApi.getCatalogs(),
+      chapanApi.getProfile(),
     ]);
-    set({ orders, clients, loading: false });
+    set({
+      orders,
+      clients,
+      requests,
+      workers: settings.workers,
+      productCatalog: settings.productCatalog,
+      fabricCatalog: settings.fabricCatalog,
+      sizeCatalog: settings.sizeCatalog,
+      profile,
+      loading: false,
+    });
   },
 
   loadClients: async () => {
@@ -82,20 +137,50 @@ export const useChapanStore = create<ChapanState>((set, get) => ({
     set({ clients });
   },
 
+  refreshRequests: async () => {
+    const requests = await chapanApi.getRequests();
+    set({ requests });
+  },
+
+  refreshSettings: async () => {
+    const [settings, profile] = await Promise.all([
+      chapanApi.getCatalogs(),
+      chapanApi.getProfile(),
+    ]);
+    set({
+      workers: settings.workers,
+      productCatalog: settings.productCatalog,
+      fabricCatalog: settings.fabricCatalog,
+      sizeCatalog: settings.sizeCatalog,
+      profile,
+    });
+  },
+
   // ── Create order ────────────────────────────────────────
 
   createOrder: async (data) => {
     const order = await chapanApi.createOrder(data);
-    set(s => ({ orders: [order, ...s.orders] }));
+    set(s => ({
+      orders: [order, ...s.orders],
+      requests: data.sourceRequestId
+        ? s.requests.map((request) => (
+            request.id === data.sourceRequestId
+              ? {
+                  ...request,
+                  status: 'converted',
+                  createdOrderId: order.id,
+                  updatedAt: new Date().toISOString(),
+                }
+              : request
+          ))
+        : s.requests,
+    }));
 
-    // Auto-save new client to the clients list
-    if (data.isNewClient && data.clientName.trim()) {
+    // Refresh clients when the order created or reused a client implicitly.
+    if (!data.clientId?.trim()) {
       try {
-        const newClient = await chapanApi.createClient({
-          fullName: data.clientName.trim(),
-          phone: data.clientPhone.trim(),
-        });
-        set(s => ({ clients: [newClient, ...s.clients] }));
+        const clients = await chapanApi.getClients();
+        set({ clients });
       } catch {
         // Non-critical — order was already created
       }
@@ -132,7 +217,7 @@ export const useChapanStore = create<ChapanState>((set, get) => ({
       id: crypto.randomUUID(),
       type: 'status_change',
       content: `${ORDER_STATUS_LABEL[prev.status]} → ${ORDER_STATUS_LABEL['confirmed']}`,
-      author: 'Менеджер',
+      author: getAuthorName(),
       createdAt: now,
     };
     updated.activities = [...updated.activities, activity];
@@ -153,7 +238,7 @@ export const useChapanStore = create<ChapanState>((set, get) => ({
       id: crypto.randomUUID(),
       type: 'status_change',
       content: `${ORDER_STATUS_LABEL[prev.status]} → ${ORDER_STATUS_LABEL[status]}`,
-      author: 'Менеджер',
+      author: getAuthorName(),
       createdAt: now,
     };
 
@@ -200,7 +285,7 @@ export const useChapanStore = create<ChapanState>((set, get) => ({
                   id: crypto.randomUUID(),
                   type: 'status_change' as const,
                   content: `${ORDER_STATUS_LABEL[prev.status]} → Отменён: ${reason}`,
-                  author: 'Менеджер',
+                  author: getAuthorName(),
                   createdAt: now,
                 },
               ],
@@ -235,7 +320,7 @@ export const useChapanStore = create<ChapanState>((set, get) => ({
               id: crypto.randomUUID(),
               type: 'payment' as const,
               content: `Оплата ${amount.toLocaleString('ru-RU')} ₸${notes ? ` — ${notes}` : ''}`,
-              author: 'Менеджер',
+              author: getAuthorName(),
               createdAt: now,
             },
           ],
@@ -350,7 +435,7 @@ export const useChapanStore = create<ChapanState>((set, get) => ({
               id: crypto.randomUUID(),
               type: 'production_update' as const,
               content: `${task.productName}: заблокировано — ${reason}`,
-              author: 'Менеджер',
+              author: getAuthorName(),
               createdAt: now,
             },
           ],
@@ -385,7 +470,7 @@ export const useChapanStore = create<ChapanState>((set, get) => ({
               id: crypto.randomUUID(),
               type: 'production_update' as const,
               content: `${task.productName}: блок снят`,
-              author: 'Менеджер',
+              author: getAuthorName(),
               createdAt: now,
             },
           ],
@@ -421,7 +506,7 @@ export const useChapanStore = create<ChapanState>((set, get) => ({
                   id: crypto.randomUUID(),
                   type: 'production_update' as const,
                   content: `${task.productName}: зафиксирован дефект — ${defect}`,
-                  author: 'Менеджер',
+                  author: getAuthorName(),
                   createdAt: now,
                 },
               ]
@@ -451,7 +536,7 @@ export const useChapanStore = create<ChapanState>((set, get) => ({
                   id: crypto.randomUUID(),
                   type: 'transfer' as const,
                   content: 'Процесс передачи инициирован',
-                  author: 'Менеджер',
+                  author: getAuthorName(),
                   createdAt: now,
                 },
               ],
@@ -530,15 +615,51 @@ export const useChapanStore = create<ChapanState>((set, get) => ({
 
   // ── Workshop config ─────────────────────────────────────
 
-  addWorker: (name) => {
-    const trimmed = name.trim();
-    if (!trimmed) return;
-    set(s => ({
-      workers: s.workers.includes(trimmed) ? s.workers : [...s.workers, trimmed],
+  updateProfile: async (patch) => {
+    const profile = await chapanApi.updateProfile(patch);
+    set({ profile });
+  },
+
+  saveCatalogs: async (data) => {
+    await chapanApi.saveCatalogs(data);
+    const settings = await chapanApi.getCatalogs();
+    set({
+      workers: settings.workers,
+      productCatalog: settings.productCatalog,
+      fabricCatalog: settings.fabricCatalog,
+      sizeCatalog: settings.sizeCatalog,
+    });
+  },
+
+  setRequestStatus: async (requestId, status, createdOrderId) => {
+    await chapanApi.updateRequestStatus(requestId, status, createdOrderId);
+    set((state) => ({
+      requests: state.requests.map((request) => (
+        request.id === requestId
+          ? {
+              ...request,
+              status,
+              createdOrderId: createdOrderId ?? request.createdOrderId,
+              updatedAt: new Date().toISOString(),
+            }
+          : request
+      )),
     }));
   },
 
-  removeWorker: (name) => {
-    set(s => ({ workers: s.workers.filter(w => w !== name) }));
+  addWorker: async (name) => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    const workers = get().workers.includes(trimmed)
+      ? get().workers
+      : [...get().workers, trimmed];
+    await chapanApi.saveCatalogs({ workers });
+    set({ workers });
+  },
+
+  removeWorker: async (name) => {
+    const workers = get().workers.filter(w => w !== name);
+    await chapanApi.saveCatalogs({ workers });
+    set({ workers });
   },
 }));

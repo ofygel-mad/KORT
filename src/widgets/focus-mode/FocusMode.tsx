@@ -28,10 +28,10 @@ function usePomodoro() {
             setRunning(false);
             if (phase === 'work') {
               setPhase('break'); setLeft(BREAK_SEC);
-              toast.success('🎉 Перерыв 5 минут!');
+              toast.success('Перерыв 5 минут');
             } else {
               setPhase('work'); setLeft(WORK_SEC);
-              toast('⏱ Пора работать!');
+              toast('Пора работать');
             }
             return 0;
           }
@@ -138,7 +138,7 @@ export function FocusMode() {
                 {pomodoro.display}
               </div>
               <div className={s.timerPhase}>
-                {pomodoro.phase === 'work' ? '⏱ Рабочий блок' : '☕ Перерыв'}
+                {pomodoro.phase === 'work' ? 'Рабочий блок' : 'Перерыв'}
               </div>
               <div className={s.timerControls}>
                 <motion.button
@@ -171,7 +171,7 @@ export function FocusMode() {
               {open.length === 0 && (
                 <div className={s.tasksEmpty}>
                   <CheckSquare size={28} className={s.tasksEmptyIcon} />
-                  <div>Все задачи выполнены 🎉</div>
+                  <div>Все задачи выполнены</div>
                 </div>
               )}
 
@@ -202,7 +202,7 @@ export function FocusMode() {
               ))}
 
               {done.length > 0 && (
-                <div className={s.doneCount}>✓ Выполнено: {done.length}</div>
+                <div className={s.doneCount}>Выполнено: {done.length}</div>
               )}
             </div>
           </motion.div>

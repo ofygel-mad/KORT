@@ -5,7 +5,7 @@
  * Publishes snapshots so Summary SPA stays up-to-date.
  */
 import { create } from 'zustand';
-import { tasksApi } from '../api/mock';
+import { tasksApi } from '../api/client';
 import { useSharedBus } from '../../shared-bus';
 import { useBadgeStore } from '../../shared-bus/badge.store';
 import type { GlobalNotifEvent } from '../../shared-bus';

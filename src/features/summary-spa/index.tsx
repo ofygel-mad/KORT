@@ -12,16 +12,16 @@
 import { useEffect } from 'react';
 import { BarChart2, RefreshCw, Zap } from 'lucide-react';
 import { useSummaryStore } from './model/summary.store';
-import { KpiCards }          from './components/widgets/KpiCards';
-import { RevenueTrend }      from './components/charts/RevenueTrend';
+import { KpiCards } from './components/widgets/KpiCards';
+import { RevenueTrend } from './components/charts/RevenueTrend';
 import { DealsFunnelWidget, LostReasonsWidget } from './components/widgets/DealsWidget';
-import { TasksHealthWidget, LiveFeedWidget }     from './components/widgets/TasksWidget';
-import { LeadsWidget }       from './components/widgets/LeadsWidget';
+import { TasksHealthWidget, LiveFeedWidget } from './components/widgets/TasksWidget';
+import { LeadsWidget } from './components/widgets/LeadsWidget';
 import type { PeriodFilter } from './model/summary.store';
 import s from './SummarySPA.module.css';
 
 const PERIOD_OPTIONS: { value: PeriodFilter; label: string }[] = [
-  { value: '7d',  label: '7 дней'  },
+  { value: '7d', label: '7 дней' },
   { value: '14d', label: '14 дней' },
   { value: '30d', label: '30 дней' },
 ];
@@ -33,40 +33,56 @@ export function SummarySPA() {
     reportSections, extraSnaps,
   } = useSummaryStore();
 
-  // Poll bus for new data
   useEffect(() => {
     const poll = () => {
-      const s = useSummaryStore.getState();
-      s.processSnapshots();
-      s.processEventQueues();
+      const state = useSummaryStore.getState();
+      state.processSnapshots();
+      state.processEventQueues();
     };
+
     poll();
     const id = setInterval(poll, 3000);
     return () => clearInterval(id);
   }, []);
 
   const connected = [
-    leadsSnap  ? 'Лиды'   : null,
-    dealsSnap  ? 'Сделки' : null,
-    tasksSnap  ? 'Задачи' : null,
+    leadsSnap ? 'Лиды' : null,
+    dealsSnap ? 'Сделки' : null,
+    tasksSnap ? 'Задачи' : null,
   ].filter(Boolean);
 
   const extraKeys = Object.keys(extraSnaps);
 
   return (
     <div className={s.root}>
-      {/* ── Header ──────────────────────────────────────── */}
       <div className={s.header}>
         <div className={s.headerLeft}>
-          <BarChart2 size={18} className={s.icon} />
-          <span className={s.title}>Сводка</span>
+          <div className={s.headerCopy}>
+            <div className={s.eyebrow}>Operations Snapshot</div>
+            <div className={s.titleRow}>
+              <div className={s.iconWrap}>
+                <BarChart2 size={18} className={s.icon} />
+              </div>
+              <div className={s.titleBlock}>
+                <span className={s.title}>Сводка</span>
+                <div className={s.headerSubtitle}>
+                  Лиды, сделки и задачи в одном обзорном контуре.
+                </div>
+              </div>
+            </div>
+          </div>
 
           {connected.length > 0 ? (
-            <div className={s.connectedPills}>
-              <Zap size={11} style={{ color: '#22c55e' }} />
-              {connected.map(name => (
-                <span key={name} className={s.connectedPill}>{name}</span>
-              ))}
+            <div className={s.connectedWrap}>
+              <div className={s.connectedLabel}>
+                <Zap size={12} className={s.connectedIcon} />
+                Подключены источники
+              </div>
+              <div className={s.connectedPills}>
+                {connected.map((name) => (
+                  <span key={name} className={s.connectedPill}>{name}</span>
+                ))}
+              </div>
             </div>
           ) : (
             <span className={s.waitingBadge}>
@@ -76,9 +92,8 @@ export function SummarySPA() {
           )}
         </div>
 
-        {/* Period selector */}
         <div className={s.periodGroup}>
-          {PERIOD_OPTIONS.map(opt => (
+          {PERIOD_OPTIONS.map((opt) => (
             <button
               key={opt.value}
               className={`${s.periodBtn} ${period === opt.value ? s.periodBtnActive : ''}`}
@@ -90,14 +105,11 @@ export function SummarySPA() {
         </div>
       </div>
 
-      {/* ── Dashboard ───────────────────────────────────── */}
       <div className={s.dashboard}>
-        {/* KPI row */}
         <section className={s.section}>
           <KpiCards />
         </section>
 
-        {/* Main row: Revenue + Funnel */}
         <div className={s.row}>
           <div className={s.col2}>
             <RevenueTrend />
@@ -107,7 +119,6 @@ export function SummarySPA() {
           </div>
         </div>
 
-        {/* Second row: Leads + Tasks + Lost reasons */}
         <div className={s.row}>
           <div className={s.col1}>
             <LeadsWidget />
@@ -120,22 +131,19 @@ export function SummarySPA() {
           </div>
         </div>
 
-        {/* Live feed */}
         <div className={s.row}>
           <div className={s.colFull}>
             <LiveFeedWidget />
           </div>
         </div>
 
-        {/* ── Extension slot: future SPAs self-register here ─────── */}
         {reportSections.length > 0 && (
           <div className={s.row}>
-            {reportSections.map(sec => (
+            {reportSections.map((sec) => (
               <div key={sec.id} className={s.col1}>
                 <div className={s.extensionCard}>
                   <div className={s.extensionTitle}>{sec.title}</div>
                   <div className={s.extensionSource}>{sec.source}</div>
-                  {/* Future SPA renders its component here via renderKey lookup */}
                   <div className={s.extensionPlaceholder}>
                     Данные от «{sec.source}» подключены
                   </div>
@@ -145,10 +153,9 @@ export function SummarySPA() {
           </div>
         )}
 
-        {/* Generic extra snapshots from unknown future SPAs */}
         {extraKeys.length > 0 && (
           <div className={s.row}>
-            {extraKeys.map(key => (
+            {extraKeys.map((key) => (
               <div key={key} className={s.col1}>
                 <div className={s.extensionCard}>
                   <div className={s.extensionTitle}>{key}</div>

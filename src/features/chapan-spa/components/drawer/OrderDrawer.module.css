@@ -1,31 +1,30 @@
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(3px);
   z-index: 850;
   display: flex;
   justify-content: flex-end;
+  background: var(--bg-overlay);
+  backdrop-filter: blur(4px);
 }
 
 .drawer {
-  width: min(480px, 100%);
+  width: min(520px, 100%);
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: #12151a;
-  border-left: 1px solid rgba(255, 255, 255, 0.06);
   overflow: hidden;
+  background: var(--card-bg);
+  border-left: 1px solid var(--card-border);
+  box-shadow: var(--shadow-xl);
 }
 
-/* ── Header ── */
-
 .header {
-  padding: 16px 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
+  padding: 18px 20px 16px;
+  border-bottom: 1px solid var(--border-subtle);
   flex-shrink: 0;
 }
 
@@ -36,55 +35,61 @@
 }
 
 .orderNum {
-  font-size: 17px;
+  color: var(--text-accent);
+  font-size: 18px;
   font-weight: 800;
-  color: rgba(210, 160, 90, 0.9);
+  letter-spacing: 0.03em;
 }
 
-.statusBadge {
+.statusBadge,
+.priorityTag,
+.payTag,
+.dueTag,
+.dueNone,
+.amountTag,
+.ptStatus {
   display: inline-flex;
   align-items: center;
-  height: 22px;
-  padding: 0 8px;
-  border-radius: 6px;
+  gap: 4px;
+  min-height: 24px;
+  padding: 0 9px;
+  border: 1px solid transparent;
+  border-radius: 999px;
   font-size: 11px;
-  font-weight: 600;
-  color: var(--s-color);
-  background: color-mix(in srgb, var(--s-color) 12%, transparent);
+  font-weight: 700;
 }
 
 .closeBtn {
-  width: 30px;
-  height: 30px;
-  display: grid;
-  place-items: center;
-  border: none;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.04);
-  color: rgba(255, 255, 255, 0.4);
-  cursor: pointer;
   margin-left: auto;
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  background: var(--bg-surface);
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: transform var(--motion-fast) var(--motion-ease), border-color var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease);
 }
 
 .closeBtn:hover {
-  background: rgba(255, 255, 255, 0.08);
+  transform: translateY(-1px);
+  border-color: var(--fill-accent);
+  color: var(--text-primary);
 }
 
 .clientRow {
   display: flex;
   align-items: center;
   gap: 6px;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--text-secondary);
   font-size: 13px;
 }
 
-.clientName {
-  font-weight: 600;
-}
-
-.clientPhone {
-  color: rgba(255, 255, 255, 0.3);
-}
+.clientName { font-weight: 700; }
+.clientPhone { color: var(--text-tertiary); }
 
 .metaRow {
   display: flex;
@@ -93,241 +98,285 @@
   flex-wrap: wrap;
 }
 
-.priorityTag, .payTag, .dueTag, .amountTag {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  height: 22px;
-  padding: 0 8px;
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 600;
-}
-
-.priorityTag {
-  color: var(--p-color);
-  background: color-mix(in srgb, var(--p-color) 10%, transparent);
-}
-
-.payTag {
-  color: var(--pay-color);
-  background: color-mix(in srgb, var(--pay-color) 10%, transparent);
-}
-
 .dueTag {
-  color: rgba(255, 255, 255, 0.4);
-  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-secondary);
+  background: var(--bg-surface-inset);
+  border-color: var(--border-subtle);
 }
 
-.dueOverdue  { color: rgba(239, 68, 68, 0.8); background: rgba(239, 68, 68, 0.08); }
-.dueToday    { color: rgba(239, 68, 68, 0.75); background: rgba(239, 68, 68, 0.07); }
-.dueTomorrow { color: rgba(245, 158, 11, 0.75); background: rgba(245, 158, 11, 0.07); }
-.dueNone     { color: rgba(245, 158, 11, 0.55); background: rgba(245, 158, 11, 0.05); border: 1px dashed rgba(245, 158, 11, 0.18); }
+.dueOverdue,
+.dueToday {
+  color: var(--fill-negative-text);
+  background: var(--fill-negative-soft);
+  border-color: color-mix(in srgb, var(--fill-negative) 24%, transparent);
+}
+
+.dueTomorrow {
+  color: var(--fill-warning-text);
+  background: var(--fill-warning-soft);
+  border-color: color-mix(in srgb, var(--fill-warning) 24%, transparent);
+}
+
+.dueNone {
+  color: var(--fill-warning-text);
+  background: color-mix(in srgb, var(--fill-warning-soft) 70%, transparent);
+  border-color: color-mix(in srgb, var(--fill-warning) 22%, transparent);
+}
 
 .amountTag {
-  color: rgba(255, 255, 255, 0.7);
-  background: rgba(255, 255, 255, 0.05);
-  font-weight: 700;
+  color: var(--text-primary);
+  background: var(--bg-surface-inset);
+  border-color: var(--border-subtle);
+  font-weight: 800;
 }
-
-/* ── Tabs ── */
 
 .tabs {
   display: flex;
-  gap: 2px;
-  padding: 6px 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  flex-shrink: 0;
+  gap: 4px;
+  padding: 8px 20px;
+  border-bottom: 1px solid var(--border-subtle);
   overflow-x: auto;
+  flex-shrink: 0;
 }
 
 .tab {
-  height: 32px;
+  min-height: 34px;
   padding: 0 12px;
-  border: none;
-  border-radius: 7px;
+  border: 1px solid transparent;
+  border-radius: 10px;
   background: transparent;
-  color: rgba(255, 255, 255, 0.35);
+  color: var(--text-tertiary);
   font: inherit;
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
-  transition: background 120ms, color 120ms;
+  transition: background var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease);
 }
 
 .tab:hover {
-  background: rgba(255, 255, 255, 0.04);
-  color: rgba(255, 255, 255, 0.6);
+  background: var(--bg-hover);
+  color: var(--text-primary);
 }
 
 .tabActive {
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.9);
-  font-weight: 600;
+  background: var(--bg-surface-inset);
+  color: var(--text-primary);
+  border-color: var(--border-subtle);
 }
-
-/* ── Content ── */
 
 .content {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 14px 20px;
+  padding: 16px 20px 20px;
 }
 
-.content::-webkit-scrollbar {
-  width: 3px;
-}
-
+.content::-webkit-scrollbar { width: 4px; }
 .content::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 3px;
+  background: color-mix(in srgb, var(--text-tertiary) 28%, transparent);
+  border-radius: 999px;
 }
 
 .sectionLabel {
-  font-size: 10px;
-  font-weight: 700;
+  margin: 0 0 8px;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.25);
-  margin-bottom: 8px;
-  margin-top: 14px;
 }
 
-.sectionLabel:first-child {
-  margin-top: 0;
-}
-
-/* ── Details tab ── */
-
-.detailsTab {
+.detailsTab,
+.productionTab,
+.paymentsTab,
+.journalTab {
   display: flex;
   flex-direction: column;
+  gap: 10px;
 }
 
-.itemRow {
+.itemRow,
+.payRow,
+.actRow {
   display: flex;
-  align-items: center;
   gap: 10px;
   padding: 10px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
-.itemIcon {
-  color: rgba(160, 104, 56, 0.6);
+.itemIcon,
+.payRowIcon {
+  color: var(--text-accent);
   flex-shrink: 0;
 }
 
-.itemBody {
+.itemBody,
+.payRowBody,
+.actBody {
   flex: 1;
   min-width: 0;
 }
 
-.itemName {
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.itemMeta {
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.3);
-}
-
-.itemNotes {
-  font-size: 11px;
-  color: rgba(245, 158, 11, 0.55);
-  font-style: italic;
-  margin-top: 2px;
-}
-
-.itemPrice {
+.itemName,
+.payRowAmount,
+.ptName {
+  color: var(--text-primary);
   font-size: 13px;
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.6);
-  flex-shrink: 0;
+}
+
+.itemMeta,
+.itemNotes,
+.payRowMeta,
+.actMeta,
+.ptMeta {
+  color: var(--text-tertiary);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.itemNotes { margin-top: 3px; }
+
+.itemPrice {
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 800;
 }
 
 .actionsSection {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  margin-top: 8px;
-}
-
-.actionBtn {
-  display: inline-flex;
-  align-items: center;
   gap: 8px;
-  height: 36px;
-  padding: 0 14px;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.03);
-  color: rgba(255, 255, 255, 0.6);
+  margin-top: 4px;
+}
+
+.actionBtn,
+.transferConfirmBtn,
+.ptBlockBtn,
+.ptUnblockBtn,
+.ptDefectToggle,
+.ptDefectSave,
+.ptDefectCancel,
+.payBtn,
+.commentSend,
+.modalCloseBtn,
+.modalConfirmBtn {
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 10px;
   font: inherit;
-  font-size: 13px;
-  font-weight: 500;
+  font-size: 12px;
+  font-weight: 700;
   cursor: pointer;
-  transition: background 120ms;
 }
 
-.actionBtn:hover {
-  background: rgba(255, 255, 255, 0.07);
+.actionBtn,
+.transferConfirmBtn,
+.payBtn,
+.commentSend {
+  border: 1px solid color-mix(in srgb, var(--fill-accent) 36%, var(--border-default));
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--fill-accent) 30%, white 6%) 0%,
+      color-mix(in srgb, var(--fill-accent) 24%, var(--bg-surface-elevated)) 100%
+    );
+  color: color-mix(in srgb, white 88%, var(--fill-accent) 12%);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, white 14%, transparent),
+    0 12px 22px -18px color-mix(in srgb, var(--fill-accent) 90%, transparent);
 }
 
-.dangerBtn {
-  color: rgba(239, 68, 68, 0.7);
-  border-color: rgba(239, 68, 68, 0.15);
+.actionBtnPositive {
+  border-color: color-mix(in srgb, var(--fill-positive) 34%, var(--border-default));
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--fill-positive) 26%, white 5%) 0%,
+      color-mix(in srgb, var(--fill-positive) 18%, var(--bg-surface-elevated)) 100%
+    );
+  color: color-mix(in srgb, white 90%, var(--fill-positive) 10%);
 }
 
-.dangerBtn:hover {
-  background: rgba(239, 68, 68, 0.08);
+.dangerBtn,
+.modalConfirmBtn {
+  border: 1px solid color-mix(in srgb, var(--fill-negative) 24%, transparent);
+  background: var(--fill-negative-soft);
+  color: var(--fill-negative-text);
 }
 
-.actionBtnGreen {
-  color: rgba(34, 197, 94, 0.8);
-  border-color: rgba(34, 197, 94, 0.2);
+.actionBtn:hover,
+.transferConfirmBtn:hover,
+.ptBlockBtn:hover,
+.ptUnblockBtn:hover,
+.ptDefectToggle:hover,
+.ptDefectSave:hover,
+.ptDefectCancel:hover,
+.payBtn:hover,
+.commentSend:hover,
+.modalCloseBtn:hover,
+.modalConfirmBtn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
 }
 
-.actionBtnGreen:hover {
-  background: rgba(34, 197, 94, 0.07);
+.actionBtn:hover,
+.transferConfirmBtn:hover,
+.payBtn:hover,
+.commentSend:hover {
+  border-color: color-mix(in srgb, var(--fill-accent) 48%, var(--border-default));
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, white 18%, transparent),
+    0 16px 28px -18px color-mix(in srgb, var(--fill-accent) 90%, transparent);
+  filter: brightness(1.04);
 }
 
-/* ── Cancel reason display (completed state) ── */
+.actionBtn:active,
+.transferConfirmBtn:active,
+.payBtn:active,
+.commentSend:active {
+  transform: translateY(0);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, white 10%, transparent),
+    0 8px 16px -18px color-mix(in srgb, var(--fill-accent) 70%, transparent);
+}
+
+.actionBtn:focus-visible,
+.transferConfirmBtn:focus-visible,
+.ptBlockBtn:focus-visible,
+.ptUnblockBtn:focus-visible,
+.ptDefectToggle:focus-visible,
+.ptDefectSave:focus-visible,
+.ptDefectCancel:focus-visible,
+.payBtn:focus-visible,
+.commentSend:focus-visible,
+.modalCloseBtn:focus-visible,
+.modalConfirmBtn:focus-visible {
+  outline: none;
+  box-shadow: var(--brand-focus-ring);
+}
 
 .cancelReasonDisplay {
-  margin-top: 12px;
-  padding: 8px 12px;
-  border-radius: 8px;
-  background: rgba(239, 68, 68, 0.05);
-  border: 1px solid rgba(239, 68, 68, 0.1);
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--fill-negative) 22%, transparent);
+  border-radius: 12px;
+  background: var(--fill-negative-soft);
+  color: var(--fill-negative-text);
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.45);
 }
 
 .cancelReasonLabel {
   display: block;
+  margin-bottom: 4px;
   font-size: 10px;
-  font-weight: 700;
-  color: rgba(239, 68, 68, 0.5);
-  text-transform: uppercase;
+  font-weight: 800;
   letter-spacing: 0.06em;
-  margin-bottom: 3px;
+  text-transform: uppercase;
 }
 
-/* ── Transfer steps ── */
-
-.transferSection {
-  padding: 10px 0;
-}
-
-.transferSteps {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  padding: 4px 0;
-}
+.transferSection { padding-top: 4px; }
+.transferSteps { display: flex; flex-direction: column; }
 
 .transferStep {
   display: flex;
@@ -337,23 +386,24 @@
 }
 
 .transferStepCircle {
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-subtle);
   border-radius: 50%;
-  border: 1.5px solid rgba(255, 255, 255, 0.15);
-  display: grid;
-  place-items: center;
+  background: var(--bg-surface);
+  color: var(--text-tertiary);
   font-size: 11px;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.35);
+  font-weight: 800;
   flex-shrink: 0;
-  transition: all 160ms;
 }
 
 .transferStepCircleDone {
-  border-color: rgba(34, 197, 94, 0.5);
-  color: rgba(34, 197, 94, 0.8);
-  background: rgba(34, 197, 94, 0.07);
+  border-color: color-mix(in srgb, var(--fill-positive) 24%, transparent);
+  background: var(--fill-positive-soft);
+  color: var(--fill-positive-text);
 }
 
 .transferStepBody {
@@ -365,603 +415,310 @@
 }
 
 .transferStepTitle {
+  color: var(--text-secondary);
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.6);
 }
 
-.transferStepDone .transferStepTitle {
-  color: rgba(34, 197, 94, 0.75);
-  text-decoration: line-through;
-  text-decoration-color: rgba(34, 197, 94, 0.3);
-}
-
-.transferConfirmBtn {
-  align-self: flex-start;
-  height: 28px;
-  padding: 0 12px;
-  border-radius: 6px;
-  border: 1px solid rgba(160, 104, 56, 0.3);
-  background: rgba(160, 104, 56, 0.1);
-  color: rgba(210, 160, 90, 0.8);
-  font: inherit;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 120ms;
-}
-
-.transferConfirmBtn:hover {
-  background: rgba(160, 104, 56, 0.2);
-}
+.transferStepDone .transferStepTitle { color: var(--fill-positive-text); }
 
 .transferConnector {
-  width: 1.5px;
+  width: 1px;
   height: 10px;
-  background: rgba(255, 255, 255, 0.08);
-  margin-left: 12px;
+  margin-left: 14px;
+  background: var(--border-subtle);
 }
 
 .transferDoneRow {
   display: flex;
   align-items: center;
   gap: 7px;
-  padding: 8px 10px;
-  border-radius: 8px;
-  background: rgba(34, 197, 94, 0.07);
-  border: 1px solid rgba(34, 197, 94, 0.15);
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--fill-positive) 24%, transparent);
+  border-radius: 12px;
+  background: var(--fill-positive-soft);
+  color: var(--fill-positive-text);
   font-size: 13px;
-  color: rgba(34, 197, 94, 0.75);
-  margin-top: 4px;
+  font-weight: 700;
 }
 
 .transferDate {
   margin-left: auto;
   font-size: 11px;
-  color: rgba(34, 197, 94, 0.4);
-}
-
-/* ── Legacy (removed) ── */
-
-.transferChecks { display: none; }
-.checkLabel     { display: none; }
-
-/* ── Production tab ── */
-
-.productionTab {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  opacity: 0.8;
 }
 
 .emptyTab {
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.2);
+  padding: 36px 0;
   text-align: center;
-  padding: 32px 0;
+  color: var(--text-tertiary);
+  font-size: 13px;
 }
 
 .ptCard {
-  padding: 12px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(255, 255, 255, 0.02);
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  background: var(--card-bg);
+}
+
+.ptCardBlocked {
+  border-color: color-mix(in srgb, var(--fill-warning) 24%, var(--card-border));
 }
 
 .ptTop {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
 }
 
-.ptName {
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.ptStatus {
-  display: inline-flex;
-  align-items: center;
-  height: 20px;
-  padding: 0 7px;
-  border-radius: 5px;
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--ps-color);
-  background: color-mix(in srgb, var(--ps-color) 12%, transparent);
-}
-
-.ptMeta {
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.3);
-}
-
-.ptWorker {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.4);
-}
-
-.ptCardBlocked {
-  border-color: rgba(245, 158, 11, 0.2);
-  background: rgba(245, 158, 11, 0.02);
-}
-
-.ptBlockReason {
-  display: flex;
-  align-items: flex-start;
-  gap: 5px;
-  font-size: 11px;
-  color: rgba(245, 158, 11, 0.7);
-  padding: 4px 7px;
-  border-radius: 5px;
-  background: rgba(245, 158, 11, 0.05);
-}
-
+.ptBlockReason,
 .ptDefectNote {
   display: flex;
   align-items: flex-start;
-  gap: 5px;
+  gap: 6px;
+  padding: 7px 8px;
+  border: 1px solid transparent;
+  border-radius: 10px;
   font-size: 11px;
-  color: rgba(239, 68, 68, 0.65);
-  padding: 4px 7px;
-  border-radius: 5px;
-  background: rgba(239, 68, 68, 0.05);
+  line-height: 1.45;
 }
 
-.ptActions {
+.ptBlockReason {
+  color: var(--fill-warning-text);
+  background: var(--fill-warning-soft);
+  border-color: color-mix(in srgb, var(--fill-warning) 24%, transparent);
+}
+
+.ptDefectNote {
+  color: var(--fill-negative-text);
+  background: var(--fill-negative-soft);
+  border-color: color-mix(in srgb, var(--fill-negative) 24%, transparent);
+}
+
+.ptActions,
+.ptFlagRow,
+.row,
+.commentBox,
+.modalActions {
   display: flex;
-  gap: 6px;
-  margin-top: 4px;
+  gap: 8px;
 }
-
-.ptFlagRow {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 4px;
-  flex-wrap: wrap;
-}
-
-.ptBlockBtn, .ptUnblockBtn, .ptDefectToggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  height: 24px;
-  padding: 0 9px;
-  border-radius: 5px;
-  font: inherit;
-  font-size: 10px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 120ms;
-}
-
-.ptBlockBtn {
-  border: 1px solid rgba(245, 158, 11, 0.2);
-  background: transparent;
-  color: rgba(245, 158, 11, 0.55);
-}
-
-.ptBlockBtn:hover { background: rgba(245, 158, 11, 0.08); color: rgba(245, 158, 11, 0.85); }
-
-.ptUnblockBtn {
-  border: 1px solid rgba(34, 197, 94, 0.2);
-  background: rgba(34, 197, 94, 0.06);
-  color: rgba(34, 197, 94, 0.7);
-}
-
-.ptUnblockBtn:hover { background: rgba(34, 197, 94, 0.12); }
-
-.ptDefectToggle {
-  border: none;
-  background: none;
-  color: rgba(255, 255, 255, 0.2);
-  text-decoration: underline;
-  text-decoration-style: dotted;
-  padding: 0 4px;
-}
-
-.ptDefectToggle:hover { color: rgba(239, 68, 68, 0.5); }
 
 .ptDefectEdit {
   display: flex;
-  align-items: center;
-  gap: 4px;
   flex: 1;
-}
-
-.ptDefectInput {
-  flex: 1;
-  height: 24px;
-  padding: 0 7px;
-  border-radius: 5px;
-  border: 1px solid rgba(239, 68, 68, 0.2);
-  background: rgba(239, 68, 68, 0.04);
-  color: rgba(255, 255, 255, 0.6);
-  font: inherit;
-  font-size: 11px;
-  outline: none;
-}
-
-.ptDefectSave, .ptDefectCancel {
-  width: 22px;
-  height: 22px;
-  display: grid;
-  place-items: center;
-  border-radius: 4px;
-  font: inherit;
-  font-size: 11px;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
-.ptDefectSave {
-  border: 1px solid rgba(34, 197, 94, 0.25);
-  background: rgba(34, 197, 94, 0.08);
-  color: rgba(34, 197, 94, 0.8);
-}
-
-.ptDefectCancel {
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  background: transparent;
-  color: rgba(255, 255, 255, 0.3);
-}
-
-.ptSelect {
-  flex: 1;
-  height: 30px;
-  padding: 0 8px;
-  border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.03);
-  color: rgba(255, 255, 255, 0.6);
-  font: inherit;
-  font-size: 11px;
-}
-
-.ptSelect option {
-  background: #1a1d24;
-  color: #e0e0e0;
-}
-
-/* ── Payments tab ── */
-
-.paymentsTab {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-/* Payment progress block */
-.payProgressBlock {
-  padding: 12px 14px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  display: flex;
-  flex-direction: column;
   gap: 6px;
 }
 
+.ptSelect,
+.formInput,
+.formSelect,
+.commentInput,
+.ptDefectInput,
+.modalInput {
+  width: 100%;
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font: inherit;
+  outline: none;
+  transition: border-color var(--motion-fast) var(--motion-ease), box-shadow var(--motion-fast) var(--motion-ease);
+}
+
+.ptSelect:focus,
+.formInput:focus,
+.formSelect:focus,
+.commentInput:focus,
+.ptDefectInput:focus,
+.modalInput:focus {
+  border-color: color-mix(in srgb, var(--fill-accent) 30%, var(--border-subtle));
+  box-shadow: var(--shadow-focus);
+}
+
+.ptBlockBtn {
+  border: 1px solid color-mix(in srgb, var(--fill-warning) 24%, transparent);
+  background: transparent;
+  color: var(--fill-warning-text);
+}
+
+.ptUnblockBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid color-mix(in srgb, var(--fill-positive) 24%, transparent);
+  background: var(--fill-positive-soft);
+  color: var(--fill-positive-text);
+}
+
+.ptDefectToggle {
+  border: 1px dashed var(--border-subtle);
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.ptDefectSave {
+  width: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid color-mix(in srgb, var(--fill-positive) 24%, transparent);
+  background: var(--fill-positive-soft);
+  color: var(--fill-positive-text);
+}
+
+.ptDefectCancel {
+  width: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-subtle);
+  background: transparent;
+  color: var(--text-tertiary);
+}
+
+.payProgressBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  background: var(--card-bg);
+}
+
 .payProgressBar {
-  height: 5px;
-  border-radius: 3px;
-  background: rgba(255, 255, 255, 0.06);
+  height: 6px;
   overflow: hidden;
+  border-radius: 999px;
+  background: var(--bg-surface-inset);
 }
 
 .payProgressFill {
   height: 100%;
-  border-radius: 3px;
-  background: linear-gradient(90deg, rgba(34, 197, 94, 0.6), rgba(34, 197, 94, 0.85));
-  transition: width 400ms ease;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--fill-positive), color-mix(in srgb, var(--fill-positive) 60%, white));
+  transition: width 0.4s ease;
 }
 
 .payProgressLabels {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.35);
-}
-
-.payProgressAmt {
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.5);
-}
-
-.payRemaining {
-  font-size: 12px;
-  color: rgba(239, 68, 68, 0.65);
-}
-
-.payRemaining strong {
-  color: rgba(239, 68, 68, 0.85);
-}
-
-.payAfterNote {
-  font-size: 11px;
-  color: rgba(34, 197, 94, 0.5);
-  margin-top: 4px;
-}
-
-/* Legacy paymentSummary (kept for safety) */
-.paymentSummary {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.45);
-}
-
-.payRow {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-}
-
-.payRowIcon {
-  color: rgba(34, 197, 94, 0.5);
-  flex-shrink: 0;
-}
-
-.payRowBody {
-  flex: 1;
-  min-width: 0;
-}
-
-.payRowAmount {
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.payRowMeta {
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.3);
-}
-
-.addPaymentForm {
-  padding: 10px 0;
-}
-
-.row {
-  display: flex;
-  gap: 6px;
-}
-
-.formInput, .formSelect {
-  flex: 1;
-  height: 32px;
-  padding: 0 8px;
-  border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.03);
-  color: var(--text-primary);
-  font: inherit;
-  font-size: 12px;
-  outline: none;
-}
-
-.formSelect option {
-  background: #1a1d24;
-  color: #e0e0e0;
-}
-
-.payBtn {
-  height: 32px;
-  padding: 0 12px;
-  border-radius: 6px;
-  border: 1px solid rgba(34, 197, 94, 0.3);
-  background: rgba(34, 197, 94, 0.1);
-  color: rgba(34, 197, 94, 0.8);
-  font: inherit;
+  gap: 8px;
+  color: var(--text-secondary);
   font-size: 12px;
   font-weight: 600;
-  cursor: pointer;
-  flex-shrink: 0;
 }
 
-.payBtn:hover {
-  background: rgba(34, 197, 94, 0.18);
-}
-
-/* ── Journal tab ── */
-
-.journalTab {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.commentBox {
-  display: flex;
-  gap: 6px;
-}
-
-.commentInput {
-  flex: 1;
-  height: 34px;
-  padding: 0 10px;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.03);
-  color: var(--text-primary);
-  font: inherit;
-  font-size: 12px;
-  outline: none;
-}
-
-.commentInput::placeholder {
-  color: rgba(255, 255, 255, 0.2);
-}
+.payProgressAmt { color: var(--text-primary); }
+.payRemaining { color: var(--fill-negative-text); font-size: 12px; }
+.payAfterNote { color: var(--fill-positive-text); font-size: 11px; }
 
 .commentSend {
-  width: 34px;
-  height: 34px;
-  display: grid;
-  place-items: center;
-  border: 1px solid rgba(160, 104, 56, 0.3);
-  border-radius: 8px;
-  background: rgba(160, 104, 56, 0.1);
-  color: rgba(210, 160, 90, 0.7);
-  cursor: pointer;
+  width: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.commentSend:hover {
-  background: rgba(160, 104, 56, 0.2);
+.activityList { display: flex; flex-direction: column; }
+
+.actDot {
+  width: 8px;
+  height: 8px;
+  margin-top: 5px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
-/* ── Cancel reason modal ── */
+.actContent {
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+}
 
-.cancelOverlay {
+.modalOverlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
   z-index: 1000;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 16px;
+  background: var(--bg-overlay);
+  backdrop-filter: blur(4px);
 }
 
-.cancelModal {
-  width: min(420px, 100%);
-  background: #12151a;
-  border: 1px solid rgba(239, 68, 68, 0.2);
-  border-radius: 14px;
-  padding: 20px;
+.modalCard {
+  width: min(440px, 100%);
   display: flex;
   flex-direction: column;
   gap: 12px;
+  padding: 20px;
+  border: 1px solid color-mix(in srgb, var(--fill-negative) 18%, var(--card-border));
+  border-radius: 16px;
+  background: var(--card-bg);
+  box-shadow: var(--shadow-xl);
 }
 
-.cancelModalTitle {
+.modalTitle {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 15px;
-  font-weight: 700;
-  color: rgba(239, 68, 68, 0.85);
-}
-
-.cancelModalSub {
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.4);
-  margin-top: -4px;
-}
-
-.cancelInput {
-  height: 38px;
-  padding: 0 12px;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.03);
   color: var(--text-primary);
-  font: inherit;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.modalSub {
+  color: var(--text-secondary);
   font-size: 13px;
-  outline: none;
 }
 
-.cancelInput:focus {
-  border-color: rgba(239, 68, 68, 0.3);
-}
-
-.cancelInput::placeholder {
-  color: rgba(255, 255, 255, 0.18);
-}
-
-.cancelModalActions {
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
-}
-
-.cancelModalClose {
-  height: 34px;
-  padding: 0 16px;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+.modalCloseBtn {
+  border: 1px solid var(--border-subtle);
   background: transparent;
-  color: rgba(255, 255, 255, 0.45);
-  font: inherit;
-  font-size: 13px;
-  cursor: pointer;
+  color: var(--text-secondary);
 }
 
-.cancelModalConfirm {
-  height: 34px;
-  padding: 0 16px;
-  border-radius: 8px;
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  background: rgba(239, 68, 68, 0.12);
-  color: rgba(239, 68, 68, 0.85);
-  font: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 120ms;
-}
-
-.cancelModalConfirm:hover:not(:disabled) {
-  background: rgba(239, 68, 68, 0.22);
-}
-
-.cancelModalConfirm:disabled {
-  opacity: 0.35;
+.modalConfirmBtn:disabled {
+  opacity: 0.45;
   cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
-/* ── Activity ── */
+.toneMuted { color: var(--text-tertiary); background: var(--bg-surface-inset); border-color: var(--border-subtle); }
+.toneInfo { color: var(--fill-info-text); background: var(--fill-info-soft); border-color: color-mix(in srgb, var(--fill-info) 24%, transparent); }
+.toneWarning { color: var(--fill-warning-text); background: var(--fill-warning-soft); border-color: color-mix(in srgb, var(--fill-warning) 24%, transparent); }
+.toneDanger { color: var(--fill-negative-text); background: var(--fill-negative-soft); border-color: color-mix(in srgb, var(--fill-negative) 24%, transparent); }
+.toneSuccess { color: var(--fill-positive-text); background: var(--fill-positive-soft); border-color: color-mix(in srgb, var(--fill-positive) 24%, transparent); }
+.toneAccent { color: var(--text-accent); background: var(--fill-accent-soft); border-color: color-mix(in srgb, var(--fill-accent) 24%, transparent); }
 
-.activityList {
-  display: flex;
-  flex-direction: column;
-}
+.actDot.toneMuted { background: var(--text-tertiary); }
+.actDot.toneInfo { background: var(--fill-info); }
+.actDot.toneWarning { background: var(--fill-warning); }
+.actDot.toneDanger { background: var(--fill-negative); }
+.actDot.toneSuccess { background: var(--fill-positive); }
+.actDot.toneAccent { background: var(--fill-accent); }
 
-.actRow {
-  display: flex;
-  gap: 10px;
-  padding: 8px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
-}
+@media (max-width: 640px) {
+  .ptActions,
+  .ptFlagRow,
+  .row,
+  .commentBox,
+  .modalActions {
+    flex-direction: column;
+  }
 
-.actDot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  margin-top: 4px;
-  flex-shrink: 0;
-  background: rgba(255, 255, 255, 0.15);
-}
-
-.actDot[data-type="status_change"] { background: rgba(59, 130, 246, 0.6); }
-.actDot[data-type="payment"]        { background: rgba(34, 197, 94, 0.6); }
-.actDot[data-type="production_update"] { background: rgba(245, 158, 11, 0.6); }
-.actDot[data-type="transfer"]       { background: rgba(139, 92, 246, 0.6); }
-.actDot[data-type="comment"]        { background: rgba(255, 255, 255, 0.3); }
-.actDot[data-type="system"]         { background: rgba(255, 255, 255, 0.1); }
-
-.actBody {
-  flex: 1;
-  min-width: 0;
-}
-
-.actContent {
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.6);
-  line-height: 1.4;
-}
-
-.actMeta {
-  font-size: 10px;
-  color: rgba(255, 255, 255, 0.2);
-  margin-top: 2px;
+  .commentSend {
+    width: 100%;
+  }
 }

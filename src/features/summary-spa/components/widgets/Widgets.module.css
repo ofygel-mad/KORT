@@ -1,177 +1,321 @@
 /* features/summary-spa/components/widgets/Widgets.module.css */
 
-/* ── KPI cards row ──────────────────────────────────────────── */
+.toneAccent {
+  --tone-color: var(--fill-accent);
+  --tone-shell: color-mix(in srgb, var(--fill-accent-soft) 80%, transparent);
+  --tone-border: color-mix(in srgb, var(--fill-accent) 20%, var(--border-subtle));
+  --tone-surface: color-mix(in srgb, var(--bg-surface) 90%, var(--fill-accent-subtle));
+}
+
+.tonePositive {
+  --tone-color: var(--fill-positive);
+  --tone-shell: color-mix(in srgb, var(--fill-positive-soft) 82%, transparent);
+  --tone-border: color-mix(in srgb, var(--fill-positive) 20%, var(--border-subtle));
+  --tone-surface: color-mix(in srgb, var(--bg-surface) 90%, var(--fill-positive-soft));
+}
+
+.toneInfo {
+  --tone-color: var(--fill-info);
+  --tone-shell: color-mix(in srgb, var(--fill-info-soft) 82%, transparent);
+  --tone-border: color-mix(in srgb, var(--fill-info) 20%, var(--border-subtle));
+  --tone-surface: color-mix(in srgb, var(--bg-surface) 90%, var(--fill-info-soft));
+}
+
+.toneWarning {
+  --tone-color: var(--fill-warning);
+  --tone-shell: color-mix(in srgb, var(--fill-warning-soft) 82%, transparent);
+  --tone-border: color-mix(in srgb, var(--fill-warning) 22%, var(--border-subtle));
+  --tone-surface: color-mix(in srgb, var(--bg-surface) 90%, var(--fill-warning-soft));
+}
+
+.toneDanger {
+  --tone-color: var(--fill-negative);
+  --tone-shell: color-mix(in srgb, var(--fill-negative-soft) 82%, transparent);
+  --tone-border: color-mix(in srgb, var(--fill-negative) 22%, var(--border-subtle));
+  --tone-surface: color-mix(in srgb, var(--bg-surface) 90%, var(--fill-negative-soft));
+}
+
+.toneViolet {
+  --tone-color: var(--chart-series-5);
+  --tone-shell: color-mix(in srgb, var(--chart-series-5) 16%, transparent);
+  --tone-border: color-mix(in srgb, var(--chart-series-5) 20%, var(--border-subtle));
+  --tone-surface: color-mix(in srgb, var(--bg-surface) 90%, var(--chart-series-5) 8%);
+}
+
+.toneMagenta {
+  --tone-color: var(--chart-series-6);
+  --tone-shell: color-mix(in srgb, var(--chart-series-6) 16%, transparent);
+  --tone-border: color-mix(in srgb, var(--chart-series-6) 20%, var(--border-subtle));
+  --tone-surface: color-mix(in srgb, var(--bg-surface) 90%, var(--chart-series-6) 8%);
+}
+
+.toneMuted {
+  --tone-color: var(--text-tertiary);
+  --tone-shell: color-mix(in srgb, var(--bg-surface-inset) 92%, transparent);
+  --tone-border: var(--status-shell-border);
+  --tone-surface: color-mix(in srgb, var(--bg-surface) 92%, var(--bg-surface-inset));
+}
+
 .kpiRow {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
 }
 
 .kpiCard {
-  flex: 1 1 140px;
-  background: var(--card-bg, rgba(255,255,255,.04));
-  border: 1px solid color-mix(in srgb, var(--card-color, #fff) 20%, transparent);
-  border-radius: 12px;
-  padding: 14px 16px;
+  min-width: 0;
+  padding: 16px;
+  border-radius: calc(var(--surface-radius-tight) + 2px);
+  border: 1px solid var(--tone-border, var(--brand-panel-border));
+  background: var(--tone-surface, var(--chart-surface));
+  box-shadow: var(--surface-shadow-rest);
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  min-width: 130px;
-  transition: border-color .2s, background .2s;
+  gap: 6px;
+  transition:
+    transform var(--motion-duration-fast) var(--motion-ease-standard),
+    box-shadow var(--motion-duration-fast) var(--motion-ease-standard),
+    border-color var(--motion-duration-fast) var(--motion-ease-standard);
 }
+
 .kpiCard:hover {
-  background: color-mix(in srgb, var(--card-color, #fff) 12%, transparent);
+  transform: var(--feedback-raise-hover);
+  box-shadow: var(--brand-panel-shadow);
 }
 
 .kpiCardTop {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
+  gap: 10px;
   margin-bottom: 8px;
 }
 
 .kpiIconWrap {
-  width: 34px; height: 34px;
-  border-radius: 10px;
-  display: flex; align-items: center; justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--tone-shell, var(--fill-accent-soft));
+  color: var(--tone-color, var(--fill-accent));
 }
 
 .kpiDelta {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
+  min-height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
   font-size: 11px;
-  font-weight: 600;
-  padding: 2px 7px;
-  border-radius: 20px;
+  font-weight: 700;
+  border: 1px solid var(--status-shell-border);
+  background: color-mix(in srgb, var(--bg-surface-elevated) 84%, transparent);
 }
-.kpiDeltaPos { color: #22c55e; background: rgba(34,197,94,.12); }
-.kpiDeltaNeg { color: #ef4444; background: rgba(239,68,68,.12); }
+
+.kpiDeltaPos {
+  color: var(--fill-positive-text);
+  background: color-mix(in srgb, var(--fill-positive-soft) 78%, transparent);
+  border-color: color-mix(in srgb, var(--fill-positive) 20%, var(--border-subtle));
+}
+
+.kpiDeltaNeg {
+  color: var(--fill-negative-text);
+  background: color-mix(in srgb, var(--fill-negative-soft) 78%, transparent);
+  border-color: color-mix(in srgb, var(--fill-negative) 20%, var(--border-subtle));
+}
 
 .kpiValue {
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 700;
-  color: #f3f4f6;
-  line-height: 1.1;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
 }
 
 .kpiTitle {
   font-size: 12px;
-  font-weight: 600;
-  color: #9ca3af;
+  font-weight: 700;
+  color: var(--text-primary);
 }
 
 .kpiSubtitle {
   font-size: 11px;
-  color: #4b5563;
+  color: var(--text-secondary);
 }
 
 .kpiSubValue {
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px solid var(--status-shell-border);
   font-size: 11px;
-  color: #6b7280;
-  margin-top: 3px;
-  padding-top: 3px;
-  border-top: 1px solid rgba(255,255,255,.06);
+  color: var(--text-tertiary);
 }
 
-/* ── Mini bar chart ─────────────────────────────────────────── */
 .chartCard {
-  background: rgba(255,255,255,.03);
-  border: 1px solid rgba(255,255,255,.07);
-  border-radius: 12px;
-  padding: 16px 18px;
+  min-height: 100%;
+  padding: 18px;
+  border-radius: calc(var(--surface-radius-tight) + 2px);
+  border: 1px solid var(--brand-panel-border);
+  background: var(--chart-surface);
+  box-shadow: var(--brand-panel-shadow);
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
 .chartHeader {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
+  gap: 12px;
 }
 
 .chartTitle {
-  font-size: 13px;
-  font-weight: 600;
-  color: #d1d5db;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.18;
+  letter-spacing: -0.014em;
+  color: var(--text-primary);
 }
 
 .chartSubtitle {
-  font-size: 11px;
-  color: #6b7280;
-  margin-top: 2px;
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-secondary);
 }
 
-/* ── Inline sparkline bars ──────────────────────────────────── */
-.sparkBars {
+.chartStatGroup {
   display: flex;
-  align-items: flex-end;
-  gap: 3px;
-  height: 60px;
-  flex: 1;
+  gap: 10px;
+  align-items: stretch;
 }
 
-.sparkBar {
-  flex: 1;
-  border-radius: 3px 3px 0 0;
-  transition: height .3s ease;
-  min-height: 2px;
-  cursor: pointer;
+.chartStat {
+  min-width: 82px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--tone-border, var(--status-shell-border));
+  background: var(--tone-shell, var(--bg-surface-inset));
+  display: grid;
+  gap: 4px;
+  text-align: center;
 }
-.sparkBar:hover { filter: brightness(1.3); }
 
-/* ── Funnel bars ────────────────────────────────────────────── */
+.chartStatValue {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--tone-color, var(--text-primary));
+}
+
+.chartStatLabel {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.chartMetric {
+  min-width: 88px;
+  padding: 8px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--status-shell-border);
+  background: color-mix(in srgb, var(--bg-surface-elevated) 84%, transparent);
+  text-align: center;
+}
+
+.chartMetricValue {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--text-primary);
+}
+
+.chartMetricLabel {
+  margin-top: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
 .funnelList {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
+}
+
+.funnelListSpaced {
+  margin-top: 8px;
 }
 
 .funnelRow {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 5px;
 }
 
 .funnelRowHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
 }
 
 .funnelLabel {
   font-size: 11.5px;
-  color: #9ca3af;
+  color: var(--text-secondary);
 }
 
 .funnelValue {
   font-size: 11.5px;
-  font-weight: 600;
-  color: #d1d5db;
+  font-weight: 700;
+  color: var(--text-primary);
 }
 
 .funnelTrack {
-  height: 6px;
-  background: rgba(255,255,255,.07);
-  border-radius: 3px;
+  height: 8px;
+  border-radius: 999px;
   overflow: hidden;
+  border: 1px solid var(--status-shell-border);
+  background: color-mix(in srgb, var(--bg-surface-inset) 86%, transparent);
 }
 
 .funnelFill {
   height: 100%;
-  border-radius: 3px;
-  transition: width .4s ease;
+  border-radius: inherit;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--tone-color, var(--fill-accent)) 70%, white 30%) 0%,
+    var(--tone-color, var(--fill-accent)) 100%
+  );
+  transition: width var(--motion-duration-slow) var(--motion-ease-standard);
 }
 
-/* ── Donut chart (pure CSS) ─────────────────────────────────── */
 .donutWrap {
   position: relative;
-  width: 100px; height: 100px;
+  width: 100px;
+  height: 100px;
   flex-shrink: 0;
 }
 
-.donutSvg { transform: rotate(-90deg); }
+.donutSvg {
+  transform: rotate(-90deg);
+}
+
+.donutTrackCircle {
+  stroke: color-mix(in srgb, var(--border-default) 78%, transparent);
+}
+
+.donutProgressCircle {
+  stroke: var(--fill-positive);
+}
 
 .donutCenter {
   position: absolute;
@@ -185,192 +329,214 @@
 .donutValue {
   font-size: 18px;
   font-weight: 700;
-  color: #f3f4f6;
   line-height: 1;
+  color: var(--text-primary);
 }
 
 .donutLabel {
-  font-size: 10px;
-  color: #6b7280;
   margin-top: 2px;
+  font-size: 10px;
+  color: var(--text-tertiary);
 }
 
-/* ── Live feed ──────────────────────────────────────────────── */
 .feedCard {
   composes: chartCard;
-  flex: 1;
   overflow: hidden;
+}
+
+.feedTitleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .feedList {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
+  max-height: 240px;
   overflow-y: auto;
-  flex: 1;
-  max-height: 220px;
+  scrollbar-color: color-mix(in srgb, var(--fill-accent) 20%, transparent) transparent;
 }
-.feedList::-webkit-scrollbar { width: 3px; }
-.feedList::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 2px; }
+
+.feedList::-webkit-scrollbar {
+  width: 4px;
+}
+
+.feedList::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--fill-accent) 20%, transparent);
+  border-radius: 999px;
+}
 
 .feedItem {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
-  padding: 8px 10px;
-  background: rgba(255,255,255,.03);
-  border-radius: 8px;
-  border: 1px solid rgba(255,255,255,.06);
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid var(--status-shell-border);
+  background: color-mix(in srgb, var(--bg-surface-elevated) 80%, transparent);
+  transition:
+    transform var(--motion-duration-fast) var(--motion-ease-standard),
+    box-shadow var(--motion-duration-fast) var(--motion-ease-standard),
+    border-color var(--motion-duration-fast) var(--motion-ease-standard);
+}
+
+.feedItem:hover {
+  transform: var(--feedback-raise-hover);
+  box-shadow: var(--surface-shadow-rest);
+  border-color: var(--brand-panel-border);
 }
 
 .feedDot {
-  width: 8px; height: 8px;
-  border-radius: 50%;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
   flex-shrink: 0;
-  margin-top: 4px;
+  margin-top: 6px;
+  background: var(--tone-color, var(--fill-accent));
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--tone-color, var(--fill-accent)) 16%, transparent);
 }
 
-.feedContent { flex: 1; min-width: 0; }
+.feedContent {
+  flex: 1;
+  min-width: 0;
+}
 
 .feedTitle {
-  font-size: 12.5px;
-  font-weight: 500;
-  color: #d1d5db;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--text-primary);
 }
 
 .feedMeta {
-  font-size: 11px;
-  color: #6b7280;
   margin-top: 2px;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--text-secondary);
 }
 
 .feedValue {
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
   white-space: nowrap;
+  color: var(--tone-color, var(--text-primary));
 }
 
 .emptyFeed {
-  font-size: 12px;
-  color: #4b5563;
-  text-align: center;
-  padding: 24px 0;
-}
-
-/* ── Status breakdown grid ──────────────────────────────────── */
-.breakdownGrid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
-}
-
-.breakdownItem {
-  background: rgba(255,255,255,.04);
-  border: 1px solid rgba(255,255,255,.07);
-  border-radius: 8px;
-  padding: 10px 12px;
+  min-height: 120px;
+  padding: 24px;
+  border: 1px dashed var(--status-shell-border);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--bg-surface-inset) 92%, transparent);
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--text-secondary);
 }
 
-.breakdownItemValue {
-  font-size: 18px;
-  font-weight: 700;
-  color: #f3f4f6;
-}
-
-.breakdownItemLabel {
-  font-size: 11px;
-  color: #6b7280;
-}
-
-/* ── Lost reason list ────────────────────────────────────────── */
 .reasonList {
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 8px;
 }
 
 .reasonRow {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
 .reasonLabel {
-  font-size: 12px;
-  color: #9ca3af;
   flex: 1;
-  white-space: nowrap;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--text-secondary);
 }
 
 .reasonTrack {
-  height: 5px;
-  background: rgba(255,255,255,.07);
-  border-radius: 3px;
-  overflow: hidden;
   flex: 2;
+  height: 7px;
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid var(--status-shell-border);
+  background: color-mix(in srgb, var(--bg-surface-inset) 86%, transparent);
 }
 
 .reasonFill {
   height: 100%;
-  background: rgba(239,68,68,.5);
-  border-radius: 3px;
-  transition: width .4s ease;
+  border-radius: inherit;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--fill-negative) 64%, transparent) 0%,
+    var(--fill-negative) 100%
+  );
+  transition: width var(--motion-duration-slow) var(--motion-ease-standard);
 }
 
 .reasonCount {
-  font-size: 11px;
-  color: #6b7280;
-  min-width: 20px;
+  min-width: 24px;
   text-align: right;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-tertiary);
 }
 
-/* ── Tasks health bar ────────────────────────────────────────── */
 .tasksHealth {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
 .healthBar {
   display: flex;
-  height: 10px;
-  border-radius: 5px;
-  overflow: hidden;
-  gap: 1px;
+  gap: 3px;
+  height: 12px;
 }
 
 .healthSegment {
+  min-width: 6px;
   height: 100%;
-  transition: flex .4s ease;
-  min-width: 3px;
+  border-radius: 999px;
+  background: var(--tone-color, var(--fill-accent));
+  transition: flex var(--motion-duration-slow) var(--motion-ease-standard);
 }
 
 .healthLegend {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 10px 12px;
 }
 
 .healthLegendItem {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   font-size: 11.5px;
-  color: #9ca3af;
+  color: var(--text-secondary);
 }
 
 .healthLegendDot {
-  width: 8px; height: 8px;
-  border-radius: 50%;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
   flex-shrink: 0;
+  background: var(--tone-color, var(--fill-accent));
 }
 
-/* ── Conversion rate ring ─────────────────────────────────────── */
+.healthLegendValue {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
 .conversionWrap {
   display: flex;
   align-items: center;
@@ -378,31 +544,107 @@
 }
 
 .conversionStats {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  flex: 1;
+  gap: 8px;
 }
 
 .conversionStat {
   display: flex;
   justify-content: space-between;
+  gap: 10px;
   font-size: 12.5px;
-  color: #9ca3af;
+  color: var(--text-secondary);
 }
 
 .conversionStatValue {
-  font-weight: 600;
-  color: #d1d5db;
+  font-weight: 700;
+  color: var(--text-primary);
 }
 
-/* ── Section title inside cards ──────────────────────────────── */
+.conversionPositive {
+  color: var(--tone-color, var(--fill-positive));
+}
+
 .sectionTitle {
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--status-shell-border);
   font-size: 11px;
   font-weight: 700;
-  color: #4b5563;
-  letter-spacing: .07em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  padding-bottom: 8px;
-  border-bottom: 1px solid rgba(255,255,255,.06);
+  color: var(--text-tertiary);
+}
+
+.revenueSvg {
+  width: 100%;
+  height: 72px;
+}
+
+.revenueGridLine {
+  stroke: var(--chart-grid);
+  stroke-width: 1;
+}
+
+.revenueBar {
+  fill: color-mix(in srgb, var(--fill-positive) 44%, transparent);
+}
+
+.revenueBarRecent {
+  fill: color-mix(in srgb, var(--fill-positive) 82%, transparent);
+}
+
+.revenueBarMuted {
+  fill: color-mix(in srgb, var(--bg-surface-inset) 88%, transparent);
+}
+
+.revenueValue {
+  fill: var(--fill-positive);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.revenueAxis {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.revenueAxisLabel {
+  font-size: 10px;
+  color: var(--text-tertiary);
+}
+
+@media (max-width: 980px) {
+  .kpiRow {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .kpiRow {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .chartHeader,
+  .conversionWrap {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .chartStatGroup {
+    width: 100%;
+  }
+}
+
+@media (max-width: 520px) {
+  .kpiRow {
+    grid-template-columns: 1fr;
+  }
+
+  .feedItem,
+  .reasonRow {
+    gap: 8px;
+  }
 }

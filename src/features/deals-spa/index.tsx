@@ -77,7 +77,7 @@ export function DealsSPA({ tileId }: Props) {
           </div>
           <div className={s.statDiv} />
           <div className={s.stat}>
-            <span className={s.statVal} style={{ color: 'rgba(134,239,172,0.85)' }}>
+            <span className={`${s.statVal} ${s.statValAccent}`}>
               ~{fmtShort(totalPipeline)} ₸
             </span>
             <span className={s.statLabel}>взвешенная воронка</span>
@@ -86,7 +86,7 @@ export function DealsSPA({ tileId }: Props) {
             <>
               <div className={s.statDiv} />
               <div className={s.stat}>
-                <span className={s.statVal} style={{ color: 'rgba(134,239,172,0.9)' }}>
+                <span className={`${s.statVal} ${s.statValSuccess}`}>
                   {wonCount} · {fmtShort(wonValue)} ₸
                 </span>
                 <span className={s.statLabel}>закрыто</span>
@@ -96,7 +96,7 @@ export function DealsSPA({ tileId }: Props) {
         </div>
         <button className={s.addBtn} onClick={() => setCreatePanelOpen(!addOpen)}>
           <Plus size={13} /> Новая сделка
-          <ChevronDown size={11} style={{ opacity: 0.6, transform: addOpen ? 'rotate(180deg)' : '', transition: 'transform 200ms' }} />
+          <ChevronDown size={11} className={`${s.chevron} ${addOpen ? s.chevronOpen : ''}`} />
         </button>
       </header>
 

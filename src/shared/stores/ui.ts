@@ -26,7 +26,6 @@ interface UIStore {
   themePack: ThemePack;
   sidebarCollapsed: boolean;
   focusMode: boolean;
-  adminMode: boolean;
   workspaceAddMenuOpen: boolean;
   createCustomerRequest: ActionRequest<undefined>;
   createDealRequest: ActionRequest<CreateDealPayload | undefined>;
@@ -34,8 +33,6 @@ interface UIStore {
   assistantPromptRequest: ActionRequest<string | undefined>;
   setTheme: (t: Theme) => void;
   setThemePack: (pack: ThemePack) => void;
-  setAdminMode: (value: boolean) => void;
-  toggleAdminMode: () => void;
   toggleSidebar: () => void;
   toggleFocusMode: () => void;
   openWorkspaceAddMenu: () => void;
@@ -63,7 +60,6 @@ export const useUIStore = create<UIStore>()(
       themePack: 'neutral',
       sidebarCollapsed: false,
       focusMode: false,
-      adminMode: false,
       workspaceAddMenuOpen: false,
       createCustomerRequest: { nonce: 0, payload: undefined },
       createDealRequest: { nonce: 0, payload: undefined },
@@ -77,8 +73,6 @@ export const useUIStore = create<UIStore>()(
         set({ themePack });
         applyTheme(get().theme, themePack);
       },
-      setAdminMode: (adminMode) => set({ adminMode }),
-      toggleAdminMode: () => set((s) => ({ adminMode: !s.adminMode })),
       toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
       toggleFocusMode: () => set((s) => ({ focusMode: !s.focusMode })),
       openWorkspaceAddMenu: () => set({ workspaceAddMenuOpen: true }),

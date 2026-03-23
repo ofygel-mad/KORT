@@ -1,388 +1,430 @@
 .page {
-  padding: var(--space-page-y) var(--space-page-x);
   width: min(100%, var(--space-page-max));
   margin: 0 auto;
   min-height: 100%;
+  padding: var(--space-page-y) var(--space-page-x);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-section-gap);
 }
 
 .tabs {
-  display: flex;
-  gap: 2px;
-  width: fit-content;
-  padding: 3px;
-  margin-bottom: var(--space-section-gap);
-  background: var(--bg-surface-inset);
-  border: 1px solid var(--border-subtle);
-  border-radius: calc(var(--surface-radius-tight) - 2px);
   position: sticky;
   top: 12px;
   z-index: 4;
-  backdrop-filter: blur(6px);
+  display: flex;
+  gap: 4px;
+  width: fit-content;
+  padding: 4px;
+  border-radius: 999px;
+  border: 1px solid var(--brand-panel-border);
+  background: color-mix(in srgb, var(--bg-surface) 88%, var(--fill-accent-subtle));
+  box-shadow: var(--surface-shadow-rest);
+  backdrop-filter: blur(8px);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .tabButton {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 7px 14px;
+  min-height: 34px;
+  padding: 0 14px;
   border: none;
-  border-radius: calc(var(--radius-md) - 2px);
+  border-radius: 999px;
   background: transparent;
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   font-family: var(--font-body);
   cursor: pointer;
   transition:
+    transform var(--motion-duration-fast) var(--motion-ease-standard),
     background var(--motion-duration-fast) var(--motion-ease-standard),
     color var(--motion-duration-fast) var(--motion-ease-standard),
     box-shadow var(--motion-duration-fast) var(--motion-ease-standard);
 }
 
 .tabButton:hover {
+  transform: var(--feedback-raise-hover);
+  background: color-mix(in srgb, var(--bg-hover) 82%, transparent);
   color: var(--text-primary);
+}
+
+.tabButton:active {
+  transform: var(--feedback-soft-press);
 }
 
 .tabButton:focus-visible {
   outline: none;
-  box-shadow: var(--rc-focus-ring);
+  box-shadow: var(--brand-focus-ring);
 }
 
 .active {
-  background: var(--bg-surface);
+  background: color-mix(in srgb, var(--bg-surface-elevated) 88%, white 12%);
   color: var(--text-primary);
-  box-shadow: var(--shadow-xs);
+  box-shadow: var(--surface-shadow-rest);
 }
 
-.tabButton.active {
-  background: var(--bg-surface);
-  color: var(--text-primary);
-  box-shadow: var(--shadow-xs);
+.tabPanel {
+  display: grid;
+  gap: 16px;
+}
+
+.statToneInfo {
+  --tone-color: var(--fill-info);
+  --tone-shell: color-mix(in srgb, var(--fill-info-soft) 82%, transparent);
+  --tone-border: color-mix(in srgb, var(--fill-info) 18%, var(--border-subtle));
+  --tone-surface: color-mix(in srgb, var(--bg-surface) 90%, var(--fill-info-soft));
+}
+
+.statTonePositive {
+  --tone-color: var(--fill-positive);
+  --tone-shell: color-mix(in srgb, var(--fill-positive-soft) 82%, transparent);
+  --tone-border: color-mix(in srgb, var(--fill-positive) 18%, var(--border-subtle));
+  --tone-surface: color-mix(in srgb, var(--bg-surface) 90%, var(--fill-positive-soft));
+}
+
+.statToneWarning {
+  --tone-color: var(--fill-warning);
+  --tone-shell: color-mix(in srgb, var(--fill-warning-soft) 82%, transparent);
+  --tone-border: color-mix(in srgb, var(--fill-warning) 18%, var(--border-subtle));
+  --tone-surface: color-mix(in srgb, var(--bg-surface) 90%, var(--fill-warning-soft));
+}
+
+.statToneViolet {
+  --tone-color: var(--chart-series-5);
+  --tone-shell: color-mix(in srgb, var(--chart-series-5) 16%, transparent);
+  --tone-border: color-mix(in srgb, var(--chart-series-5) 18%, var(--border-subtle));
+  --tone-surface: color-mix(in srgb, var(--bg-surface) 90%, var(--chart-series-5) 8%);
 }
 
 .panelGrid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
-  margin-bottom: var(--space-section-gap);
 }
 
-.statCard,
-.surfaceCard,
-.teamCard,
-.auditCard,
-.planCard,
-.inviteCard,
-.warningBanner {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--surface-radius);
-  box-shadow: var(--surface-shadow-rest);
+.statCard {
+  position: relative;
+  overflow: hidden;
+  padding: 20px;
+  border-radius: calc(var(--surface-radius) + 2px);
+  border: 1px solid var(--tone-border, var(--brand-panel-border));
+  background: var(--tone-surface, var(--chart-surface));
+  box-shadow: var(--brand-panel-shadow);
+  transition:
+    transform var(--motion-duration-fast) var(--motion-ease-standard),
+    box-shadow var(--motion-duration-fast) var(--motion-ease-standard);
 }
 
-.statCard,
-.surfaceCard,
-.planCard,
-.warningBanner {
-  padding: 20px 24px;
+.statCard::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--tone-color, var(--fill-accent)) 78%, white 22%) 0%,
+    var(--tone-color, var(--fill-accent)) 100%
+  );
+}
+
+.statCard:hover {
+  transform: var(--feedback-raise-hover);
+  box-shadow: var(--brand-panel-shadow-strong);
 }
 
 .statIcon {
-  width: 40px;
-  height: 40px;
-  border-radius: var(--radius-md);
+  width: 44px;
+  height: 44px;
+  border-radius: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 12px;
-  color: var(--card-color, var(--fill-accent));
-  background: color-mix(in srgb, var(--card-color, var(--fill-accent)) 12%, transparent);
+  background: var(--tone-shell, var(--fill-accent-soft));
+  color: var(--tone-color, var(--fill-accent));
 }
 
 .statValue {
-  margin-bottom: 4px;
-  font-size: 26px;
+  margin-top: 16px;
+  font-size: 28px;
   font-weight: 800;
-  font-family: var(--font-display);
+  line-height: 1;
+  letter-spacing: -0.02em;
   color: var(--text-primary);
 }
 
-.statLabel,
-.helperText,
-.auditTime,
-.memberEmail,
-.memberCount,
-.planFeature,
-.modeDescription,
-.warningText {
+.statLabel {
+  margin-top: 8px;
+  font-size: 12px;
   color: var(--text-secondary);
 }
 
-.statLabel,
-.memberCount,
-.helperText,
-.modeDescription,
-.planFeature { font-size: 12px; }
-.memberEmail,
-.auditTime { font-size: 11px; }
+.surfaceCard,
+.inviteCard,
+.teamCard,
+.planCard {
+  border-radius: calc(var(--surface-radius) + 2px);
+  border: 1px solid var(--brand-panel-border);
+  background: var(--chart-surface);
+  box-shadow: var(--brand-panel-shadow);
+}
+
+.surfaceCard {
+  padding: 22px 24px;
+}
 
 .surfaceTitle {
-  margin: 0 0 16px;
-  font-size: 14px;
-  font-weight: 600;
+  margin: 0 0 10px;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.25;
   color: var(--text-primary);
 }
 
-.modeRow,
-.teamHeader,
-.memberRow,
-.memberIdentity,
-.memberActions,
-.inviteForm,
-.auditHead,
-.auditRow,
-.warningBanner {
-  display: flex;
-  align-items: center;
-  background: var(--state-warning-bg);
-}
-
-.modeRow {
-  gap: 12px;
-}
-
-.modeDot {
-  width: 10px;
-  height: 10px;
-  border-radius: 999px;
-  background: var(--mode-color, var(--fill-accent));
-}
-
-.modeValue {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--mode-color, var(--fill-accent));
-}
-
-.modeLink {
-  margin-left: auto;
-  border: none;
-  background: none;
-  color: var(--fill-accent);
-  font-size: 12px;
-  font-weight: 500;
-  font-family: var(--font-body);
-  cursor: pointer;
+.helperText {
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text-secondary);
+  max-width: 82ch;
 }
 
 .teamHeader {
+  display: flex;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: var(--space-section-gap);
+}
+
+.memberCount {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--status-shell-border);
+  background: color-mix(in srgb, var(--bg-surface-elevated) 82%, transparent);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .inviteWrap {
   overflow: hidden;
-  margin-bottom: var(--space-section-gap);
 }
 
 .inviteCard {
-  padding: 14px 16px;
+  padding: 18px;
+}
+
+.inviteMeta {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 14px;
+}
+
+.inviteTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.inviteSubtitle {
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--text-secondary);
 }
 
 .inviteForm {
+  display: flex;
+  align-items: center;
   gap: 8px;
-  margin: 0;
-  padding: 0;
-  border: 0;
+}
+
+.inviteFormSecondary {
+  margin-top: 10px;
+}
+
+.inviteSelect,
+.inlineSelect {
+  appearance: none;
+  outline: none;
+  cursor: pointer;
+  color-scheme: light dark;
+  border: 1px solid var(--border-default);
+  background:
+    var(--bg-surface)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%236B7280' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E")
+    no-repeat right 8px center;
+  color: var(--text-primary);
+  font-family: var(--font-body);
+}
+
+.inviteSelect {
+  height: 36px;
+  min-width: 172px;
+  padding: 0 30px 0 10px;
+  border-radius: 14px;
+  font-size: 12px;
+}
+
+.inviteLinkField {
+  flex: 1;
   min-width: 0;
 }
 
-.teamCard,
-.auditCard {
+.teamCard {
   overflow: hidden;
 }
 
-.memberRow,
-.auditHead,
-.auditRow,
 .skeletonRow {
-  padding: 14px 20px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--status-shell-border);
 }
 
-.memberRow,
-.auditHead,
-.auditRow {
-  border-bottom: 1px solid var(--border-subtle);
-}
-
-.memberRow:last-child,
-.auditRow:last-child,
-.skeletonRow:last-child,
-.auditHead:last-child {
+.skeletonRow:last-child {
   border-bottom: none;
 }
 
 .memberRow {
+  display: flex;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--status-shell-border);
+  transition:
+    background var(--motion-duration-fast) var(--motion-ease-standard),
+    transform var(--motion-duration-fast) var(--motion-ease-standard);
+}
+
+.memberRow:last-child {
+  border-bottom: none;
+}
+
+.memberRow:hover {
+  background: var(--table-row-hover);
+  transform: translateY(-1px);
 }
 
 .memberIdentity {
+  display: flex;
+  align-items: center;
   gap: 12px;
   min-width: 0;
 }
 
 .memberAvatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 999px;
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   font-size: 14px;
   font-weight: 700;
-  color: var(--member-color, var(--fill-accent));
-  background: color-mix(in srgb, var(--member-color, var(--fill-accent)) 14%, transparent);
+  color: var(--fill-accent);
+  background: color-mix(in srgb, var(--fill-accent-soft) 82%, transparent);
 }
 
 .memberName {
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-primary);
 }
 
-.memberActions {
-  gap: 10px;
-}
-
-.memberStatus {
+.memberEmail {
+  margin-top: 2px;
   font-size: 11px;
-  font-weight: 600;
-}
-
-.activeStatus { color: var(--fill-positive); }
-.inactiveStatus { color: var(--text-tertiary); }
-
-.memberStatus.active { color: var(--fill-positive); }
-.memberStatus.inactive { color: var(--text-tertiary); }
-
-.inlineSelect {
-  height: 30px;
-  padding: 0 24px 0 6px;
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-sm);
-  background: var(--bg-surface)
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%236B7280' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat right 6px center;
-  color: var(--text-primary);
-  font-size: 12px;
-  font-family: var(--font-body);
-  outline: none;
-  cursor: pointer;
-  appearance: none;
-  color-scheme: light dark;
-}
-
-.inviteSelect {
-  height: 36px;
-  padding: 0 28px 0 8px;
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-md);
-  background: var(--bg-surface)
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%236B7280' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat right 8px center;
-  color: var(--text-primary);
-  font-size: 12px;
-  font-family: var(--font-body);
-  outline: none;
-  appearance: none;
-  cursor: pointer;
-  color-scheme: light dark;
-}
-
-.iconButton {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 4px;
-  border: none;
-  border-radius: var(--radius-sm);
-  background: none;
-  cursor: pointer;
-  color: var(--icon-color, var(--text-tertiary));
-}
-
-.auditGrid,
-.auditHead,
-.auditRow {
-  display: grid;
-  grid-template-columns: 140px 140px 1fr 160px 120px;
-  gap: 8px;
-  align-items: center;
-}
-
-.auditHead {
-  padding-top: 12px;
-  padding-bottom: 12px;
-}
-
-.auditHeading {
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-tertiary);
-}
-
-.auditAction {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--action-color, var(--text-primary));
-}
-
-.auditEntity,
-.auditActor {
-  font-size: 12px;
-}
-
-.auditEntity { color: var(--text-secondary); }
-.auditActor { color: var(--text-primary); }
-.auditLabel {
-  font-size: 12px;
-  color: var(--text-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.emptyAudit {
-  padding: 40px 20px;
-  text-align: center;
-  font-size: 13px;
   color: var(--text-secondary);
 }
 
-.emptyAuditIcon {
-  margin: 0 auto 8px;
-  opacity: 0.3;
+.memberActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.inlineSelect {
+  height: 30px;
+  padding: 0 28px 0 8px;
+  border-radius: 12px;
+  font-size: 12px;
+}
+
+.iconButton {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--bg-surface-elevated) 82%, transparent);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition:
+    transform var(--motion-duration-fast) var(--motion-ease-standard),
+    background var(--motion-duration-fast) var(--motion-ease-standard),
+    color var(--motion-duration-fast) var(--motion-ease-standard);
+}
+
+.iconButton:hover {
+  transform: var(--feedback-raise-hover);
+  background: color-mix(in srgb, var(--fill-negative-soft) 74%, transparent);
+  color: var(--fill-negative-text);
 }
 
 .warningBanner {
+  display: flex;
+  align-items: center;
   gap: 8px;
-  margin-bottom: var(--space-section-gap);
-  color: var(--fill-negative-text);
-  background: var(--fill-negative-soft);
-  border-color: color-mix(in srgb, var(--fill-negative) 24%, transparent);
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid color-mix(in srgb, var(--fill-negative) 22%, var(--border-subtle));
+  background: color-mix(in srgb, var(--fill-negative-soft) 72%, var(--bg-surface));
 }
 
 .warningText {
   font-size: 13px;
+  line-height: 1.55;
   color: var(--fill-negative-text);
 }
 
 .modeDescription {
-  margin: 0 0 20px;
-  font-size: 14px;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--text-secondary);
+}
+
+.planToneInfo {
+  --plan-color: var(--fill-info);
+  --plan-shell: color-mix(in srgb, var(--fill-info-soft) 80%, transparent);
+  --plan-border: color-mix(in srgb, var(--fill-info) 18%, var(--border-subtle));
+  --plan-surface: color-mix(in srgb, var(--bg-surface) 90%, var(--fill-info-soft));
+}
+
+.planToneWarning {
+  --plan-color: var(--fill-warning);
+  --plan-shell: color-mix(in srgb, var(--fill-warning-soft) 80%, transparent);
+  --plan-border: color-mix(in srgb, var(--fill-warning) 18%, var(--border-subtle));
+  --plan-surface: color-mix(in srgb, var(--bg-surface) 90%, var(--fill-warning-soft));
+}
+
+.planToneViolet {
+  --plan-color: var(--chart-series-5);
+  --plan-shell: color-mix(in srgb, var(--chart-series-5) 14%, transparent);
+  --plan-border: color-mix(in srgb, var(--chart-series-5) 18%, var(--border-subtle));
+  --plan-surface: color-mix(in srgb, var(--bg-surface) 90%, var(--chart-series-5) 8%);
 }
 
 .planGrid {
@@ -392,55 +434,85 @@
 }
 
 .planCard {
-  border: 2px solid var(--border-subtle);
-  box-shadow: none;
+  padding: 20px;
+  border-color: var(--plan-border, var(--brand-panel-border));
+  background: var(--plan-surface, var(--chart-surface));
+  display: grid;
+  gap: 10px;
+  transition:
+    transform var(--motion-duration-fast) var(--motion-ease-standard),
+    box-shadow var(--motion-duration-fast) var(--motion-ease-standard);
+}
+
+.planCard:hover {
+  transform: var(--feedback-raise-hover);
+  box-shadow: var(--brand-panel-shadow-strong);
 }
 
 .planCurrent {
-  border-color: var(--plan-color, var(--fill-accent));
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--plan-color, var(--fill-accent)) 14%, transparent);
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--plan-color, var(--fill-accent)) 16%, transparent),
+    var(--brand-panel-shadow);
+}
+
+.planEyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--plan-color, var(--fill-accent));
 }
 
 .planTitle {
-  margin-bottom: 6px;
   font-size: 16px;
   font-weight: 700;
-  color: var(--plan-color, var(--fill-accent));
+  line-height: 1.2;
+  color: var(--text-primary);
+}
+
+.planDescription {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-secondary);
 }
 
 .planFeatureRow {
   display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 4px;
+  align-items: flex-start;
+  gap: 8px;
+  color: var(--plan-color, var(--fill-accent));
+}
+
+.planFeature {
+  font-size: 12px;
+  line-height: 1.5;
   color: var(--text-secondary);
 }
 
 .planCurrentBadge {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 4px;
-  margin-top: 14px;
-  font-size: 12px;
-  font-weight: 600;
+  gap: 6px;
+  width: fit-content;
+  min-height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--plan-border, var(--brand-panel-border));
+  background: var(--plan-shell, var(--fill-accent-soft));
   color: var(--plan-color, var(--fill-accent));
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .planButton {
-  margin-top: 14px;
   width: 100%;
+  margin-top: 8px;
 }
 
 @media (max-width: 980px) {
   .panelGrid,
   .planGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .auditGrid,
-  .auditHead,
-  .auditRow {
-    grid-template-columns: 120px 120px 1fr 140px 100px;
   }
 }
 
@@ -449,12 +521,13 @@
     padding: 20px 16px;
   }
 
-  .tabs,
-  .memberRow,
-  .memberActions,
-  .teamHeader,
-  .inviteForm {
-    flex-wrap: wrap;
+  .tabs {
+    width: 100%;
+  }
+
+  .tabButton {
+    flex: 1 1 0;
+    justify-content: center;
   }
 
   .panelGrid,
@@ -462,27 +535,13 @@
     grid-template-columns: 1fr;
   }
 
-  .auditHead {
-    display: none;
+  .inviteForm,
+  .memberRow {
+    flex-wrap: wrap;
   }
 
-  .auditRow {
-    grid-template-columns: 1fr;
-    gap: 4px;
+  .memberActions {
+    width: 100%;
+    justify-content: flex-start;
   }
 }
-
-
-.tabs { border: 1px solid var(--border-subtle); }
-.tabButton { transition: background var(--motion-duration-fast) var(--motion-ease-standard), color var(--motion-duration-fast) var(--motion-ease-standard), box-shadow var(--motion-duration-fast) var(--motion-ease-standard), transform var(--motion-duration-fast) var(--motion-ease-standard); }
-.tabButton:hover { transform: translateY(-1px); }
-.tabButton:active { transform: var(--feedback-soft-press); }
-.statCard, .surfaceCard, .teamCard, .auditCard, .planCard, .inviteCard, .warningBanner { box-shadow: var(--surface-shadow-rest); }
-.memberRow, .auditRow { transition: background var(--motion-fast) var(--motion-ease), transform var(--motion-fast) var(--motion-ease); }
-.memberRow:hover, .auditRow:hover { background: var(--bg-hover); transform: translateY(-1px); }
-
-
-/* ── Theme pack final pass ───────────────────────────────────────────────── */
-.teamCard, .auditCard, .plansCard, .modeCard, .inviteWrap { background: var(--rc-detail-surface-bg); border-color: var(--rc-detail-surface-border); box-shadow: var(--brand-panel-shadow); }
-.memberRow:hover, .auditRow:hover { background: var(--rc-table-row-hover); }
-.modeLink:focus-visible { box-shadow: var(--rc-focus-ring); outline: none; border-radius: 999px; }

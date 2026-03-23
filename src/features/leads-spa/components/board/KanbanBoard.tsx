@@ -2,9 +2,10 @@
  * Generic Kanban board. Each column is a stage bucket.
  * Uses pointer-capture drag (no external DnD lib).
  */
-import { useRef, useState, useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useLeadsStore } from '../../model/leads.store';
 import type { Lead, LeadStage } from '../../api/types';
+import type { LeadTone } from '../../model/stage-meta';
 import { LeadCard } from './LeadCard';
 import s from './Board.module.css';
 
@@ -12,7 +13,7 @@ export interface KanbanColumn {
   stage: LeadStage;
   pipeline: 'qualifier' | 'closer';
   label: string;
-  accent?: string;
+  tone?: LeadTone;
 }
 
 interface Props {
@@ -60,7 +61,7 @@ export function KanbanBoard({ columns, leads, onOpenDrawer, onOpenHandoff }: Pro
           <div
             key={col.stage}
             className={`${s.column} ${isOver ? s.columnOver : ''}`}
-            style={{ '--col-accent': col.accent ?? '#6b7280' } as React.CSSProperties}
+            data-tone={col.tone ?? 'muted'}
             onDragOver={e => { e.preventDefault(); setOverCol(col.stage); }}
             onDragLeave={() => setOverCol(null)}
             onDrop={e => {
@@ -75,7 +76,10 @@ export function KanbanBoard({ columns, leads, onOpenDrawer, onOpenHandoff }: Pro
             </div>
             <div className={s.colCards}>
               {colLeads.length === 0 ? (
-                <div className={s.colEmpty}>Перетащите<br/>лида сюда</div>
+                <div className={s.colEmpty}>
+                  <span className={s.colEmptyTitle}>Пусто</span>
+                  <span className={s.colEmptyHint}>Перетащите лид в эту колонку</span>
+                </div>
               ) : (
                 colLeads.map(lead => (
                   <LeadCard

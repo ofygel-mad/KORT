@@ -3,7 +3,7 @@
  * Central state for all leads data. Swap leadsApi calls for real API when ready.
  */
 import { create } from 'zustand';
-import { leadsApi } from '../api/mock';
+import { leadsApi } from '../api/client';
 import { useSharedBus } from '../../shared-bus';
 import { useBadgeStore } from '../../shared-bus/badge.store';
 import type { GlobalNotifEvent } from '../../shared-bus';

@@ -1,20 +1,24 @@
-/**
- * features/tasks-spa/components/board/TaskCard.tsx
- */
 import { memo } from 'react';
-import { Calendar, Link2, CheckSquare, AlertCircle } from 'lucide-react';
-import type { Task } from '../../api/types';
-import {
-  PRIORITY_COLOR, PRIORITY_LABEL, TAGS,
-} from '../../api/types';
+import { AlertCircle, Calendar, CheckSquare, Link2 } from 'lucide-react';
+import type { Task, TaskTone } from '../../api/types';
+import { PRIORITY_LABEL, PRIORITY_TONE, TAGS } from '../../api/types';
 import s from './Board.module.css';
+
+const TONE_CLASS: Record<TaskTone, string> = {
+  muted: s.toneMuted,
+  info: s.toneInfo,
+  warning: s.toneWarning,
+  danger: s.toneDanger,
+  success: s.toneSuccess,
+  accent: s.toneAccent,
+};
 
 function formatDue(iso?: string): { label: string; overdue: boolean } | null {
   if (!iso) return null;
-  const d = new Date(iso);
+  const dueAt = new Date(iso);
   const now = new Date();
-  const overdue = d < now;
-  const diffDays = Math.ceil((d.getTime() - now.getTime()) / 86_400_000);
+  const overdue = dueAt < now;
+  const diffDays = Math.ceil((dueAt.getTime() - now.getTime()) / 86_400_000);
 
   if (diffDays === 0) return { label: 'Сегодня', overdue };
   if (diffDays === 1) return { label: 'Завтра', overdue: false };
@@ -29,38 +33,40 @@ const ENTITY_TYPE_LABEL: Record<string, string> = {
   standalone: '',
 };
 
-export const TaskCard = memo(function TaskCard({ task, onDragStart, onDragEnd, onOpenDrawer }: {
+export const TaskCard = memo(function TaskCard({
+  task,
+  onDragStart,
+  onDragEnd,
+  onOpenDrawer,
+}: {
   task: Task;
   onDragStart: () => void;
   onDragEnd: () => void;
   onOpenDrawer: (id: string) => void;
 }) {
   const due = formatDue(task.dueAt);
-  const doneSubs = task.subtasks.filter(st => st.done).length;
+  const doneSubs = task.subtasks.filter((subtask) => subtask.done).length;
   const totalSubs = task.subtasks.length;
-  const taskTags = TAGS.filter(tg => task.tags.includes(tg.id));
-
-  const priorityColor = PRIORITY_COLOR[task.priority];
+  const taskTags = TAGS.filter((tag) => task.tags.includes(tag.id));
 
   return (
     <div
-      className={s.card}
+      className={`${s.card} ${TONE_CLASS[PRIORITY_TONE[task.priority]]}`}
       draggable
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
       onClick={() => onOpenDrawer(task.id)}
-      style={{ '--priority-color': priorityColor } as React.CSSProperties}
     >
-      <div className={s.cardPriorityStripe} style={{ background: priorityColor }} />
+      <div className={s.cardPriorityStripe} />
 
       <div className={s.cardHeader}>
-        <span className={s.cardPriorityBadge} style={{ color: priorityColor }}>
+        <span className={s.cardPriorityBadge}>
           {task.priority === 'critical' && <AlertCircle size={10} />}
           {PRIORITY_LABEL[task.priority]}
         </span>
         {task.linkedEntity && (
           <span className={s.cardEntityBadge}>
-            <Link2 size={9} />
+            <Link2 size={10} />
             {ENTITY_TYPE_LABEL[task.linkedEntity.type]}
           </span>
         )}
@@ -70,9 +76,9 @@ export const TaskCard = memo(function TaskCard({ task, onDragStart, onDragEnd, o
 
       {taskTags.length > 0 && (
         <div className={s.cardTags}>
-          {taskTags.map(tg => (
-            <span key={tg.id} className={s.cardTag} style={{ '--tag-color': tg.color } as React.CSSProperties}>
-              {tg.label}
+          {taskTags.map((tag) => (
+            <span key={tag.id} className={`${s.cardTag} ${TONE_CLASS[tag.tone]}`}>
+              {tag.label}
             </span>
           ))}
         </div>
@@ -97,7 +103,7 @@ export const TaskCard = memo(function TaskCard({ task, onDragStart, onDragEnd, o
         <div className={s.cardFooterRight}>
           {task.assignedName && (
             <span className={s.cardAvatar} title={task.assignedName}>
-              {task.assignedName.slice(0, 2)}
+              {task.assignedName.slice(0, 2).toUpperCase()}
             </span>
           )}
         </div>

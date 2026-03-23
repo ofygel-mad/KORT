@@ -93,6 +93,7 @@ export class WorkspaceSceneRuntime {
   private frameCount = 0;
   private mounted = true;
   private pendingDelta = 0;
+  private paused = false;
 
   constructor(options: WorkspaceSceneRuntimeOptions) {
     this.canvas = options.canvas;
@@ -268,12 +269,16 @@ export class WorkspaceSceneRuntime {
   resize(width: number, height: number) {
     const safeWidth = Math.max(1, Math.round(width));
     const safeHeight = Math.max(1, Math.round(height));
+    if (safeWidth <= 1 || safeHeight <= 1) {
+      return; // Skip degenerate sizes — layout not ready yet
+    }
     if (safeWidth === this.viewportWidth && safeHeight === this.viewportHeight) {
       return;
     }
 
     this.viewportWidth = safeWidth;
     this.viewportHeight = safeHeight;
+    this.inputController.suppressPointerInfluence();
     this.inputController.updateCachedRect(this.canvas.getBoundingClientRect());
     this.camera.aspect = safeWidth / safeHeight;
     this.camera.updateProjectionMatrix();
@@ -299,14 +304,31 @@ export class WorkspaceSceneRuntime {
     }
 
     this.flightTileController.syncAnchors(previous.tiles, nextState.tiles, themeChanged);
+  }
 
-    if (!previous.tiles.length && nextState.tiles.length && !nextState.flightMode) {
-      this.cameraController.placeHeroEntry();
-    }
+  pause() {
+    if (this.paused) return;
+    this.paused = true;
+    cancelAnimationFrame(this.frameHandle);
+    this.frameHandle = 0;
+    this.clock.stop();
+  }
+
+  resume() {
+    if (!this.paused || !this.mounted) return;
+    this.paused = false;
+    this.clock.start();
+    this.pendingDelta = 0;
+    this.animate();
+  }
+
+  isPaused() {
+    return this.paused;
   }
 
   dispose() {
     this.mounted = false;
+    this.paused = true;
     cancelAnimationFrame(this.frameHandle);
     this.inputController.dispose();
     this.themeController.dispose();

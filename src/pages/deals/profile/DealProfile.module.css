@@ -502,15 +502,6 @@
 .tabBtn:active { transform: var(--feedback-soft-press); }
 
 
-.scenarioRail { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 14px; padding: 14px 16px; border-radius: calc(var(--surface-radius-tight) + 2px); border: 1px solid var(--journey-rail-border); background: var(--journey-rail-bg); box-shadow: var(--brand-panel-shadow); }
-.scenarioCopy { display: grid; gap: 4px; max-width: 620px; }
-.scenarioEyebrow { color: var(--text-tertiary); font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
-.scenarioText { color: var(--text-secondary); font-size: 13px; line-height: 1.55; }
-.scenarioChips { display: flex; flex-wrap: wrap; gap: 8px; }
-.scenarioChip { display: inline-flex; align-items: center; min-height: 28px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--journey-chip-border); background: var(--journey-chip-bg); color: var(--text-secondary); font-size: 12px; font-weight: 600; }
-@media (max-width: 760px) { .scenarioRail { flex-direction: column; align-items: stretch; } }
-
-
 .nextActionSurface {
   display: flex;
   align-items: center;
@@ -534,4 +525,4 @@
 .nextActionBtn:active { transform: var(--feedback-soft-press); }
 
 
-.nextActionSurface, .scenarioRail, .card, .pipelineSection { background: var(--rc-detail-surface-bg); border-color: var(--rc-detail-surface-border); }
+.nextActionSurface, .card, .pipelineSection { background: var(--rc-detail-surface-bg); border-color: var(--rc-detail-surface-border); }

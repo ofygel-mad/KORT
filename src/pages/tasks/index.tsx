@@ -105,7 +105,7 @@ export default function TasksPage() {
       return { prev };
     },
     onError: (_err, _id, ctx) => { if (ctx?.prev) qc.setQueryData(['tasks', filter], ctx.prev); toast.error('Ошибка'); },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['tasks'] }); toast.success('Задача выполнена ✓'); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['tasks'] }); toast.success('Задача выполнена'); },
   });
 
   useEffect(() => {
@@ -167,7 +167,7 @@ export default function TasksPage() {
             icon={<CheckSquare size={22} />}
             title="Задач нет"
             subtitle={
-              filter === 'overdue' ? 'Просроченных задач нет 🎉' :
+              filter === 'overdue' ? 'Просроченных задач нет' :
               filter === 'due_today' ? 'На сегодня задач нет' :
               'Создайте первую задачу'
             }

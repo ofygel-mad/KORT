@@ -1,16 +1,16 @@
 import { useState } from 'react';
 import {
-  Upload,
-  FileSpreadsheet,
-  Check,
   AlertCircle,
-  RefreshCw,
-  Search,
-  Filter,
-  Settings,
   ArrowDownToLine,
+  Check,
+  FileSpreadsheet,
+  Filter,
   GitMerge,
   History,
+  RefreshCw,
+  Search,
+  Settings,
+  Upload,
 } from 'lucide-react';
 import s from './ImportsSPA.module.css';
 
@@ -18,29 +18,33 @@ interface Props {
   tileId: string;
 }
 
-interface Section {
-  id: string;
-  label: string;
-  icon: typeof Upload;
-}
+type SectionId = 'upload' | 'mapping' | 'history' | 'settings';
+type ImportStatus = 'done' | 'error' | 'pending';
+type StatusTone = 'positive' | 'danger' | 'warning';
 
-const SECTIONS: Section[] = [
-  { id: 'upload',   label: 'Загрузка',    icon: ArrowDownToLine },
-  { id: 'mapping',  label: 'Маппинг',     icon: GitMerge },
-  { id: 'history',  label: 'История',     icon: History },
-  { id: 'settings', label: 'Настройки',   icon: Settings },
+const SECTIONS: Array<{ id: SectionId; label: string; icon: typeof Upload }> = [
+  { id: 'upload', label: 'Загрузка', icon: ArrowDownToLine },
+  { id: 'mapping', label: 'Маппинг', icon: GitMerge },
+  { id: 'history', label: 'История', icon: History },
+  { id: 'settings', label: 'Настройки', icon: Settings },
 ];
 
-const MOCK_IMPORTS = [
-  { id: '1', name: 'clients_march.xlsx', status: 'done',    rows: 142, date: '14 мар 2026' },
-  { id: '2', name: 'deals_q1.csv',       status: 'error',   rows: 0,   date: '13 мар 2026' },
-  { id: '3', name: 'contacts_2025.xlsx', status: 'done',    rows: 891, date: '02 мар 2026' },
+const MOCK_IMPORTS: Array<{ id: string; name: string; status: ImportStatus; rows: number; date: string }> = [
+  { id: '1', name: 'clients_march.xlsx', status: 'done', rows: 142, date: '14 мар 2026' },
+  { id: '2', name: 'deals_q1.csv', status: 'error', rows: 0, date: '13 мар 2026' },
+  { id: '3', name: 'contacts_2025.xlsx', status: 'done', rows: 891, date: '02 мар 2026' },
 ];
 
-const STATUS = {
-  done:    { label: 'Загружено', color: '#22c55e', Icon: Check },
-  error:   { label: 'Ошибка',   color: '#ef4444', Icon: AlertCircle },
-  pending: { label: 'В очереди', color: '#f59e0b', Icon: RefreshCw },
+const STATUS_META: Record<ImportStatus, { label: string; Icon: typeof Check; tone: StatusTone }> = {
+  done: { label: 'Загружено', Icon: Check, tone: 'positive' },
+  error: { label: 'Ошибка', Icon: AlertCircle, tone: 'danger' },
+  pending: { label: 'В очереди', Icon: RefreshCw, tone: 'warning' },
+};
+
+const STATUS_CLASS: Record<StatusTone, string> = {
+  positive: s.statusPositive,
+  danger: s.statusDanger,
+  warning: s.statusWarning,
 };
 
 function UploadSection() {
@@ -50,63 +54,83 @@ function UploadSection() {
     <div className={s.uploadSection}>
       <div
         className={`${s.dropzone} ${dragging ? s.dropzoneActive : ''}`}
-        onDragOver={e => { e.preventDefault(); setDragging(true); }}
+        onDragOver={(event) => {
+          event.preventDefault();
+          setDragging(true);
+        }}
         onDragLeave={() => setDragging(false)}
-        onDrop={e => { e.preventDefault(); setDragging(false); }}
+        onDrop={(event) => {
+          event.preventDefault();
+          setDragging(false);
+        }}
       >
-        <Upload size={28} className={s.dropIcon} />
-        <span className={s.dropTitle}>Перетащите файл сюда</span>
-        <span className={s.dropSub}>Excel (.xlsx), CSV, JSON · до 50 МБ</span>
+        <div className={s.dropIconWrap}>
+          <Upload size={24} className={s.dropIcon} />
+        </div>
+        <span className={s.dropTitle}>Перетащите файл или выберите его вручную</span>
+        <span className={s.dropSub}>Excel (.xlsx), CSV или JSON до 50 МБ</span>
         <button className={s.dropBtn}>Выбрать файл</button>
       </div>
 
       <div className={s.recentSection}>
         <div className={s.sectionLabel}>Последние загрузки</div>
-        {MOCK_IMPORTS.map(imp => {
-          const meta = STATUS[imp.status as keyof typeof STATUS];
-          return (
-            <div key={imp.id} className={s.importRow}>
-              <FileSpreadsheet size={18} className={s.fileIcon} />
-              <div className={s.importBody}>
-                <span className={s.importName}>{imp.name}</span>
-                <span className={s.importMeta}>{imp.date}{imp.rows > 0 ? ` · ${imp.rows} строк` : ''}</span>
+        <div className={s.importList}>
+          {MOCK_IMPORTS.map((item) => {
+            const meta = STATUS_META[item.status];
+            return (
+              <div key={item.id} className={s.importRow}>
+                <div className={s.fileIconWrap}>
+                  <FileSpreadsheet size={18} className={s.fileIcon} />
+                </div>
+                <div className={s.importBody}>
+                  <span className={s.importName}>{item.name}</span>
+                  <span className={s.importMeta}>
+                    {item.date}
+                    {item.rows > 0 ? ` · ${item.rows} строк` : ''}
+                  </span>
+                </div>
+                <span className={`${s.importStatus} ${STATUS_CLASS[meta.tone]}`}>
+                  <meta.Icon size={12} />
+                  {meta.label}
+                </span>
               </div>
-              <span className={s.importStatus} style={{ '--s-color': meta.color } as React.CSSProperties}>
-                <meta.Icon size={12} />
-                {meta.label}
-              </span>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     </div>
   );
 }
 
-function SectionPlaceholder({ section }: { section: Section }) {
+function SectionPlaceholder({ section }: { section: (typeof SECTIONS)[number] }) {
   const Icon = section.icon;
 
   return (
     <div className={s.placeholder}>
-      <Icon size={36} className={s.placeholderIcon} />
+      <div className={s.placeholderIconWrap}>
+        <Icon size={26} className={s.placeholderIcon} />
+      </div>
       <div className={s.placeholderTitle}>{section.label}</div>
-      <div className={s.placeholderDesc}>Раздел в процессе подключения</div>
+      <div className={s.placeholderDesc}>Раздел уже подготовлен и ждёт подключения рабочего сценария.</div>
     </div>
   );
 }
 
 export function ImportsSPA({ tileId }: Props) {
-  const [activeSection, setActiveSection] = useState('upload');
-
-  const currentSection = SECTIONS.find(sec => sec.id === activeSection) ?? SECTIONS[0];
+  const [activeSection, setActiveSection] = useState<SectionId>('upload');
+  const currentSection = SECTIONS.find((section) => section.id === activeSection) ?? SECTIONS[0];
 
   return (
     <div className={s.root} data-tile-id={tileId}>
-      {/* ── Header ── */}
       <div className={s.header}>
         <div className={s.headerLeft}>
-          <ArrowDownToLine size={18} className={s.headerIcon} />
-          <span className={s.title}>Импорт</span>
+          <div className={s.headerIconWrap}>
+            <ArrowDownToLine size={16} className={s.headerIcon} />
+          </div>
+          <div className={s.headerCopy}>
+            <span className={s.headerEyebrow}>Import Desk</span>
+            <span className={s.title}>Импорт</span>
+          </div>
         </div>
         <div className={s.headerActions}>
           <button className={s.iconBtn} aria-label="Поиск">
@@ -122,27 +146,23 @@ export function ImportsSPA({ tileId }: Props) {
         </div>
       </div>
 
-      {/* ── Navigation tabs ── */}
       <nav className={s.nav}>
-        {SECTIONS.map(sec => (
+        {SECTIONS.map((section) => (
           <button
-            key={sec.id}
-            className={`${s.navItem} ${activeSection === sec.id ? s.navItemActive : ''}`}
-            onClick={() => setActiveSection(sec.id)}
+            key={section.id}
+            className={`${s.navItem} ${activeSection === section.id ? s.navItemActive : ''}`}
+            onClick={() => setActiveSection(section.id)}
           >
-            <sec.icon size={14} />
-            <span>{sec.label}</span>
+            <section.icon size={14} />
+            <span>{section.label}</span>
           </button>
         ))}
       </nav>
 
-      {/* ── Content area ── */}
       <div className={s.content}>
-        {activeSection === 'upload' && <UploadSection />}
-        {activeSection !== 'upload' && <SectionPlaceholder section={currentSection} />}
+        {activeSection === 'upload' ? <UploadSection /> : <SectionPlaceholder section={currentSection} />}
       </div>
 
-      {/* ── Status bar ── */}
       <div className={s.statusBar}>
         <span className={s.statusDot} />
         <span>Подключение активно</span>

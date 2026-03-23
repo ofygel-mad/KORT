@@ -1,14 +1,8 @@
 /**
- * features/chapan-spa/api/types.ts
  * Domain types for the Chapan (sewing workshop) ERP SPA.
- *
- * Three status axes per order:
- *   1. OrderStatus   — lifecycle of the order itself
- *   2. PaymentStatus — payment tracking
- *   3. ProductionStatus — per-item production progress
  */
 
-// ── Order lifecycle ──────────────────────────────────────────
+export type UITone = 'muted' | 'info' | 'warning' | 'danger' | 'success' | 'accent';
 
 export type OrderStatus =
   | 'new'
@@ -20,46 +14,47 @@ export type OrderStatus =
   | 'cancelled';
 
 export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
-  new:            'Новый',
-  confirmed:      'Подтверждён',
-  in_production:  'В производстве',
-  ready:          'Готов',
-  transferred:    'Передан',
-  completed:      'Завершён',
-  cancelled:      'Отменён',
+  new: 'Новый',
+  confirmed: 'Подтверждён',
+  in_production: 'В производстве',
+  ready: 'Готов',
+  transferred: 'Передан',
+  completed: 'Завершён',
+  cancelled: 'Отменён',
 };
 
-export const ORDER_STATUS_COLOR: Record<OrderStatus, string> = {
-  new:            '#6b7280',
-  confirmed:      '#3b82f6',
-  in_production:  '#f59e0b',
-  ready:          '#22c55e',
-  transferred:    '#8b5cf6',
-  completed:      '#10b981',
-  cancelled:      '#ef4444',
+export const ORDER_STATUS_TONE: Record<OrderStatus, UITone> = {
+  new: 'muted',
+  confirmed: 'info',
+  in_production: 'warning',
+  ready: 'success',
+  transferred: 'accent',
+  completed: 'success',
+  cancelled: 'danger',
 };
 
 export const ORDER_STATUS_ORDER: OrderStatus[] = [
-  'new', 'confirmed', 'in_production', 'ready', 'transferred', 'completed',
+  'new',
+  'confirmed',
+  'in_production',
+  'ready',
+  'transferred',
+  'completed',
 ];
-
-// ── Payment status ───────────────────────────────────────────
 
 export type PaymentStatus = 'not_paid' | 'partial' | 'paid';
 
 export const PAYMENT_STATUS_LABEL: Record<PaymentStatus, string> = {
   not_paid: 'Не оплачен',
-  partial:  'Частично',
-  paid:     'Оплачен',
+  partial: 'Частично',
+  paid: 'Оплачен',
 };
 
-export const PAYMENT_STATUS_COLOR: Record<PaymentStatus, string> = {
-  not_paid: '#ef4444',
-  partial:  '#f59e0b',
-  paid:     '#22c55e',
+export const PAYMENT_STATUS_TONE: Record<PaymentStatus, UITone> = {
+  not_paid: 'danger',
+  partial: 'warning',
+  paid: 'success',
 };
-
-// ── Production status (per item) ─────────────────────────────
 
 export type ProductionStatus =
   | 'pending'
@@ -70,54 +65,53 @@ export type ProductionStatus =
   | 'done';
 
 export const PRODUCTION_STATUS_LABEL: Record<ProductionStatus, string> = {
-  pending:       'Ожидание',
-  cutting:       'Раскрой',
-  sewing:        'Пошив',
-  finishing:     'Отделка',
+  pending: 'Ожидание',
+  cutting: 'Раскрой',
+  sewing: 'Пошив',
+  finishing: 'Отделка',
   quality_check: 'Проверка',
-  done:          'Готово',
+  done: 'Готово',
 };
 
-export const PRODUCTION_STATUS_COLOR: Record<ProductionStatus, string> = {
-  pending:       '#6b7280',
-  cutting:       '#f59e0b',
-  sewing:        '#3b82f6',
-  finishing:     '#8b5cf6',
-  quality_check: '#ec4899',
-  done:          '#22c55e',
+export const PRODUCTION_STATUS_TONE: Record<ProductionStatus, UITone> = {
+  pending: 'muted',
+  cutting: 'warning',
+  sewing: 'info',
+  finishing: 'accent',
+  quality_check: 'warning',
+  done: 'success',
 };
 
 export const PRODUCTION_STATUS_ORDER: ProductionStatus[] = [
-  'pending', 'cutting', 'sewing', 'finishing', 'quality_check', 'done',
+  'pending',
+  'cutting',
+  'sewing',
+  'finishing',
+  'quality_check',
+  'done',
 ];
-
-// ── Order priority ───────────────────────────────────────────
 
 export type OrderPriority = 'normal' | 'urgent' | 'vip';
 
 export const PRIORITY_LABEL: Record<OrderPriority, string> = {
   normal: 'Обычный',
   urgent: 'Срочный',
-  vip:    'VIP',
+  vip: 'VIP',
 };
 
-export const PRIORITY_COLOR: Record<OrderPriority, string> = {
-  normal: '#6b7280',
-  urgent: '#f59e0b',
-  vip:    '#ec4899',
+export const PRIORITY_TONE: Record<OrderPriority, UITone> = {
+  normal: 'muted',
+  urgent: 'warning',
+  vip: 'accent',
 };
-
-// ── Payment method ───────────────────────────────────────────
 
 export type PaymentMethod = 'cash' | 'card' | 'transfer';
 
 export const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
-  cash:     'Наличные',
-  card:     'Карта',
+  cash: 'Наличные',
+  card: 'Карта',
   transfer: 'Перевод',
 };
-
-// ── Activity types ───────────────────────────────────────────
 
 export type ActivityType =
   | 'status_change'
@@ -127,7 +121,14 @@ export type ActivityType =
   | 'transfer'
   | 'system';
 
-// ── Entities ─────────────────────────────────────────────────
+export const ACTIVITY_TONE: Record<ActivityType, UITone> = {
+  status_change: 'info',
+  payment: 'success',
+  production_update: 'warning',
+  comment: 'accent',
+  transfer: 'accent',
+  system: 'muted',
+};
 
 export interface Client {
   id: string;
@@ -147,7 +148,6 @@ export interface OrderItem {
   quantity: number;
   unitPrice: number;
   notes?: string;
-  /** Special instructions for the workshop (e.g. embroidery, non-standard cut) */
   workshopNotes?: string;
 }
 
@@ -166,9 +166,7 @@ export interface ProductionTask {
   completedAt?: string;
   notes?: string;
   defects?: string;
-  /** True when the task is blocked and cannot proceed */
   isBlocked: boolean;
-  /** Reason why the task is blocked (no material, client change, etc.) */
   blockReason?: string;
 }
 
@@ -204,20 +202,16 @@ export interface Order {
   clientId: string;
   clientName: string;
   clientPhone: string;
-
   status: OrderStatus;
   paymentStatus: PaymentStatus;
   priority: OrderPriority;
-
   items: OrderItem[];
   productionTasks: ProductionTask[];
   payments: Payment[];
   transfer?: Transfer;
   activities: OrderActivity[];
-
   totalAmount: number;
   paidAmount: number;
-
   dueDate?: string;
   createdAt: string;
   updatedAt: string;
@@ -226,13 +220,50 @@ export interface Order {
   cancelReason?: string;
 }
 
-// ── View options ─────────────────────────────────────────────
+export type ClientRequestStatus = 'new' | 'reviewed' | 'converted' | 'archived';
+
+export interface ClientRequestItem {
+  id: string;
+  productName: string;
+  fabricPreference?: string;
+  size?: string;
+  quantity: number;
+  notes?: string;
+}
+
+export interface ClientRequest {
+  id: string;
+  requestNumber: string;
+  customerName: string;
+  phone: string;
+  messengers?: Array<'whatsapp' | 'telegram'>;
+  city?: string;
+  deliveryMethod?: string;
+  leadSource?: string;
+  preferredContact: 'phone' | 'whatsapp' | 'telegram';
+  desiredDate?: string;
+  notes?: string;
+  source: 'public_form' | 'manager' | 'whatsapp';
+  status: ClientRequestStatus;
+  items: ClientRequestItem[];
+  createdOrderId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WorkzoneProfile {
+  displayName: string;
+  descriptor: string;
+  orderPrefix: string;
+  publicIntakeTitle: string;
+  publicIntakeDescription: string;
+  publicIntakeEnabled: boolean;
+  supportLabel: string;
+}
 
 export type ViewMode = 'list' | 'kanban';
 export type OrderSortBy = 'createdAt' | 'dueDate' | 'totalAmount' | 'updatedAt';
 export type OrderGroupBy = 'status' | 'priority' | 'paymentStatus';
-
-// ── Product catalog (predefined) ─────────────────────────────
 
 export const PRODUCT_CATALOG = [
   'Чапан классический',
@@ -259,7 +290,14 @@ export const FABRIC_CATALOG = [
 ] as const;
 
 export const SIZE_OPTIONS = [
-  'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL', 'На заказ',
+  'XS',
+  'S',
+  'M',
+  'L',
+  'XL',
+  'XXL',
+  'XXXL',
+  'На заказ',
 ] as const;
 
 export const DEFAULT_WORKERS: string[] = [

@@ -1,85 +1,97 @@
-import { useState, useRef, useEffect, type CSSProperties } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent, type CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { motion, AnimatePresence } from 'framer-motion';
-import { successBurst } from '../../shared/motion/presets';
-import { Upload, FileText, CheckCircle2, AlertCircle, ArrowRight } from 'lucide-react';
-import { api } from '../../shared/api/client';
-import { PageHeader } from '../../shared/ui/PageHeader';
-import { Button } from '../../shared/ui/Button';
-import { Skeleton } from '../../shared/ui/Skeleton';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { AnimatePresence, motion } from 'framer-motion';
+import { AlertCircle, ArrowRight, CheckCircle2, FileText, Upload } from 'lucide-react';
 import { toast } from 'sonner';
+import { successBurst } from '../../shared/motion/presets';
+import { api } from '../../shared/api/client';
 import { useDocumentTitle } from '../../shared/hooks/useDocumentTitle';
-import { SpreadsheetReview } from '../../widgets/spreadsheet-review/SpreadsheetReview';
 import { setProductMoment } from '../../shared/utils/productMoment';
+import { Button } from '../../shared/ui/Button';
+import { PageHeader } from '../../shared/ui/PageHeader';
+import { Skeleton } from '../../shared/ui/Skeleton';
 import s from './Imports.module.css';
 
-/* ── Types & constants ───────────────────────────────────────── */
 const KORT_FIELDS = [
-  { value: '',             label: '— Не импортировать —' },
-  { value: 'full_name',    label: 'Имя клиента'  },
-  { value: 'phone',        label: 'Телефон'       },
-  { value: 'email',        label: 'Email'         },
-  { value: 'company_name', label: 'Компания'      },
-  { value: 'source',       label: 'Источник'      },
-  { value: 'status',       label: 'Статус'        },
+  { value: '', label: 'Не импортировать' },
+  { value: 'full_name', label: 'Имя клиента' },
+  { value: 'phone', label: 'Телефон' },
+  { value: 'email', label: 'Email' },
+  { value: 'company_name', label: 'Компания' },
+  { value: 'source', label: 'Источник' },
+  { value: 'status', label: 'Статус' },
 ];
 
 interface ImportJob {
-  id: string; status: string; import_type: string;
-  preview_json?: { headers: string[]; rows: string[][]; total: number; auto_mapping: Record<string, string> };
-  result_json?: { success: number; errors: number; duplicates: number };
+  id: string;
+  status: string;
+  import_type: string;
+  preview_json?: {
+    headers: string[];
+    rows: string[][];
+    total: number;
+    auto_mapping: Record<string, string>;
+  };
+  result_json?: {
+    success: number;
+    errors: number;
+    duplicates: number;
+  };
   created_at: string;
 }
 
 const STEPS = ['Загрузка', 'Маппинг', 'Импорт'];
 
 const STATUS_LABELS: Record<string, string> = {
-  uploaded: 'Загружен', analyzing: 'Анализ', mapping_required: 'Требуется маппинг',
-  mapping_confirmed: 'Маппинг подтверждён', processing: 'Обработка',
-  completed: 'Завершён', failed: 'Ошибка', pending: 'Ожидание',
+  uploaded: 'Загружен',
+  analyzing: 'Анализ',
+  mapping_required: 'Требуется маппинг',
+  mapping_confirmed: 'Маппинг подтверждён',
+  processing: 'Обработка',
+  completed: 'Завершён',
+  failed: 'Ошибка',
+  pending: 'Ожидание',
 };
 
-/* bg/color are hardcoded hex pairs for status badges — not token-based
-   because status colours are product-semantic, not design-system-semantic */
 const STATUS_BADGE: Record<string, { bg: string; color: string }> = {
-  completed:         { bg: 'var(--fill-positive-soft)', color: 'var(--fill-positive-text)' },
-  failed:            { bg: 'var(--fill-negative-soft)', color: 'var(--fill-negative-text)' },
-  processing:        { bg: 'var(--fill-info-soft)',     color: 'var(--fill-info-text)'     },
-  analyzing:         { bg: 'var(--fill-info-soft)',     color: 'var(--fill-info-text)'     },
-  mapping_required:  { bg: 'var(--fill-warning-soft)',  color: 'var(--fill-warning-text)'  },
-  mapping_confirmed: { bg: 'var(--fill-accent-soft)',   color: 'var(--fill-accent)'         },
-  uploaded:          { bg: 'var(--bg-surface-inset)',   color: 'var(--text-secondary)'      },
-  pending:           { bg: 'var(--bg-surface-inset)',   color: 'var(--text-secondary)'      },
+  completed: { bg: 'var(--fill-positive-soft)', color: 'var(--fill-positive-text)' },
+  failed: { bg: 'var(--fill-negative-soft)', color: 'var(--fill-negative-text)' },
+  processing: { bg: 'var(--fill-info-soft)', color: 'var(--fill-info-text)' },
+  analyzing: { bg: 'var(--fill-info-soft)', color: 'var(--fill-info-text)' },
+  mapping_required: { bg: 'var(--fill-warning-soft)', color: 'var(--fill-warning-text)' },
+  mapping_confirmed: { bg: 'var(--fill-accent-soft)', color: 'var(--fill-accent)' },
+  uploaded: { bg: 'var(--bg-surface-inset)', color: 'var(--text-secondary)' },
+  pending: { bg: 'var(--bg-surface-inset)', color: 'var(--text-secondary)' },
 };
 
-/* ── Step helpers ────────────────────────────────────────────── */
 function dotClass(idx: number, current: number) {
   return idx < current ? s.done : idx === current ? s.active : s.pending;
 }
+
 function numClass(idx: number, current: number) {
   return idx === current ? s.active : s.pending;
 }
+
 function connClass(idx: number, current: number) {
   return idx < current ? s.done : s.pending;
 }
 
-/* ── Page ────────────────────────────────────────────────────── */
 export default function ImportsPage() {
   useDocumentTitle('Импорт');
-  const qc       = useQueryClient();
+  const queryClient = useQueryClient();
   const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement>(null);
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
-  const [mapping, setMapping]         = useState<Record<string, string>>({});
-  const [wizardStep, setWizardStep]   = useState(0);
+  const [mapping, setMapping] = useState<Record<string, string>>({});
+  const [wizardStep, setWizardStep] = useState(0);
 
   const { data: jobs, isLoading } = useQuery<{ results: ImportJob[] }>({
     queryKey: ['import-jobs'],
     queryFn: () => api.get('/imports/'),
     refetchInterval: (query) => {
-      const active = (query.state.data as { results: ImportJob[] } | undefined)?.results.some(
-        j => ['processing', 'analyzing', 'mapping_required', 'mapping_confirmed'].includes(j.status),
+      const active = (query.state.data as { results: ImportJob[] } | undefined)?.results.some((job) =>
+        ['processing', 'analyzing', 'mapping_required', 'mapping_confirmed'].includes(job.status),
       );
       return active ? 3000 : false;
     },
@@ -92,111 +104,116 @@ export default function ImportsPage() {
       fd.append('import_type', 'customers');
       return api.post<ImportJob>('/imports/', fd as unknown as object);
     },
-    onSuccess: (job: ImportJob) => {
-      qc.invalidateQueries({ queryKey: ['import-jobs'] });
+    onSuccess: (job) => {
+      queryClient.invalidateQueries({ queryKey: ['import-jobs'] });
       setActiveJobId(job.id);
       setWizardStep(1);
-      toast.success('Файл загружен, анализируем...');
+      toast.success('Файл загружен, анализируем структуру...');
     },
-    onError: () => toast.error('Ошибка загрузки файла'),
+    onError: () => toast.error('Не удалось загрузить файл'),
   });
 
   const startImport = useMutation({
     mutationFn: () => api.post(`/imports/${activeJobId}/start/`),
-    onSuccess:  () => qc.invalidateQueries({ queryKey: ['import-jobs'] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['import-jobs'] }),
   });
 
   const confirmMapping = useMutation({
     mutationFn: () => api.post(`/imports/${activeJobId}/mapping/`, { column_mapping: mapping }),
-    onSuccess:  () => { setWizardStep(2); startImport.mutate(); },
+    onSuccess: () => {
+      setWizardStep(2);
+      startImport.mutate();
+    },
   });
 
-  const activeJob = jobs?.results.find(j => j.id === activeJobId);
-  const preview   = activeJob?.preview_json;
+  const activeJob = jobs?.results.find((job) => job.id === activeJobId);
+  const preview = activeJob?.preview_json;
 
   useEffect(() => {
     if (preview?.auto_mapping && Object.keys(mapping).length === 0) {
       setMapping(preview.auto_mapping);
     }
-  }, [preview, mapping]);
+  }, [mapping, preview]);
 
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
+  function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
     if (!file) return;
     if (!file.name.match(/\.(xlsx|xls|csv)$/i)) {
-      toast.error('Поддерживаются только файлы Excel (.xlsx, .xls) и CSV');
+      toast.error('Поддерживаются только Excel (.xlsx, .xls) и CSV');
       return;
     }
     uploadMutation.mutate(file);
   }
 
-  function resetWizard() { setWizardStep(0); setActiveJobId(null); setMapping({}); }
+  function resetWizard() {
+    setWizardStep(0);
+    setActiveJobId(null);
+    setMapping({});
+  }
 
   return (
     <div className={s.page}>
-      <PageHeader title="Импорт данных" subtitle="Загрузите клиентов из Excel или CSV" actions={<Button variant="secondary" size="sm" onClick={() => navigate(-1)}>Вернуться</Button>} />
+      <PageHeader
+        title="Импорт данных"
+        subtitle="Загрузите клиентскую базу из Excel или CSV и сразу доведите её до рабочего контура"
+        actions={<Button variant="secondary" size="sm" onClick={() => navigate(-1)}>Вернуться</Button>}
+      />
 
-      <div className={s.scenarioRail}>
-        <div className={s.scenarioCopy}>
-          <span className={s.scenarioEyebrow}>Сценарий данных</span>
-          <div className={s.scenarioText}>Импорт должен закончиться действием, а не красивым тупиком после кнопки «Готово».</div>
-        </div>
-        <div className={s.scenarioChips}>
-          <span className={s.scenarioChip}>Загрузить</span>
-          <span className={s.scenarioChip}>Сопоставить</span>
-          <span className={s.scenarioChip}>Начать работу</span>
-        </div>
-      </div>
-
-      {/* ── Wizard card ────────────────────────────────────── */}
       <div className={s.wizardCard}>
+        <div className={s.wizardIntro}>
+          <span className={s.wizardEyebrow}>Import Flow</span>
+          <div className={s.wizardTitle}>Загрузите файл и сразу переведите его в рабочий ритм команды</div>
+          <div className={s.wizardLead}>
+            Kort сначала разбирает колонки, затем даёт быстро подтвердить маппинг и сразу подводит команду к следующему действию.
+          </div>
+        </div>
 
-        {/* Step indicators */}
         <div className={s.steps}>
           {STEPS.map((label, idx) => (
             <div key={label} className={s.stepItem}>
               <div className={`${s.stepDot} ${dotClass(idx, wizardStep)}`}>
-                {idx < wizardStep
-                  ? <CheckCircle2 size={14} color="#fff" />
-                  : <span className={`${s.stepNum} ${numClass(idx, wizardStep)}`}>{idx + 1}</span>
-                }
+                {idx < wizardStep ? (
+                  <CheckCircle2 size={14} className={s.stepDoneIcon} />
+                ) : (
+                  <span className={`${s.stepNum} ${numClass(idx, wizardStep)}`}>{idx + 1}</span>
+                )}
               </div>
               <span className={`${s.stepLabel} ${idx === wizardStep ? s.active : s.other}`}>{label}</span>
-              {idx < STEPS.length - 1 && (
-                <div className={`${s.stepConnector} ${connClass(idx, wizardStep)}`} />
-              )}
+              {idx < STEPS.length - 1 && <div className={`${s.stepConnector} ${connClass(idx, wizardStep)}`} />}
             </div>
           ))}
         </div>
 
         <AnimatePresence mode="wait">
-
-          {/* Step 0 — upload */}
           {wizardStep === 0 && (
             <motion.div key="upload" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-              <input ref={inputRef} type="file" accept=".xlsx,.xls,.csv" className={s.hiddenInput} onChange={handleFileChange} />
+              <input
+                ref={inputRef}
+                type="file"
+                accept=".xlsx,.xls,.csv"
+                className={s.hiddenInput}
+                onChange={handleFileChange}
+              />
               <motion.div
                 className={`${s.dropZone} ${uploadMutation.isPending ? s.uploading : ''}`}
-                whileHover={{ borderColor: 'var(--fill-accent)' }}
                 onClick={() => inputRef.current?.click()}
               >
                 {uploadMutation.isPending ? (
                   <div className={s.spinnerWrap}>
                     <div className={s.spinner} />
-                    <span className={s.spinnerLabel}>Загружаем и анализируем...</span>
+                    <span className={s.spinnerLabel}>Загружаем и разбираем файл...</span>
                   </div>
                 ) : (
                   <>
-                    <Upload size={32} color="var(--fill-accent)" className={s.dropIcon} />
-                    <div className={s.dropTitle}>Перетащите файл или нажмите</div>
-                    <div className={s.dropDesc}>Поддерживаются .xlsx, .xls, .csv</div>
+                    <Upload size={32} className={s.dropIcon} />
+                    <div className={s.dropTitle}>Перетащите файл или выберите его вручную</div>
+                    <div className={s.dropDesc}>Поддерживаются .xlsx, .xls и .csv</div>
                   </>
                 )}
               </motion.div>
             </motion.div>
           )}
 
-          {/* Step 1 — column mapping */}
           {wizardStep === 1 && preview && (
             <motion.div key="mapping" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
               <div className={s.mappingHeader}>
@@ -206,40 +223,57 @@ export default function ImportsPage() {
                 </div>
                 <div className={s.mappingActions}>
                   <Button variant="secondary" size="sm" onClick={resetWizard}>Заново</Button>
-                  <Button size="sm" loading={confirmMapping.isPending} iconRight={<ArrowRight size={13} />} onClick={() => confirmMapping.mutate()}>
+                  <Button
+                    size="sm"
+                    loading={confirmMapping.isPending}
+                    iconRight={<ArrowRight size={13} />}
+                    onClick={() => confirmMapping.mutate()}
+                  >
                     Импортировать
                   </Button>
                 </div>
               </div>
 
               <div className={s.mappingGrid}>
-                {preview.headers.map(header => (
+                {preview.headers.map((header) => (
                   <div key={header} className={s.mappingRow}>
                     <span className={s.mappingColName}>{header}</span>
                     <ArrowRight size={12} className={s.mappingArrow} />
                     <select
                       value={mapping[header] ?? ''}
-                      onChange={e => setMapping(m => ({ ...m, [header]: e.target.value }))}
+                      onChange={(event) => setMapping((prev) => ({ ...prev, [header]: event.target.value }))}
                       className={`kort-input ${s.mappingSelect}`}
                     >
-                      {KORT_FIELDS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
+                      {KORT_FIELDS.map((field) => (
+                        <option key={field.value} value={field.value}>
+                          {field.label}
+                        </option>
+                      ))}
                     </select>
                   </div>
                 ))}
               </div>
 
-              <div className={s.previewLabel}>Предварительный просмотр (первые 5 строк)</div>
+              <div className={s.previewLabel}>Предварительный просмотр первых пяти строк</div>
               <div className={s.previewTableWrap}>
                 <table className={s.previewTable}>
                   <thead>
                     <tr>
-                      {preview.headers.map(h => <th key={h} className={s.previewTh}>{h}</th>)}
+                      {preview.headers.map((header) => (
+                        <th key={header} className={s.previewTh}>
+                          {header}
+                        </th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {preview.rows.slice(0, 5).map((row, i) => (
-                      <tr key={i}>
-                        {row.map((cell, j) => <td key={j} className={s.previewTd}>{cell}</td>)}
+                    {preview.rows.slice(0, 5).map((row, rowIndex) => (
+                      <tr key={rowIndex}>
+                        {row.map((cell, cellIndex) => (
+                          <td key={cellIndex} className={s.previewTd}>
+                            {cell}
+                          </td>
+                        ))}
                       </tr>
                     ))}
                   </tbody>
@@ -248,50 +282,91 @@ export default function ImportsPage() {
             </motion.div>
           )}
 
-          {/* Step 2 — result */}
           {wizardStep === 2 && (
             <motion.div key="result" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
               {activeJob?.status === 'processing' ? (
                 <motion.div className={s.resultCenter} variants={successBurst} initial="hidden" animate="visible">
                   <div className={s.resultSpinner} />
                   <div className={s.resultProcessingTitle}>Импортируем клиентов...</div>
-                  <div className={s.resultProcessingDesc}>Обновим результат автоматически</div>
+                  <div className={s.resultProcessingDesc}>Результат обновится автоматически</div>
                 </motion.div>
               ) : activeJob?.status === 'completed' ? (
                 <motion.div className={s.resultCenter} variants={successBurst} initial="hidden" animate="visible">
-                  <CheckCircle2 size={40} color="var(--fill-positive)" className={s.resultSuccessIcon} />
-                  <div className={s.resultSuccessTitle}>Импорт завершён!</div>
+                  <CheckCircle2 size={40} className={s.resultSuccessIcon} />
+                  <div className={s.resultSuccessTitle}>Импорт завершён</div>
                   <div className={s.statsRow}>
                     {[
-                      { label: 'Успешно', value: activeJob.result_json?.success ?? 0, color: 'var(--fill-positive)' },
-                      { label: 'Дублей',  value: activeJob.result_json?.duplicates ?? 0, color: 'var(--fill-warning)' },
-                      { label: 'Ошибок',  value: activeJob.result_json?.errors ?? 0, color: 'var(--fill-negative)' },
-                    ].map(stat => (
+                      { label: 'Успешно', value: activeJob.result_json?.success ?? 0, tone: s.statPositive },
+                      { label: 'Дублей', value: activeJob.result_json?.duplicates ?? 0, tone: s.statWarning },
+                      { label: 'Ошибок', value: activeJob.result_json?.errors ?? 0, tone: s.statNegative },
+                    ].map((stat) => (
                       <div key={stat.label} className={s.statItem}>
-                        <div className={s.statValue} style={{ '--stat-color': stat.color } as CSSProperties}>{stat.value}</div>
+                        <div className={`${s.statValue} ${stat.tone}`}>{stat.value}</div>
                         <div className={s.statLabel}>{stat.label}</div>
                       </div>
                     ))}
                   </div>
                   <div className={s.resultActions}>
                     <Button className={s.resultNewImport} onClick={resetWizard}>Новый импорт</Button>
-                    <Button variant="secondary" onClick={() => { setProductMoment('Импорт завершён · сначала проверьте карточки клиентов, чтобы быстро превратить свежие данные в живой контур команды.'); navigate('/customers'); }}>Открыть клиентов</Button>
-                    <Button variant="secondary" onClick={() => { setProductMoment('Импорт завершён · Kort Home уже собран как следующий контур действий: проверить базу, создать сделки и распределить задачи.'); navigate('/'); }}>Перейти в Kort Home</Button>
+                    <Button
+                      variant="secondary"
+                      onClick={() => {
+                        setProductMoment('Импорт завершён. Сначала проверьте карточки клиентов, затем сразу соберите первые активные сделки.');
+                        navigate('/customers');
+                      }}
+                    >
+                      Открыть клиентов
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      onClick={() => {
+                        setProductMoment('Импорт завершён. Kort Home уже подготовлен как следующий контур действий: проверить базу, собрать сделки и раздать задачи.');
+                        navigate('/');
+                      }}
+                    >
+                      Перейти в Kort Home
+                    </Button>
                   </div>
                   <div className={s.nextActionRail}>
                     <div className={s.nextActionTitle}>Что делать дальше</div>
                     <div className={s.nextActionGrid}>
-                      <button className={s.nextActionCard} onClick={() => { setProductMoment('Импорт завершён. Проверяйте клиентов сразу после загрузки, пока контекст ещё горячий.'); navigate('/customers'); }}>Проверить карточки клиентов</button>
-                      <button className={s.nextActionCard} onClick={() => { setProductMoment('Импорт завершён · переходите к сделкам, пока свежие клиенты ещё не остыли в системе.'); navigate('/deals'); }}>Создать первую сделку</button>
-                      <button className={s.nextActionCard} onClick={() => { setProductMoment('Импорт завершён. Возвращайтесь в обзор команды, чтобы увидеть, что требует следующего действия прямо сейчас.'); navigate('/'); }}>Вернуться в обзор команды</button>
+                      <button
+                        className={s.nextActionCard}
+                        onClick={() => {
+                          setProductMoment('Импорт завершён. Проверьте клиентов сразу после загрузки, пока контекст ещё горячий.');
+                          navigate('/customers');
+                        }}
+                      >
+                        Проверить карточки клиентов
+                      </button>
+                      <button
+                        className={s.nextActionCard}
+                        onClick={() => {
+                          setProductMoment('Импорт завершён. Переходите к сделкам, пока свежие клиенты ещё не остыли в системе.');
+                          navigate('/deals');
+                        }}
+                      >
+                        Создать первую сделку
+                      </button>
+                      <button
+                        className={s.nextActionCard}
+                        onClick={() => {
+                          setProductMoment('Импорт завершён. Возвращайтесь в обзор команды, чтобы увидеть следующий операционный шаг.');
+                          navigate('/');
+                        }}
+                      >
+                        Вернуться в обзор команды
+                      </button>
                     </div>
                   </div>
                 </motion.div>
               ) : (
                 <div className={s.resultError}>
                   <AlertCircle size={32} className={s.resultErrorIcon} />
-                  <div className={s.resultErrorTitle}>Ошибка импорта</div>
-                  <div className={s.resultErrorText}>Проверьте файл, сопоставление полей и попробуйте снова без потери текущего сценария.</div>
+                  <div className={s.resultErrorTitle}>Импорт не завершился</div>
+                  <div className={s.resultErrorText}>
+                    Проверьте файл и сопоставление полей, затем повторите попытку без потери текущего сценария.
+                  </div>
                   <div className={s.resultErrorActions}>
                     <button className={s.resultRecoveryBtn} onClick={() => setWizardStep(0)}>Исправить и повторить</button>
                     <button className={s.resultRecoveryBtn} onClick={resetWizard}>Начать заново</button>
@@ -300,23 +375,21 @@ export default function ImportsPage() {
               )}
             </motion.div>
           )}
-
         </AnimatePresence>
       </div>
 
-      {/* ── History ─────────────────────────────────────────── */}
       <div className={s.historyCard}>
         <div className={s.historyTitle}>История импортов</div>
 
         {isLoading
-          ? [1, 2, 3].map(i => (
-              <div key={i} className={s.historySkeletonRow}>
+          ? [1, 2, 3].map((item) => (
+              <div key={item} className={s.historySkeletonRow}>
                 <Skeleton height={14} width="50%" />
               </div>
             ))
           : (jobs?.results ?? []).length === 0
-            ? <div className={s.historyEmpty}>Импортов не было</div>
-            : (jobs?.results ?? []).map(job => {
+            ? <div className={s.historyEmpty}>Импортов пока не было</div>
+            : (jobs?.results ?? []).map((job) => {
                 const badge = STATUS_BADGE[job.status] ?? STATUS_BADGE.pending;
                 return (
                   <div key={job.id} className={s.historyRow}>
@@ -326,19 +399,23 @@ export default function ImportsPage() {
                         <div className={s.historyJobName}>Импорт клиентов</div>
                         <div className={s.historyJobDate}>
                           {new Date(job.created_at).toLocaleDateString('ru-RU', {
-                            day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
+                            day: 'numeric',
+                            month: 'short',
+                            hour: '2-digit',
+                            minute: '2-digit',
                           })}
                         </div>
                       </div>
                     </div>
-                    {/* bg/color runtime from badge map → inline correct */}
-                    <div className={s.statusBadge} style={{ '--status-bg': badge.bg, '--status-color': badge.color } as CSSProperties}>
+                    <div
+                      className={s.statusBadge}
+                      style={{ '--status-bg': badge.bg, '--status-color': badge.color } as CSSProperties}
+                    >
                       {STATUS_LABELS[job.status] ?? job.status}
                     </div>
                   </div>
                 );
-              })
-        }
+              })}
       </div>
     </div>
   );

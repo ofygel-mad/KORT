@@ -7,27 +7,27 @@ import {
   Plus, MessageSquare, CheckSquare, Briefcase, Tag,
   Send, MessageCircle, FileText, PhoneCall,
 } from 'lucide-react';
-import { api } from '../../shared/api/client';
-import { Button } from '../../shared/ui/Button';
-import { Badge } from '../../shared/ui/Badge';
-import { PageLoader } from '../../shared/ui/PageLoader';
-import { EmptyState } from '../../shared/ui/EmptyState';
-import { Drawer } from '../../shared/ui/Drawer';
-import { FormErrorSummary } from '../../shared/ui/FormErrorSummary';
-import { Input, Textarea } from '../../shared/ui/Input';
+import { api } from '../../../shared/api/client';
+import { Button } from '../../../shared/ui/Button';
+import { Badge } from '../../../shared/ui/Badge';
+import { PageLoader } from '../../../shared/ui/PageLoader';
+import { EmptyState } from '../../../shared/ui/EmptyState';
+import { Drawer } from '../../../shared/ui/Drawer';
+import { FormErrorSummary } from '../../../shared/ui/FormErrorSummary';
+import { Input, Textarea } from '../../../shared/ui/Input';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { format, formatDistanceToNow } from 'date-fns';
 import { ru } from 'date-fns/locale';
-import { formatMoney } from '../../shared/utils/format';
-import { AiAssistant } from '../../widgets/ai-assistant/AiAssistant';
-import { useDocumentTitle } from '../../shared/hooks/useDocumentTitle';
-import { useUIStore } from '../../shared/stores/ui';
-import styles from './Customers.module.css';
-import { setProductMoment } from '../../shared/utils/productMoment';
-import { openExternal } from '../../shared/lib/browser';
-import { useCapabilities } from '../../shared/hooks/useCapabilities';
-import { useTabsKeyboardNav } from '../../shared/hooks/useTabsKeyboardNav';
+import { formatMoney } from '../../../shared/utils/format';
+import { AiAssistant } from '../../../widgets/ai-assistant/AiAssistant';
+import { useDocumentTitle } from '../../../shared/hooks/useDocumentTitle';
+import { useUIStore } from '../../../shared/stores/ui';
+import styles from './CustomerProfile.module.css';
+import { setProductMoment } from '../../../shared/utils/productMoment';
+import { openExternal } from '../../../shared/lib/browser';
+import { useCapabilities } from '../../../shared/hooks/useCapabilities';
+import { useTabsKeyboardNav } from '../../../shared/hooks/useTabsKeyboardNav';
 
 interface CustomerDetail {
   id: string; full_name: string; company_name: string;
@@ -204,19 +204,6 @@ export default function CustomerProfilePage() {
                 WhatsApp
               </Button>
             )}
-          </div>
-        </div>
-
-        {/* Quick facts */}
-        <div className={styles.scenarioRail}>
-          <div className={styles.scenarioCopy}>
-            <span className={styles.scenarioEyebrow}>Работа с клиентом</span>
-            <div className={styles.scenarioText}>Здесь должны быть под рукой контакт, сделка и следующий шаг. Карточка нужна для работы, а не для красивого хранения полей.</div>
-          </div>
-          <div className={styles.scenarioChips}>
-            <span className={styles.scenarioChip}>Контакт</span>
-            <span className={styles.scenarioChip}>Сделка</span>
-            <span className={styles.scenarioChip}>Follow-up</span>
           </div>
         </div>
 

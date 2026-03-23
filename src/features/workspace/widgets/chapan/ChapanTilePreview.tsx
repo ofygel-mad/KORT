@@ -1,43 +1,38 @@
 import { useChapanStore } from '../../../chapan-spa/model/chapan.store';
-import { ORDER_STATUS_LABEL, ORDER_STATUS_COLOR } from '../../../chapan-spa/api/types';
+import { useTileProductionShell } from './spa/production-shell.store';
 import styles from '../../components/Workspace.module.css';
 
-export function ChapanTilePreview() {
-  const { orders } = useChapanStore();
+export function ChapanTilePreview({ tileId }: { tileId: string }) {
+  const { orders, profile } = useChapanStore();
+  const { templateName } = useTileProductionShell(tileId);
 
-  const active = orders.filter(o => o.status !== 'cancelled' && o.status !== 'completed');
-  const recent = active.slice(0, 3);
-
-  if (recent.length === 0) {
-    return (
-      <div className={styles.previewFrame}>
-        <div className={styles.previewHeaderRow}>
-          <span>Заказ</span><span>Статус</span><span>Сумма</span>
-        </div>
-        <div className={styles.previewBody}>
-          <div className={styles.previewEmpty}>
-            Нет активных заказов
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const active = orders.filter(
+    (o) => o.status !== 'cancelled' && o.status !== 'completed',
+  );
+  const tasks = active.flatMap((o) => o.productionTasks);
+  const blocked = tasks.filter((t) => t.isBlocked).length;
+  const inFlow  = tasks.filter((t) => t.status !== 'pending' && t.status !== 'done').length;
+  const done    = tasks.filter((t) => t.status === 'done').length;
 
   return (
     <div className={styles.previewFrame}>
       <div className={styles.previewHeaderRow}>
-        <span>Заказ</span><span>Статус</span><span>Сумма</span>
+        <span>Цех</span>
+        <span>В работе</span>
+        <span>Статус</span>
       </div>
+
       <div className={styles.previewBody}>
-        {recent.map(o => (
-          <div key={o.id} className={styles.previewRow}>
-            <span>{o.orderNumber}</span>
-            <span style={{ color: ORDER_STATUS_COLOR[o.status], fontSize: 11 }}>
-              {ORDER_STATUS_LABEL[o.status]}
-            </span>
-            <span>{(o.totalAmount / 1000).toFixed(0)}K ₸</span>
-          </div>
-        ))}
+        <div className={styles.tableRow3}>
+          <strong>{profile.displayName}</strong>
+          <span>{inFlow} заданий</span>
+          <span>{blocked > 0 ? `${blocked} блок.` : 'без блоков'}</span>
+        </div>
+        <div className={styles.tableRow3}>
+          <strong>{templateName || 'Шаблон'}</strong>
+          <span>{done} готово</span>
+          <span>{active.length} заказов</span>
+        </div>
       </div>
     </div>
   );

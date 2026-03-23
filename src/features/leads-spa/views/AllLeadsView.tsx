@@ -1,26 +1,8 @@
-/**
- * AllLeadsView — replaces the broken double-kanban.
- * Clean table with filter bar, sortable columns, opens LeadDrawer on row click.
- */
-import { useState, useMemo } from 'react';
+import { useMemo, useState } from 'react';
+import { ArrowDown, ArrowUp, Search, SlidersHorizontal, Users } from 'lucide-react';
 import type { Lead } from '../api/types';
+import { PIPELINE_META, getLeadStageMeta } from '../model/stage-meta';
 import s from './AllLeads.module.css';
-
-// ── helpers ──────────────────────────────────────────────────
-const STAGE_LABELS: Record<string, string> = {
-  new: 'Новый', in_progress: 'В работе', no_answer: 'Недозвон',
-  thinking: 'Думает', meeting_set: 'Встреча назн.', junk: 'Брак',
-  awaiting_meeting: 'Ожидает встречи', meeting_done: 'Встреча пров.',
-  proposal: 'Подготовка КП', contract: 'Договор',
-  awaiting_payment: 'Ожидание оплаты', won: 'Успешно', lost: 'Слив',
-};
-
-const STAGE_COLOR: Record<string, string> = {
-  new: '#3b82f6', in_progress: '#8b5cf6', no_answer: '#f59e0b',
-  thinking: '#ec4899', meeting_set: '#22c55e', junk: '#6b7280',
-  awaiting_meeting: '#3b82f6', meeting_done: '#8b5cf6', proposal: '#f59e0b',
-  contract: '#ec4899', awaiting_payment: '#f97316', won: '#22c55e', lost: '#ef4444',
-};
 
 const SOURCE_LABEL: Record<string, string> = {
   instagram: 'Instagram', site: 'Сайт', referral: 'Реферал', ad: 'Реклама',
@@ -40,7 +22,12 @@ function isStale(lead: Lead) {
   return (Date.now() - new Date(lead.updatedAt).getTime()) / 3600000 > 24;
 }
 
-// ── filter options ────────────────────────────────────────────
+function getLeadWord(count: number) {
+  if (count % 10 === 1 && count % 100 !== 11) return 'лид';
+  if (count % 10 >= 2 && count % 10 <= 4 && (count % 100 < 10 || count % 100 >= 20)) return 'лида';
+  return 'лидов';
+}
+
 const PIPELINE_OPTIONS = [
   { value: '', label: 'Все воронки' },
   { value: 'qualifier', label: 'Лидогенерация' },
@@ -55,7 +42,6 @@ const SOURCE_OPTIONS = [
   { value: 'ad', label: 'Реклама' },
 ];
 
-// ── component ─────────────────────────────────────────────────
 export function AllLeadsView({ leads, onOpenDrawer }: { leads: Lead[]; onOpenDrawer: (id: string) => void }) {
   const [pipeline, setPipeline] = useState('');
   const [source, setSource] = useState('');
@@ -97,90 +83,120 @@ export function AllLeadsView({ leads, onOpenDrawer }: { leads: Lead[]; onOpenDra
     else { setSortKey(key); setSortDir('desc'); }
   };
 
-  const SortArrow = ({ k }: { k: typeof sortKey }) =>
-    sortKey === k ? <span className={s.arrow}>{sortDir === 'asc' ? '↑' : '↓'}</span> : null;
+  const SortArrow = ({ column }: { column: typeof sortKey }) => {
+    if (sortKey !== column) return null;
+    return sortDir === 'asc'
+      ? <ArrowUp size={13} className={s.arrow} />
+      : <ArrowDown size={13} className={s.arrow} />;
+  };
 
   return (
     <div className={s.root}>
-      {/* Filter bar */}
-      <div className={s.filterBar}>
-        <input
-          className={s.filterSearch}
-          placeholder="Поиск по имени, телефону..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-        />
-        <select className={s.filterSelect} value={pipeline} onChange={e => setPipeline(e.target.value)}>
-          {PIPELINE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-        </select>
-        <select className={s.filterSelect} value={source} onChange={e => setSource(e.target.value)}>
-          {SOURCE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-        </select>
-        <div className={s.filterCount}>{filtered.length} лид{filtered.length === 1 ? '' : 'ов'}</div>
+      <div className={s.toolbar}>
+        <div className={s.toolbarIntro}>
+          <span className={s.toolbarBadge}>
+            <SlidersHorizontal size={12} />
+            Каталог лидов
+          </span>
+          <div className={s.toolbarSummary}>
+            <span className={s.toolbarValue}>{filtered.length}</span>
+            <span className={s.toolbarLabel}>{getLeadWord(filtered.length)} после фильтров</span>
+          </div>
+        </div>
+
+        <div className={s.controls}>
+          <label className={s.searchField}>
+            <Search size={14} className={s.searchIcon} />
+            <input
+              className={s.filterSearch}
+              placeholder="Поиск по имени, телефону или ответственному"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+          </label>
+
+          <select className={s.filterSelect} value={pipeline} onChange={e => setPipeline(e.target.value)}>
+            {PIPELINE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+          <select className={s.filterSelect} value={source} onChange={e => setSource(e.target.value)}>
+            {SOURCE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        </div>
       </div>
 
-      {/* Table */}
       <div className={s.tableWrap}>
         <table className={s.table}>
           <thead className={s.thead}>
             <tr>
-              <th className={s.th} style={{ width: 36 }}></th>
+              <th className={s.th} style={{ width: 52 }}></th>
               <th className={`${s.th} ${s.sortable}`} onClick={() => toggleSort('name')}>
-                Имя <SortArrow k="name" />
+                Имя <SortArrow column="name" />
               </th>
               <th className={s.th}>Телефон</th>
               <th className={s.th}>Источник</th>
               <th className={s.th}>Стадия</th>
               <th className={s.th}>Воронка</th>
               <th className={`${s.th} ${s.sortable}`} onClick={() => toggleSort('budget')}>
-                Бюджет <SortArrow k="budget" />
+                Бюджет <SortArrow column="budget" />
               </th>
               <th className={s.th}>Ответственный</th>
               <th className={`${s.th} ${s.sortable}`} onClick={() => toggleSort('date')}>
-                Обновлён <SortArrow k="date" />
+                Обновлён <SortArrow column="date" />
               </th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={9} className={s.empty}>Нет лидов по выбранным фильтрам</td>
+                <td colSpan={9} className={s.emptyCell}>
+                  <div className={s.emptyState}>
+                    <Users size={26} className={s.emptyIcon} />
+                    <div className={s.emptyTitle}>Ничего не найдено</div>
+                    <div className={s.emptyText}>
+                      Смените фильтры или расширьте запрос, чтобы снова увидеть поток лидов.
+                    </div>
+                  </div>
+                </td>
               </tr>
             )}
-            {filtered.map(lead => (
-              <tr
-                key={lead.id}
-                className={`${s.row} ${isStale(lead) ? s.rowStale : ''}`}
-                onClick={() => onOpenDrawer(lead.id)}
-              >
-                <td className={s.td}>
-                  <div className={s.avatar}>{lead.fullName[0]}</div>
-                </td>
-                <td className={s.td}>
-                  <div className={s.name}>{lead.fullName}</div>
-                  {isStale(lead) && <div className={s.staleTag}>Без движения 24ч+</div>}
-                </td>
-                <td className={`${s.td} ${s.mono}`}>{lead.phone}</td>
-                <td className={s.td}>
-                  <span className={s.sourceBadge}>{SOURCE_LABEL[lead.source] ?? lead.source}</span>
-                </td>
-                <td className={s.td}>
-                  <span
-                    className={s.stageDot}
-                    style={{ background: STAGE_COLOR[lead.stage] ?? '#6b7280' }}
-                  />
-                  <span className={s.stageLabel}>{STAGE_LABELS[lead.stage] ?? lead.stage}</span>
-                </td>
-                <td className={s.td}>
-                  <span className={s.pipelineBadge}>
-                    {lead.pipeline === 'qualifier' ? 'Лидогенерация' : 'Сделки'}
-                  </span>
-                </td>
-                <td className={`${s.td} ${s.budget}`}>{fmt(lead.budget)}</td>
-                <td className={`${s.td} ${s.assignee}`}>{lead.assignedName ?? '—'}</td>
-                <td className={`${s.td} ${s.dateCell}`}>{fmtDate(lead.updatedAt)}</td>
-              </tr>
-            ))}
+            {filtered.map(lead => {
+              const stageMeta = getLeadStageMeta(lead.stage);
+              const pipelineMeta = PIPELINE_META[lead.pipeline];
+
+              return (
+                <tr
+                  key={lead.id}
+                  className={`${s.row} ${isStale(lead) ? s.rowStale : ''}`}
+                  onClick={() => onOpenDrawer(lead.id)}
+                >
+                  <td className={s.td}>
+                    <div className={s.avatar}>{lead.fullName[0]}</div>
+                  </td>
+                  <td className={s.td}>
+                    <div className={s.name}>{lead.fullName}</div>
+                    {isStale(lead) && <div className={s.staleTag}>Без движения 24ч+</div>}
+                  </td>
+                  <td className={`${s.td} ${s.mono}`}>{lead.phone}</td>
+                  <td className={s.td}>
+                    <span className={s.sourceBadge}>{SOURCE_LABEL[lead.source] ?? lead.source}</span>
+                  </td>
+                  <td className={s.td}>
+                    <span className={s.stageBadge} data-tone={stageMeta.tone}>
+                      <span className={s.stageDot} />
+                      {stageMeta.shortLabel}
+                    </span>
+                  </td>
+                  <td className={s.td}>
+                    <span className={s.pipelineBadge} data-tone={pipelineMeta.tone}>
+                      {pipelineMeta.label}
+                    </span>
+                  </td>
+                  <td className={`${s.td} ${s.budget}`}>{fmt(lead.budget)}</td>
+                  <td className={`${s.td} ${s.assignee}`}>{lead.assignedName ?? '—'}</td>
+                  <td className={`${s.td} ${s.dateCell}`}>{fmtDate(lead.updatedAt)}</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

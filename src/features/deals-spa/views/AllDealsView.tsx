@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import type { Deal, DealStage } from '../api/types';
-import { STAGE_LABEL, STAGE_ACCENT } from '../api/types';
+import { STAGE_LABEL, STAGE_TONE, ACTIVE_STAGES, getDealProbabilityTone } from '../api/types';
 import s from './AllDeals.module.css';
 
 const SOURCE_LABEL: Record<string, string> = {
@@ -78,10 +78,6 @@ export function AllDealsView({ deals, onOpenDrawer }: { deals: Deal[]; onOpenDra
   const Arr = ({ k }: { k: SortKey }) =>
     sortKey === k ? <span className={s.arr}>{sortDir === 'asc' ? '↑' : '↓'}</span> : null;
 
-  const ACTIVE_STAGE_OPTIONS: DealStage[] = [
-    'awaiting_meeting','meeting_done','proposal','contract','awaiting_payment',
-  ];
-
   return (
     <div className={s.root}>
       {/* Tab row */}
@@ -92,7 +88,7 @@ export function AllDealsView({ deals, onOpenDrawer }: { deals: Deal[]; onOpenDra
             className={`${s.tab} ${tab === t ? s.tabActive : ''}`}
             onClick={() => setTab(t)}
           >
-            {t === 'active' ? 'Активные' : t === 'won' ? '✓ Выигранные' : '✕ Проигранные'}
+            {t === 'active' ? 'Активные' : t === 'won' ? 'Выигранные' : 'Проигранные'}
             <span className={s.tabCount}>
               {deals.filter(d =>
                 t === 'active' ? (d.stage !== 'won' && d.stage !== 'lost') :
@@ -108,9 +104,9 @@ export function AllDealsView({ deals, onOpenDrawer }: { deals: Deal[]; onOpenDra
           <span className={s.summaryVal}>{fmt(totalValue)}</span>
         </div>
         {tab === 'active' && weightedValue > 0 && (
-          <div className={s.summaryChip}>
+          <div className={`${s.summaryChip} ${s.summaryChipAccent}`}>
             <span className={s.summaryLabel}>Взвешенная</span>
-            <span className={s.summaryVal} style={{ color: 'rgba(134,239,172,0.8)' }}>~{fmt(weightedValue)}</span>
+            <span className={s.summaryVal}>~{fmt(weightedValue)}</span>
           </div>
         )}
       </div>
@@ -126,7 +122,7 @@ export function AllDealsView({ deals, onOpenDrawer }: { deals: Deal[]; onOpenDra
         {tab === 'active' && (
           <select className={s.sel} value={stage} onChange={e => setStage(e.target.value as DealStage | '')}>
             <option value="">Все стадии</option>
-            {ACTIVE_STAGE_OPTIONS.map(st => (
+            {ACTIVE_STAGES.map(st => (
               <option key={st} value={st}>{STAGE_LABEL[st]}</option>
             ))}
           </select>
@@ -180,8 +176,8 @@ export function AllDealsView({ deals, onOpenDrawer }: { deals: Deal[]; onOpenDra
                 </td>
                 {tab === 'active' && (
                   <td className={s.td}>
-                    <span className={s.stagePill} style={{ color: STAGE_ACCENT[deal.stage], borderColor: `color-mix(in srgb, ${STAGE_ACCENT[deal.stage]} 30%, rgba(255,255,255,0.06))` }}>
-                      <span className={s.stageDot} style={{ background: STAGE_ACCENT[deal.stage] }} />
+                    <span className={s.stagePill} data-tone={STAGE_TONE[deal.stage]}>
+                      <span className={s.stageDot} />
                       {STAGE_LABEL[deal.stage]}
                     </span>
                   </td>
@@ -192,11 +188,8 @@ export function AllDealsView({ deals, onOpenDrawer }: { deals: Deal[]; onOpenDra
                 {tab === 'active' && (
                   <td className={s.td}>
                     <div className={s.probWrap}>
-                      <div className={s.probBar}>
-                        <div className={s.probFill} style={{
-                          width: `${deal.probability}%`,
-                          background: deal.probability >= 75 ? '#22c55e' : deal.probability >= 45 ? '#f59e0b' : '#ef4444',
-                        }} />
+                      <div className={s.probBar} data-tone={getDealProbabilityTone(deal.probability)}>
+                        <div className={s.probFill} style={{ width: `${deal.probability}%` }} />
                       </div>
                       <span className={s.probVal}>{deal.probability}%</span>
                     </div>

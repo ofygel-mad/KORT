@@ -207,19 +207,6 @@ export default function CustomerProfilePage() {
           </div>
         </div>
 
-        {/* Quick facts */}
-        <div className={styles.scenarioRail}>
-          <div className={styles.scenarioCopy}>
-            <span className={styles.scenarioEyebrow}>Работа с клиентом</span>
-            <div className={styles.scenarioText}>Здесь должны быть под рукой контакт, сделка и следующий шаг. Карточка нужна для работы, а не для красивого хранения полей.</div>
-          </div>
-          <div className={styles.scenarioChips}>
-            <span className={styles.scenarioChip}>Контакт</span>
-            <span className={styles.scenarioChip}>Сделка</span>
-            <span className={styles.scenarioChip}>Follow-up</span>
-          </div>
-        </div>
-
         <div className={styles.quickFacts}>
           <div className={styles.quickFact}>
             <span className={styles.quickFactLabel}>Источник</span>

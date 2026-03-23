@@ -35,6 +35,7 @@ describe('sanitizeWorkspacePersistedState', () => {
           modalSize: 'huge',
           version: 0,
           createdAt: 'invalid-date',
+          distance3D: 'near',
           pinned: 'yes',
           zIndex: -5,
         },
@@ -81,6 +82,28 @@ describe('sanitizeWorkspacePersistedState', () => {
       sceneTheme: 'morning',
       sceneTerrainMode: 'full',
     });
+  });
+
+  it('migrates legacy Chapan tile titles to the new Production module name', () => {
+    const state = sanitizeWorkspacePersistedState({
+      tiles: [
+        {
+          id: 'chapan-1',
+          kind: 'chapan',
+          title: 'Чапан',
+          x: 40,
+          y: 20,
+          width: 260,
+          height: 170,
+          modalSize: 'default',
+          version: 1,
+          createdAt: '2026-03-18T00:00:00.000Z',
+          lastInteractionAt: '2026-03-18T00:00:00.000Z',
+        },
+      ],
+    });
+
+    expect(state.tiles[0]?.title).toBe('Производство');
   });
 
   it('clamps viewport and tile positions to the current workspace bounds', () => {

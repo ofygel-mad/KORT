@@ -47,11 +47,11 @@ export function WonModal({ tileId }: Props) {
               transition={{ type: 'spring', stiffness: 380, damping: 28 }}
             >
               <div className={s.header}>
-                <div className={s.iconWrap} style={{ background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.3)' }}>
-                  <Trophy size={22} color="#4ade80" />
+                <div className={`${s.iconWrap} ${s.iconSuccess}`}>
+                  <Trophy size={22} />
                 </div>
                 <div>
-                  <div className={s.title} style={{ color: '#4ade80' }}>Сделка закрыта!</div>
+                  <div className={`${s.title} ${s.titleSuccess}`}>Сделка закрыта!</div>
                   <div className={s.sub}>{deal.fullName}</div>
                 </div>
                 <button className={s.closeBtn} onClick={handleClose}><X size={15} /></button>

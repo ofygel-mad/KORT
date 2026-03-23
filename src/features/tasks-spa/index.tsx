@@ -19,7 +19,7 @@ import {
   PRIORITY_ORDER, PRIORITY_LABEL, STATUS_ORDER, STATUS_LABEL,
 } from './api/types';
 import type { TaskPriority, TaskStatus } from './api/types';
-import { ASSIGNEES } from './api/mock';
+import { ASSIGNEES } from './api/client';
 import { useSharedBus } from '../shared-bus';
 import s from './TasksSPA.module.css';
 

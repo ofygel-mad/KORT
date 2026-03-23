@@ -8,7 +8,9 @@
   inset: 0;
   z-index: 9999;
   overflow: hidden;
-  background: #0f0d0a;
+  background:
+    radial-gradient(circle at top right, rgba(160, 104, 56, 0.18), transparent 30%),
+    linear-gradient(180deg, #0e0b07 0%, #141009 100%);
 }
 
 /* ── Noise — волнистые горизонтальные линии
@@ -22,8 +24,8 @@
     0deg,
     transparent,
     transparent 17px,
-    rgba(255, 255, 255, 0.032) 17px,
-    rgba(255, 255, 255, 0.032) 18px
+    rgba(255, 244, 232, 0.028) 17px,
+    rgba(255, 244, 232, 0.028) 18px
   );
   animation: noiseDrift 10s ease-in-out infinite alternate;
 }
@@ -99,25 +101,28 @@
 
 /* ── KORT — кино-заголовок ── */
 .titleKort {
-  font-family: 'Georgia', 'Times New Roman', serif;
+  font-family: 'Plus Jakarta Sans', 'DM Sans', 'Segoe UI', sans-serif;
   font-size: clamp(80px, 13vw, 200px);
-  font-weight: 400;
-  letter-spacing: 0.32em;
-  color: rgba(242, 234, 218, 0.90);
-  -webkit-text-stroke: 0.5px rgba(210, 165, 80, 0.4);
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  color: rgba(246, 237, 224, 0.92);
+  -webkit-text-stroke: 0.5px rgba(210, 165, 80, 0.24);
   text-align: center;
   line-height: 1;
   user-select: none;
+  text-shadow:
+    0 0 32px rgba(184, 146, 92, 0.18),
+    0 12px 48px rgba(0, 0, 0, 0.42);
 }
 
 /* ── "Enterprise Resource Planning" — как titres ── */
 .subtitleText {
-  font-family: 'Georgia', 'Times New Roman', serif;
+  font-family: 'Plus Jakarta Sans', 'DM Sans', 'Segoe UI', sans-serif;
   font-size: clamp(12px, 1.5vw, 20px);
-  font-weight: 400;
-  letter-spacing: 0.42em;
+  font-weight: 600;
+  letter-spacing: 0.34em;
   text-transform: uppercase;
-  color: rgba(242, 234, 218, 0.40);
+  color: rgba(232, 214, 190, 0.44);
   text-align: center;
   user-select: none;
 }

@@ -59,10 +59,10 @@ const STATUS_BADGE: Record<string, { bg: string; color: string; label: string }>
 function activityText(a: Activity): string {
   const p = a.payload as any;
   switch (a.type) {
-    case 'note.created':   return `📝 Добавил заметку`;
-    case 'stage.changed':  return `📊 Сменил этап → ${p?.to ?? ''}`;
-    case 'task.created':   return `✅ Создал задачу "${p?.title ?? ''}"`;
-    case 'deal.updated':   return `✏️ Обновил сделку`;
+    case 'note.created':   return 'Добавил заметку';
+    case 'stage.changed':  return `Сменил этап -> ${p?.to ?? ''}`;
+    case 'task.created':   return `Создал задачу "${p?.title ?? ''}"`;
+    case 'deal.updated':   return 'Обновил сделку';
     default:               return a.type;
   }
 }
@@ -128,7 +128,7 @@ export default function DealProfilePage() {
 
   const completeTask = useMutation({
     mutationFn: (tid: string) => api.post(`/tasks/${tid}/complete/`),
-    onSuccess:  () => { qc.invalidateQueries({ queryKey: ['deal-tasks', id] }); toast.success('Задача выполнена ✓'); },
+    onSuccess:  () => { qc.invalidateQueries({ queryKey: ['deal-tasks', id] }); toast.success('Задача выполнена'); },
   });
 
   if (isLoading) return <PageLoader />;
@@ -172,17 +172,6 @@ export default function DealProfilePage() {
         </div>
       </div>
 
-      <div className={s.scenarioRail}>
-        <div className={s.scenarioCopy}>
-          <span className={s.scenarioEyebrow}>Работа со сделкой</span>
-          <div className={s.scenarioText}>Этап, заметки и задачи собраны рядом, чтобы по сделке можно было двигаться вперёд без лишнего шума вокруг карточки.</div>
-        </div>
-        <div className={s.scenarioChips}>
-          <span className={s.scenarioChip}>Этап</span>
-          <span className={s.scenarioChip}>Заметка</span>
-          <span className={s.scenarioChip}>Задача</span>
-        </div>
-      </div>
       <div className={s.nextActionSurface}>
         <div className={s.nextActionCopy}>
           <span className={s.nextActionEyebrow}>Дальше по сделке</span>

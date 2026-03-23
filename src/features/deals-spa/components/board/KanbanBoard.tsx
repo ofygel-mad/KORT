@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useDealsStore } from '../../model/deals.store';
 import type { Deal, DealStage } from '../../api/types';
-import { STAGE_LABEL, STAGE_ACCENT, ACTIVE_STAGES } from '../../api/types';
+import { STAGE_LABEL, STAGE_TONE, ACTIVE_STAGES } from '../../api/types';
 import { DealCard } from './DealCard';
 import s from './Board.module.css';
 
@@ -54,7 +54,7 @@ export function DealKanbanBoard({ deals, onOpenDrawer, onOpenLostModal, onOpenWo
           <div
             key={stage}
             className={`${s.column} ${isOver ? s.columnOver : ''}`}
-            style={{ '--col-accent': STAGE_ACCENT[stage] } as React.CSSProperties}
+            data-tone={STAGE_TONE[stage]}
             onDragOver={e => { e.preventDefault(); setOverCol(stage); }}
             onDragLeave={() => setOverCol(null)}
             onDrop={e => { e.preventDefault(); if (dragId) handleDrop(stage, dragId); }}
@@ -65,7 +65,7 @@ export function DealKanbanBoard({ deals, onOpenDrawer, onOpenLostModal, onOpenWo
               <span className={s.colCount}>{colDeals.length}</span>
             </div>
             {colValue > 0 && (
-              <div style={{ padding: '0 4px 6px', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+              <div className={s.colValueWrap}>
                 <span className={s.colValue}>~{fmt(colValue)} взвеш.</span>
               </div>
             )}

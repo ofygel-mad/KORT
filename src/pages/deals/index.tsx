@@ -6,27 +6,27 @@ import {
   ChevronLeft, Edit3, User, Calendar, Target, AlertCircle,
   Phone, Mail, Building2, Plus, CheckSquare, CheckCircle2, MessageSquare,
 } from 'lucide-react';
-import { api } from '../../shared/api/client';
-import { Button } from '../../shared/ui/Button';
-import { PageLoader } from '../../shared/ui/PageLoader';
-import { EmptyState } from '../../shared/ui/EmptyState';
-import { Drawer } from '../../shared/ui/Drawer';
-import { FormErrorSummary } from '../../shared/ui/FormErrorSummary';
-import { Input } from '../../shared/ui/Input';
-import { Badge } from '../../shared/ui/Badge';
-import { currencySymbol, formatMoney } from '../../shared/utils/format';
+import { api } from '../../../shared/api/client';
+import { Button } from '../../../shared/ui/Button';
+import { PageLoader } from '../../../shared/ui/PageLoader';
+import { EmptyState } from '../../../shared/ui/EmptyState';
+import { Drawer } from '../../../shared/ui/Drawer';
+import { FormErrorSummary } from '../../../shared/ui/FormErrorSummary';
+import { Input } from '../../../shared/ui/Input';
+import { Badge } from '../../../shared/ui/Badge';
+import { currencySymbol, formatMoney } from '../../../shared/utils/format';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { format, formatDistanceToNow, differenceInDays } from 'date-fns';
-import { getDateLocale } from '../../shared/utils/locale';
-import { useConvert } from '../../shared/hooks/useExchangeRates';
-import { useDocumentTitle } from '../../shared/hooks/useDocumentTitle';
-import { useUIStore } from '../../shared/stores/ui';
-import { fadeUp } from '../../shared/motion/presets';
-import s from './Deals.module.css';
-import { setProductMoment } from '../../shared/utils/productMoment';
-import { useCapabilities } from '../../shared/hooks/useCapabilities';
-import { useTabsKeyboardNav } from '../../shared/hooks/useTabsKeyboardNav';
+import { getDateLocale } from '../../../shared/utils/locale';
+import { useConvert } from '../../../shared/hooks/useExchangeRates';
+import { useDocumentTitle } from '../../../shared/hooks/useDocumentTitle';
+import { useUIStore } from '../../../shared/stores/ui';
+import { fadeUp } from '../../../shared/motion/presets';
+import s from './DealProfile.module.css';
+import { setProductMoment } from '../../../shared/utils/productMoment';
+import { useCapabilities } from '../../../shared/hooks/useCapabilities';
+import { useTabsKeyboardNav } from '../../../shared/hooks/useTabsKeyboardNav';
 
 /* ── Types ──────────────────────────────────────────────────── */
 interface Stage { id: string; name: string; position: number; type: string; color?: string; }
@@ -59,10 +59,10 @@ const STATUS_BADGE: Record<string, { bg: string; color: string; label: string }>
 function activityText(a: Activity): string {
   const p = a.payload as any;
   switch (a.type) {
-    case 'note.created':   return `📝 Добавил заметку`;
-    case 'stage.changed':  return `📊 Сменил этап → ${p?.to ?? ''}`;
-    case 'task.created':   return `✅ Создал задачу "${p?.title ?? ''}"`;
-    case 'deal.updated':   return `✏️ Обновил сделку`;
+    case 'note.created':   return 'Добавил заметку';
+    case 'stage.changed':  return `Сменил этап -> ${p?.to ?? ''}`;
+    case 'task.created':   return `Создал задачу "${p?.title ?? ''}"`;
+    case 'deal.updated':   return 'Обновил сделку';
     default:               return a.type;
   }
 }
@@ -128,7 +128,7 @@ export default function DealProfilePage() {
 
   const completeTask = useMutation({
     mutationFn: (tid: string) => api.post(`/tasks/${tid}/complete/`),
-    onSuccess:  () => { qc.invalidateQueries({ queryKey: ['deal-tasks', id] }); toast.success('Задача выполнена ✓'); },
+    onSuccess:  () => { qc.invalidateQueries({ queryKey: ['deal-tasks', id] }); toast.success('Задача выполнена'); },
   });
 
   if (isLoading) return <PageLoader />;
@@ -172,17 +172,6 @@ export default function DealProfilePage() {
         </div>
       </div>
 
-      <div className={s.scenarioRail}>
-        <div className={s.scenarioCopy}>
-          <span className={s.scenarioEyebrow}>Работа со сделкой</span>
-          <div className={s.scenarioText}>Этап, заметки и задачи собраны рядом, чтобы по сделке можно было двигаться вперёд без лишнего шума вокруг карточки.</div>
-        </div>
-        <div className={s.scenarioChips}>
-          <span className={s.scenarioChip}>Этап</span>
-          <span className={s.scenarioChip}>Заметка</span>
-          <span className={s.scenarioChip}>Задача</span>
-        </div>
-      </div>
       <div className={s.nextActionSurface}>
         <div className={s.nextActionCopy}>
           <span className={s.nextActionEyebrow}>Дальше по сделке</span>

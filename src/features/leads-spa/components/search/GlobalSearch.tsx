@@ -12,6 +12,7 @@
  */
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Search, Phone, X, Clock } from 'lucide-react';
+import { PIPELINE_META, getLeadStageMeta } from '../../model/stage-meta';
 import s from './Search.module.css';
 
 interface Lead {
@@ -27,21 +28,6 @@ interface Props {
   leads: Lead[];
   onSelectLead: (id: string) => void;
 }
-
-const STAGE_COLOR: Record<string, string> = {
-  new: '#3b82f6',          in_progress: '#8b5cf6',       no_answer: '#f59e0b',
-  thinking: '#ec4899',     meeting_set: '#22c55e',        junk: '#6b7280',
-  awaiting_meeting: '#3b82f6', meeting_done: '#8b5cf6',   proposal: '#f59e0b',
-  contract: '#ec4899',     awaiting_payment: '#f97316',   won: '#22c55e', lost: '#ef4444',
-};
-
-const STAGE_LABEL: Record<string, string> = {
-  new: 'Новый',            in_progress: 'В работе',       no_answer: 'Недозвон',
-  thinking: 'Думает',      meeting_set: 'Встреча',        junk: 'Брак',
-  awaiting_meeting: 'Ожидает встречи', meeting_done: 'Встреча прош.',
-  proposal: 'КП',          contract: 'Договор',
-  awaiting_payment: 'Оплата', won: 'Успешно',             lost: 'Слив',
-};
 
 const SOURCE_LABEL: Record<string, string> = {
   instagram: 'IG', site: 'WEB', referral: 'REF', ad: 'ADS',
@@ -68,7 +54,7 @@ function ResultItem({
   lead: Lead; query: string; active: boolean;
   onHover: () => void; onSelect: () => void;
 }) {
-  const accent = STAGE_COLOR[lead.stage] ?? '#6b7280';
+  const stageMeta = getLeadStageMeta(lead.stage);
   return (
     <div
       className={`${s.result} ${active ? s.resultActive : ''}`}
@@ -85,8 +71,8 @@ function ResultItem({
         </div>
       </div>
       <div className={s.resultRight}>
-        <span className={s.resultStage} style={{ color: accent, borderColor: `${accent}44` }}>
-          {STAGE_LABEL[lead.stage] ?? lead.stage}
+        <span className={s.resultStage} data-tone={stageMeta.tone}>
+          {stageMeta.shortLabel}
         </span>
         <a
           className={s.callBtn}
@@ -143,7 +129,7 @@ export function CommandPalette({ leads, onSelectLead }: Props) {
     ? leads.filter(l =>
         l.fullName.toLowerCase().includes(q) ||
         l.phone.includes(q) ||
-        (STAGE_LABEL[l.stage] ?? '').toLowerCase().includes(q) ||
+        getLeadStageMeta(l.stage).label.toLowerCase().includes(q) ||
         (SOURCE_LABEL[l.source] ?? '').toLowerCase().includes(q)
       )
     : [];
@@ -271,8 +257,8 @@ export function CommandPalette({ leads, onSelectLead }: Props) {
                 <>
                   {qualifier.length > 0 && (
                     <div className={s.group}>
-                      <div className={s.groupLabel} style={{ color: '#8b5cf6' }}>
-                        Квалификатор
+                      <div className={s.groupLabel} data-tone={PIPELINE_META.qualifier.tone}>
+                        {PIPELINE_META.qualifier.shortLabel}
                         <span className={s.groupCount}>{qualifier.length}</span>
                       </div>
                       {qualifier.map((lead, i) => (
@@ -286,8 +272,8 @@ export function CommandPalette({ leads, onSelectLead }: Props) {
                   )}
                   {closer.length > 0 && (
                     <div className={s.group}>
-                      <div className={s.groupLabel} style={{ color: '#22c55e' }}>
-                        Клоузер
+                      <div className={s.groupLabel} data-tone={PIPELINE_META.closer.tone}>
+                        {PIPELINE_META.closer.shortLabel}
                         <span className={s.groupCount}>{closer.length}</span>
                       </div>
                       {closer.map((lead, i) => (

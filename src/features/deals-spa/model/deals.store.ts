@@ -3,7 +3,7 @@
  * Central state for all deals. Subscribes to shared-bus for cross-SPA events.
  */
 import { create } from 'zustand';
-import { dealsApi } from '../api/mock';
+import { dealsApi } from '../api/client';
 import { useSharedBus } from '../../shared-bus';
 import { useBadgeStore } from '../../shared-bus/badge.store';
 import type { GlobalNotifEvent } from '../../shared-bus';

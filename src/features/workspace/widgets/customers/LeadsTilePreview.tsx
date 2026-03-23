@@ -1,36 +1,32 @@
-/**
- * LeadsTilePreview
- * Живой экран-превью: отражает текущее состояние SPA внутри плитки.
- *
- * Два режима:
- *   DRAWER — drawer открыт → показываем мини-карточку лида (имя, статус, телефон, последнее событие)
- *   BOARD  — drawer закрыт → показываем мини-канбан + активный таб
- */
 import { useEffect } from 'react';
 import { useLeadsStore } from '../../../leads-spa/model/leads.store';
 import { useTileLeadsUI } from '../../../leads-spa/model/tile-ui.store';
 import s from './LeadsTilePreview.module.css';
 
+type Tone = 'accent' | 'info' | 'warning' | 'success' | 'muted' | 'danger';
+
 const QUALIFIER_COLS = [
-  { stage: 'new', label: 'Новые', accent: '#3b82f6' },
-  { stage: 'in_progress', label: 'В работе', accent: '#8b5cf6' },
-  { stage: 'no_answer', label: 'Недозвон', accent: '#f59e0b' },
-  { stage: 'thinking', label: 'Думают', accent: '#ec4899' },
-  { stage: 'meeting_set', label: 'Встреча', accent: '#22c55e' },
+  { stage: 'new', label: 'Новые', tone: 'info' as Tone },
+  { stage: 'in_progress', label: 'В работе', tone: 'accent' as Tone },
+  { stage: 'no_answer', label: 'Недозвон', tone: 'warning' as Tone },
+  { stage: 'thinking', label: 'Думают', tone: 'accent' as Tone },
+  { stage: 'meeting_set', label: 'Встреча', tone: 'success' as Tone },
 ];
 
-const STAGE_LABEL: Record<string, string> = {
-  new: 'Новый', in_progress: 'В работе', no_answer: 'Недозвон',
-  thinking: 'Думают', meeting_set: 'Встреча', junk: 'Мусор',
-  awaiting_meeting: 'Встреча ждёт', meeting_done: 'Встреча', proposal: 'КП',
-  contract: 'Договор', awaiting_payment: 'Оплата', won: 'Закрыт', lost: 'Отказ',
-};
-
-const STAGE_COLOR: Record<string, string> = {
-  new: '#3b82f6', in_progress: '#8b5cf6', no_answer: '#f59e0b',
-  thinking: '#ec4899', meeting_set: '#22c55e', junk: '#6b7280',
-  awaiting_meeting: '#22c55e', meeting_done: '#10b981', proposal: '#f59e0b',
-  contract: '#f97316', awaiting_payment: '#eab308', won: '#22c55e', lost: '#ef4444',
+const STAGE_META: Record<string, { label: string; tone: Tone }> = {
+  new: { label: 'Новый', tone: 'info' },
+  in_progress: { label: 'В работе', tone: 'accent' },
+  no_answer: { label: 'Недозвон', tone: 'warning' },
+  thinking: { label: 'Думают', tone: 'accent' },
+  meeting_set: { label: 'Встреча', tone: 'success' },
+  junk: { label: 'Мусор', tone: 'muted' },
+  awaiting_meeting: { label: 'Встреча ждёт', tone: 'success' },
+  meeting_done: { label: 'Встреча', tone: 'success' },
+  proposal: { label: 'КП', tone: 'warning' },
+  contract: { label: 'Договор', tone: 'accent' },
+  awaiting_payment: { label: 'Оплата', tone: 'warning' },
+  won: { label: 'Закрыт', tone: 'success' },
+  lost: { label: 'Отказ', tone: 'danger' },
 };
 
 const TAB_LABELS: Record<string, string> = {
@@ -39,33 +35,38 @@ const TAB_LABELS: Record<string, string> = {
   all: 'Все',
 };
 
-const SOURCE_ICON: Record<string, string> = {
-  instagram: 'IG', site: 'WEB', referral: 'REF', ad: 'ADS',
+const SOURCE_LABEL: Record<string, string> = {
+  instagram: 'IG',
+  site: 'WEB',
+  referral: 'REF',
+  ad: 'ADS',
 };
 
 export function LeadsTilePreview({ tileId }: { tileId: string }) {
   const { leads, loading, load } = useLeadsStore();
-  // ↓ читаем ВСЕ нужные поля из tile-ui.store, не только activeLeadId
   const { activeLeadId, drawerOpen, currentTab } = useTileLeadsUI(tileId);
-  const activeLead = leads.find(l => l.id === activeLeadId);
+  const activeLead = leads.find((lead) => lead.id === activeLeadId);
 
   useEffect(() => {
-    if (leads.length === 0 && !loading) load();
-  }, []);
+    if (leads.length === 0 && !loading) {
+      load();
+    }
+  }, [leads.length, load, loading]);
 
-  const qualifierLeads = leads.filter(l => l.pipeline === 'qualifier');
-  const closerLeads = leads.filter(l => l.pipeline === 'closer');
+  const qualifierLeads = leads.filter((lead) => lead.pipeline === 'qualifier');
+  const closerLeads = leads.filter((lead) => lead.pipeline === 'closer');
   const overdueCount = leads.filter(
-    l => (Date.now() - new Date(l.updatedAt).getTime()) / 3_600_000 > 24
+    (lead) => (Date.now() - new Date(lead.updatedAt).getTime()) / 3_600_000 > 24,
   ).length;
 
   if (loading && leads.length === 0) {
     return (
       <div className={s.root}>
         <div className={s.shimmer}>
-          {[1, 2, 3].map(i => (
-            <div key={i} className={s.shimmerCol}>
+          {QUALIFIER_COLS.slice(0, 3).map((column) => (
+            <div key={column.stage} className={s.shimmerCol} data-tone={column.tone}>
               <div className={s.shimmerHdr} />
+              <div className={s.shimmerCard} />
               <div className={s.shimmerCard} />
             </div>
           ))}
@@ -74,58 +75,47 @@ export function LeadsTilePreview({ tileId }: { tileId: string }) {
     );
   }
 
-  // ══════════════════════════════════════════════════════════
-  //  РЕЖИМ 1: DRAWER ОТКРЫТ — показываем мини-карточку лида
-  // ══════════════════════════════════════════════════════════
   if (drawerOpen && activeLead) {
     const lastEvent = activeLead.history[activeLead.history.length - 1];
-    const stageColor = STAGE_COLOR[activeLead.stage] ?? '#6b7280';
-    const stageLabel = STAGE_LABEL[activeLead.stage] ?? activeLead.stage;
+    const stageMeta = STAGE_META[activeLead.stage] ?? { label: activeLead.stage, tone: 'muted' as Tone };
 
     return (
       <div className={s.root}>
-        {/* Индикатор "экрана" — читатель сразу понимает что открыто */}
         <div className={s.screenBadge}>
           <span className={s.screenDot} />
           <span className={s.screenLabel}>Карточка лида</span>
         </div>
 
         <div className={s.drawerPreview}>
-          {/* Шапка карточки */}
           <div className={s.drawerHeader}>
             <div className={s.drawerAvatar}>{activeLead.fullName[0]}</div>
             <div className={s.drawerMeta}>
               <div className={s.drawerName}>{activeLead.fullName}</div>
-              <span
-                className={s.drawerStage}
-                style={{ color: stageColor, borderColor: `${stageColor}55` }}
-              >
-                {stageLabel}
+              <span className={s.drawerStage} data-tone={stageMeta.tone}>
+                {stageMeta.label}
               </span>
             </div>
           </div>
 
-          {/* Контакт */}
           <div className={s.drawerRow}>
             <span className={s.drawerRowLabel}>Тел.</span>
             <span className={s.drawerRowValue}>{activeLead.phone}</span>
           </div>
+
           <div className={s.drawerRow}>
             <span className={s.drawerRowLabel}>Источник</span>
-            <span className={s.drawerRowValue}>
-              {SOURCE_ICON[activeLead.source] ?? activeLead.source}
-            </span>
+            <span className={s.drawerRowValue}>{SOURCE_LABEL[activeLead.source] ?? activeLead.source}</span>
           </div>
+
           {activeLead.budget && (
             <div className={s.drawerRow}>
               <span className={s.drawerRowLabel}>Бюджет</span>
-              <span className={s.drawerRowValue} style={{ color: 'rgba(134,239,172,0.8)' }}>
+              <span className={`${s.drawerRowValue} ${s.drawerBudget}`}>
                 {(activeLead.budget / 1_000).toFixed(0)} 000 ₸
               </span>
             </div>
           )}
 
-          {/* Последнее событие из ленты */}
           {lastEvent && (
             <div className={s.drawerEvent}>
               <span className={s.drawerEventDot} />
@@ -137,14 +127,10 @@ export function LeadsTilePreview({ tileId }: { tileId: string }) {
     );
   }
 
-  // ══════════════════════════════════════════════════════════
-  //  РЕЖИМ 2: BOARD — мини-канбан + активный таб
-  // ══════════════════════════════════════════════════════════
   return (
     <div className={s.root}>
-      {/* Таб-индикатор: какой pipeline сейчас открыт в SPA */}
       <div className={s.tabBar}>
-        {(['qualifier', 'closer', 'all'] as const).map(tab => (
+        {(['qualifier', 'closer', 'all'] as const).map((tab) => (
           <span
             key={tab}
             className={`${s.tabPill} ${currentTab === tab ? s.tabPillActive : ''}`}
@@ -154,52 +140,50 @@ export function LeadsTilePreview({ tileId }: { tileId: string }) {
         ))}
       </div>
 
-      {/* ── Мини-статистика ── */}
       <div className={s.statsBar}>
-        <div className={s.statChip}>
-          <span className={s.statDot} style={{ background: '#8b5cf6' }} />
+        <div className={s.statChip} data-tone="accent">
+          <span className={s.statDot} />
           <span className={s.statNum}>{qualifierLeads.length}</span>
           <span className={s.statLabel}>лидов</span>
         </div>
-        <div className={s.statChip}>
-          <span className={s.statDot} style={{ background: '#22c55e' }} />
+        <div className={s.statChip} data-tone="success">
+          <span className={s.statDot} />
           <span className={s.statNum}>{closerLeads.length}</span>
           <span className={s.statLabel}>сделок</span>
         </div>
         {overdueCount > 0 && (
-          <div className={s.statChip}>
-            <span className={s.statDot} style={{ background: '#ef4444' }} />
+          <div className={s.statChip} data-tone="danger">
+            <span className={s.statDot} />
             <span className={s.statNum}>{overdueCount}</span>
             <span className={s.statLabel}>просроч.</span>
           </div>
         )}
       </div>
 
-      {/* ── Мини-канбан ── */}
       <div className={s.board}>
-        {QUALIFIER_COLS.map(col => {
-          const colLeads = qualifierLeads.filter(l => l.stage === col.stage);
+        {QUALIFIER_COLS.map((column) => {
+          const columnLeads = qualifierLeads.filter((lead) => lead.stage === column.stage);
           return (
-            <div key={col.stage} className={s.col}>
+            <div key={column.stage} className={s.col} data-tone={column.tone}>
               <div className={s.colHead}>
-                <span className={s.colDot} style={{ background: col.accent }} />
-                <span className={s.colLabel}>{col.label}</span>
-                <span className={s.colCount}>{colLeads.length}</span>
+                <span className={s.colDot} />
+                <span className={s.colLabel}>{column.label}</span>
+                <span className={s.colCount}>{columnLeads.length}</span>
               </div>
+
               <div className={s.colCards}>
-                {colLeads.length === 0 ? (
+                {columnLeads.length === 0 ? (
                   <div className={s.colEmpty} />
                 ) : (
-                  colLeads.slice(0, 2).map(lead => (
+                  columnLeads.slice(0, 2).map((lead) => (
                     <div
                       key={lead.id}
-                      // ↓ подсвечиваем последнего просмотренного лида
                       className={`${s.card} ${lead.id === activeLeadId ? s.cardActive : ''}`}
                     >
                       <div className={s.cardAvatar}>{lead.fullName[0]}</div>
                       <div className={s.cardInfo}>
                         <div className={s.cardName}>{lead.fullName.split(' ')[0]}</div>
-                        <span className={s.cardSrc}>{SOURCE_ICON[lead.source] ?? lead.source}</span>
+                        <span className={s.cardSrc}>{SOURCE_LABEL[lead.source] ?? lead.source}</span>
                       </div>
                       {lead.budget && (
                         <span className={s.cardBudget}>
@@ -209,8 +193,9 @@ export function LeadsTilePreview({ tileId }: { tileId: string }) {
                     </div>
                   ))
                 )}
-                {colLeads.length > 2 && (
-                  <div className={s.moreChip}>+{colLeads.length - 2} ещё</div>
+
+                {columnLeads.length > 2 && (
+                  <div className={s.moreChip}>+{columnLeads.length - 2} ещё</div>
                 )}
               </div>
             </div>

@@ -1,8 +1,7 @@
 import * as THREE from 'three';
 import type { WorkspaceSceneRuntimeState } from './sceneTypes';
 import { clamp } from './sceneHelpers';
-import { computePresentationMetrics, computeSurfaceOrbitPosition } from './sceneCamera';
-import { getFieldPositionForTile } from './sceneShells';
+import { computeSurfaceOrbitPosition } from './sceneCamera';
 import type { WorkspaceSceneTerrainController } from './sceneTerrainController';
 import {
   FLIGHT_ACCELERATION,
@@ -10,9 +9,6 @@ import {
   FLIGHT_BASE_SPEED,
   FLIGHT_DRAG,
   FLIGHT_IDLE_TIMEOUT,
-  HERO_CAMERA_DISTANCE,
-  HERO_CAMERA_HEIGHT,
-  HERO_TARGET_LIFT,
   LANDING_CAMERA_HEIGHT,
   MAX_FLIGHT_LOCAL_HEIGHT,
   MAX_FLIGHT_PITCH,
@@ -162,11 +158,8 @@ export class WorkspaceSceneCameraController {
 
   placeHeroEntry() {
     this.computePresentationPose();
-    this.camera.position.set(
-      this.presentationCameraPosition.x,
-      this.presentationCameraPosition.y + 10,
-      this.presentationCameraPosition.z + 18,
-    );
+    this.camera.position.copy(this.presentationCameraPosition);
+    this.cameraTarget.copy(this.presentationCameraTarget);
     this.camera.lookAt(this.presentationCameraTarget);
   }
 
@@ -399,62 +392,10 @@ export class WorkspaceSceneCameraController {
   }
 
   private computePresentationPose() {
-    const tiles = this.getState().tiles;
-    if (!tiles.length) {
-      this.presentationCameraTarget.set(0, 3.2, 0);
-      this.presentationCameraPosition.set(0, 12.8, 72);
-      this.presentationLookDirection.copy(this.presentationCameraTarget).sub(this.presentationCameraPosition).normalize();
-      return;
-    }
-
-    let sumX = 0;
-    let sumY = 0;
-    let minX = Infinity;
-    let maxX = -Infinity;
-    let minY = Infinity;
-    let maxY = -Infinity;
-    let count = 0;
-
-    tiles.forEach((tile) => {
-      const field = getFieldPositionForTile(tile);
-      const widthSpread = THREE.MathUtils.mapLinear(tile.width, 220, 320, 1.55, 2.75);
-      const depthSpread = THREE.MathUtils.mapLinear(tile.height, 150, 190, 0.95, 1.7);
-      sumX += field.x;
-      sumY += field.y;
-      minX = Math.min(minX, field.x - widthSpread);
-      maxX = Math.max(maxX, field.x + widthSpread);
-      minY = Math.min(minY, field.y - depthSpread);
-      maxY = Math.max(maxY, field.y + depthSpread);
-      count += 1;
-    });
-
-    this.presentationFocusLocal.set(sumX / count, sumY / count, 0);
-
-    const { spread, cameraDistance, targetLift, lateralBias } = computePresentationMetrics(
-      maxX - minX,
-      maxY - minY,
-      this.presentationFocusLocal.x,
-      HERO_CAMERA_DISTANCE,
-      HERO_TARGET_LIFT,
-    );
-
-    this.terrainController.sampleTerrainPoint(
-      this.presentationFocusLocal.x,
-      this.presentationFocusLocal.y,
-      this.presentationFocusWorld,
-      this.presentationFocusNormal,
-    );
-
-    // Smooth the raw raycast result to absorb per-frame wave-induced jitter
-    this.smoothedFocusWorld.lerp(this.presentationFocusWorld, 0.08);
-    this.smoothedFocusNormal.lerp(this.presentationFocusNormal, 0.06).normalize();
-
-    this.presentationCameraTarget.copy(this.smoothedFocusWorld).addScaledVector(this.smoothedFocusNormal, targetLift);
-    this.presentationCameraPosition.set(
-      this.presentationCameraTarget.x + lateralBias,
-      this.presentationCameraTarget.y + HERO_CAMERA_HEIGHT + clamp(spread * 0.04, 0, 2.4),
-      this.presentationCameraTarget.z + cameraDistance,
-    );
+    // Keep the surface camera anchored to the default landscape pose so tile
+    // creation/removal never reframes the scene.
+    this.presentationCameraTarget.set(0, 3.2, 0);
+    this.presentationCameraPosition.set(0, 12.8, 72);
     this.presentationLookDirection.copy(this.presentationCameraTarget).sub(this.presentationCameraPosition).normalize();
   }
 }

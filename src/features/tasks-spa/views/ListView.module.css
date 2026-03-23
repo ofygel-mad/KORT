@@ -1,151 +1,197 @@
-/* features/tasks-spa/views/ListView.module.css */
-
-.wrap {
-  flex: 1;
-  overflow: auto;
-  padding: 0 4px;
-}
-.wrap::-webkit-scrollbar { width: 4px; height: 4px; }
-.wrap::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 2px; }
-
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-}
-
-.thead tr {
-  border-bottom: 1px solid rgba(255,255,255,.08);
-}
-
-.thead th {
-  text-align: left;
-  padding: 8px 12px;
-  font-size: 11px;
-  font-weight: 600;
-  color: #4b5563;
-  letter-spacing: .06em;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-.thCheck  { width: 36px; }
-.thTitle  { min-width: 220px; }
-.thPriority { width: 110px; }
-.thAssignee { width: 100px; }
-.thDue    { width: 90px; }
-.thSubs   { width: 80px; }
-.thLinked { width: 160px; }
-
-/* ── Row ────────────────────────────────────────────────────── */
-.row {
-  border-bottom: 1px solid rgba(255,255,255,.05);
-  cursor: pointer;
-  transition: background .12s;
-}
-.row:hover { background: rgba(255,255,255,.04); }
-
-.row td {
-  padding: 10px 12px;
-  vertical-align: middle;
-}
-
-.tdCheck { text-align: center; }
-
-.checkbox {
-  width: 15px; height: 15px;
-  accent-color: #22c55e;
-  cursor: pointer;
-}
-
-.title {
-  font-size: 13px;
-  font-weight: 500;
-  color: #e5e7eb;
-  display: block;
-}
-.titleDone {
-  text-decoration: line-through;
-  color: #4b5563;
-}
-
-.tagRow {
+.root {
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-top: 4px;
-}
-.tag {
-  font-size: 10px;
-  font-weight: 500;
-  padding: 1px 6px;
-  border-radius: 8px;
+  flex-direction: column;
+  gap: 14px;
+  padding: 0 4px 8px;
+  overflow: auto;
 }
 
-.priorityBadge {
-  font-size: 11px;
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 10px;
-  letter-spacing: .03em;
+.root::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
 }
 
-.avatar {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px; height: 24px;
-  border-radius: 50%;
-  background: rgba(59,130,246,.22);
-  color: #93c5fd;
-  font-size: 9px;
-  font-weight: 700;
+.root::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--text-tertiary) 28%, transparent);
+  border-radius: 999px;
 }
-.noAssign { color: #4b5563; }
 
-.due      { font-size: 12px; color: #9ca3af; }
-.dueOverdue { color: #ef4444; font-weight: 600; }
-.noDue    { color: #4b5563; }
-
-.subs     { font-size: 12px; color: #9ca3af; }
-.subsDone { color: #22c55e; }
-
-.linked {
-  font-size: 11.5px;
-  color: #6b7280;
-  white-space: nowrap;
+.group {
   overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 150px;
-  display: block;
+  border: 1px solid var(--card-border);
+  border-radius: var(--surface-radius-tight);
+  background: var(--card-bg);
+  box-shadow: var(--surface-shadow-rest);
 }
 
-/* ── Group header ────────────────────────────────────────────── */
-.groupHeader td {
-  padding: 14px 12px 6px;
-  background: transparent;
+.groupHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: color-mix(in srgb, var(--bg-surface) 94%, transparent);
 }
-.groupHeaderContent {
+
+.groupTitleRow {
   display: flex;
   align-items: center;
   gap: 8px;
 }
-.groupDot {
-  width: 8px; height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-.groupLabel {
+
+.groupBadge,
+.priorityBadge,
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid transparent;
   font-size: 11px;
   font-weight: 700;
-  color: #9ca3af;
-  letter-spacing: .05em;
-  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
+
 .groupCount {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--bg-surface-inset);
+  color: var(--text-tertiary);
   font-size: 11px;
-  color: #4b5563;
-  background: rgba(255,255,255,.06);
-  padding: 1px 7px;
-  border-radius: 10px;
+  font-weight: 700;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.row {
+  cursor: pointer;
+  transition: background var(--motion-fast) var(--motion-ease);
+}
+
+.row:hover {
+  background: var(--bg-hover);
+}
+
+.row td {
+  padding: 12px 14px;
+  border-top: 1px solid var(--border-subtle);
+  vertical-align: middle;
+}
+
+.tdCheck {
+  width: 42px;
+  text-align: center;
+}
+
+.tdTitle {
+  min-width: 240px;
+}
+
+.tdPriority,
+.tdStatus {
+  width: 132px;
+}
+
+.tdAssignee {
+  width: 140px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.tdDue {
+  width: 110px;
+}
+
+.tdLinked {
+  max-width: 190px;
+}
+
+.checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--fill-positive);
+  cursor: pointer;
+}
+
+.title {
+  display: block;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.titleDone {
+  color: var(--text-tertiary);
+  text-decoration: line-through;
+}
+
+.due {
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.dueOverdue {
+  color: var(--fill-negative-text);
+}
+
+.linkedValue {
+  display: block;
+  color: var(--text-secondary);
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mutedValue {
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+
+.toneMuted {
+  color: var(--text-tertiary);
+  background: var(--bg-surface-inset);
+  border-color: var(--border-subtle);
+}
+
+.toneInfo {
+  color: var(--fill-info-text);
+  background: var(--fill-info-soft);
+  border-color: color-mix(in srgb, var(--fill-info) 24%, transparent);
+}
+
+.toneWarning {
+  color: var(--fill-warning-text);
+  background: var(--fill-warning-soft);
+  border-color: color-mix(in srgb, var(--fill-warning) 24%, transparent);
+}
+
+.toneDanger {
+  color: var(--fill-negative-text);
+  background: var(--fill-negative-soft);
+  border-color: color-mix(in srgb, var(--fill-negative) 24%, transparent);
+}
+
+.toneSuccess {
+  color: var(--fill-positive-text);
+  background: var(--fill-positive-soft);
+  border-color: color-mix(in srgb, var(--fill-positive) 24%, transparent);
+}
+
+.toneAccent {
+  color: var(--text-accent);
+  background: var(--fill-accent-soft);
+  border-color: color-mix(in srgb, var(--fill-accent) 24%, transparent);
 }

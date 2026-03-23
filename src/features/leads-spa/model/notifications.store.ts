@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { notificationsApi } from '../api/mock';
+import { notificationsApi } from '../api/client';
 import type { Notification } from '../api/types';
 
 interface NotifState {

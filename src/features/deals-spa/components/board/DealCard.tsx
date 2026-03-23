@@ -1,7 +1,7 @@
 import { memo } from 'react';
-import { Phone, MessageCircle, Trophy, XCircle, Clock, CheckSquare } from 'lucide-react';
+import { Phone, MessageCircle, Trophy, XCircle, Clock, CheckSquare, ArrowRight } from 'lucide-react';
 import type { Deal } from '../../api/types';
-import { STAGE_ACCENT } from '../../api/types';
+import { getDealProbabilityTone } from '../../api/types';
 import s from './Board.module.css';
 
 const SOURCE_LABEL: Record<string, string> = {
@@ -45,6 +45,7 @@ export const DealCard = memo(function DealCard({ deal, onDragStart, onDragEnd, o
   const overdueDeal = task && isOverdue(task.dueAt);
   const doneTasks  = deal.tasks.filter(t => t.done).length;
   const totalTasks = deal.tasks.length;
+  const probabilityTone = getDealProbabilityTone(deal.probability);
 
   const fmt = (n: number) =>
     new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 }).format(n) + ' ₸';
@@ -72,17 +73,10 @@ export const DealCard = memo(function DealCard({ deal, onDragStart, onDragEnd, o
         <span className={s.valueAmt}>{fmt(deal.value)}</span>
         <span className={s.valuePct}>{deal.probability}%</span>
       </div>
-      <div className={s.probBar}>
+      <div className={s.probBar} data-tone={probabilityTone}>
         <div
           className={s.probFill}
-          style={{
-            width: `${deal.probability}%`,
-            background: deal.probability >= 75
-              ? '#22c55e'
-              : deal.probability >= 45
-              ? '#f59e0b'
-              : '#ef4444',
-          }}
+          style={{ width: `${deal.probability}%` }}
         />
       </div>
 
@@ -105,7 +99,8 @@ export const DealCard = memo(function DealCard({ deal, onDragStart, onDragEnd, o
       {/* Next task */}
       {task && (
         <div className={`${s.cardNextTask} ${isOverdue(task.dueAt) ? s.cardNextTaskOverdue : ''}`}>
-          ↳ {task.title}
+          <ArrowRight size={10} />
+          <span>{task.title}</span>
         </div>
       )}
 

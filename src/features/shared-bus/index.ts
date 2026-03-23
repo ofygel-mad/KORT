@@ -119,7 +119,29 @@ export interface GlobalNotifEvent {
   /** ISO timestamp */
   createdAt: string;
   /** Источник для иконки */
-  source: 'leads' | 'deals' | 'tasks' | 'system';
+  source: 'leads' | 'deals' | 'tasks' | 'system' | 'warehouse';
+}
+
+/** Warehouse → Production: нехватка материала для заказа */
+export interface WarehouseShortageEvent {
+  orderId: string;
+  orderNumber?: string;
+  items: Array<{
+    itemId: string;
+    itemName: string;
+    unit: string;
+    needed: number;
+    available: number;
+    shortage: number;
+  }>;
+  detectedAt: string;
+}
+
+/** Warehouse → Production: материалы восполнены, заказ разблокирован */
+export interface WarehouseStockAvailableEvent {
+  orderId: string;
+  itemIds: string[];
+  resolvedAt: string;
 }
 
 /**
@@ -158,6 +180,13 @@ export type SpaSnapshot =
       overdueCount: number;
       completionRateThisMonth: number; // 0–100
       snapshotAt: string;
+    }
+  | {
+      source: 'warehouse';
+      totalItems: number;
+      openAlerts: number;
+      lowStockCount: number;
+      snapshotAt: string;
     };
 
 // ─────────────────────────────────────────────────────────────
@@ -173,7 +202,9 @@ interface SharedBusState {
   taskRequestQueue:   TaskRequestEvent[];
   taskDoneQueue:      TaskDoneEvent[];
   snapshotQueue:      SpaSnapshot[];
-  globalNotifQueue: GlobalNotifEvent[];
+  globalNotifQueue:   GlobalNotifEvent[];
+  warehouseShortageQueue:      WarehouseShortageEvent[];
+  warehouseStockAvailableQueue: WarehouseStockAvailableEvent[];
 
   // ── Publishers ────────────────────────────────────────────
   publishLeadConverted: (ev: LeadConvertedEvent) => void;
@@ -183,7 +214,9 @@ interface SharedBusState {
   publishTaskRequest:   (ev: TaskRequestEvent)    => void;
   publishTaskDone:      (ev: TaskDoneEvent)        => void;
   publishSnapshot:      (snap: SpaSnapshot)       => void;
-  publishGlobalNotif: (ev: GlobalNotifEvent) => void;
+  publishGlobalNotif:   (ev: GlobalNotifEvent)    => void;
+  publishWarehouseShortage:       (ev: WarehouseShortageEvent)       => void;
+  publishWarehouseStockAvailable: (ev: WarehouseStockAvailableEvent) => void;
 
   // ── Consumers (drain queue → return consumed items) ───────
   consumeLeadConverted: () => LeadConvertedEvent[];
@@ -193,7 +226,9 @@ interface SharedBusState {
   consumeTaskRequests:  () => TaskRequestEvent[];
   consumeTaskDone:      () => TaskDoneEvent[];
   consumeSnapshots:     () => SpaSnapshot[];
-  consumeGlobalNotifs: () => GlobalNotifEvent[];
+  consumeGlobalNotifs:  () => GlobalNotifEvent[];
+  consumeWarehouseShortages:       () => WarehouseShortageEvent[];
+  consumeWarehouseStockAvailable:  () => WarehouseStockAvailableEvent[];
 }
 
 export const useSharedBus = create<SharedBusState>((set, get) => ({
@@ -205,6 +240,8 @@ export const useSharedBus = create<SharedBusState>((set, get) => ({
   taskDoneQueue:      [],
   snapshotQueue:      [],
   globalNotifQueue: [],
+  warehouseShortageQueue: [],
+  warehouseStockAvailableQueue: [],
 
   publishLeadConverted: (ev) =>
     set(s => ({ leadConvertedQueue: [...s.leadConvertedQueue, ev] })),
@@ -222,6 +259,10 @@ export const useSharedBus = create<SharedBusState>((set, get) => ({
     set(s => ({ snapshotQueue: [...s.snapshotQueue, snap] })),
   publishGlobalNotif: (ev) =>
     set(s => ({ globalNotifQueue: [...s.globalNotifQueue, ev] })),
+  publishWarehouseShortage: (ev) =>
+    set(s => ({ warehouseShortageQueue: [...s.warehouseShortageQueue, ev] })),
+  publishWarehouseStockAvailable: (ev) =>
+    set(s => ({ warehouseStockAvailableQueue: [...s.warehouseStockAvailableQueue, ev] })),
 
   consumeLeadConverted: () => {
     const items = get().leadConvertedQueue;
@@ -261,6 +302,16 @@ export const useSharedBus = create<SharedBusState>((set, get) => ({
   consumeGlobalNotifs: () => {
     const items = get().globalNotifQueue;
     set({ globalNotifQueue: [] });
+    return items;
+  },
+  consumeWarehouseShortages: () => {
+    const items = get().warehouseShortageQueue;
+    set({ warehouseShortageQueue: [] });
+    return items;
+  },
+  consumeWarehouseStockAvailable: () => {
+    const items = get().warehouseStockAvailableQueue;
+    set({ warehouseStockAvailableQueue: [] });
     return items;
   },
 }));

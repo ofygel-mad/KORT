@@ -7,6 +7,7 @@ import { Drawer } from '../../shared/ui/Drawer';
 import { Button } from '../../shared/ui/Button';
 import { Input } from '../../shared/ui/Input';
 import { api } from '../../shared/api/client';
+import { useCompanyAccess } from '../../shared/hooks/useCompanyAccess';
 import { useUIStore } from '../../shared/stores/ui';
 import { setProductMoment } from '../../shared/utils/productMoment';
 import styles from './CreateCustomerDrawer.module.css';
@@ -42,6 +43,7 @@ export function CreateDealDrawer() {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const request = useUIStore((s) => s.createDealRequest);
+  const { hasCompanyAccess } = useCompanyAccess();
   const [open, setOpen] = useState(false);
   const { register, handleSubmit, reset, setValue, watch, setFocus, formState: { errors, isSubmitting } } = useForm<DealForm>({
     defaultValues: DEFAULT_VALUES,
@@ -50,12 +52,14 @@ export function CreateDealDrawer() {
   const { data: customers } = useQuery<{ results: CustomerOption[] }>({
     queryKey: ['customers', 'quick-picker'],
     queryFn: () => api.get('/customers/', { page_size: 100 }),
+    enabled: open && hasCompanyAccess,
     staleTime: 60_000,
   });
 
   const { data: pipeline } = useQuery<PipelineResponse>({
     queryKey: ['deals-board', 'quick-create'],
     queryFn: () => api.get('/deals/board/'),
+    enabled: open && hasCompanyAccess,
     staleTime: 60_000,
   });
 
@@ -73,7 +77,7 @@ export function CreateDealDrawer() {
     onSuccess: (created: CreatedDeal) => {
       qc.invalidateQueries({ queryKey: ['deals-board'] });
       qc.invalidateQueries({ queryKey: ['deals'] });
-      qc.invalidateQueries({ queryKey: ['dashboard'] });
+      qc.invalidateQueries({ queryKey: ['workspace-snapshot'] });
       setProductMoment(`Сделка «${created.title}» создана. Откройте карточку и зафиксируйте следующий шаг, пока контекст не успел умереть.`);
       toast.success('Сделка создана');
       setOpen(false);
