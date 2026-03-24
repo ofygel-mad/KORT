@@ -75,13 +75,13 @@ export default function ChapanOrderDetailPage() {
     formState: { errors: payErrors },
   } = useForm<PayForm>({
     resolver: zodResolver(paySchema),
-    defaultValues: { method: 'Наличные' },
+    defaultValues: { method: 'cash' },
   });
 
   async function onPaySubmit(data: PayForm) {
     if (!id) return;
     await addPayment.mutateAsync({ id, dto: data });
-    resetPay({ method: 'Наличные' });
+    resetPay({ method: 'cash' });
     setShowPayForm(false);
   }
 
@@ -429,3 +429,4 @@ export default function ChapanOrderDetailPage() {
     </div>
   );
 }
+

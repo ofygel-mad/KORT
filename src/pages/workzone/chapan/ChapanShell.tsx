@@ -13,11 +13,9 @@ export default function ChapanShell() {
       {/* Topbar: back button + module label. Clean, no dots, no user chip. */}
       <div className={styles.topbar}>
         <button className={styles.kortBack} onClick={() => navigate('/')}>
-          <ChevronLeft size={12} />
+          <ChevronLeft size={14} />
           <span>На главную</span>
         </button>
-        <div className={styles.topbarDivider} />
-        <span className={styles.topbarModule}>Чапан</span>
       </div>
 
       <div className={styles.body}>
