@@ -1,7 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   BarChart2, Briefcase, Building2, CheckSquare, LogOut,
-  Settings, Users, Warehouse, Layers, User, ChevronRight,
+  Settings, Users, Warehouse, Layers, User, ChevronRight, FolderOpen,
 } from 'lucide-react';
 import { useAuthStore } from '../../shared/stores/auth';
 import { KortLogo } from '../../shared/ui/KortLogo';
@@ -47,7 +47,7 @@ function NavGroup({ label, items }: { label: string; items: NavItem[] }) {
   );
 }
 
-export function Sidebar() {
+export function Sidebar({ chromeTone = 'dark' }: { chromeTone?: 'canvas' | 'dark' | 'light' }) {
   const navigate = useNavigate();
   const clearAuth = useAuthStore((s) => s.clearAuth);
 
@@ -57,7 +57,7 @@ export function Sidebar() {
   }
 
   return (
-    <aside className={styles.sidebar}>
+    <aside className={styles.sidebar} data-chrome={chromeTone}>
       <div className={styles.logo}>
         <KortLogo size={28} />
         <span className={styles.logoText}>KORT</span>
@@ -85,6 +85,13 @@ export function Sidebar() {
             <BarChart2 size={15} className={styles.navIcon} />
             <span className={styles.navLabel}>Отчёты</span>
           </NavLink>
+          <NavLink
+            to="/documents"
+            className={({ isActive }) => `${styles.navItem} ${isActive ? styles.navItemActive : ''}`}
+          >
+            <FolderOpen size={15} className={styles.navIcon} />
+            <span className={styles.navLabel}>Документы</span>
+          </NavLink>
         </div>
 
         <div className={styles.navDivider} />
@@ -109,8 +116,8 @@ export function Sidebar() {
           <span className={styles.navLabel}>Настройки</span>
         </NavLink>
         <button className={styles.logoutBtn} onClick={handleLogout}>
-          <LogOut size={14} />
-          <span>Выйти</span>
+          <LogOut size={15} className={styles.navIcon} />
+          <span className={styles.navLabel}>Выйти</span>
         </button>
       </div>
     </aside>

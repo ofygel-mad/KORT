@@ -82,7 +82,7 @@ function readAuthError(cause: unknown, fallback: string) {
   const message = readApiErrorMessage(cause, '').trim();
   const status = readApiErrorStatus(cause);
   if (!status && message.toLowerCase() === 'network error') {
-    return 'Сервис авторизации недоступен. Проверьте подключение frontend к backend.';
+    return 'Сервис авторизации временно недоступен. Сервер не отвечает.';
   }
   if (message) return message;
   if (status === 401) return 'Неверный логин или пароль.';

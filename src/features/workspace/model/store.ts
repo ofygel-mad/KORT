@@ -49,6 +49,7 @@ interface WorkspaceStore {
   bringToFront: (id: string) => void;
   removeTile: (id: string) => void;
   renameTile: (id: string, title: string) => void;
+  toggleTilePinned: (id: string) => void;
   setViewport: (x: number, y: number) => void;
   initializeViewport: (width: number, height: number) => void;
   setZoom: (zoom: number) => void; zoomIn: () => void; zoomOut: () => void; resetZoom: () => void;
@@ -108,6 +109,18 @@ export function clampTileToWorldBounds(tile: WorkspaceTile, w: number, h: number
   const ny = clampAxisWithinWorld(tile.y, tile.height, world.height);
   if (nx === tile.x && ny === tile.y) return tile;
   return { ...tile, x: nx, y: ny };
+}
+export function clampTileToViewportBounds(
+  tile: Pick<WorkspaceTile, 'x' | 'y' | 'width' | 'height'>,
+  vp: WorkspaceViewport,
+  vs: { width: number; height: number },
+  zoom: number,
+) {
+  const bounds = getTileViewportBounds(vp, vs, zoom, tile);
+  return {
+    x: clamp(tile.x, bounds.minX, bounds.maxX),
+    y: clamp(tile.y, bounds.minY, bounds.maxY),
+  };
 }
 function sanitizeTile(raw: unknown, fbZ: number): WorkspaceTile | null {
   if (!raw || typeof raw !== 'object') return null;
@@ -183,10 +196,46 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
         const sx = clamp(visible.left + pad, 0, Math.max(0, ww - maxTW)); const sy = clamp(visible.top + pad, 0, Math.max(0, wh - maxTH));
         set((s) => ({ tiles: s.tiles.map((t, i) => ({ ...t, x: clamp(sx + (i%cols)*(maxTW+gap), 0, Math.max(0, ww-t.width)), y: clamp(sy + Math.floor(i/cols)*(maxTH+gap), 0, Math.max(0, wh-t.height)) })) }));
       },
-      setTilePosition: (id, x, y) => set((s) => ({ tiles: s.tiles.map(t => t.id===id ? { ...t, x, y, lastInteractionAt: nowIsoString(), status: 'floating', rotation3D: deriveTile3DRotation('floating') } : t) })),
+      setTilePosition: (id, x, y) => set((s) => {
+        const target = s.tiles.find((tile) => tile.id === id);
+        if (!target) return s;
+
+        const status: WorkspaceTileStatus = target.pinned ? 'idle' : 'floating';
+        const nextPosition = s.viewportSize.width > 0 && s.viewportSize.height > 0 && s.sceneMode !== 'flight'
+          ? clampTileToViewportBounds({ ...target, x, y }, s.viewport, s.viewportSize, s.zoom)
+          : clampTileToWorldBounds({ ...target, x, y }, s.viewportSize.width, s.viewportSize.height);
+
+        return {
+          tiles: s.tiles.map((tile) => tile.id === id
+            ? {
+                ...tile,
+                x: nextPosition.x,
+                y: nextPosition.y,
+                lastInteractionAt: nowIsoString(),
+                status,
+                rotation3D: deriveTile3DRotation(status),
+              }
+            : tile),
+          contextMenu: s.contextMenu?.tileId === id ? null : s.contextMenu,
+        };
+      }),
       bringToFront: (id) => { const newZ = get().topZIndex + 1; set((s) => ({ tiles: s.tiles.map(t => t.id===id ? { ...t, zIndex: newZ, lastInteractionAt: nowIsoString(), status: 'floating', rotation3D: deriveTile3DRotation('floating') } : t), topZIndex: newZ })); },
       removeTile: (id) => set((s) => ({ tiles: s.tiles.filter(t => t.id!==id), hoveredTileId: s.hoveredTileId===id ? null : s.hoveredTileId, contextMenu: s.contextMenu?.tileId===id ? null : s.contextMenu })),
       renameTile: (id, title) => set((s) => ({ tiles: s.tiles.map(t => t.id===id ? { ...t, title: title.trim() || t.title } : t) })),
+      toggleTilePinned: (id) => set((s) => ({
+        tiles: s.tiles.map((tile) => {
+          if (tile.id !== id) return tile;
+          const pinned = !tile.pinned;
+          const status: WorkspaceTileStatus = pinned ? 'idle' : 'floating';
+          return {
+            ...tile,
+            pinned,
+            lastInteractionAt: nowIsoString(),
+            status,
+            rotation3D: deriveTile3DRotation(status),
+          };
+        }),
+      })),
       setViewport: (x, y) => set((s) => ({ viewport: clampViewportToBounds({ x, y }, s.viewportSize.width, s.viewportSize.height, s.zoom) })),
       initializeViewport: (width, height) => set((s) => ({ viewportSize: { width, height }, viewport: clampViewportToBounds(s.viewportReady ? s.viewport : { x: 0, y: 0 }, width, height, s.zoom), tiles: width > 0 && height > 0 ? s.tiles.map(tile => clampTileToWorldBounds(tile, width, height)) : s.tiles, viewportReady: true })),
       setZoom: (zoom) => set((s) => { const z = clamp(zoom, ZOOM_MIN, ZOOM_MAX); return { zoom: z, viewport: clampViewportToBounds(s.viewport, s.viewportSize.width, s.viewportSize.height, z) }; }),

@@ -1,14 +1,15 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Check, CreditCard, MessageSquare, AlertTriangle } from 'lucide-react';
-import { useOrder, useConfirmOrder, useChangeOrderStatus, useAddPayment, useAddOrderActivity } from '../../../../entities/order/queries';
+import { ChevronLeft, Check, CreditCard, MessageSquare, AlertTriangle, Pencil, ArchiveIcon, RotateCcw, Download } from 'lucide-react';
+import { useOrder, useConfirmOrder, useChangeOrderStatus, useAddPayment, useAddOrderActivity, useRestoreOrder, useCloseOrder } from '../../../../entities/order/queries';
 import type { ChapanOrder, OrderStatus, Priority } from '../../../../entities/order/types';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { apiClient } from '../../../../shared/api/client';
 import styles from './ChapanOrderDetail.module.css';
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// в”Ђв”Ђ Helpers в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 const STATUS_LABEL: Record<OrderStatus, string> = {
   new: 'Новый', confirmed: 'Подтверждён', in_production: 'В цехе',
@@ -25,9 +26,18 @@ const PAY_LABEL: Record<string, string> = {
 const PAY_COLOR: Record<string, string> = {
   not_paid: '#D94F4F', partial: '#E5922A', paid: '#4FC999',
 };
+const PAYMENT_METHOD_LABEL: Record<string, string> = {
+  cash: 'Наличные',
+  card: 'Карта',
+  kaspi_qr: 'Kaspi QR',
+  kaspi_terminal: 'Kaspi терминал',
+  transfer: 'Перевод',
+  mixed: 'Смешанный',
+};
 const PROD_STATUS_LABEL: Record<string, string> = {
-  pending: 'Ожидание', cutting: 'Раскрой', sewing: 'Пошив',
-  finishing: 'Отделка', quality_check: 'Контроль', done: 'Готово',
+  queued: 'Очередь',
+  in_progress: 'В работе',
+  done: 'Готово',
 };
 const PRIORITY_LABEL: Record<Priority, string> = {
   normal: 'Обычный', urgent: '🔴 Срочно', vip: '⭐ VIP',
@@ -43,7 +53,29 @@ function fmtDatetime(s: string) {
   });
 }
 
-// ── Payment form schema ───────────────────────────────────────────────────────
+function formatPaymentMethod(method: string) {
+  return PAYMENT_METHOD_LABEL[method] ?? method;
+}
+
+async function downloadInvoice(orderId: string, orderNumber: string) {
+  const response = await apiClient.get(`/chapan/orders/${orderId}/invoice`, {
+    params: { style: 'branded' },
+    responseType: 'blob',
+  });
+  const blob = new Blob([response.data], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `nakladnaya-${orderNumber}.xlsx`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+// в”Ђв”Ђ Payment form schema в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 const paySchema = z.object({
   amount: z.coerce.number().min(0.01, 'Сумма должна быть больше 0'),
@@ -52,7 +84,7 @@ const paySchema = z.object({
 });
 type PayForm = z.infer<typeof paySchema>;
 
-// ── Main component ────────────────────────────────────────────────────────────
+// в”Ђв”Ђ Main component в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 export default function ChapanOrderDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -63,10 +95,15 @@ export default function ChapanOrderDetailPage() {
   const changeStatus = useChangeOrderStatus();
   const addPayment = useAddPayment();
   const addActivity = useAddOrderActivity();
+  const restoreOrder = useRestoreOrder();
+  const closeOrder = useCloseOrder();
 
   const [showPayForm, setShowPayForm] = useState(false);
   const [comment, setComment] = useState('');
   const [submittingComment, setSubmittingComment] = useState(false);
+  const [restorePromptOpen, setRestorePromptOpen] = useState(false);
+  const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
+  const [invoiceDownloading, setInvoiceDownloading] = useState(false);
 
   const {
     register: registerPay,
@@ -93,6 +130,16 @@ export default function ChapanOrderDetailPage() {
       setComment('');
     } finally {
       setSubmittingComment(false);
+    }
+  }
+
+  async function handleInvoiceDownload() {
+    if (!id || !order || invoiceDownloading) return;
+    setInvoiceDownloading(true);
+    try {
+      await downloadInvoice(id, order.orderNumber);
+    } finally {
+      setInvoiceDownloading(false);
     }
   }
 
@@ -125,7 +172,7 @@ export default function ChapanOrderDetailPage() {
 
   return (
     <div className={styles.root}>
-      {/* ── Header ── */}
+      {/* в”Ђв”Ђ Header в”Ђв”Ђ */}
       <div className={styles.pageHeader}>
         <button className={styles.backLink} onClick={() => navigate('/workzone/chapan/orders')}>
           <ChevronLeft size={14} />
@@ -148,9 +195,9 @@ export default function ChapanOrderDetailPage() {
         </div>
       </div>
 
-      {/* ── Body (two columns) ── */}
+      {/* в”Ђв”Ђ Body (two columns) в”Ђв”Ђ */}
       <div className={styles.grid}>
-        {/* ── Left column ── */}
+        {/* в”Ђв”Ђ Left column в”Ђв”Ђ */}
         <div className={styles.col}>
           {/* Client card */}
           <div className={styles.card}>
@@ -176,7 +223,7 @@ export default function ChapanOrderDetailPage() {
                   <div className={styles.itemInfo}>
                     <span className={styles.itemName}>{item.productName}</span>
                     <span className={styles.itemMeta}>
-                      {[item.fabric, item.size].filter(Boolean).join(' · ')}
+                      {[item.fabric, item.size].filter(Boolean).join(' В· ')}
                       {item.quantity > 1 && ` × ${item.quantity}`}
                     </span>
                     {item.workshopNotes && (
@@ -229,7 +276,7 @@ export default function ChapanOrderDetailPage() {
                 {(order.payments ?? []).map(p => (
                   <div key={p.id} className={styles.payRow}>
                     <span>{fmtDatetime(p.createdAt)}</span>
-                    <span>{p.method}</span>
+                    <span>{formatPaymentMethod(p.method)}</span>
                     {p.note && <span className={styles.payNote}>{p.note}</span>}
                     <strong style={{ color: '#4FC999', marginLeft: 'auto' }}>+{fmt(p.amount)}</strong>
                   </div>
@@ -265,8 +312,8 @@ export default function ChapanOrderDetailPage() {
                   <div className={styles.field}>
                     <label className={styles.fieldLabel}>Метод</label>
                     <select {...registerPay('method')} className={styles.payInput}>
-                      {['Наличные', 'QR', 'Терминал', 'Перевод', 'Другое'].map(m => (
-                        <option key={m}>{m}</option>
+                      {Object.entries(PAYMENT_METHOD_LABEL).map(([value, label]) => (
+                        <option key={value} value={value}>{label}</option>
                       ))}
                     </select>
                   </div>
@@ -289,15 +336,37 @@ export default function ChapanOrderDetailPage() {
           </div>
         </div>
 
-        {/* ── Right column ── */}
+        {/* в”Ђв”Ђ Right column в”Ђв”Ђ */}
         <div className={styles.col}>
           {/* Actions */}
           <div className={styles.card}>
             <div className={styles.cardLabel}>Действия</div>
             <div className={styles.actions}>
+              {/* Edit button for active orders */}
+              {!['completed', 'cancelled'].includes(order.status) && (
+                <button
+                  className={styles.actionBtn + ' ' + styles.actionEdit}
+                  onClick={() => navigate(`/workzone/chapan/orders/${order.id}/edit`)}
+                >
+                  <Pencil size={13} />
+                  Редактировать заказ
+                </button>
+              )}
+
+              {['ready', 'transferred', 'completed'].includes(order.status) && (
+                <button
+                  className={styles.actionBtn + ' ' + styles.actionSecondary}
+                  onClick={handleInvoiceDownload}
+                  disabled={invoiceDownloading}
+                >
+                  <Download size={13} />
+                  {invoiceDownloading ? 'Подготовка накладной...' : 'Скачать накладную'}
+                </button>
+              )}
+
               {order.status === 'new' && (
                 <button
-                  className={styles.actionPrimary}
+                  className={styles.actionBtn + ' ' + styles.actionPrimary}
                   onClick={() => confirmOrder.mutate(order.id)}
                   disabled={confirmOrder.isPending}
                 >
@@ -305,18 +374,9 @@ export default function ChapanOrderDetailPage() {
                   {confirmOrder.isPending ? 'Подтверждение...' : 'Подтвердить → отправить в цех'}
                 </button>
               )}
-              {order.status === 'in_production' && (
-                <button
-                  className={styles.actionSecondary}
-                  onClick={() => changeStatus.mutate({ id: order.id, status: 'ready' })}
-                  disabled={changeStatus.isPending}
-                >
-                  Отметить как готовый
-                </button>
-              )}
               {order.status === 'ready' && (
                 <button
-                  className={styles.actionSecondary}
+                  className={styles.actionBtn + ' ' + styles.actionSecondary}
                   onClick={() => changeStatus.mutate({ id: order.id, status: 'transferred' })}
                   disabled={changeStatus.isPending}
                 >
@@ -325,31 +385,56 @@ export default function ChapanOrderDetailPage() {
               )}
               {order.status === 'transferred' && (
                 <button
-                  className={styles.actionSecondary}
+                  className={styles.actionBtn + ' ' + styles.actionSecondary}
                   onClick={() => changeStatus.mutate({ id: order.id, status: 'completed' })}
                   disabled={changeStatus.isPending}
                 >
                   Завершить заказ
                 </button>
               )}
+              {['ready', 'transferred', 'completed'].includes(order.status) && !order.isArchived && (
+                <button
+                  className={styles.actionBtn + ' ' + styles.actionArchive}
+                  onClick={() => closeOrder.mutate(order.id)}
+                  disabled={closeOrder.isPending}
+                >
+                  <ArchiveIcon size={13} />
+                  {closeOrder.isPending ? 'Закрытие...' : 'Закрыть сделку'}
+                </button>
+              )}
               {!['completed', 'cancelled'].includes(order.status) && (
                 <button
-                  className={styles.actionDanger}
-                  onClick={() => {
-                    if (confirm('Отменить заказ? Это действие необратимо.')) {
-                      changeStatus.mutate({ id: order.id, status: 'cancelled' });
-                    }
-                  }}
+                  className={styles.actionBtn + ' ' + styles.actionDanger}
+                  onClick={() => setCancelConfirmOpen(true)}
                   disabled={changeStatus.isPending}
                 >
                   Отменить заказ
                 </button>
               )}
+
+              {/* Terminal state badges + actions */}
               {order.status === 'completed' && (
-                <div className={styles.completedBadge}>✓ Заказ завершён</div>
+                <>
+                  <div className={styles.completedBadge}>✓ Заказ завершён</div>
+                  {order.isArchived && (
+                    <div className={styles.archivedBadge}>📦 В архиве</div>
+                  )}
+                </>
               )}
-              {order.status === 'cancelled' && (
-                <div className={styles.cancelledBadge}>✕ Заказ отменён</div>
+              {(order.status === 'cancelled' || order.isArchived) && (
+                <>
+                  <div className={styles.cancelledBadge}>
+                    {order.status === 'cancelled' ? '✕ Заказ отменён' : '📦 Заказ в архиве'}
+                  </div>
+                  <button
+                    className={styles.actionBtn + ' ' + styles.actionSecondary}
+                    onClick={() => setRestorePromptOpen(true)}
+                    disabled={restoreOrder.isPending}
+                  >
+                    <RotateCcw size={13} />
+                    {restoreOrder.isPending ? 'Восстановление...' : 'Восстановить заказ'}
+                  </button>
+                </>
               )}
             </div>
           </div>
@@ -364,7 +449,7 @@ export default function ChapanOrderDetailPage() {
                     <div className={styles.prodTaskLeft}>
                       <span className={styles.prodTaskName}>{task.productName}</span>
                       <span className={styles.prodTaskMeta}>
-                        {[task.fabric, task.size].filter(Boolean).join(' · ')}
+                        {[task.fabric, task.size].filter(Boolean).join(' В· ')}
                         {task.quantity > 1 && ` × ${task.quantity}`}
                       </span>
                       {task.assignedTo && (
@@ -385,7 +470,7 @@ export default function ChapanOrderDetailPage() {
 
           {/* Activity / history */}
           <div className={styles.card}>
-            <div className={styles.cardLabel}>История</div>
+              <div className={styles.cardLabel}>История</div>
             <div className={styles.activityList}>
               {(order.activities ?? []).length === 0 && (
                 <div className={styles.noActivity}>Нет записей</div>
@@ -426,7 +511,72 @@ export default function ChapanOrderDetailPage() {
           </div>
         </div>
       </div>
+
+      {cancelConfirmOpen && (
+        <div className={styles.confirmOverlay} role="dialog" aria-modal="true" aria-labelledby="cancel-title" onClick={() => setCancelConfirmOpen(false)}>
+          <div className={styles.confirmDialog} onClick={e => e.stopPropagation()}>
+            <div className={styles.confirmTitle} id="cancel-title">Отменить заказ?</div>
+            <div className={styles.confirmText}>
+              Заказ #{order.orderNumber} будет переведён в статус «Отменён». Это действие можно отменить через «Восстановить заказ».
+            </div>
+            <div className={styles.confirmActions}>
+              <button
+                type="button"
+                className={styles.confirmSecondary}
+                onClick={() => setCancelConfirmOpen(false)}
+              >
+                Не отменять
+              </button>
+              <button
+                type="button"
+                className={styles.confirmDanger}
+                onClick={() => {
+                  setCancelConfirmOpen(false);
+                  changeStatus.mutate({ id: order.id, status: 'cancelled' });
+                }}
+                disabled={changeStatus.isPending}
+              >
+                Да, отменить
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {restorePromptOpen && (
+        <div className={styles.confirmOverlay} role="dialog" aria-modal="true" aria-labelledby="restore-title">
+          <div className={styles.confirmDialog}>
+            <div className={styles.confirmTitle} id="restore-title">
+              {order.status === 'cancelled' ? 'Восстановить заказ?' : 'Убрать заказ из архива?'}
+            </div>
+            <div className={styles.confirmText}>
+              {order.status === 'cancelled'
+                ? 'Заказ вернётся в статус "Новый".'
+                : 'Заказ снова станет обычным активным заказом.'}
+            </div>
+            <div className={styles.confirmActions}>
+              <button
+                type="button"
+                className={styles.confirmSecondary}
+                onClick={() => setRestorePromptOpen(false)}
+              >
+                Отмена
+              </button>
+              <button
+                type="button"
+                className={styles.confirmPrimary}
+                  onClick={() => {
+                  setRestorePromptOpen(false);
+                  restoreOrder.mutate({ id: order.id, status: order.status });
+                }}
+                disabled={restoreOrder.isPending}
+              >
+                Восстановить
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-

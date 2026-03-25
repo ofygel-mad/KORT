@@ -1,7 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { ordersApi, productionApi, chapanSettingsApi } from './api';
-import type { CreateOrderDto, AddPaymentDto, ChapanCatalogs, ChapanProfile } from './types';
+import type { CreateOrderDto, UpdateOrderDto, AddPaymentDto, ChapanCatalogs, ChapanProfile } from './types';
+import { readApiErrorMessage } from '../../shared/api/errors';
 
 // ── Query keys ────────────────────────────────────────────────────────────────
 
@@ -40,6 +41,59 @@ export const useCreateOrder = () => {
       toast.success('Заказ создан');
     },
     onError: () => toast.error('Не удалось создать заказ'),
+  });
+};
+
+export const useUpdateOrder = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, dto }: { id: string; dto: UpdateOrderDto }) => ordersApi.update(id, dto),
+    onSuccess: (_data, { id }) => {
+      qc.invalidateQueries({ queryKey: orderKeys.all });
+      qc.invalidateQueries({ queryKey: orderKeys.detail(id) });
+      toast.success('Заказ обновлён');
+    },
+    onError: () => toast.error('Не удалось сохранить изменения'),
+  });
+};
+
+export const useRestoreOrder = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, status }: { id: string; status?: string }) => ordersApi.restore(id, status),
+    onSuccess: (_data, { id }) => {
+      qc.invalidateQueries({ queryKey: orderKeys.all });
+      qc.invalidateQueries({ queryKey: orderKeys.detail(id) });
+      toast.success('Заказ восстановлен');
+    },
+    onError: (error) => toast.error(readApiErrorMessage(error, 'Не удалось восстановить заказ')),
+  });
+};
+
+export const useArchiveOrder = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => ordersApi.archive(id),
+    onSuccess: (_data, id) => {
+      qc.invalidateQueries({ queryKey: orderKeys.all });
+      qc.invalidateQueries({ queryKey: orderKeys.detail(id) });
+      toast.success('Заказ перемещён в архив');
+    },
+    onError: () => toast.error('Не удалось архивировать заказ'),
+  });
+};
+
+export const useCloseOrder = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => ordersApi.close(id),
+    onSuccess: (_data, id) => {
+      qc.invalidateQueries({ queryKey: orderKeys.all });
+      qc.invalidateQueries({ queryKey: orderKeys.detail(id) });
+      qc.invalidateQueries({ queryKey: orderKeys.production });
+      toast.success('Сделка закрыта, заказ отправлен в архив');
+    },
+    onError: (error) => toast.error(readApiErrorMessage(error, 'Не удалось закрыть сделку')),
   });
 };
 
@@ -119,10 +173,19 @@ export const useUpdateProductionStatus = () => {
   });
 };
 
+export const useClaimProductionTask = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (taskId: string) => productionApi.claim(taskId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: orderKeys.production }),
+    onError: (error) => toast.error(readApiErrorMessage(error, 'Не удалось взять заказ в работу')),
+  });
+};
+
 export const useAssignWorker = () => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ taskId, worker }: { taskId: string; worker: string }) =>
+    mutationFn: ({ taskId, worker }: { taskId: string; worker: string | null }) =>
       productionApi.assignWorker(taskId, worker),
     onSuccess: () => qc.invalidateQueries({ queryKey: orderKeys.production }),
   });

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   ZOOM_MAX,
+  clampTileToViewportBounds,
   clampTileToWorldBounds,
   clampViewportToBounds,
   getTileViewportBounds,
@@ -156,6 +157,20 @@ describe('sanitizeWorkspacePersistedState', () => {
       maxX: 1140,
       minY: 300,
       maxY: 663.3333333333334,
+    });
+  });
+
+  it('clamps dragged tiles to the visible viewport in surface mode', () => {
+    const position = clampTileToViewportBounds(
+      { x: 1400, y: 900, width: 260, height: 170 },
+      { x: -900, y: -450 },
+      { width: 1200, height: 800 },
+      1.5,
+    );
+
+    expect(position).toEqual({
+      x: 1140,
+      y: 663.3333333333334,
     });
   });
 });

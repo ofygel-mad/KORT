@@ -107,6 +107,46 @@ function parseOptionalAmount(value: string) {
   return Number.isFinite(n) ? n : undefined;
 }
 
+function buildPayloadItems(items: FormData['items'], orderDiscount: number) {
+  const discountedLines = items.map((item) => {
+    const quantity = Number(item.quantity) || 0;
+    const unitPrice = Number(item.unitPrice) || 0;
+    const lineTotal = quantity * unitPrice;
+    const itemDiscount = Math.min(Number(item.itemDiscount) || 0, lineTotal);
+    return {
+      item,
+      quantity,
+      lineTotal: Math.max(0, lineTotal - itemDiscount),
+    };
+  });
+
+  const subtotal = discountedLines.reduce((sum, line) => sum + line.lineTotal, 0);
+  const safeOrderDiscount = Math.min(orderDiscount, subtotal);
+  let remainingDiscount = safeOrderDiscount;
+
+  return discountedLines.map((line, index) => {
+    const proportionalDiscount = index === discountedLines.length - 1
+      ? remainingDiscount
+      : subtotal > 0
+        ? safeOrderDiscount * (line.lineTotal / subtotal)
+        : 0;
+    const finalLineTotal = Math.max(0, line.lineTotal - proportionalDiscount);
+    remainingDiscount = Math.max(0, remainingDiscount - proportionalDiscount);
+    const effectiveUnitPrice = line.quantity > 0
+      ? Number((finalLineTotal / line.quantity).toFixed(4))
+      : 0;
+
+    return {
+      productName: line.item.productName,
+      fabric: line.item.color?.trim() || undefined,
+      size: line.item.size,
+      quantity: line.quantity,
+      unitPrice: effectiveUnitPrice,
+      workshopNotes: line.item.workshopNotes || undefined,
+    };
+  });
+}
+
 function SelectOrText({ options, placeholder, className, ...props }: InputHTMLAttributes<HTMLInputElement> & { options: string[] }) {
   const id = useId();
   return (
@@ -178,6 +218,7 @@ export default function ChapanNewOrderPage() {
   async function onSubmit(data: FormData) {
     const hasPrepayment = (data.prepayment ?? 0) > 0;
     const isMixed = data.paymentMethod === 'mixed';
+    const payloadItems = buildPayloadItems(data.items, orderDiscount);
 
     await createOrder.mutateAsync({
       clientName:    data.clientName,
@@ -186,8 +227,6 @@ export default function ChapanNewOrderPage() {
       priority:      data.priority as Priority,
       orderDate:     data.orderDate || undefined,
       dueDate:       data.dueDate   || undefined,
-      totalAmount:   finalTotal,
-      orderDiscount: orderDiscount > 0 ? orderDiscount : undefined,
       prepayment:    hasPrepayment ? data.prepayment : undefined,
       paymentMethod: hasPrepayment ? data.paymentMethod : undefined,
       mixedBreakdown: hasPrepayment && isMixed ? {
@@ -197,17 +236,8 @@ export default function ChapanNewOrderPage() {
         mixedTransfer:      data.mixedTransfer      ?? 0,
       } : undefined,
       receiptFileNames: receipts.length > 0 ? receipts.map((f) => f.name) : undefined,
-      items: data.items.map((item) => ({
-        productName:   item.productName,
-        color:         item.color || undefined,
-        gender:        item.gender || undefined,
-        length:        item.length?.trim() || undefined,
-        size:          item.size,
-        quantity:      item.quantity,
-        unitPrice:     item.unitPrice   ?? 0,
-        itemDiscount:  (item.itemDiscount ?? 0) > 0 ? item.itemDiscount : undefined,
-        workshopNotes: item.workshopNotes || undefined,
-      })),
+      items: payloadItems,
+      managerNote: data.managerNote?.trim() || undefined,
     });
     navigate('/workzone/chapan/orders');
   }

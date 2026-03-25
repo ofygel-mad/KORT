@@ -22,6 +22,7 @@ import { chapanOrdersRoutes } from './modules/chapan/orders.routes.js';
 import { chapanProductionRoutes } from './modules/chapan/production.routes.js';
 import { chapanRequestsRoutes } from './modules/chapan/requests.routes.js';
 import { chapanSettingsRoutes } from './modules/chapan/settings.routes.js';
+// documents routes moved into orders module as /:id/invoice
 import { frontendCompatRoutes } from './modules/frontend-compat/frontend-compat.routes.js';
 import { employeesRoutes } from './modules/employees/employees.routes.js';
 import { accountingRoutes } from './modules/accounting/accounting.routes.js';
@@ -109,6 +110,7 @@ export async function buildApp() {
   await app.register(chapanProductionRoutes, { prefix: '/api/v1/chapan/production' });
   await app.register(chapanRequestsRoutes, { prefix: '/api/v1/chapan/requests' });
   await app.register(chapanSettingsRoutes, { prefix: '/api/v1/chapan/settings' });
+  // invoice generation is now at GET /api/v1/chapan/orders/:id/invoice
   await app.register(frontendCompatRoutes, { prefix: '/api/v1' });
 
 
@@ -118,6 +120,7 @@ export async function buildApp() {
 
   // ── Health check ────────────────────────────────────────
   app.get('/api/v1/health', async () => ({ status: 'ok', ts: new Date().toISOString() }));
+
 
   return app;
 }

@@ -1,36 +1,36 @@
-/* ChapanShell — Premium glassmorphism: titanium, cold silver, deep space */
+/* ChapanShell — light premium shell aligned with the global light theme */
 .root {
-  --ch-bg:          #080A10;
-  --ch-sidebar:     rgba(10,12,20,0.82);
-  --ch-surface:     rgba(255,255,255,0.04);
-  --ch-card:        rgba(255,255,255,0.05);
-  --ch-card-hover:  rgba(255,255,255,0.09);
-  --ch-border:      rgba(255,255,255,0.07);
-  --ch-border-plat: rgba(255,255,255,0.13);
-  --ch-plat:        #8A96B4;
-  --ch-plat-bright: #BEC8E0;
-  --ch-plat-dim:    #505A70;
-  --ch-plat-soft:   rgba(190,200,224,0.08);
-  --ch-plat-border: rgba(190,200,224,0.20);
-  --ch-text:        #EDF0F8;
-  --ch-text-dim:    #8892AA;
-  --ch-text-muted:  #5E6880;
+  --ch-bg:          var(--bg-canvas);
+  --ch-sidebar:     color-mix(in srgb, var(--bg-surface) 92%, transparent);
+  --ch-surface:     var(--bg-surface);
+  --ch-card:        var(--bg-surface-elevated);
+  --ch-card-hover:  var(--bg-hover);
+  --ch-border:      var(--border-subtle);
+  --ch-border-plat: color-mix(in srgb, var(--fill-accent) 22%, var(--border-default));
+  --ch-plat:        var(--fill-accent);
+  --ch-plat-bright: color-mix(in srgb, var(--fill-accent) 80%, #fff 20%);
+  --ch-plat-dim:    var(--text-tertiary);
+  --ch-plat-soft:   var(--fill-accent-subtle);
+  --ch-plat-border: color-mix(in srgb, var(--fill-accent) 26%, var(--border-default));
+  --ch-text:        var(--text-primary);
+  --ch-text-dim:    var(--text-secondary);
+  --ch-text-muted:  var(--text-tertiary);
   --ch-green:  #10B981;
   --ch-red:    #EF4444;
   --ch-amber:  #F59E0B;
   --ch-blue:   #6E8EF0;
-  --ch-accent:        #00C8FF;
-  --ch-accent-soft:   rgba(0,200,255,0.08);
-  --ch-accent-border: rgba(0,200,255,0.28);
-  --ch-accent-glow:   rgba(0,200,255,0.18);
+  --ch-accent:        var(--fill-accent);
+  --ch-accent-soft:   var(--fill-accent-subtle);
+  --ch-accent-border: color-mix(in srgb, var(--fill-accent) 28%, var(--border-default));
+  --ch-accent-glow:   rgba(154,74,27,0.14);
 
   display: flex;
   flex-direction: column;
   min-height: 100dvh;
   background: var(--ch-bg);
   background-image:
-    radial-gradient(ellipse 70% 50% at 15% -5%,  rgba(80,100,200,0.14) 0%, transparent 55%),
-    radial-gradient(ellipse 55% 45% at 85% 105%,  rgba(50,70,150,0.09) 0%, transparent 55%);
+    radial-gradient(ellipse 70% 50% at 15% -5%, rgba(154,74,27,0.06) 0%, transparent 55%),
+    radial-gradient(ellipse 55% 45% at 85% 105%, rgba(59,130,246,0.05) 0%, transparent 55%);
   color: var(--ch-text);
   font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif);
 }
@@ -41,14 +41,20 @@
   align-items: center;
   height: 50px;
   flex-shrink: 0;
-  background: rgba(8,10,16,0.80);
-  backdrop-filter: blur(24px) saturate(160%);
-  -webkit-backdrop-filter: blur(24px) saturate(160%);
-  border-bottom: 1px solid var(--ch-border-plat);
+  background: color-mix(in srgb, var(--bg-surface) 90%, transparent);
+  backdrop-filter: blur(18px) saturate(130%);
+  -webkit-backdrop-filter: blur(18px) saturate(130%);
+  border-bottom: 1px solid var(--border-default);
   padding: 0 20px;
   position: sticky;
   top: 0;
   z-index: 20;
+}
+
+.topbarRight {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
 }
 
 .kortBack {
@@ -56,8 +62,8 @@
   align-items: center;
   gap: 6px;
   padding: 7px 14px 7px 10px;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.14);
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-default);
   border-radius: 8px;
   color: var(--ch-text-dim);
   font-size: 13px;
@@ -68,8 +74,8 @@
   white-space: nowrap;
 }
 .kortBack:hover {
-  background: rgba(255,255,255,0.10);
-  border-color: rgba(255,255,255,0.24);
+  background: var(--bg-hover);
+  border-color: var(--border-strong);
   color: var(--ch-text);
 }
 
@@ -98,17 +104,17 @@
   height: calc(100dvh - 50px);
   position: sticky;
   top: 50px;
-  background: rgba(8,10,18,0.75);
-  backdrop-filter: blur(28px) saturate(160%);
-  -webkit-backdrop-filter: blur(28px) saturate(160%);
-  border-right: 1px solid var(--ch-border-plat);
+  background: color-mix(in srgb, var(--bg-surface) 94%, transparent);
+  backdrop-filter: blur(18px) saturate(130%);
+  -webkit-backdrop-filter: blur(18px) saturate(130%);
+  border-right: 1px solid var(--border-default);
   display: flex;
   flex-direction: column;
 }
 
 .logoWrap {
   padding: 20px 16px 16px;
-  border-bottom: 1px solid var(--ch-border-plat);
+  border-bottom: 1px solid var(--border-subtle);
 }
 .logoText {
   display: block;
@@ -144,13 +150,13 @@
 }
 .navItem:hover {
   color: var(--ch-text);
-  background: rgba(255,255,255,0.06);
-  border-color: rgba(255,255,255,0.08);
+  background: var(--bg-hover);
+  border-color: var(--border-subtle);
 }
 .navActive {
-  background: transparent;
-  border-color: transparent;
-  animation: chNavIridescent 6s ease-in-out infinite;
+  background: var(--fill-accent-subtle);
+  border-color: var(--ch-plat-border);
+  animation: none;
 }
 
 @keyframes chNavIridescent {
@@ -188,8 +194,8 @@
   overflow-y: auto;
   background: transparent;
   background-image:
-    linear-gradient(rgba(255,255,255,0.022) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.022) 1px, transparent 1px);
+    linear-gradient(rgba(16,24,40,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(16,24,40,0.03) 1px, transparent 1px);
   background-size: 44px 44px;
   overscroll-behavior: contain;
 }
@@ -204,4 +210,28 @@
   .navItem { padding: 6px 10px; white-space: nowrap; font-size: 12px; }
   .sidebarBottom { display: none; }
   .main { height: auto; }
+}
+
+/* ── Light Theme — cold steel bg, dark glass components ── */
+:global([data-theme="light"]) .root {
+  --ch-bg:          var(--bg-canvas);
+  --ch-sidebar:     color-mix(in srgb, var(--bg-surface) 92%, transparent);
+  --ch-surface:     var(--bg-surface);
+  --ch-card:        var(--bg-surface-elevated);
+  --ch-card-hover:  var(--bg-hover);
+  --ch-border:      var(--border-subtle);
+  --ch-border-plat: color-mix(in srgb, var(--fill-accent) 18%, var(--border-default));
+  --ch-plat:        var(--fill-accent);
+  --ch-plat-bright: color-mix(in srgb, var(--fill-accent) 80%, #fff 20%);
+  --ch-plat-dim:    var(--text-tertiary);
+  --ch-plat-soft:   var(--fill-accent-subtle);
+  --ch-plat-border: color-mix(in srgb, var(--fill-accent) 22%, var(--border-default));
+  --ch-text:        var(--text-primary);
+  --ch-text-dim:    var(--text-secondary);
+  --ch-text-muted:  var(--text-tertiary);
+
+  background: var(--ch-bg);
+  background-image:
+    radial-gradient(ellipse 70% 50% at 15% -5%, rgba(154,74,27,0.06) 0%, transparent 55%),
+    radial-gradient(ellipse 55% 45% at 85% 105%, rgba(59,130,246,0.05) 0%, transparent 55%);
 }

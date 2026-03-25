@@ -28,6 +28,7 @@ const WarehousePage  = makePage(() => import('../../pages/warehouse'));
 const FinancePage    = makePage(() => import('../../pages/finance'));
 const EmployeesPage  = makePage(() => import('../../pages/employees'));
 const ReportsPage    = makePage(() => import('../../pages/reports'));
+const DocumentsPage  = makePage(() => import('../../pages/documents'));
 const SettingsPage   = makePage(() => import('../../pages/settings'));
 const OnboardingPage = makePage(() => import('../../pages/onboarding'));
 
@@ -41,8 +42,11 @@ const ChapanShell        = makePage(() => import('../../pages/workzone/chapan/Ch
 const ChapanOrdersPage   = makePage(() => import('../../pages/workzone/chapan/orders/ChapanOrders'));
 const ChapanNewOrderPage = makePage(() => import('../../pages/workzone/chapan/orders/ChapanNewOrder'));
 const ChapanOrderDetailPage = makePage(() => import('../../pages/workzone/chapan/orders/ChapanOrderDetail'));
-const ChapanProductionPage = makePage(() => import('../../pages/workzone/chapan/production/ChapanProduction'));
-const ChapanSettingsPage = makePage(() => import('../../pages/workzone/chapan/settings/ChapanSettings'));
+const ChapanEditOrderPage   = makePage(() => import('../../pages/workzone/chapan/orders/ChapanEditOrder'));
+const ChapanProductionPage  = makePage(() => import('../../pages/workzone/chapan/production/ChapanProduction'));
+const ChapanReadyPage       = makePage(() => import('../../pages/workzone/chapan/ready/ChapanReady'));
+const ChapanSettingsPage    = makePage(() => import('../../pages/workzone/chapan/settings/ChapanSettings'));
+const ChapanArchivePage     = makePage(() => import('../../pages/workzone/chapan/archive/ChapanArchive'));
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const user = useAuthStore((s) => s.user);
@@ -99,6 +103,10 @@ export const appRouter = createBrowserRouter([
         element: <RequireAuth><RequireOrg><ReportsPage /></RequireOrg></RequireAuth>,
       },
       {
+        path: 'documents',
+        element: <RequireAuth><RequireOrg><DocumentsPage /></RequireOrg></RequireAuth>,
+      },
+      {
         path: 'settings',
         element: <RequireAuth><SettingsPage /></RequireAuth>,
       },
@@ -135,8 +143,20 @@ export const appRouter = createBrowserRouter([
         element: <ChapanOrderDetailPage />,
       },
       {
+        path: 'orders/:id/edit',
+        element: <ChapanEditOrderPage />,
+      },
+      {
         path: 'production',
         element: <ChapanProductionPage />,
+      },
+      {
+        path: 'ready',
+        element: <ChapanReadyPage />,
+      },
+      {
+        path: 'archive',
+        element: <ChapanArchivePage />,
       },
       {
         path: 'settings',

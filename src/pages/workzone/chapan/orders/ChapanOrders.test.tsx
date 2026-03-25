@@ -36,6 +36,8 @@ function buildOrder(): ChapanOrder {
     cancelReason: null,
     completedAt: null,
     cancelledAt: null,
+    isArchived: false,
+    archivedAt: null,
     createdAt: '2026-03-23T00:00:00.000Z',
     updatedAt: '2026-03-23T00:00:00.000Z',
     items: [],
