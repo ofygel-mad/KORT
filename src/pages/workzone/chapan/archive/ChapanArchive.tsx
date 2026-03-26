@@ -1,6 +1,6 @@
 import { useState, useDeferredValue } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, ArchiveIcon, RotateCcw } from 'lucide-react';
+import { Search, ArchiveIcon, RotateCcw, Check, X, AlertCircle, ExternalLink } from 'lucide-react';
 import { useOrders, useRestoreOrder } from '../../../../entities/order/queries';
 import type { ChapanOrder, OrderStatus } from '../../../../entities/order/types';
 import styles from './ChapanArchive.module.css';
@@ -11,6 +11,8 @@ const STATUS_LABEL: Record<OrderStatus, string> = {
   in_production: 'В цехе',
   ready: 'Готов',
   transferred: 'Передан',
+  on_warehouse: 'На складе',
+  shipped: 'Отправлен',
   completed: 'Завершён',
   cancelled: 'Отменён',
 };
@@ -21,6 +23,8 @@ const STATUS_COLOR: Record<OrderStatus, string> = {
   in_production: '#F59E0B',
   ready: '#10B981',
   transferred: '#8B5CF6',
+  on_warehouse: '#8B5CF6',
+  shipped: '#3B82F6',
   completed: '#4A5268',
   cancelled: '#EF4444',
 };
@@ -62,7 +66,7 @@ export default function ChapanArchivePage() {
   const orders: ChapanOrder[] = data?.results ?? [];
 
   return (
-    <div className={styles.root}>
+    <div className={`${styles.root} kort-page-enter`}>
       <div className={styles.header}>
         <div className={styles.headerTitle}>
           <ArchiveIcon size={18} />
@@ -100,11 +104,16 @@ export default function ChapanArchivePage() {
         </div>
       )}
 
-      {isError && <div className={styles.error}>Не удалось загрузить архив</div>}
+      {isError && (
+        <div className="kort-inline-error">
+          <AlertCircle size={16} />
+          Не удалось загрузить архив. Проверьте соединение и попробуйте обновить страницу.
+        </div>
+      )}
 
       {!isLoading && !isError && orders.length === 0 && (
         <div className={styles.emptyState}>
-          <div className={styles.emptyIcon}>📦</div>
+          <ArchiveIcon size={36} className={styles.emptyIcon} />
           <div className={styles.emptyTitle}>Архив пуст</div>
           <div className={styles.emptyText}>
             {search || statusFilter
@@ -138,19 +147,13 @@ function ArchiveRow({ order, onClick }: { order: ChapanOrder; onClick: () => voi
     <div
       className={styles.row}
       style={{ '--status-color': STATUS_COLOR[order.status] } as React.CSSProperties}
-      onClick={onClick}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') onClick();
-      }}
     >
       <span className={styles.rowStripe} />
 
       <div className={styles.rowNum}>
         <span className={styles.cardNum}>#{order.orderNumber}</span>
         <span className={styles.statusBadge}>{STATUS_LABEL[order.status]}</span>
-        {order.isArchived && <span className={styles.archivedTag}>📦 архив</span>}
+        {order.isArchived && <span className={styles.archivedTag}>архив</span>}
       </div>
 
       <div className={styles.rowClient}>
@@ -182,13 +185,13 @@ function ArchiveRow({ order, onClick }: { order: ChapanOrder; onClick: () => voi
 
       <div className={styles.rowDates}>
         {order.status === 'completed' && order.completedAt && (
-          <span className={styles.dateLabel}>✓ {fmtDate(order.completedAt)}</span>
+          <span className={styles.dateLabel}><Check size={10} className={styles.dateIcon} />{fmtDate(order.completedAt)}</span>
         )}
         {order.status === 'cancelled' && order.cancelledAt && (
-          <span className={styles.dateLabel} style={{ color: '#EF4444' }}>✕ {fmtDate(order.cancelledAt)}</span>
+          <span className={`${styles.dateLabel} ${styles.dateCancelled}`}><X size={10} className={styles.dateIcon} />{fmtDate(order.cancelledAt)}</span>
         )}
         {order.archivedAt && (
-          <span className={styles.archivedDate}>📦 {fmtDate(order.archivedAt)}</span>
+          <span className={styles.archivedDate}>{fmtDate(order.archivedAt)}</span>
         )}
       </div>
 
@@ -196,14 +199,19 @@ function ArchiveRow({ order, onClick }: { order: ChapanOrder; onClick: () => voi
         <button
           type="button"
           className={styles.restoreBtn}
-          onClick={(e) => {
-            e.stopPropagation();
-            restoreOrder.mutate({ id: order.id, status: order.status });
-          }}
+          onClick={() => restoreOrder.mutate({ id: order.id, status: order.status })}
           disabled={restoreOrder.isPending}
         >
           <RotateCcw size={12} />
-          <span>{restoreOrder.isPending ? 'Восстановление...' : 'Восстановить'}</span>
+          <span>{restoreOrder.isPending ? '...' : 'Восстановить'}</span>
+        </button>
+        <button
+          type="button"
+          className={styles.viewBtn}
+          onClick={onClick}
+          title="Открыть заказ"
+        >
+          <ExternalLink size={12} />
         </button>
       </div>
     </div>

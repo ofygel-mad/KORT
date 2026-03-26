@@ -426,6 +426,12 @@
   }
 }
 
+.rowFull {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+
 .rowHalf {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -959,4 +965,32 @@
   border-color: var(--ch-accent-border);
   color: var(--ch-accent);
   box-shadow: 0 0 10px var(--ch-accent-glow);
+}
+
+.stockBadgeIn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  background: rgba(16, 185, 129, 0.12);
+  color: #10B981;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.stockBadgeOut {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  background: rgba(239, 68, 68, 0.10);
+  color: #EF4444;
+  border: 1px solid rgba(239, 68, 68, 0.22);
 }

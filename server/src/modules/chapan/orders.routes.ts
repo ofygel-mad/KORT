@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import * as svc from './orders.service.js';
-import { generateInvoiceXlsx } from './invoice.service.js';
+import { generateInvoiceXlsx, generateBatchInvoiceXlsx } from './invoice.service.js';
 
 export async function chapanOrdersRoutes(app: FastifyInstance) {
   app.addHook('preHandler', app.authenticate);
@@ -59,6 +59,7 @@ export async function chapanOrdersRoutes(app: FastifyInstance) {
         mixedKaspiTerminal: z.number().min(0),
         mixedTransfer: z.number().min(0),
       }).optional(),
+      streetAddress: z.string().optional(),
       managerNote: z.string().optional(),
       sourceRequestId: z.string().optional(),
     }).parse(request.body);
@@ -100,6 +101,13 @@ export async function chapanOrdersRoutes(app: FastifyInstance) {
   app.post('/:id/close', async (request, reply) => {
     const { id } = request.params as { id: string };
     await svc.close(request.orgId, id, request.userId, request.userFullName);
+    return reply.send({ ok: true });
+  });
+
+  // POST /api/v1/chapan/orders/:id/fulfill-from-stock
+  app.post('/:id/fulfill-from-stock', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    await svc.fulfillFromStock(request.orgId, id, request.userId, request.userFullName);
     return reply.send({ ok: true });
   });
 
@@ -172,7 +180,31 @@ export async function chapanOrdersRoutes(app: FastifyInstance) {
       .send(buffer);
   });
 
+  // POST /api/v1/chapan/orders/batch-invoice
+  app.post('/batch-invoice', async (request, reply) => {
+    const body = z.object({
+      orderIds: z.array(z.string()).min(1),
+      style: z.enum(['default', 'branded']).default('branded'),
+    }).parse(request.body);
+
+    const buffer = await generateBatchInvoiceXlsx(request.orgId, body.orderIds, body.style);
+    const filename = `nakladnaya-batch-${Date.now()}.xlsx`;
+
+    return reply
+      .header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+      .header('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`)
+      .header('Cache-Control', 'no-store')
+      .send(buffer);
+  });
+
   // POST /api/v1/chapan/orders/:id/activities
+  // POST /api/v1/chapan/orders/:id/ship — Warehouse ships to client
+  app.post('/:id/ship', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    await svc.shipOrder(request.orgId, id, request.userId, request.userFullName);
+    return reply.send({ ok: true });
+  });
+
   app.post('/:id/activities', async (request, reply) => {
     const { id } = request.params as { id: string };
     const body = z.object({

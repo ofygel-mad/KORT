@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { ordersApi, productionApi, chapanSettingsApi } from './api';
+import { ordersApi, productionApi, chapanSettingsApi, invoicesApi } from './api';
 import type { CreateOrderDto, UpdateOrderDto, AddPaymentDto, ChapanCatalogs, ChapanProfile } from './types';
 import { readApiErrorMessage } from '../../shared/api/errors';
 
@@ -12,6 +12,9 @@ export const orderKeys = {
   detail: (id: string) => [...orderKeys.all, id] as const,
   production: ['chapan_production'] as const,
   productionList: (filters?: object) => [...orderKeys.production, filters] as const,
+  invoices: ['chapan_invoices'] as const,
+  invoiceList: (filters?: object) => ['chapan_invoices', filters] as const,
+  invoiceDetail: (id: string) => ['chapan_invoices', id] as const,
   settings: ['chapan_settings'] as const,
   catalogs: ['chapan_catalogs'] as const,
   clients: ['chapan_clients'] as const,
@@ -97,6 +100,19 @@ export const useCloseOrder = () => {
   });
 };
 
+export const useFulfillFromStock = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => ordersApi.fulfillFromStock(id),
+    onSuccess: (_data, id) => {
+      qc.invalidateQueries({ queryKey: orderKeys.all });
+      qc.invalidateQueries({ queryKey: orderKeys.detail(id) });
+      toast.success('Заказ выполнен со склада — готов к выдаче');
+    },
+    onError: (error) => toast.error(readApiErrorMessage(error, 'Не удалось выполнить со склада')),
+  });
+};
+
 export const useConfirmOrder = () => {
   const qc = useQueryClient();
   return useMutation({
@@ -135,6 +151,19 @@ export const useAddPayment = () => {
       toast.success('Оплата добавлена');
     },
     onError: () => toast.error('Не удалось добавить оплату'),
+  });
+};
+
+export const useShipOrder = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => ordersApi.ship(id),
+    onSuccess: (_data, id) => {
+      qc.invalidateQueries({ queryKey: orderKeys.all });
+      qc.invalidateQueries({ queryKey: orderKeys.detail(id) });
+      toast.success('Заказ отправлен клиенту');
+    },
+    onError: (error) => toast.error(readApiErrorMessage(error, 'Не удалось отправить заказ')),
   });
 };
 
@@ -211,6 +240,78 @@ export const useUnflagTask = () => {
       qc.invalidateQueries({ queryKey: orderKeys.production });
       toast.success('Блокировка снята');
     },
+  });
+};
+
+// ── Invoices ──────────────────────────────────────────────────────────────────
+
+export const useInvoices = (params?: Parameters<typeof invoicesApi.list>[0]) =>
+  useQuery({
+    queryKey: orderKeys.invoiceList(params),
+    queryFn: () => invoicesApi.list(params),
+  });
+
+export const useInvoice = (id: string) =>
+  useQuery({
+    queryKey: orderKeys.invoiceDetail(id),
+    queryFn: () => invoicesApi.get(id),
+    enabled: Boolean(id),
+  });
+
+export const useCreateInvoice = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orderIds, notes }: { orderIds: string[]; notes?: string }) =>
+      invoicesApi.create(orderIds, notes),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: orderKeys.invoices });
+      qc.invalidateQueries({ queryKey: orderKeys.all });
+      toast.success('Накладная создана');
+    },
+    onError: (error) => toast.error(readApiErrorMessage(error, 'Не удалось создать накладную')),
+  });
+};
+
+export const useConfirmSeamstress = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => invoicesApi.confirmSeamstress(id),
+    onSuccess: (_data, id) => {
+      qc.invalidateQueries({ queryKey: orderKeys.invoices });
+      qc.invalidateQueries({ queryKey: orderKeys.invoiceDetail(id) });
+      qc.invalidateQueries({ queryKey: orderKeys.all });
+      toast.success('Отправка подтверждена');
+    },
+    onError: (error) => toast.error(readApiErrorMessage(error, 'Не удалось подтвердить')),
+  });
+};
+
+export const useConfirmWarehouse = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => invoicesApi.confirmWarehouse(id),
+    onSuccess: (_data, id) => {
+      qc.invalidateQueries({ queryKey: orderKeys.invoices });
+      qc.invalidateQueries({ queryKey: orderKeys.invoiceDetail(id) });
+      qc.invalidateQueries({ queryKey: orderKeys.all });
+      toast.success('Получение подтверждено');
+    },
+    onError: (error) => toast.error(readApiErrorMessage(error, 'Не удалось подтвердить')),
+  });
+};
+
+export const useRejectInvoice = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason: string }) =>
+      invoicesApi.reject(id, reason),
+    onSuccess: (_data, { id }) => {
+      qc.invalidateQueries({ queryKey: orderKeys.invoices });
+      qc.invalidateQueries({ queryKey: orderKeys.invoiceDetail(id) });
+      qc.invalidateQueries({ queryKey: orderKeys.all });
+      toast.success('Накладная отклонена');
+    },
+    onError: (error) => toast.error(readApiErrorMessage(error, 'Не удалось отклонить')),
   });
 };
 

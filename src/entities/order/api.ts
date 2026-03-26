@@ -1,6 +1,6 @@
 import { api } from '../../shared/api/client';
 import type {
-  ChapanOrder, CreateOrderDto, UpdateOrderDto, AddPaymentDto, ListResponse,
+  ChapanOrder, ChapanInvoice, CreateOrderDto, UpdateOrderDto, AddPaymentDto, ListResponse,
   ProductionTask, ChapanCatalogs, ChapanProfile, ChapanClient,
 } from './types';
 
@@ -53,6 +53,12 @@ export const ordersApi = {
       notes: dto.note,
     }),
 
+  ship: (id: string) =>
+    api.post<{ ok: boolean }>(`/chapan/orders/${id}/ship`, {}),
+
+  fulfillFromStock: (id: string) =>
+    api.post<{ ok: boolean }>(`/chapan/orders/${id}/fulfill-from-stock`, {}),
+
   addActivity: (id: string, content: string) =>
     api.post<{ ok: boolean }>(`/chapan/orders/${id}/activities`, {
       type: 'comment',
@@ -88,6 +94,28 @@ export const productionApi = {
 
   setDefect: (taskId: string, defect: string) =>
     api.patch<{ ok: boolean }>(`/chapan/production/${taskId}/defect`, { defect }),
+};
+
+// ── Invoices (Накладные) ──────────────────────────────────────────────────────
+
+export const invoicesApi = {
+  create: (orderIds: string[], notes?: string) =>
+    api.post<ChapanInvoice>('/chapan/invoices', { orderIds, notes }),
+
+  list: (params?: { status?: string; limit?: number }) =>
+    api.get<ListResponse<ChapanInvoice>>('/chapan/invoices', params),
+
+  get: (id: string) =>
+    api.get<ChapanInvoice>(`/chapan/invoices/${id}`),
+
+  confirmSeamstress: (id: string) =>
+    api.post<{ bothConfirmed: boolean }>(`/chapan/invoices/${id}/confirm-seamstress`, {}),
+
+  confirmWarehouse: (id: string) =>
+    api.post<{ bothConfirmed: boolean }>(`/chapan/invoices/${id}/confirm-warehouse`, {}),
+
+  reject: (id: string, reason: string) =>
+    api.post<{ ok: boolean }>(`/chapan/invoices/${id}/reject`, { reason }),
 };
 
 // ── Settings ──────────────────────────────────────────────────────────────────

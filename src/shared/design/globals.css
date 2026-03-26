@@ -514,6 +514,7 @@
 @keyframes scaleIn   { from{opacity:0;transform:scale(0.96);}to{opacity:1;transform:scale(1);} }
 @keyframes successPulse { 0%{transform:scale(0.96);opacity:0.72;} 55%{transform:scale(1.03);opacity:1;} 100%{transform:scale(1);opacity:1;} }
 @keyframes confirmationRise { 0%{opacity:0;transform:translateY(8px);} 100%{opacity:1;transform:translateY(0);} }
+@keyframes pulse-red { 0%,100%{box-shadow:0 0 0 0 rgba(217,79,79,0.7);} 50%{box-shadow:0 0 0 8px rgba(217,79,79,0);} }
 
 /* ═══════════════════════════════════════════════════════════════════════
    RESET + BASE
@@ -684,6 +685,34 @@ header, nav, main, aside, section, article,
 .kort-page { padding:24px 28px; max-width:var(--content-max-width); }
 .kort-page-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:var(--space-6); }
 .kort-page-header-actions { display:flex; align-items:center; gap:var(--space-2); flex-wrap:wrap; }
+
+/* Page entrance animation — add to root element of any page */
+.kort-page-enter {
+  animation: slideUp var(--motion-page) var(--motion-ease) both;
+}
+
+/* Inline error state utility */
+.kort-inline-error {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border: 1px solid color-mix(in srgb, var(--fill-negative) 22%, var(--border-subtle));
+  background: color-mix(in srgb, var(--fill-negative-soft) 55%, var(--bg-surface));
+  border-radius: var(--radius-lg);
+  font-size: 13px;
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+.kort-inline-error svg { flex-shrink: 0; color: var(--fill-negative); }
+
+/* Table header sticky utility */
+.kort-table-sticky-head th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--bg-surface-inset);
+}
 
 /* ═══════════════════════════════════════════════════════════════════════
    DEAL STATUS BORDERS

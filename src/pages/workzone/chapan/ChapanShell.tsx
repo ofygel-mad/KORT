@@ -1,6 +1,7 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { Archive, CheckCheck, ChevronLeft, Factory, Package, Settings } from 'lucide-react';
+import { Archive, CheckCheck, ChevronLeft, Factory, Package, Settings, Warehouse } from 'lucide-react';
 import { useAuthStore } from '../../../shared/stores/auth';
+import { useEmployeePermissions } from '../../../shared/hooks/useEmployeePermissions';
 import { ThemeSwitcher } from '../../../shared/ui/ThemeSwitcher';
 import styles from './ChapanShell.module.css';
 
@@ -8,6 +9,7 @@ export default function ChapanShell() {
   const navigate = useNavigate();
   const role = useAuthStore((state) => state.membership.role);
   const isAdmin = role === 'owner' || role === 'admin';
+  const { canAccessWarehouse } = useEmployeePermissions();
 
   return (
     <div className={styles.root}>
@@ -52,6 +54,16 @@ export default function ChapanShell() {
               <CheckCheck size={14} />
               <span>Готово</span>
             </NavLink>
+
+            {(isAdmin || canAccessWarehouse) && (
+              <NavLink
+                to="/warehouse"
+                className={({ isActive }) => `${styles.navItem} ${isActive ? styles.navActive : ''}`}
+              >
+                <Warehouse size={14} />
+                <span>Склад</span>
+              </NavLink>
+            )}
 
             <NavLink
               to="/workzone/chapan/archive"

@@ -1,16 +1,18 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
-import { AlertTriangle, CheckCircle2, Factory, Flag, Layers, User, X } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Factory, FileText, Flag, Layers, User, X } from 'lucide-react';
 import {
   useAssignWorker,
   useChapanCatalogs,
   useClaimProductionTask,
+  useConfirmSeamstress,
   useFlagTask,
+  useInvoices,
   useProductionTasks,
   useUnflagTask,
   useUpdateProductionStatus,
   useWorkshopTasks,
 } from '../../../../entities/order/queries';
-import type { Priority, ProductionStatus, ProductionTask } from '../../../../entities/order/types';
+import type { ChapanInvoice, Priority, ProductionStatus, ProductionTask } from '../../../../entities/order/types';
 import { useAuthStore } from '@/shared/stores/auth';
 import styles from './ChapanProduction.module.css';
 
@@ -97,6 +99,23 @@ function buildTaskGroups(tasks: ProductionTask[]): TaskDisplayGroup[] {
   return result;
 }
 
+const INVOICE_STATUS_LABEL: Record<string, string> = {
+  pending_confirmation: 'Ожидает',
+  confirmed: 'Подтверждена',
+  rejected: 'Отклонена',
+};
+
+function invoiceStatusStyle(status: string): CSSProperties {
+  if (status === 'confirmed') return { background: 'color-mix(in srgb, #10B981 14%, transparent)', color: '#10B981', border: '1px solid color-mix(in srgb, #10B981 28%, transparent)' };
+  if (status === 'rejected') return { background: 'color-mix(in srgb, #EF4444 14%, transparent)', color: '#EF4444', border: '1px solid color-mix(in srgb, #EF4444 28%, transparent)' };
+  return { background: 'color-mix(in srgb, #F59E0B 14%, transparent)', color: '#F59E0B', border: '1px solid color-mix(in srgb, #F59E0B 28%, transparent)' };
+}
+
+function fmtDate(d: string | null | undefined) {
+  if (!d) return '';
+  return new Date(d).toLocaleDateString('ru-KZ', { day: '2-digit', month: 'short' });
+}
+
 function getBatchColor(priority: Priority) {
   if (priority === 'urgent') return '#D94F4F';
   if (priority === 'vip') return '#C9A84C';
@@ -136,6 +155,7 @@ export default function ChapanProductionPage() {
   const [flagModal, setFlagModal] = useState<{ taskId: string } | null>(null);
   const [flagReason, setFlagReason] = useState('');
   const [assignModal, setAssignModal] = useState<{ taskId: string; currentWorker: string | null } | null>(null);
+  const [invoicePanelOpen, setInvoicePanelOpen] = useState(false);
 
   useEffect(() => {
     setView(workshopDefault ? 'workshop' : 'manager');
@@ -164,6 +184,11 @@ export default function ChapanProductionPage() {
   const assignWorker = useAssignWorker();
   const flagTask = useFlagTask();
   const unflagTask = useUnflagTask();
+
+  const { data: invoicesData } = useInvoices({ limit: 50 });
+  const invoices: ChapanInvoice[] = invoicesData?.results ?? [];
+  const confirmSeamstress = useConfirmSeamstress();
+  const pendingSeamstress = invoices.filter((inv) => !inv.seamstressConfirmed).length;
 
   const rawTasks = view === 'manager' ? (managerData?.results ?? []) : (workshopData?.results ?? []);
   const tasks = useMemo(
@@ -221,6 +246,17 @@ export default function ChapanProductionPage() {
         </div>
 
         <div className={styles.headerRight}>
+          <button
+            className={`${styles.groupToggle} ${invoicePanelOpen ? styles.groupToggleActive : ''}`}
+            onClick={() => setInvoicePanelOpen((v) => !v)}
+          >
+            <FileText size={13} />
+            <span>Накладные</span>
+            {pendingSeamstress > 0 && (
+              <span className={styles.invoiceBadge}>{pendingSeamstress}</span>
+            )}
+          </button>
+
           <button
             className={`${styles.groupToggle} ${grouped ? styles.groupToggleActive : ''}`}
             onClick={toggleGrouped}
@@ -362,6 +398,64 @@ export default function ChapanProductionPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {invoicePanelOpen && (
+        <>
+          <div className={styles.invoicePanelOverlay} onClick={() => setInvoicePanelOpen(false)} />
+          <div className={styles.invoicePanel}>
+            <div className={styles.invoicePanelHead}>
+              <span className={styles.invoicePanelTitle}>Накладные</span>
+              <button className={styles.invoicePanelClose} onClick={() => setInvoicePanelOpen(false)}>
+                <X size={14} />
+              </button>
+            </div>
+            <div className={styles.invoicePanelBody}>
+              {invoices.length === 0 ? (
+                <div className={styles.invoicePanelEmpty}>
+                  <div className={styles.invoicePanelEmptyText}>Накладных нет</div>
+                  <div className={styles.invoicePanelEmptyNote}>Накладные создаются контролёром в разделе «Готово»</div>
+                </div>
+              ) : (
+                <div className={styles.invoiceSection}>
+                  {invoices.map((inv) => (
+                    <div key={inv.id} className={styles.invoiceRow}>
+                      <div className={styles.invoiceRowHead}>
+                        <span className={styles.invoiceRowNum}>№{inv.invoiceNumber}</span>
+                        <span
+                          className={styles.invoiceStatusBadge}
+                          style={invoiceStatusStyle(inv.status)}
+                        >
+                          {INVOICE_STATUS_LABEL[inv.status] ?? inv.status}
+                        </span>
+                      </div>
+                      <div className={styles.invoiceRowMeta}>
+                        {inv.items?.length ?? 0} заказ(ов) · {fmtDate(inv.createdAt)}
+                      </div>
+                      <div className={styles.invoiceConfirmIcons}>
+                        <span className={`${styles.invoiceConfirmIcon} ${inv.seamstressConfirmed ? styles.invoiceConfirmDone : ''}`}>
+                          ✓ Швея
+                        </span>
+                        <span className={`${styles.invoiceConfirmIcon} ${inv.warehouseConfirmed ? styles.invoiceConfirmDone : ''}`}>
+                          ✓ Склад
+                        </span>
+                      </div>
+                      {!inv.seamstressConfirmed && inv.status !== 'rejected' && (
+                        <button
+                          className={styles.invoiceConfirmBtn}
+                          onClick={() => confirmSeamstress.mutate(inv.id)}
+                          disabled={confirmSeamstress.isPending}
+                        >
+                          {confirmSeamstress.isPending ? '...' : 'Подтвердить отправку'}
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </>
       )}
 
       {assignModal && (

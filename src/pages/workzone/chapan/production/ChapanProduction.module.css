@@ -435,6 +435,111 @@
   font-size: 12px;
 }
 
+/* ── Invoice panel ── */
+.invoiceBadge {
+  min-width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--ch-red);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.invoicePanelOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  background: rgba(0,0,0,.18);
+}
+
+.invoicePanel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 31;
+  width: min(380px, 100vw);
+  display: flex;
+  flex-direction: column;
+  background: var(--ch-card);
+  border-left: 1px solid var(--ch-border);
+  box-shadow: -8px 0 32px rgba(0,0,0,.14);
+}
+
+.invoicePanelHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--ch-border);
+}
+.invoicePanelTitle { font-size: 14px; font-weight: 700; color: var(--ch-text); }
+.invoicePanelClose {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--ch-border);
+  border-radius: 7px;
+  background: none;
+  color: var(--ch-text-muted);
+  cursor: pointer;
+  transition: border-color 120ms, color 120ms;
+}
+.invoicePanelClose:hover { border-color: var(--ch-plat-border); color: var(--ch-text); }
+
+.invoicePanelBody { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+
+.invoiceSection { display: flex; flex-direction: column; gap: 8px; }
+.invoiceSectionLabel { font-size: 11px; font-weight: 600; color: var(--ch-text-muted); text-transform: uppercase; letter-spacing: .06em; }
+
+.invoiceRow {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--ch-border);
+  background: var(--ch-surface);
+}
+
+.invoiceRowHead { display: flex; align-items: center; gap: 8px; }
+.invoiceRowNum { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; color: var(--ch-text); }
+.invoiceStatusBadge { font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: 2px 7px; border-radius: 4px; }
+.invoiceRowMeta { font-size: 11px; color: var(--ch-text-muted); }
+
+.invoiceConfirmIcons { display: flex; gap: 8px; }
+.invoiceConfirmIcon { font-size: 11px; color: var(--ch-text-muted); opacity: .5; }
+.invoiceConfirmDone { color: var(--ch-green); opacity: 1; font-weight: 600; }
+
+.invoiceConfirmBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 12px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--ch-green) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ch-green) 28%, transparent);
+  color: var(--ch-green);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 140ms;
+}
+.invoiceConfirmBtn:hover { background: color-mix(in srgb, var(--ch-green) 18%, transparent); }
+.invoiceConfirmBtn:disabled { opacity: .5; cursor: not-allowed; }
+
+.invoicePanelEmpty { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 48px 16px; text-align: center; }
+.invoicePanelEmptyText { font-size: 14px; font-weight: 600; color: var(--ch-text); }
+.invoicePanelEmptyNote { font-size: 12px; color: var(--ch-text-muted); line-height: 1.5; }
+
 @keyframes shimmer { 0%,100%{opacity:.4} 50%{opacity:.8} }
 
 @media (max-width: 960px) {

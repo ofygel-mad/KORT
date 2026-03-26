@@ -2,7 +2,7 @@ import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import sensible from '@fastify/sensible';
 import { ZodError } from 'zod';
-import { config } from './config.js';
+import { config, normalizeCorsOrigin } from './config.js';
 import { AppError } from './lib/errors.js';
 
 // Plugins
@@ -22,6 +22,8 @@ import { chapanOrdersRoutes } from './modules/chapan/orders.routes.js';
 import { chapanProductionRoutes } from './modules/chapan/production.routes.js';
 import { chapanRequestsRoutes } from './modules/chapan/requests.routes.js';
 import { chapanSettingsRoutes } from './modules/chapan/settings.routes.js';
+import { chapanInvoicesRoutes } from './modules/chapan/invoices.routes.js';
+import { alertsRouter } from './modules/chapan/alerts.routes.js';
 // documents routes moved into orders module as /:id/invoice
 import { frontendCompatRoutes } from './modules/frontend-compat/frontend-compat.routes.js';
 import { employeesRoutes } from './modules/employees/employees.routes.js';
@@ -31,6 +33,7 @@ import { warehouseRoutes } from './modules/warehouse/warehouse.routes.js';
 
 export async function buildApp() {
   const isProd = process.env.NODE_ENV === 'production';
+  const allowedOrigins = new Set(config.CORS_ORIGINS);
   const app = Fastify({
     routerOptions: {
       ignoreTrailingSlash: true,
@@ -48,7 +51,22 @@ export async function buildApp() {
 
   // ── Global plugins ──────────────────────────────────────
   await app.register(cors, {
-    origin: config.CORS_ORIGIN,
+    origin(origin, callback) {
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
+
+      const normalizedOrigin = normalizeCorsOrigin(origin);
+
+      if (allowedOrigins.has(normalizedOrigin)) {
+        callback(null, true);
+        return;
+      }
+
+      app.log.warn({ origin: normalizedOrigin, allowedOrigins: [...allowedOrigins] }, 'Blocked CORS origin');
+      callback(null, false);
+    },
     credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID', 'Idempotency-Key', 'X-Org-Id'],
   });
@@ -110,6 +128,8 @@ export async function buildApp() {
   await app.register(chapanProductionRoutes, { prefix: '/api/v1/chapan/production' });
   await app.register(chapanRequestsRoutes, { prefix: '/api/v1/chapan/requests' });
   await app.register(chapanSettingsRoutes, { prefix: '/api/v1/chapan/settings' });
+  await app.register(chapanInvoicesRoutes, { prefix: '/api/v1/chapan/invoices' });
+  await app.register(alertsRouter, { prefix: '/api/v1/chapan/alerts' });
   // invoice generation is now at GET /api/v1/chapan/orders/:id/invoice
   await app.register(frontendCompatRoutes, { prefix: '/api/v1' });
 

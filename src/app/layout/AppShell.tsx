@@ -50,7 +50,7 @@ export function AppShell() {
     () => 'dark',
   );
 
-  const isCanvasPage = location.pathname === '/' || location.pathname === '/onboarding';
+  const isCanvasPage = location.pathname === '/';
   // Canvas: overlaid glass chrome (not in layout flow)
   // Work pages + light theme: light chrome
   // Everything else: dark chrome

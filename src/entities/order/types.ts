@@ -3,7 +3,7 @@
 
 export type OrderStatus =
   | 'new' | 'confirmed' | 'in_production' | 'ready'
-  | 'transferred' | 'completed' | 'cancelled';
+  | 'transferred' | 'on_warehouse' | 'shipped' | 'completed' | 'cancelled';
 
 export type PaymentStatus = 'not_paid' | 'partial' | 'paid';
 
@@ -24,6 +24,7 @@ export interface ChapanOrder {
   totalAmount: number;
   paidAmount: number;
   dueDate: string | null;          // was: deadline
+  streetAddress: string | null;
   cancelReason: string | null;
   completedAt: string | null;
   cancelledAt: string | null;
@@ -120,6 +121,7 @@ export interface CreateOrderDto {
   priority: Priority;
   orderDate?: string;
   dueDate?: string;            // ISO date: '2026-03-25'
+  streetAddress?: string;
   postalCode?: string;
   totalAmount?: number;
   orderDiscount?: number;
@@ -197,4 +199,34 @@ export interface ChapanClient {
 export interface ListResponse<T> {
   count: number;
   results: T[];
+}
+
+// ── Invoice (Накладная) types ────────────────────────────────────────────────
+
+export type InvoiceStatus = 'pending_confirmation' | 'confirmed' | 'rejected';
+
+export interface ChapanInvoice {
+  id: string;
+  orgId: string;
+  invoiceNumber: string;
+  status: InvoiceStatus;
+  createdById: string;
+  createdByName: string;
+  seamstressConfirmed: boolean;
+  seamstressConfirmedAt: string | null;
+  seamstressConfirmedBy: string | null;
+  warehouseConfirmed: boolean;
+  warehouseConfirmedAt: string | null;
+  warehouseConfirmedBy: string | null;
+  rejectedBy: string | null;
+  rejectionReason: string | null;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+  items: Array<{
+    id: string;
+    invoiceId: string;
+    orderId: string;
+    order: ChapanOrder;
+  }>;
 }

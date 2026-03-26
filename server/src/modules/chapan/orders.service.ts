@@ -26,6 +26,7 @@ type CreateOrderInput = {
     mixedKaspiTerminal: number;
     mixedTransfer: number;
   };
+  streetAddress?: string;
   managerNote?: string;
   sourceRequestId?: string;
 };
@@ -41,6 +42,40 @@ type OrderRecord = Prisma.ChapanOrderGetPayload<{
 }>;
 
 // ── Helpers ─────────────────────────────────────────────
+
+const CLIENT_NAME_WORD_START_RE = /(^|[\s-]+)([a-zа-яёәіңғүұқөһ])/giu;
+
+function normalizeClientName(value: string) {
+  return value
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLocaleLowerCase('ru-RU')
+    .replace(CLIENT_NAME_WORD_START_RE, (_match, separator: string, letter: string) => (
+      `${separator}${letter.toLocaleUpperCase('ru-RU')}`
+    ));
+}
+
+function readKazakhPhoneDigits(value: string) {
+  const digits = value.replace(/\D/g, '');
+
+  if (!digits) return '';
+  if (digits === '7') return '7';
+  if (digits.startsWith('8')) return `7${digits.slice(1)}`.slice(0, 11);
+  if (digits.length === 11 && digits.startsWith('7')) return digits.slice(0, 11);
+  if (digits.length <= 10) return `7${digits}`.slice(0, 11);
+
+  return `7${digits.slice(-10)}`.slice(0, 11);
+}
+
+function formatKazakhPhone(value: string) {
+  const digits = readKazakhPhoneDigits(value);
+  if (digits.length !== 11 || !digits.startsWith('7')) {
+    return value.trim();
+  }
+
+  const national = digits.slice(1);
+  return `+7 (${national.slice(0, 3)})-${national.slice(3, 6)}-${national.slice(6, 8)}-${national.slice(8, 10)}`;
+}
 
 async function nextOrderNumber(orgId: string): Promise<string> {
   const profile = await prisma.chapanProfile.findUnique({ where: { orgId } });
@@ -67,18 +102,20 @@ function getOrderStatusLabel(status: string) {
   if (status === 'in_production') return 'В производстве';
   if (status === 'ready') return 'Готово';
   if (status === 'transferred') return 'Передан';
+  if (status === 'on_warehouse') return 'На складе';
+  if (status === 'shipped') return 'Отправлен';
   if (status === 'completed') return 'Завершен';
   if (status === 'cancelled') return 'Отменен';
   return status;
 }
 
 function formatPaymentMethod(method: string) {
-  if (method === 'cash') return 'РќР°Р»РёС‡РЅС‹Рµ';
-  if (method === 'card') return 'РљР°СЂС‚Р°';
+  if (method === 'cash') return 'Наличные';
+  if (method === 'card') return 'Карта';
   if (method === 'kaspi_qr') return 'Kaspi QR';
-  if (method === 'kaspi_terminal') return 'Kaspi РўРµСЂРјРёРЅР°Р»';
-  if (method === 'transfer') return 'РџРµСЂРµРІРѕРґ';
-  if (method === 'mixed') return 'РЎРјРµС€Р°РЅРЅР°СЏ РѕРїР»Р°С‚Р°';
+  if (method === 'kaspi_terminal') return 'Kaspi Терминал';
+  if (method === 'transfer') return 'Перевод';
+  if (method === 'mixed') return 'Смешанная оплата';
   return method;
 }
 
@@ -134,8 +171,8 @@ async function resolveOrderClient(
   data: Pick<CreateOrderInput, 'clientId' | 'clientName' | 'clientPhone'>,
 ) {
   const clientId = data.clientId?.trim();
-  const clientName = data.clientName.trim();
-  const clientPhone = data.clientPhone.trim();
+  const clientName = normalizeClientName(data.clientName);
+  const clientPhone = formatKazakhPhone(data.clientPhone);
 
   if (!clientName) {
     throw new ValidationError('Укажите имя клиента');
@@ -291,7 +328,7 @@ export async function create(orgId: string, authorId: string, authorName: string
     if (prepayment > 0) {
       activityEntries.push({
         type: 'payment',
-        content: `РџСЂРµРґРѕРїР»Р°С‚Р° ${prepayment.toLocaleString('ru-RU')} в‚ё (${formatPaymentMethod(paymentMethod)})`,
+        content: `Предоплата ${prepayment.toLocaleString('ru-RU')} ₸ (${formatPaymentMethod(paymentMethod)})`,
         authorId,
         authorName,
       });
@@ -317,6 +354,7 @@ export async function create(orgId: string, authorId: string, authorName: string
         totalAmount,
         paidAmount: prepayment,
         paymentStatus: computePaymentStatus(prepayment, totalAmount),
+        streetAddress: data.streetAddress?.trim() || undefined,
         internalNote: data.managerNote?.trim() || undefined,
         dueDate: data.dueDate ? new Date(data.dueDate) : undefined,
         items: {
@@ -377,10 +415,11 @@ export async function confirm(orgId: string, id: string, authorId: string, autho
       data: { status: 'confirmed' },
     });
 
-    // Auto-create production tasks from items
+    // Auto-create production tasks from items (reset status to queued if they exist)
     for (const item of order.items) {
-      await tx.chapanProductionTask.create({
-        data: {
+      await tx.chapanProductionTask.upsert({
+        where: { orderItemId: item.id },
+        create: {
           orderId: id,
           orderItemId: item.id,
           productName: item.productName,
@@ -388,6 +427,10 @@ export async function confirm(orgId: string, id: string, authorId: string, autho
           size: item.size,
           quantity: item.quantity,
           status: 'queued',
+        },
+        update: {
+          status: 'queued',
+          assignedTo: null,
         },
       });
     }
@@ -413,12 +456,52 @@ export async function confirm(orgId: string, id: string, authorId: string, autho
   }
 }
 
+// ── Fulfill from stock (skip production) ───────────────
+
+export async function fulfillFromStock(orgId: string, id: string, authorId: string, authorName: string) {
+  const order = await prisma.chapanOrder.findFirst({ where: { id, orgId } });
+  if (!order) throw new NotFoundError('ChapanOrder', id);
+  if (order.status !== 'new') throw new ValidationError('Только новые заказы можно выполнить со склада');
+
+  await prisma.$transaction(async (tx) => {
+    await tx.chapanOrder.update({
+      where: { id },
+      data: { status: 'ready' },
+    });
+    await tx.chapanActivity.create({
+      data: {
+        orderId: id,
+        type: 'status_change',
+        content: 'Новый → Готов (выполнен со склада — без производства)',
+        authorId,
+        authorName,
+      },
+    });
+  });
+}
+
 // ── Update order status ─────────────────────────────────
 
 export async function updateStatus(orgId: string, id: string, status: string, authorId: string, authorName: string, cancelReason?: string) {
   const order = await prisma.chapanOrder.findFirst({ where: { id, orgId } });
   if (!order) throw new NotFoundError('ChapanOrder', id);
   if (order.isArchived) throw new ValidationError('Сначала восстановите заказ из архива');
+
+  if (status === 'on_warehouse' && order.paymentStatus !== 'paid') {
+    const balance = order.totalAmount - order.paidAmount;
+
+    await prisma.chapanActivity.create({
+      data: {
+        orderId: id,
+        type: 'system',
+        content: `⚠ Попытка передать на склад неоплаченный заказ (остаток: ${balance.toLocaleString('ru-KZ')} ₸).`,
+        authorId,
+        authorName,
+      },
+    });
+
+    throw new ValidationError('Нельзя передать на склад заказ с неоплаченным остатком.');
+  }
 
   const now = new Date();
 
@@ -589,8 +672,20 @@ export async function update(orgId: string, id: string, authorId: string, author
 
   return prisma.$transaction(async (tx) => {
     const updateData: Record<string, unknown> = {};
-    if (data.clientName) updateData.clientName = data.clientName.trim();
-    if (data.clientPhone) updateData.clientPhone = data.clientPhone.trim();
+    if (data.clientName) {
+      const clientName = normalizeClientName(data.clientName);
+      if (!clientName) {
+        throw new ValidationError('Укажите имя клиента');
+      }
+      updateData.clientName = clientName;
+    }
+    if (data.clientPhone) {
+      const clientPhone = formatKazakhPhone(data.clientPhone);
+      if (!clientPhone) {
+        throw new ValidationError('Укажите телефон клиента');
+      }
+      updateData.clientPhone = clientPhone;
+    }
     if (data.dueDate !== undefined) updateData.dueDate = data.dueDate ? new Date(data.dueDate) : null;
     if (data.priority) updateData.priority = data.priority;
 
@@ -645,11 +740,11 @@ export async function restore(orgId: string, id: string, authorId: string, autho
     const restoreData: Prisma.ChapanOrderUpdateInput = {
       isArchived: false,
       archivedAt: null,
+      status: 'new', // All archived orders are restored to 'new' to allow re-confirmation
     };
 
-    // Cancelled orders go back to "new"; completed orders are just unarchived.
+    // Cancelled orders also clear their cancellation data
     if (isCancelled) {
-      restoreData.status = 'new';
       restoreData.cancelReason = null;
       restoreData.cancelledAt = null;
     }
@@ -660,7 +755,7 @@ export async function restore(orgId: string, id: string, authorId: string, autho
     });
 
     await tx.chapanActivity.create({
-      data: { orderId: id, type: 'status_change', content: 'Заказ восстановлен', authorId, authorName },
+      data: { orderId: id, type: 'status_change', content: 'Заказ восстановлен → Новый', authorId, authorName },
     });
   });
 }
@@ -693,7 +788,7 @@ export async function close(orgId: string, id: string, authorId: string, authorN
   const order = await prisma.chapanOrder.findFirst({ where: { id, orgId } });
   if (!order) throw new NotFoundError('ChapanOrder', id);
   if (order.isArchived) throw new ValidationError('Заказ уже находится в архиве');
-  if (!['ready', 'transferred', 'completed'].includes(order.status)) {
+  if (!['ready', 'transferred', 'on_warehouse', 'shipped', 'completed'].includes(order.status)) {
     throw new ValidationError('Закрыть сделку можно только по готовому заказу');
   }
 
@@ -719,6 +814,19 @@ export async function close(orgId: string, id: string, authorId: string, authorN
         authorName,
       },
     });
+
+    if (order.paymentStatus !== 'paid') {
+      const balance = order.totalAmount - order.paidAmount;
+      await tx.chapanActivity.create({
+        data: {
+          orderId: id,
+          type: 'system',
+          content: `⚠ Сделка закрыта с неоплаченным остатком: ${balance.toLocaleString('ru-KZ')} ₸ (статус: ${order.paymentStatus === 'not_paid' ? 'не оплачен' : 'частично оплачен'})`,
+          authorId,
+          authorName,
+        },
+      });
+    }
   });
 
   try {
@@ -727,6 +835,44 @@ export async function close(orgId: string, id: string, authorId: string, authorN
   } catch {
     // Warehouse module may not have reservations — not fatal
   }
+}
+
+export async function shipOrder(orgId: string, id: string, authorId: string, authorName: string) {
+  const order = await prisma.chapanOrder.findFirst({ where: { id, orgId } });
+  if (!order) throw new NotFoundError('ChapanOrder', id);
+  if (order.status !== 'on_warehouse') {
+    throw new ValidationError('Отправить можно только заказ со статусом «На складе»');
+  }
+  if (order.paymentStatus !== 'paid') {
+    const balance = order.totalAmount - order.paidAmount;
+    // Log an alert activity visible to managers
+    await prisma.chapanActivity.create({
+      data: {
+        orderId: id,
+        type: 'system',
+        content: `⚠ Попытка отгрузки неоплаченного заказа (остаток: ${balance.toLocaleString('ru-KZ')} ₸). Уведомите менеджера.`,
+        authorId,
+        authorName,
+      },
+    });
+    throw new ValidationError('Заказ не оплачен. Отгрузка невозможна — уведомите менеджера.');
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.chapanOrder.update({
+      where: { id },
+      data: { status: 'shipped' },
+    });
+    await tx.chapanActivity.create({
+      data: {
+        orderId: id,
+        type: 'system',
+        content: 'Заказ отправлен клиенту',
+        authorId,
+        authorName,
+      },
+    });
+  });
 }
 
 export async function addActivity(orgId: string, orderId: string, authorId: string, authorName: string, data: {

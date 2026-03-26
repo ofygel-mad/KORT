@@ -6,6 +6,8 @@ import { z } from 'zod';
 import { ChevronLeft, Plus, Trash2, AlertTriangle } from 'lucide-react';
 import { useOrder, useUpdateOrder, useChapanCatalogs } from '../../../../entities/order/queries';
 import type { Priority } from '../../../../entities/order/types';
+import { formatPersonNameInput } from '../../../../shared/utils/person';
+import { formatKazakhPhoneInput, isKazakhPhoneComplete } from '../../../../shared/utils/kz';
 import styles from './ChapanNewOrder.module.css';
 
 // ── Schema ────────────────────────────────────────────────────────────────────
@@ -21,7 +23,9 @@ const itemSchema = z.object({
 
 const schema = z.object({
   clientName:  z.string().min(2, 'Минимум 2 символа'),
-  clientPhone: z.string().min(1, 'Телефон обязателен'),
+  clientPhone: z.string()
+    .min(1, 'Телефон обязателен')
+    .refine((value) => isKazakhPhoneComplete(value), 'Введите номер в формате +7 (777)-777-77-77'),
   dueDate:     z.string().optional(),
   priority:    z.enum(['normal', 'urgent', 'vip']),
   items:       z.array(itemSchema).min(1, 'Добавьте хотя бы одну позицию'),
@@ -58,8 +62,8 @@ export default function ChapanEditOrderPage() {
   useEffect(() => {
     if (!order) return;
     reset({
-      clientName:  order.clientName,
-      clientPhone: order.clientPhone,
+      clientName:  formatPersonNameInput(order.clientName),
+      clientPhone: formatKazakhPhoneInput(order.clientPhone),
       dueDate:     order.dueDate ? order.dueDate.slice(0, 10) : '',
       priority:    order.priority as Priority,
       items: (order.items ?? []).map(item => ({
@@ -88,8 +92,8 @@ export default function ChapanEditOrderPage() {
     await updateOrder.mutateAsync({
       id,
       dto: {
-        clientName:  data.clientName,
-        clientPhone: data.clientPhone,
+        clientName:  formatPersonNameInput(data.clientName).trim(),
+        clientPhone: formatKazakhPhoneInput(data.clientPhone),
         dueDate:     data.dueDate || null,
         priority:    data.priority as Priority,
         items:       canEditItems ? data.items.map(item => ({
@@ -149,20 +153,37 @@ export default function ChapanEditOrderPage() {
             <div className={styles.row2}>
               <div className={styles.field}>
                 <label className={styles.label}>ФИО клиента <span className={styles.req}>*</span></label>
-                <input
-                  {...register('clientName')}
-                  className={`${styles.input} ${errors.clientName ? styles.inputError : ''}`}
-                  placeholder="Аскаров Аскар Аскарович"
+                <Controller
+                  control={control}
+                  name="clientName"
+                  render={({ field }) => (
+                    <input
+                      {...field}
+                      value={field.value ?? ''}
+                      onChange={(event) => field.onChange(formatPersonNameInput(event.target.value))}
+                      className={`${styles.input} ${errors.clientName ? styles.inputError : ''}`}
+                      placeholder="Аскаров Аскар Аскарович"
+                    />
+                  )}
                 />
                 {errors.clientName && <span className={styles.fieldError}>{errors.clientName.message}</span>}
               </div>
               <div className={styles.field}>
                 <label className={styles.label}>Телефон <span className={styles.req}>*</span></label>
-                <input
-                  {...register('clientPhone')}
-                  type="tel"
-                  className={`${styles.input} ${errors.clientPhone ? styles.inputError : ''}`}
-                  placeholder="+7 701 234 5678"
+                <Controller
+                  control={control}
+                  name="clientPhone"
+                  render={({ field }) => (
+                    <input
+                      {...field}
+                      type="tel"
+                      inputMode="tel"
+                      value={field.value ?? ''}
+                      onChange={(event) => field.onChange(formatKazakhPhoneInput(event.target.value))}
+                      className={`${styles.input} ${errors.clientPhone ? styles.inputError : ''}`}
+                      placeholder="+7 (701)-234-56-78"
+                    />
+                  )}
                 />
                 {errors.clientPhone && <span className={styles.fieldError}>{errors.clientPhone.message}</span>}
               </div>
@@ -240,6 +261,7 @@ export default function ChapanEditOrderPage() {
                         disabled={!canEditItems}
                         className={styles.input}
                         onWheel={e => e.currentTarget.blur()}
+                        onFocus={e => e.target.select()}
                       />
                     </div>
                     <div className={styles.field}>
@@ -251,6 +273,7 @@ export default function ChapanEditOrderPage() {
                         className={styles.input}
                         placeholder="0"
                         onWheel={e => e.currentTarget.blur()}
+                        onFocus={e => e.target.select()}
                       />
                     </div>
                   </div>

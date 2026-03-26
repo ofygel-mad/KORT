@@ -1,20 +1,27 @@
 import { useState, useDeferredValue, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, LayoutGrid, Layers, List, Plus, Search, SlidersHorizontal } from 'lucide-react';
+import { Bell, Check, LayoutGrid, Layers, List, Plus, Search, SlidersHorizontal, X } from 'lucide-react';
 import { useOrders } from '../../../../entities/order/queries';
 import type { ChapanOrder, OrderStatus, Priority } from '../../../../entities/order/types';
+import { useProductsAvailability } from '../../../../entities/warehouse/queries';
+import type { ProductsAvailabilityMap } from '../../../../entities/warehouse/types';
 import { useAuthStore } from '@/shared/stores/auth';
+import { useChapanUiStore } from '../../../../features/workzone/chapan/store';
+import { useUnpaidAlerts } from '../../../../entities/alert/queries';
+import OrderDetailDrawer from './OrderDetailDrawer';
 import styles from './ChapanOrders.module.css';
 
 const STATUS_LABEL: Record<OrderStatus, string> = {
   new: 'Новый', confirmed: 'Подтверждён', in_production: 'В цехе',
-  ready: 'Готов', transferred: 'Передан', completed: 'Завершён', cancelled: 'Отменён',
+  ready: 'Готов', transferred: 'Передан', on_warehouse: 'На складе',
+  shipped: 'Отправлен', completed: 'Завершён', cancelled: 'Отменён',
 };
 
-const ACTIVE_STATUSES: OrderStatus[] = ['new', 'confirmed', 'in_production', 'ready', 'transferred'];
+const ACTIVE_STATUSES: OrderStatus[] = ['new', 'confirmed', 'in_production', 'ready', 'shipped'];
 const STATUS_COLOR: Record<OrderStatus, string> = {
   new: '#7C3AED', confirmed: '#3B82F6', in_production: '#F59E0B',
-  ready: '#10B981', transferred: '#8B5CF6', completed: '#4A5268',
+  ready: '#10B981', transferred: '#8B5CF6', on_warehouse: '#8B5CF6',
+  shipped: '#3B82F6', completed: '#4A5268',
   cancelled: '#EF4444',
 };
 const PAY_LABEL: Record<string, string> = { not_paid: 'Не оплачен', partial: 'Частично', paid: 'Оплачен' };
@@ -93,6 +100,7 @@ function buildGroups(orders: ChapanOrder[]): DisplayGroup[] {
 export default function ChapanOrdersPage() {
   const navigate = useNavigate();
   const userId = useAuthStore((state) => state.user?.id);
+  const { selectedOrderId, setSelectedOrderId } = useChapanUiStore();
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -101,7 +109,12 @@ export default function ChapanOrdersPage() {
   const [viewMode, setViewModeState] = useState<ViewMode>('grid');
   const [grouped, setGroupedState] = useState(true);
   const [showViewMenu, setShowViewMenu] = useState(false);
+  const [showAlertsPanel, setShowAlertsPanel] = useState(false);
   const viewPickerRef = useRef<HTMLDivElement>(null);
+
+  const { data: alertsData } = useUnpaidAlerts();
+  const alerts = alertsData?.results ?? [];
+  const activeAlertOrderIds = new Set(alerts.map(a => a.orderId));
 
   const deferred = useDeferredValue(search);
   const hasActiveFilters = Boolean(search || statusFilter || payFilter);
@@ -112,6 +125,15 @@ export default function ChapanOrdersPage() {
     const savedGroup = localStorage.getItem(groupStorageKey(userId));
     if (savedGroup !== null) setGroupedState(savedGroup !== 'false');
   }, [userId]);
+
+  // Restore selected order from store when returning to this page
+  useEffect(() => {
+    if (selectedOrderId) {
+      navigate(`/workzone/chapan/orders/${selectedOrderId}`);
+    }
+    // Empty dependency array - only run once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (!showViewMenu) return;
@@ -143,6 +165,16 @@ export default function ChapanOrdersPage() {
     limit: 100,
   });
   const orders: ChapanOrder[] = data?.results ?? [];
+
+  const newProductNames = [
+    ...new Set(
+      orders
+        .filter((o) => o.status === 'new' || o.status === 'confirmed')
+        .flatMap((o) => (o.items ?? []).map((i) => i.productName).filter((n): n is string => !!n)),
+    ),
+  ];
+  const { data: stockMap } = useProductsAvailability(newProductNames);
+
   const showToolbarCreateButton =
     isLoading || isError || hasActiveFilters || (data?.count ?? 0) > 0;
 
@@ -210,6 +242,32 @@ export default function ChapanOrdersPage() {
             <SlidersHorizontal size={13} /><span>Фильтры</span>
             {(statusFilter || payFilter) && <span className={styles.filterDot} />}
           </button>
+
+          {/* Alerts bell icon */}
+          <button
+            className={styles.alertsBtn}
+            onClick={() => setShowAlertsPanel(!showAlertsPanel)}
+            title={alerts.length > 0 ? `${alerts.length} неоплаченных заказов` : 'Нет активных алертов'}
+            style={{
+              position: 'relative',
+              padding: '6px 10px',
+              borderRadius: '8px',
+              background: alerts.length > 0 ? 'rgba(217, 79, 79, 0.1)' : 'transparent',
+              border: alerts.length > 0 ? '1px solid rgba(217, 79, 79, 0.25)' : '1px solid transparent',
+              color: alerts.length > 0 ? '#D94F4F' : 'var(--text-secondary)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '12px',
+              fontWeight: 500,
+              transition: 'all 140ms',
+            }}
+          >
+            <Bell size={13} />
+            {alerts.length > 0 && <span>{alerts.length}</span>}
+          </button>
+
           {showToolbarCreateButton && (
             <button className={styles.newBtn} onClick={() => navigate('/workzone/chapan/orders/new')}>
               <Plus size={14} /> Новый заказ
@@ -266,19 +324,104 @@ export default function ChapanOrdersPage() {
             <div className={styles.grid}>
               {displayGroups.map((g, i) =>
                 g.kind === 'single'
-                  ? <OrderCard key={g.order.id} order={g.order} onClick={() => navigate(`/workzone/chapan/orders/${g.order.id}`)} />
-                  : <BatchCard key={`batch-${i}`} group={g} navigate={navigate} />
+                  ? <OrderCard key={g.order.id} order={g.order} onClick={() => setSelectedOrderId(g.order.id)} hasAlert={activeAlertOrderIds.has(g.order.id)} stockMap={stockMap} />
+                  : <BatchCard key={`batch-${i}`} group={g} onSelectOrder={setSelectedOrderId} />
               )}
             </div>
           ) : (
             <div className={styles.list}>
               {displayGroups.map((g, i) =>
                 g.kind === 'single'
-                  ? <OrderRow key={g.order.id} order={g.order} onClick={() => navigate(`/workzone/chapan/orders/${g.order.id}`)} />
-                  : <BatchRow key={`batch-${i}`} group={g} navigate={navigate} />
+                  ? <OrderRow key={g.order.id} order={g.order} onClick={() => setSelectedOrderId(g.order.id)} hasAlert={activeAlertOrderIds.has(g.order.id)} stockMap={stockMap} />
+                  : <BatchRow key={`batch-${i}`} group={g} onSelectOrder={setSelectedOrderId} />
               )}
             </div>
           )}
+        </div>
+      )}
+
+      {selectedOrderId && <OrderDetailDrawer orderId={selectedOrderId} onClose={() => setSelectedOrderId(null)} navigate={navigate} />}
+
+      {/* Alerts panel */}
+      {showAlertsPanel && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 40,
+            background: 'rgba(0, 0, 0, 0.2)',
+          }}
+          onClick={() => setShowAlertsPanel(false)}
+        >
+          <div
+            style={{
+              position: 'fixed',
+              top: '70px',
+              right: '20px',
+              width: '360px',
+              maxHeight: '500px',
+              background: 'var(--bg-surface)',
+              border: '1px solid var(--border-default)',
+              borderRadius: '12px',
+              boxShadow: '0 10px 40px rgba(0, 0, 0, 0.2)',
+              overflow: 'auto',
+              zIndex: 41,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ padding: '16px', borderBottom: '1px solid var(--border-subtle)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: '14px', fontWeight: 600 }}>Неоплаченные заказы</span>
+                <button
+                  onClick={() => setShowAlertsPanel(false)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: 'var(--text-secondary)',
+                  }}
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+
+            <div style={{ padding: '12px' }}>
+              {alerts.length === 0 ? (
+                <div style={{ padding: '24px 12px', textAlign: 'center', color: 'var(--text-tertiary)' }}>
+                  Нет активных алертов
+                </div>
+              ) : (
+                alerts.map((alert) => (
+                  <div
+                    key={alert.id}
+                    style={{
+                      padding: '12px',
+                      marginBottom: '8px',
+                      background: 'rgba(217, 79, 79, 0.08)',
+                      border: '1px solid rgba(217, 79, 79, 0.25)',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                    }}
+                    onClick={() => {
+                      setSelectedOrderId(alert.orderId);
+                      setShowAlertsPanel(false);
+                    }}
+                  >
+                    <div style={{ fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>
+                      {alert.orderNumber}
+                    </div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                      {alert.order.clientName}
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#D94F4F', fontWeight: 500 }}>
+                      Остаток: {(alert.order.totalAmount - alert.order.paidAmount).toLocaleString('ru-KZ')} ₸
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -287,14 +430,16 @@ export default function ChapanOrdersPage() {
 
 // ── Single grid card ──────────────────────────────────────────────────────────
 
-function OrderCard({ order, onClick }: { order: ChapanOrder; onClick: () => void }) {
+function OrderCard({ order, onClick, hasAlert, stockMap }: { order: ChapanOrder; onClick: () => void; hasAlert?: boolean; stockMap?: ProductsAvailabilityMap }) {
   const overdue = isOverdue(order.dueDate);
   const first = order.items?.[0];
   const more = (order.items?.length ?? 0) - 1;
+  const showStock = (order.status === 'new' || order.status === 'confirmed') && !!first?.productName && !!stockMap;
+  const stockInfo = showStock ? stockMap![first!.productName] : undefined;
 
   return (
     <button
-      className={styles.card}
+      className={`${styles.card} ${hasAlert ? styles.cardAlert : ''}`}
       style={{ '--status-color': STATUS_COLOR[order.status] } as React.CSSProperties}
       onClick={onClick}
     >
@@ -304,6 +449,11 @@ function OrderCard({ order, onClick }: { order: ChapanOrder; onClick: () => void
         {order.priority !== 'normal' && (
           <span className={`${styles.priorityBadge} ${order.priority === 'vip' ? styles.vip : styles.urgent}`}>
             {PRIORITY_LABEL[order.priority]}
+          </span>
+        )}
+        {stockInfo !== undefined && (
+          <span className={stockInfo.available ? styles.stockPillIn : styles.stockPillOut}>
+            {stockInfo.available ? `склад: ${stockInfo.qty} шт.` : 'нет на складе'}
           </span>
         )}
       </div>
@@ -324,7 +474,7 @@ function OrderCard({ order, onClick }: { order: ChapanOrder; onClick: () => void
         <span className={styles.cardPay} style={{ color: PAY_COLOR[order.paymentStatus] }}>{PAY_LABEL[order.paymentStatus]}</span>
         {order.dueDate && (
           <span className={styles.cardDate} style={{ color: overdue ? '#EF4444' : '#4A5268' }}>
-            {overdue ? '⚠ ' : ''}{fmtDate(order.dueDate)}
+            {fmtDate(order.dueDate)}
           </span>
         )}
       </div>
@@ -334,7 +484,7 @@ function OrderCard({ order, onClick }: { order: ChapanOrder; onClick: () => void
 
 // ── Batch grid card ───────────────────────────────────────────────────────────
 
-function BatchCard({ group, navigate }: { group: { orders: ChapanOrder[] }; navigate: (p: string) => void }) {
+function BatchCard({ group, onSelectOrder }: { group: { orders: ChapanOrder[] }; onSelectOrder: (id: string) => void }) {
   const [expanded, setExpanded] = useState(false);
   const { orders } = group;
   const first = orders[0];
@@ -389,7 +539,7 @@ function BatchCard({ group, navigate }: { group: { orders: ChapanOrder[] }; navi
               className={styles.batchDateRange}
               style={{ color: anyOverdue ? '#EF4444' : '#6B7280' }}
             >
-              {anyOverdue ? '⚠ ' : ''}{fmtDate(minDate)}
+              {fmtDate(minDate)}
               {maxDate && maxDate !== minDate ? ` — ${fmtDate(maxDate)}` : ''}
             </span>
           )}
@@ -417,7 +567,7 @@ function BatchCard({ group, navigate }: { group: { orders: ChapanOrder[] }; navi
                 key={o.id}
                 className={styles.batchMiniCard}
                 style={{ '--status-color': STATUS_COLOR[o.status], '--delay': `${i * 40}ms` } as React.CSSProperties}
-                onClick={e => { e.stopPropagation(); navigate(`/workzone/chapan/orders/${o.id}`); }}
+                onClick={e => { e.stopPropagation(); onSelectOrder(o.id); }}
               >
                 <span className={styles.batchMiniStripe} />
                 <div className={styles.batchMiniContent}>
@@ -452,14 +602,16 @@ function BatchCard({ group, navigate }: { group: { orders: ChapanOrder[] }; navi
 
 // ── Single list row ───────────────────────────────────────────────────────────
 
-function OrderRow({ order, onClick }: { order: ChapanOrder; onClick: () => void }) {
+function OrderRow({ order, onClick, hasAlert, stockMap }: { order: ChapanOrder; onClick: () => void; hasAlert?: boolean; stockMap?: ProductsAvailabilityMap }) {
   const overdue = isOverdue(order.dueDate);
   const first = order.items?.[0];
   const more = (order.items?.length ?? 0) - 1;
+  const showStock = (order.status === 'new' || order.status === 'confirmed') && !!first?.productName && !!stockMap;
+  const stockInfo = showStock ? stockMap![first!.productName] : undefined;
 
   return (
     <button
-      className={styles.row}
+      className={`${styles.row} ${hasAlert ? styles.rowAlert : ''}`}
       style={{ '--status-color': STATUS_COLOR[order.status] } as React.CSSProperties}
       onClick={onClick}
     >
@@ -470,6 +622,11 @@ function OrderRow({ order, onClick }: { order: ChapanOrder; onClick: () => void 
         {order.priority !== 'normal' && (
           <span className={`${styles.priorityBadge} ${order.priority === 'vip' ? styles.vip : styles.urgent}`}>
             {PRIORITY_LABEL[order.priority]}
+          </span>
+        )}
+        {stockInfo !== undefined && (
+          <span className={stockInfo.available ? styles.stockPillIn : styles.stockPillOut}>
+            {stockInfo.available ? `склад: ${stockInfo.qty} шт.` : 'нет на складе'}
           </span>
         )}
       </div>
@@ -501,7 +658,7 @@ function OrderRow({ order, onClick }: { order: ChapanOrder; onClick: () => void 
       </div>
       <div className={styles.rowDate}>
         {order.dueDate
-          ? <span style={{ color: overdue ? '#EF4444' : '#6B7280' }}>{overdue ? '⚠ ' : ''}{fmtDate(order.dueDate)}</span>
+          ? <span style={{ color: overdue ? '#EF4444' : '#6B7280' }}>{fmtDate(order.dueDate)}</span>
           : <span className={styles.rowDateEmpty}>—</span>
         }
       </div>
@@ -511,7 +668,7 @@ function OrderRow({ order, onClick }: { order: ChapanOrder; onClick: () => void 
 
 // ── Batch list row ────────────────────────────────────────────────────────────
 
-function BatchRow({ group, navigate }: { group: { orders: ChapanOrder[] }; navigate: (p: string) => void }) {
+function BatchRow({ group, onSelectOrder }: { group: { orders: ChapanOrder[] }; onSelectOrder: (id: string) => void }) {
   const [expanded, setExpanded] = useState(false);
   const { orders } = group;
   const first = orders[0];
@@ -567,7 +724,7 @@ function BatchRow({ group, navigate }: { group: { orders: ChapanOrder[] }; navig
         <div className={styles.rowDate}>
           {minDate
             ? <span style={{ color: anyOverdue ? '#EF4444' : '#6B7280' }}>
-                {anyOverdue ? '⚠ ' : ''}{fmtDate(minDate)}
+                {fmtDate(minDate)}
                 {maxDate && maxDate !== minDate ? `–${fmtDate(maxDate)}` : ''}
               </span>
             : <span className={styles.rowDateEmpty}>—</span>
@@ -579,7 +736,7 @@ function BatchRow({ group, navigate }: { group: { orders: ChapanOrder[] }; navig
       {expanded && (
         <div className={styles.batchRowExpanded}>
           {orders.map(o => (
-            <OrderRow key={o.id} order={o} onClick={() => navigate(`/workzone/chapan/orders/${o.id}`)} />
+            <OrderRow key={o.id} order={o} onClick={() => onSelectOrder(o.id)} />
           ))}
         </div>
       )}

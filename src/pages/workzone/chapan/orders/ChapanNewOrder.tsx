@@ -1,5 +1,5 @@
 import type { InputHTMLAttributes } from 'react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useDeferredValue } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -7,7 +7,10 @@ import { z } from 'zod';
 import { ChevronLeft, Plus, Trash2, Calculator, AlertCircle, Paperclip, X, ImagePlus } from 'lucide-react';
 import { useId } from 'react';
 import { useCreateOrder, useChapanCatalogs } from '../../../../entities/order/queries';
+import { useProductsAvailability } from '../../../../entities/warehouse/queries';
 import type { Priority } from '../../../../entities/order/types';
+import { formatPersonNameInput } from '../../../../shared/utils/person';
+import { formatKazakhPhoneInput, isKazakhPhoneComplete } from '../../../../shared/utils/kz';
 import styles from './ChapanNewOrder.module.css';
 
 // ─── Payment methods ──────────────────────────────────────────────────────────
@@ -47,10 +50,13 @@ const itemSchema = z.object({
 const schema = z
   .object({
     clientName:   z.string().min(2, 'Минимум 2 символа'),
-    clientPhone:  z.string().min(1, 'Телефон обязателен').regex(/^\+?[\d\s\-()]{7,}$/, 'Неверный формат'),
-    city:         z.string().optional(),
-    postalCode:   z.string().optional(),
-    deliveryType: z.string().optional(),
+    clientPhone:  z.string()
+      .min(1, 'Телефон обязателен')
+      .refine((value) => isKazakhPhoneComplete(value), 'Введите номер в формате +7 (777)-777-77-77'),
+    city:          z.string().optional(),
+    streetAddress: z.string().optional(),
+    postalCode:    z.string().optional(),
+    deliveryType:  z.string().optional(),
     source:       z.string().optional(),
     priority:     z.enum(['normal', 'urgent', 'vip']),
     orderDate:    z.string(),
@@ -185,6 +191,10 @@ export default function ChapanNewOrderPage() {
   // Derived values
   const items            = watch('items');
   const priority         = watch('priority');
+  const deferredProductNames = useDeferredValue(
+    items.map((i) => i.productName).filter(Boolean),
+  );
+  const { data: stockMap } = useProductsAvailability(deferredProductNames);
   const paymentMethod    = watch('paymentMethod');
   const totalAmountRaw   = watch('totalAmount');
   const orderDiscountRaw = watch('orderDiscount');
@@ -221,8 +231,9 @@ export default function ChapanNewOrderPage() {
     const payloadItems = buildPayloadItems(data.items, orderDiscount);
 
     await createOrder.mutateAsync({
-      clientName:    data.clientName,
-      clientPhone:   data.clientPhone,
+      clientName:    formatPersonNameInput(data.clientName).trim(),
+      clientPhone:   formatKazakhPhoneInput(data.clientPhone),
+      streetAddress: data.streetAddress?.trim() || undefined,
       postalCode:    data.postalCode || undefined,
       priority:      data.priority as Priority,
       orderDate:     data.orderDate || undefined,
@@ -267,21 +278,38 @@ export default function ChapanNewOrderPage() {
             <div className={styles.row2}>
               <div className={styles.field}>
                 <label className={styles.label}>ФИО клиента <span className={styles.req}>*</span></label>
-                <input
-                  {...register('clientName')}
-                  className={`${styles.input} ${errors.clientName ? styles.inputError : ''}`}
-                  placeholder="Аскаров Аскар Аскарович"
-                  autoFocus
+                <Controller
+                  control={control}
+                  name="clientName"
+                  render={({ field }) => (
+                    <input
+                      {...field}
+                      value={field.value ?? ''}
+                      onChange={(event) => field.onChange(formatPersonNameInput(event.target.value))}
+                      className={`${styles.input} ${errors.clientName ? styles.inputError : ''}`}
+                      placeholder="Аскаров Аскар Аскарович"
+                      autoFocus
+                    />
+                  )}
                 />
                 {errors.clientName && <span className={styles.fieldError}>{errors.clientName.message}</span>}
               </div>
               <div className={styles.field}>
                 <label className={styles.label}>Телефон <span className={styles.req}>*</span></label>
-                <input
-                  {...register('clientPhone')}
-                  type="tel"
-                  className={`${styles.input} ${errors.clientPhone ? styles.inputError : ''}`}
-                  placeholder="+7 701 234 5678"
+                <Controller
+                  control={control}
+                  name="clientPhone"
+                  render={({ field }) => (
+                    <input
+                      {...field}
+                      type="tel"
+                      inputMode="tel"
+                      value={field.value ?? ''}
+                      onChange={(event) => field.onChange(formatKazakhPhoneInput(event.target.value))}
+                      className={`${styles.input} ${errors.clientPhone ? styles.inputError : ''}`}
+                      placeholder="+7 (701)-234-56-78"
+                    />
+                  )}
                 />
                 {errors.clientPhone && <span className={styles.fieldError}>{errors.clientPhone.message}</span>}
               </div>
@@ -302,6 +330,16 @@ export default function ChapanNewOrderPage() {
                 <Controller control={control} name="deliveryType" render={({ field }) => (
                   <SelectOrText {...field} value={field.value ?? ''} options={DELIVERY} placeholder="Выберите или введите" className={styles.input} />
                 )} />
+              </div>
+            </div>
+            <div className={styles.rowFull}>
+              <div className={styles.field}>
+                <label className={styles.label}>Адрес доставки</label>
+                <input
+                  {...register('streetAddress')}
+                  className={styles.input}
+                  placeholder="ул. Абая 10, кв. 5 / ориентир"
+                />
               </div>
             </div>
             <div className={styles.rowHalf}>
@@ -326,6 +364,8 @@ export default function ChapanNewOrderPage() {
               const linePrice   = (Number(items[idx]?.quantity) || 0) * (Number(items[idx]?.unitPrice) || 0);
               const lineDisc    = Number(items[idx]?.itemDiscount) || 0;
               const lineTotal   = Math.max(0, linePrice - lineDisc);
+              const itemStockName = items[idx]?.productName;
+              const itemStock = itemStockName && stockMap ? stockMap[itemStockName] : undefined;
 
               return (
                 <div key={field.id} className={styles.itemCard}>
@@ -354,6 +394,11 @@ export default function ChapanNewOrderPage() {
                         )
                       )} />
                       {errors.items?.[idx]?.productName && <span className={styles.fieldError}>{errors.items[idx]?.productName?.message}</span>}
+                      {itemStock !== undefined && (
+                        <span className={itemStock.available ? styles.stockBadgeIn : styles.stockBadgeOut}>
+                          {itemStock.available ? `В наличии: ${itemStock.qty} шт.` : 'Нет на складе'}
+                        </span>
+                      )}
                     </div>
                     <div className={styles.field}>
                       <label className={styles.label}>Размер <span className={styles.req}>*</span></label>
@@ -412,7 +457,7 @@ export default function ChapanNewOrderPage() {
                     </div>
                     <div className={styles.field}>
                       <label className={styles.label}>Кол-во</label>
-                      <input {...register(`items.${idx}.quantity`, { valueAsNumber: true })} type="number" min="1" className={styles.input} onWheel={(e) => e.currentTarget.blur()} />
+                      <input {...register(`items.${idx}.quantity`, { valueAsNumber: true })} type="number" min="1" className={styles.input} onWheel={(e) => e.currentTarget.blur()} onFocus={(e) => e.target.select()} />
                     </div>
                     <div className={styles.field}>
                       <label className={styles.label}>Цена за ед. (₸)</label>
@@ -424,6 +469,7 @@ export default function ChapanNewOrderPage() {
                           value={f.value ?? ''}
                           onChange={(e) => f.onChange(parseOptionalAmount(e.target.value))}
                           onWheel={(e) => e.currentTarget.blur()}
+                          onFocus={(e) => e.target.select()}
                         />
                       )} />
                     </div>
@@ -437,6 +483,7 @@ export default function ChapanNewOrderPage() {
                           value={f.value ?? ''}
                           onChange={(e) => f.onChange(parseOptionalAmount(e.target.value))}
                           onWheel={(e) => e.currentTarget.blur()}
+                          onFocus={(e) => e.target.select()}
                         />
                       )} />
                     </div>
@@ -581,6 +628,7 @@ export default function ChapanNewOrderPage() {
                     value={field.value ?? ''}
                     onChange={(e) => field.onChange(parseOptionalAmount(e.target.value))}
                     onWheel={(e) => e.currentTarget.blur()}
+                    onFocus={(e) => e.target.select()}
                   />
                 )} />
               </div>
@@ -607,6 +655,7 @@ export default function ChapanNewOrderPage() {
                     value={field.value ?? ''}
                     onChange={(e) => field.onChange(parseOptionalAmount(e.target.value))}
                     onWheel={(e) => e.currentTarget.blur()}
+                    onFocus={(e) => e.target.select()}
                   />
                 )} />
                 {errors.prepayment && <span className={styles.fieldError}>{errors.prepayment.message}</span>}
@@ -659,6 +708,7 @@ export default function ChapanNewOrderPage() {
                         value={field.value ?? ''}
                         onChange={(e) => field.onChange(parseOptionalAmount(e.target.value))}
                         onWheel={(e) => e.currentTarget.blur()}
+                        onFocus={(e) => e.target.select()}
                       />
                     )} />
                   </div>

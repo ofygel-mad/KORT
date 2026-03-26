@@ -120,6 +120,13 @@
   background: var(--ch-accent-soft);
 }
 
+/* ── Select mode toggle ── */
+.selectToggleActive {
+  color: #4FC999;
+  border-color: rgba(79, 201, 153, 0.4);
+  background: rgba(79, 201, 153, 0.08);
+}
+
 /* ── Count ── */
 .count { font-size: 12px; color: var(--ch-text-muted); }
 
@@ -145,6 +152,25 @@
   transition: border-color 140ms, background 140ms, box-shadow 140ms;
 }
 .card:hover { background: var(--ch-card); border-color: var(--ch-border-plat); box-shadow: 0 2px 12px rgba(0,0,0,.08); }
+.cardSelected {
+  border-color: rgba(79, 201, 153, 0.5);
+  background: rgba(79, 201, 153, 0.06);
+  box-shadow: 0 0 0 1px rgba(79, 201, 153, 0.2);
+  position: relative;
+}
+.selectCheckmark {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #4FC999;
+  color: #0B0D12;
+}
 
 .cardHead { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
@@ -188,6 +214,7 @@
 .itemMore { font-size: 10px; color: var(--ch-text-muted); }
 
 .cardFoot { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.payBadge { font-size: 10px; font-weight: 600; letter-spacing: .03em; }
 .amount { font-size: 13px; font-weight: 700; color: var(--ch-text); }
 .deadline { font-size: 11px; color: var(--ch-text-muted); }
 
@@ -312,6 +339,12 @@
   opacity: 0.92;
 }
 .row:hover { border-color: var(--ch-border-plat); background: var(--ch-card); box-shadow: 0 2px 12px rgba(0,0,0,.08); opacity: 1; }
+.rowSelected {
+  border-color: rgba(79, 201, 153, 0.5);
+  background: rgba(79, 201, 153, 0.06);
+  opacity: 1;
+}
+.rowCheckmark { color: #4FC999; flex-shrink: 0; }
 
 .rowStripe { align-self: stretch; background: var(--status-color); opacity: 0.6; transition: opacity 140ms; }
 .row:hover .rowStripe { opacity: 0.9; }
@@ -345,6 +378,178 @@
 
 @keyframes shimmer { 0%,100%{opacity:.4} 50%{opacity:.8} }
 
+/* ── Floating action bar ── */
+.floatingBar {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 20px;
+  background: rgba(20, 24, 32, 0.95);
+  border: 1px solid var(--ch-border-plat);
+  border-radius: 14px;
+  box-shadow: 0 12px 48px rgba(0,0,0,.5);
+  backdrop-filter: blur(16px);
+  z-index: 60;
+  max-width: calc(100vw - 48px);
+}
+.floatingLeft { display: flex; align-items: center; gap: 10px; }
+.floatingRight { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.floatingCount {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ch-text);
+  white-space: nowrap;
+}
+.floatingClear {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: 1px solid var(--ch-border);
+  border-radius: 7px;
+  color: var(--ch-text-muted);
+  font: inherit;
+  font-size: 11px;
+  padding: 5px 10px;
+  cursor: pointer;
+  transition: color 120ms, border-color 120ms;
+}
+.floatingClear:hover { color: var(--ch-text); border-color: var(--ch-plat-border); }
+.floatingAction {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 9px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  background: var(--ch-surface);
+  border: 1px solid var(--ch-border);
+  color: var(--ch-text-dim);
+  transition: background 120ms, border-color 120ms, color 120ms;
+}
+.floatingAction:hover { border-color: var(--ch-plat-border); color: var(--ch-text); }
+.floatingAction:disabled {
+  opacity: .4;
+  cursor: not-allowed;
+}
+.floatingActionPrimary {
+  background: rgba(79, 201, 153, 0.12);
+  border-color: rgba(79, 201, 153, 0.3);
+  color: #4FC999;
+}
+.floatingActionPrimary:hover:not(:disabled) {
+  background: rgba(79, 201, 153, 0.2);
+  border-color: rgba(79, 201, 153, 0.5);
+}
+
+/* ── Confirm dialog ── */
+.confirmOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 7, 11, 0.68);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 80;
+  padding: 20px;
+}
+.confirmDialog {
+  width: 100%;
+  max-width: 420px;
+  background: var(--ch-card);
+  border: 1px solid var(--ch-border-plat);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.confirmTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ch-text);
+}
+.confirmText {
+  font-size: 13px;
+  color: var(--ch-text-dim);
+  line-height: 1.45;
+}
+.unpaidLine {
+  padding: 4px 0;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: #E5922A;
+}
+.confirmActions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+.confirmSecondary {
+  background: var(--ch-surface);
+  border: 1px solid var(--ch-border);
+  color: var(--ch-text-dim);
+  border-radius: 9px;
+  padding: 10px 14px;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.confirmDanger {
+  background: rgba(217, 79, 79, 0.12);
+  border: 1px solid rgba(217, 79, 79, 0.35);
+  color: #E87272;
+  border-radius: 9px;
+  padding: 10px 14px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 130ms, border-color 130ms;
+}
+.confirmDanger:hover {
+  background: rgba(217, 79, 79, 0.2);
+  border-color: rgba(217, 79, 79, 0.55);
+}
+.confirmDanger:disabled {
+  opacity: .6;
+  cursor: not-allowed;
+}
+.notifyBtn {
+  background: linear-gradient(135deg, rgba(217, 79, 79, 0.15) 0%, rgba(217, 79, 79, 0.08) 100%);
+  border: 1px solid rgba(217, 79, 79, 0.45);
+  color: #E87272;
+  border-radius: 9px;
+  padding: 10px 18px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  letter-spacing: 0.01em;
+  transition: background 140ms, border-color 140ms, box-shadow 140ms;
+}
+.notifyBtn:hover {
+  background: linear-gradient(135deg, rgba(217, 79, 79, 0.25) 0%, rgba(217, 79, 79, 0.14) 100%);
+  border-color: rgba(217, 79, 79, 0.65);
+  box-shadow: 0 0 12px rgba(217, 79, 79, 0.2);
+}
+.notifyBtn:disabled {
+  opacity: .6;
+  cursor: not-allowed;
+}
+
 @media (max-width: 960px) {
   .toolbar { flex-direction: column; align-items: stretch; }
   .toolbarRight { flex-wrap: wrap; }
@@ -356,3 +561,144 @@
   .row { grid-template-columns: 2px 1fr; }
   .actions { padding: 0 12px 12px; }
 }
+
+/* ── Invoice side panel ── */
+.invoicePanelOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 7, 11, 0.5);
+  z-index: 50;
+  display: flex;
+  justify-content: flex-end;
+}
+.invoicePanel {
+  width: 420px;
+  max-width: 95vw;
+  height: 100%;
+  background: var(--ch-card);
+  border-left: 1px solid var(--ch-border-plat);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: -24px 0 64px rgba(0,0,0,.35);
+}
+.invoicePanelHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid var(--ch-border);
+  flex-shrink: 0;
+}
+.invoicePanelTitle { font-size: 16px; font-weight: 700; color: var(--ch-text); }
+.invoicePanelClose {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--ch-text-muted);
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 7px;
+  transition: color 120ms, background 120ms;
+}
+.invoicePanelClose:hover { color: var(--ch-text); background: var(--ch-surface); }
+.invoicePanelBody {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.invoiceSection { display: flex; flex-direction: column; gap: 8px; }
+.invoiceSectionLabel {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--ch-text-muted);
+}
+.invoiceCreateBox {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  background: var(--ch-surface);
+  border: 1px solid rgba(79, 201, 153, 0.2);
+  border-radius: 10px;
+}
+.invoiceCreateInfo { font-size: 12px; color: var(--ch-text-dim); line-height: 1.4; }
+.invoiceCreateBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 10px 14px;
+  background: rgba(79, 201, 153, 0.12);
+  border: 1px solid rgba(79, 201, 153, 0.3);
+  border-radius: 8px;
+  color: #4FC999;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 120ms, border-color 120ms;
+}
+.invoiceCreateBtn:hover:not(:disabled) {
+  background: rgba(79, 201, 153, 0.2);
+  border-color: rgba(79, 201, 153, 0.5);
+}
+.invoiceCreateBtn:disabled { opacity: .5; cursor: not-allowed; }
+.invoiceRow {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  background: var(--ch-surface);
+  border: 1px solid var(--ch-border);
+  border-radius: 10px;
+}
+.invoiceRowHead { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.invoiceRowNum {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ch-text);
+}
+.invoiceStatusBadge {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+.invoiceConfirmIcons { display: flex; gap: 5px; margin-left: auto; }
+.invoiceConfirmIcon {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.invoiceRowMeta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 11px;
+  color: var(--ch-text-muted);
+}
+.invoicePanelEmpty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--ch-text-muted);
+}
+.invoicePanelEmptyText { font-size: 13px; color: var(--ch-text-dim); }
+.invoicePanelEmptyNote { font-size: 11px; color: var(--ch-text-muted); }

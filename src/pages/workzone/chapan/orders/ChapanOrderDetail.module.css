@@ -32,6 +32,9 @@
 .itemName { font-size:14px; color:var(--ch-text); }
 .itemMeta { font-size:11px; color:var(--ch-text-muted); }
 .itemNote { font-size:11px; color:var(--ch-plat-dim); font-style:italic; }
+.stockBadgeIn { display:inline-flex; align-items:center; gap:4px; font-size:10px; font-weight:600; color:#10B981; margin-top:2px; }
+.stockBadgeOut { display:inline-flex; align-items:center; gap:4px; font-size:10px; font-weight:600; color:#EF4444; margin-top:2px; }
+.stockNotice { display:flex; align-items:center; gap:7px; padding:10px 14px; border-radius:8px; border:1px solid color-mix(in srgb, #10B981 28%, transparent); background:color-mix(in srgb, #10B981 10%, transparent); color:#10B981; font-size:12px; font-weight:600; }
 .itemPrice { font-size:14px; font-weight:600; color:var(--ch-plat-bright); white-space:nowrap; }
 .noItems { font-size:12px; color:var(--ch-text-muted); text-align:center; padding:12px 0; }
 .itemsTotal { display:flex; justify-content:space-between; align-items:center; padding:10px 12px; border-top:1px solid var(--ch-border); margin-top:4px; font-size:13px; color:var(--ch-text-dim); }
@@ -60,6 +63,7 @@
 .payInput:focus { border-color:var(--ch-plat-border); }
 .payInputError { border-color:rgba(239,68,68,.5)!important; }
 .payError { font-size:11px; color:var(--ch-red); }
+.payBalanceHint { font-size:11px; color:rgba(240,232,212,.45); margin-top:2px; }
 .payFormActions { display:flex; gap:8px; }
 
 .addPayBtn,
