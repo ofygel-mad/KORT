@@ -349,7 +349,7 @@
     0 0 0 1px rgba(59,115,189,0.06);
   cursor: grab;
   touch-action: none;
-  transition: transform 220ms ease, border-color 180ms ease, box-shadow 180ms ease, opacity 220ms ease;
+  transition: left 180ms ease-out, top 180ms ease-out, transform 220ms ease, border-color 180ms ease, box-shadow 180ms ease, opacity 220ms ease;
   will-change: transform;
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;

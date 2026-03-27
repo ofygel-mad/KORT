@@ -1,14 +1,17 @@
 import { useState, useDeferredValue } from 'react';
-import { Plus, Search, Package, TrendingDown, AlertTriangle, Download, PackageCheck, Send, FileText, X, CheckCircle2, AlertCircle } from 'lucide-react';
+import {
+  AlertCircle, AlertTriangle, CheckCircle2, ChevronRight, Download,
+  FileText, Package, PackageCheck, Phone, Plus, Search, Send, TrendingDown, User, X,
+} from 'lucide-react';
 import {
   useWarehouseItems, useWarehouseMovements, useWarehouseAlerts,
   useWarehouseCategories, useCreateItem, useAddMovement, useDeleteItem, useResolveAlert,
 } from '../../entities/warehouse/queries';
 import {
-  useInvoices, useConfirmWarehouse, useOrders, useShipOrder,
+  useInvoices, useConfirmWarehouse, useOrders, useShipOrder, useOrder,
 } from '../../entities/order/queries';
 import type { WarehouseItem, MovementType, CreateItemDto, AddMovementDto } from '../../entities/warehouse/types';
-import type { ChapanOrder, ChapanInvoice } from '../../entities/order/types';
+import type { ChapanInvoice, ChapanOrder } from '../../entities/order/types';
 import { getStockStatus } from '../../entities/warehouse/types';
 import { Skeleton } from '../../shared/ui/Skeleton';
 import { exportToCSV } from '../../shared/lib/export';
@@ -24,11 +27,271 @@ const MOVEMENT_COLOR: Record<MovementType, string> = {
   write_off: 'var(--fill-negative)', return: 'var(--fill-info)',
 };
 
+const PAY_LABEL: Record<string, string> = {
+  not_paid: 'Не оплачен', partial: 'Частично оплачен', paid: 'Оплачен',
+};
+const PAY_COLOR: Record<string, string> = {
+  not_paid: 'var(--fill-negative)', partial: 'var(--fill-warning)', paid: 'var(--fill-positive)',
+};
+const PRIORITY_LABEL: Record<string, string> = { normal: 'Обычный', urgent: 'Срочно', vip: 'VIP' };
+const PRIORITY_COLOR: Record<string, string> = { normal: 'var(--text-tertiary)', urgent: '#D94F4F', vip: '#C9A84C' };
+
 function fmtDate(s: string) {
   return new Date(s).toLocaleDateString('ru-KZ', { day: '2-digit', month: 'short', year: 'numeric' });
 }
-function fmtNum(n: number) {
-  return new Intl.NumberFormat('ru-KZ').format(n);
+function fmtNum(n: number) { return new Intl.NumberFormat('ru-KZ').format(n); }
+function fmtMoney(n: number) {
+  return new Intl.NumberFormat('ru-KZ', { maximumFractionDigits: 0 }).format(n) + ' ₸';
+}
+
+// ── Invoice Detail Drawer ─────────────────────────────────────────────────────
+
+function InvoiceDetailDrawer({ invoice, onClose }: { invoice: ChapanInvoice; onClose: () => void }) {
+  const confirmWarehouse = useConfirmWarehouse();
+  const alreadyConfirmed = invoice.warehouseConfirmed;
+
+  const orders = invoice.items?.map((it) => it.order).filter(Boolean) ?? [];
+
+  return (
+    <div className={styles.drawerOverlay} onClick={onClose}>
+      <div className={styles.drawer} onClick={(e) => e.stopPropagation()}>
+        <div className={styles.drawerHeader}>
+          <div>
+            <div className={styles.drawerTitle}>Накладная #{invoice.invoiceNumber}</div>
+            <div className={styles.drawerSubtitle}>{fmtDate(invoice.createdAt)} · Создал: {invoice.createdByName}</div>
+          </div>
+          <button className={styles.drawerClose} onClick={onClose}><X size={14} /></button>
+        </div>
+
+        <div className={styles.drawerStatusRow}>
+          <div className={styles.drawerStatusItem}>
+            {invoice.seamstressConfirmed
+              ? <CheckCircle2 size={14} style={{ color: 'var(--fill-positive)', flexShrink: 0 }} />
+              : <AlertCircle size={14} style={{ color: 'var(--fill-warning)', flexShrink: 0 }} />}
+            <span style={{ color: invoice.seamstressConfirmed ? 'var(--fill-positive)' : 'var(--text-tertiary)' }}>
+              {invoice.seamstressConfirmed ? `Цех отправил${invoice.seamstressConfirmedBy ? ` (${invoice.seamstressConfirmedBy})` : ''}` : 'Цех ещё не подтвердил'}
+            </span>
+          </div>
+          <div className={styles.drawerStatusItem}>
+            {alreadyConfirmed
+              ? <CheckCircle2 size={14} style={{ color: 'var(--fill-positive)', flexShrink: 0 }} />
+              : <AlertCircle size={14} style={{ color: 'var(--fill-warning)', flexShrink: 0 }} />}
+            <span style={{ color: alreadyConfirmed ? 'var(--fill-positive)' : 'var(--text-tertiary)' }}>
+              {alreadyConfirmed ? `Склад принял${invoice.warehouseConfirmedBy ? ` (${invoice.warehouseConfirmedBy})` : ''}` : 'Склад ещё не принял'}
+            </span>
+          </div>
+        </div>
+
+        <div className={styles.drawerBody}>
+          {orders.length === 0 && (
+            <div style={{ color: 'var(--text-tertiary)', fontSize: 13, textAlign: 'center', padding: '32px 0' }}>Нет заказов в накладной</div>
+          )}
+
+          {orders.map((order) => {
+            const orderTotal = order.items?.reduce((s, i) => s + i.quantity * i.unitPrice, 0) ?? order.totalAmount;
+            return (
+              <div key={order.id} className={styles.invOrderCard}>
+                <div className={styles.invOrderHead}>
+                  <span className={styles.invOrderNum}>#{order.orderNumber}</span>
+                  {order.priority !== 'normal' && (
+                    <span style={{ fontSize: 11, color: PRIORITY_COLOR[order.priority], fontWeight: 600, padding: '2px 7px', borderRadius: 5, background: `${PRIORITY_COLOR[order.priority]}1a` }}>
+                      {PRIORITY_LABEL[order.priority]}
+                    </span>
+                  )}
+                  <div className={styles.invOrderClient}>
+                    <User size={12} /> {order.clientName}
+                    {order.clientPhone && <><Phone size={12} style={{ marginLeft: 8 }} /> {order.clientPhone}</>}
+                  </div>
+                </div>
+
+                <div className={styles.drawerTableWrap}>
+                  <table>
+                    <thead>
+                      <tr>
+                        {['Модель', 'Размер', 'Кол-во', 'Цена', 'Сумма'].map((h) => (
+                          <th key={h} style={{ padding: '6px 14px', fontSize: 10, fontWeight: 600, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--text-tertiary)', textAlign: 'left', whiteSpace: 'nowrap' }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(order.items ?? []).map((item) => (
+                        <tr key={item.id} style={{ borderTop: '1px solid var(--border-subtle)' }}>
+                          <td style={{ padding: '8px 14px', fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>{item.productName}</td>
+                          <td style={{ padding: '8px 14px', fontSize: 12, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{item.size}</td>
+                          <td style={{ padding: '8px 14px', fontSize: 12, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{item.quantity} шт.</td>
+                          <td style={{ padding: '8px 14px', fontSize: 12, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{fmtMoney(item.unitPrice)}</td>
+                          <td style={{ padding: '8px 14px', fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>{fmtMoney(item.quantity * item.unitPrice)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className={styles.invOrderFoot}>
+                  <span style={{ fontSize: 12, color: PAY_COLOR[order.paymentStatus] ?? 'var(--text-tertiary)', fontWeight: 600 }}>
+                    {PAY_LABEL[order.paymentStatus] ?? order.paymentStatus}
+                  </span>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
+                    Итого: {fmtMoney(orderTotal)}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className={styles.drawerFooter}>
+          {alreadyConfirmed ? (
+            <div className={styles.drawerConfirmedNotice}>
+              <CheckCircle2 size={16} />
+              Накладная принята — товар поступил на склад
+            </div>
+          ) : (
+            <button
+              className={`${styles.drawerActionBtn} ${styles.drawerActionBtnPrimary}`}
+              onClick={() => { confirmWarehouse.mutate(invoice.id); onClose(); }}
+              disabled={confirmWarehouse.isPending}
+            >
+              <PackageCheck size={16} />
+              {confirmWarehouse.isPending ? 'Подтверждение...' : 'Подтвердить получение товара'}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Order Detail Drawer (warehouse view) ──────────────────────────────────────
+
+function OrderDetailDrawer({ orderId, onClose }: { orderId: string; onClose: () => void }) {
+  const { data: order, isLoading } = useOrder(orderId);
+  const shipOrder = useShipOrder();
+
+  return (
+    <div className={styles.drawerOverlay} onClick={onClose}>
+      <div className={styles.drawer} onClick={(e) => e.stopPropagation()}>
+        {isLoading || !order ? (
+          <>
+            <div className={styles.drawerHeader}>
+              <span className={styles.drawerTitle}>Загрузка...</span>
+              <button className={styles.drawerClose} onClick={onClose}><X size={14} /></button>
+            </div>
+            <div className={styles.drawerBody}>
+              {[...Array(4)].map((_, i) => <Skeleton key={i} height={48} radius={8} />)}
+            </div>
+          </>
+        ) : (
+          <>
+            <div className={styles.drawerHeader}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <div className={styles.drawerTitle}>#{order.orderNumber}</div>
+                  {order.priority !== 'normal' && (
+                    <span style={{ fontSize: 11, color: PRIORITY_COLOR[order.priority], fontWeight: 600, padding: '2px 8px', borderRadius: 6, background: `${PRIORITY_COLOR[order.priority]}1a`, flexShrink: 0 }}>
+                      {PRIORITY_LABEL[order.priority] ?? order.priority}
+                    </span>
+                  )}
+                </div>
+                <div className={styles.drawerSubtitle} style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><User size={11} /> {order.clientName}</span>
+                  {order.clientPhone && <a href={`tel:${order.clientPhone}`} style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'var(--text-tertiary)', textDecoration: 'none' }}><Phone size={11} /> {order.clientPhone}</a>}
+                  {order.dueDate && <span>Срок: {fmtDate(order.dueDate)}</span>}
+                </div>
+              </div>
+              <button className={styles.drawerClose} onClick={onClose}><X size={14} /></button>
+            </div>
+
+            <div className={styles.drawerBody}>
+              {/* Items */}
+              <div>
+                <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--text-tertiary)', marginBottom: 6 }}>
+                  Позиции — {order.items?.length ?? 0} шт.
+                </div>
+                <div className={styles.drawerTableWrap}>
+                  <table>
+                    <tbody>
+                      {(order.items ?? []).map((item, idx) => (
+                        <tr key={item.id} style={{ borderTop: idx > 0 ? '1px solid var(--border-subtle)' : 'none' }}>
+                          <td style={{ padding: '9px 14px', fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>
+                            {item.productName}
+                            {item.fabric ? <span style={{ color: 'var(--text-tertiary)', fontWeight: 400 }}> · {item.fabric}</span> : null}
+                          </td>
+                          <td style={{ padding: '9px 12px', fontSize: 12, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>р.{item.size}</td>
+                          <td style={{ padding: '9px 12px', fontSize: 12, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>×{item.quantity}</td>
+                          <td style={{ padding: '9px 14px', fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                            {fmtMoney(item.unitPrice * item.quantity)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <div style={{ padding: '9px 14px', borderTop: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'flex-end', background: 'var(--bg-surface)' }}>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>Итого: {fmtMoney(order.totalAmount)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Payment */}
+              <div className={styles.drawerCard}>
+                <div className={styles.drawerCardLabel}>Оплата</div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+                  <span style={{ fontSize: 13, color: PAY_COLOR[order.paymentStatus], fontWeight: 700 }}>
+                    {PAY_LABEL[order.paymentStatus]}
+                  </span>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
+                    <span style={{ fontSize: 12, color: 'var(--fill-positive)' }}>Оплачено: {fmtMoney(order.paidAmount)}</span>
+                    {order.paidAmount < order.totalAmount && (
+                      <span style={{ fontSize: 12, color: 'var(--fill-negative)' }}>Остаток: {fmtMoney(order.totalAmount - order.paidAmount)}</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Invoice link */}
+              {(order.invoiceOrders ?? []).length > 0 && (
+                <div>
+                  <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--text-tertiary)', marginBottom: 6 }}>Накладная</div>
+                  {order.invoiceOrders!.map((io) => (
+                    <div key={io.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--text-secondary)', padding: '9px 12px', background: 'var(--bg-surface-inset)', borderRadius: 8, border: '1px solid var(--border-subtle)' }}>
+                      <FileText size={13} style={{ color: 'var(--text-tertiary)', flexShrink: 0 }} />
+                      <span>Накладная #{io.invoice.invoiceNumber}</span>
+                      <span style={{ marginLeft: 'auto', color: io.invoice.warehouseConfirmed ? 'var(--fill-positive)' : 'var(--fill-warning)', fontWeight: 600, flexShrink: 0 }}>
+                        {io.invoice.warehouseConfirmed ? 'Принята' : 'Ожидает приёмки'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className={styles.drawerFooter}>
+              {order.paymentStatus === 'paid' ? (
+                <button
+                  className={`${styles.drawerActionBtn} ${styles.drawerActionBtnSuccess}`}
+                  onClick={() => { shipOrder.mutate(order.id); onClose(); }}
+                  disabled={shipOrder.isPending}
+                >
+                  <Send size={16} />
+                  {shipOrder.isPending ? 'Отправка...' : 'Отправить клиенту'}
+                </button>
+              ) : (
+                <div className={styles.drawerUnpaidNote}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <AlertTriangle size={15} style={{ flexShrink: 0 }} />
+                    <strong>Заказ не оплачен</strong>
+                  </div>
+                  <div style={{ marginTop: 4, paddingLeft: 23 }}>
+                    Остаток: {fmtMoney(order.totalAmount - order.paidAmount)} — свяжитесь с менеджером
+                  </div>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
 }
 
 // ── Add Item Drawer ────────────────────────────────────────────────────────────
@@ -109,12 +372,7 @@ function AddItemDrawer({ onClose }: { onClose: () => void }) {
 
 function AddMovementDrawer({ items, preselectItemId, onClose }: { items: WarehouseItem[]; preselectItemId?: string; onClose: () => void }) {
   const addMovement = useAddMovement();
-  const [form, setForm] = useState<AddMovementDto>({
-    itemId: preselectItemId ?? '',
-    type: 'in',
-    qty: 1,
-    reason: '',
-  });
+  const [form, setForm] = useState<AddMovementDto>({ itemId: preselectItemId ?? '', type: 'in', qty: 1, reason: '' });
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -172,18 +430,21 @@ function AddMovementDrawer({ items, preselectItemId, onClose }: { items: Warehou
   );
 }
 
-// ── Main Page ────────────────────────────────────────────────────────────────
+// ── Clickable table row helper ────────────────────────────────────────────────
 
-function fmtMoney(n: number) {
-  return new Intl.NumberFormat('ru-KZ', { maximumFractionDigits: 0 }).format(n) + ' ₸';
+function ClickRow({ children, onClick }: { children: React.ReactNode; onClick: () => void }) {
+  return (
+    <tr
+      className={styles.row}
+      onClick={onClick}
+      style={{ cursor: 'pointer' }}
+    >
+      {children}
+    </tr>
+  );
 }
 
-const PAY_LABEL: Record<string, string> = {
-  not_paid: 'Не оплачен', partial: 'Частично', paid: 'Оплачен',
-};
-const PAY_COLOR: Record<string, string> = {
-  not_paid: 'var(--fill-negative)', partial: 'var(--fill-warning)', paid: 'var(--fill-positive)',
-};
+// ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function WarehousePage() {
   const [tab, setTab] = useState<Tab>('items');
@@ -193,55 +454,48 @@ export default function WarehousePage() {
   const [addMovOpen, setAddMovOpen] = useState(false);
   const [preselectItem, setPreselectItem] = useState<string | undefined>();
 
-  // Warehouse inventory data
+  // Detail drawers
+  const [selectedInvoice, setSelectedInvoice] = useState<ChapanInvoice | null>(null);
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+
+  // Inventory data
   const { data: itemsData, isLoading: itemsLoading } = useWarehouseItems({ search: deferredSearch || undefined });
   const { data: movData, isLoading: movLoading } = useWarehouseMovements({ limit: 100 });
   const { data: alertsData } = useWarehouseAlerts();
   const deleteItem = useDeleteItem();
   const resolveAlert = useResolveAlert();
 
-  // Chapan order handoff data
+  // Chapan handoff data
   const { data: invoicesData, isLoading: invoicesLoading } = useInvoices({ status: 'pending_confirmation', limit: 200 });
-  const pendingInvoices = (invoicesData?.results ?? []).filter((inv) => !inv.warehouseConfirmed);
+  const pendingInvoices: ChapanInvoice[] = (invoicesData?.results ?? []).filter((inv) => !inv.warehouseConfirmed);
   const { data: whOrdersData, isLoading: whOrdersLoading } = useOrders({ status: 'on_warehouse', limit: 200 });
   const warehouseOrders: ChapanOrder[] = whOrdersData?.results ?? [];
   const toShipOrders = warehouseOrders.filter((o) => o.paymentStatus === 'paid');
   const unpaidOrders = warehouseOrders.filter((o) => o.paymentStatus !== 'paid');
 
-  const confirmWarehouse = useConfirmWarehouse();
-  const shipOrder = useShipOrder();
+  // Partial warehouse orders
+  const { data: partialWhData, isLoading: partialWhLoading } = useOrders({ hasWarehouseItems: true, limit: 200 });
+  const partialWarehouseOrders: ChapanOrder[] = partialWhData?.results ?? [];
 
   const items = itemsData?.results ?? [];
   const movements = movData?.results ?? [];
   const alerts = alertsData?.results ?? [];
-
   const alertCount = alerts.length;
   const incomingCount = pendingInvoices.length;
+  const totalUnits = items.reduce((sum, i) => sum + i.qty, 0);
 
   function handleExportItems() {
     exportToCSV(items.map(i => ({
-      'Название': i.name,
-      'Уникальный номер': i.sku ?? '',
-      'Ед.изм': i.unit,
-      'Остаток': i.qty,
-      'Мин.остаток': i.qtyMin,
-      'Категория': i.category?.name ?? '',
-      'Цена закупки': i.costPrice ?? '',
+      'Название': i.name, 'Уникальный номер': i.sku ?? '', 'Ед.изм': i.unit,
+      'Остаток': i.qty, 'Мин.остаток': i.qtyMin, 'Категория': i.category?.name ?? '', 'Цена закупки': i.costPrice ?? '',
     })), 'склад_остатки.csv');
   }
-
   function handleExportMovements() {
     exportToCSV(movements.map(m => ({
-      'Дата': fmtDate(m.createdAt),
-      'Тип': MOVEMENT_LABEL[m.type],
-      'Позиция': m.item?.name ?? m.itemId,
-      'Количество': m.qty,
-      'Причина': m.reason ?? '',
-      'Автор': m.author,
+      'Дата': fmtDate(m.createdAt), 'Тип': MOVEMENT_LABEL[m.type], 'Позиция': m.item?.name ?? m.itemId,
+      'Количество': m.qty, 'Причина': m.reason ?? '', 'Автор': m.author,
     })), 'склад_движения.csv');
   }
-
-  const totalUnits = items.reduce((sum, i) => sum + i.qty, 0);
 
   return (
     <div className={styles.root}>
@@ -267,16 +521,16 @@ export default function WarehousePage() {
               <FileText size={13} /> Приёмка {incomingCount > 0 && <span className={styles.alertBadge}>{incomingCount}</span>}
             </button>
             <button className={`${styles.tab} ${tab === 'orders_wh' ? styles.tabActive : ''}`} onClick={() => setTab('orders_wh')}>
-              <Package size={13} /> Заказы {warehouseOrders.length > 0 && <span className={styles.alertBadge}>{warehouseOrders.length}</span>}
+              <Package size={13} /> Заказы {(warehouseOrders.length + partialWarehouseOrders.length) > 0 && <span className={styles.alertBadge}>{warehouseOrders.length + partialWarehouseOrders.length}</span>}
             </button>
             <button className={`${styles.tab} ${tab === 'to_ship' ? styles.tabActive : ''}`} onClick={() => setTab('to_ship')}>
-              <Send size={13} /> К отправке
+              <Send size={13} /> К отправке {toShipOrders.length > 0 && <span className={styles.alertBadge}>{toShipOrders.length}</span>}
             </button>
           </div>
         </div>
       </div>
 
-      {/* Summary stats — always visible */}
+      {/* Summary stats */}
       {!itemsLoading && (
         <div className={styles.statsBar}>
           <div className={styles.statItem}>
@@ -302,37 +556,45 @@ export default function WarehousePage() {
         </div>
       )}
 
-      {/* ── Incoming invoices tab ── */}
+      {/* ── Приёмка tab ── */}
       {tab === 'incoming' && (
         invoicesLoading ? (
-          <div className={styles.skeletons}>{[...Array(4)].map((_,i) => <Skeleton key={i} height={56} radius={8} />)}</div>
+          <div className={styles.skeletons}>{[...Array(4)].map((_, i) => <Skeleton key={i} height={56} radius={8} />)}</div>
         ) : pendingInvoices.length === 0 ? (
           <div className={styles.empty}>
             <PackageCheck size={32} className={styles.emptyIcon} />
             <p>Нет входящих накладных</p>
-            <span className={styles.emptyNote}>Когда контролёр передаст заказы на склад, накладные появятся здесь</span>
+            <span className={styles.emptyNote}>Когда цех отправит заказы на склад, накладные появятся здесь</span>
           </div>
         ) : (
           <div className={styles.tableWrap}>
             <table className={styles.table}>
-              <thead><tr><th>Накладная</th><th>Дата</th><th>Заказов</th><th>Создал</th><th></th></tr></thead>
+              <thead>
+                <tr>
+                  <th>Накладная</th><th>Дата</th><th>Заказов</th><th>Создал</th><th>Статус цеха</th><th></th>
+                </tr>
+              </thead>
               <tbody>
                 {pendingInvoices.map((inv) => (
-                  <tr key={inv.id} className={styles.row}>
+                  <ClickRow key={inv.id} onClick={() => setSelectedInvoice(inv)}>
                     <td className={styles.tdName}>#{inv.invoiceNumber}</td>
                     <td className={styles.tdDate}>{fmtDate(inv.createdAt)}</td>
-                    <td className={styles.tdNum}>{inv.items?.length ?? 0}</td>
+                    <td className={styles.tdNum}>{inv.items?.length ?? 0} заказ(а)</td>
                     <td className={styles.tdSecondary}>{inv.createdByName}</td>
-                    <td className={styles.tdActions}>
+                    <td>
+                      {inv.seamstressConfirmed
+                        ? <span style={{ color: 'var(--fill-positive)', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}><CheckCircle2 size={12} /> Цех отправил</span>
+                        : <span style={{ color: 'var(--fill-warning)', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}><AlertCircle size={12} /> Ожидает цех</span>}
+                    </td>
+                    <td className={styles.tdActions} onClick={(e) => e.stopPropagation()}>
                       <button
                         className={styles.incomBtn}
-                        onClick={() => confirmWarehouse.mutate(inv.id)}
-                        disabled={confirmWarehouse.isPending}
+                        onClick={() => setSelectedInvoice(inv)}
                       >
-                        <PackageCheck size={12} /> {confirmWarehouse.isPending ? 'Подтверждение...' : 'Принять'}
+                        <FileText size={12} /> Открыть
                       </button>
                     </td>
-                  </tr>
+                  </ClickRow>
                 ))}
               </tbody>
             </table>
@@ -340,59 +602,107 @@ export default function WarehousePage() {
         )
       )}
 
-      {/* ── Orders on warehouse tab ── */}
+      {/* ── Заказы на складе tab ── */}
       {tab === 'orders_wh' && (
-        whOrdersLoading ? (
-          <div className={styles.skeletons}>{[...Array(4)].map((_,i) => <Skeleton key={i} height={52} radius={8} />)}</div>
-        ) : warehouseOrders.length === 0 ? (
+        (whOrdersLoading || partialWhLoading) ? (
+          <div className={styles.skeletons}>{[...Array(4)].map((_, i) => <Skeleton key={i} height={52} radius={8} />)}</div>
+        ) : warehouseOrders.length === 0 && partialWarehouseOrders.length === 0 ? (
           <div className={styles.empty}>
             <Package size={32} className={styles.emptyIcon} />
             <p>Склад пуст</p>
             <span className={styles.emptyNote}>Принятые заказы появятся после подтверждения накладных</span>
           </div>
         ) : (
-          <div className={styles.tableWrap}>
-            <table className={styles.table}>
-              <thead><tr><th>Заказ</th><th>Клиент</th><th>Модель</th><th>Сумма</th><th>Оплата</th><th></th></tr></thead>
-              <tbody>
-                {warehouseOrders.map((order) => (
-                  <tr key={order.id} className={styles.row}>
-                    <td className={styles.tdMono}>#{order.orderNumber}</td>
-                    <td className={styles.tdName}>{order.clientName}</td>
-                    <td className={styles.tdSecondary}>{order.items?.[0]?.productName ?? '—'}</td>
-                    <td className={styles.tdNum}>{fmtMoney(order.totalAmount)}</td>
-                    <td>
-                      <span style={{ color: PAY_COLOR[order.paymentStatus], fontWeight: 500, fontSize: 12 }}>
-                        {PAY_LABEL[order.paymentStatus]}
-                      </span>
-                    </td>
-                    <td className={styles.tdActions}>
-                      {order.paymentStatus === 'paid' ? (
-                        <button
-                          className={styles.incomBtn}
-                          onClick={() => shipOrder.mutate(order.id)}
-                          disabled={shipOrder.isPending}
-                        >
-                          <Send size={12} /> Отправить
-                        </button>
-                      ) : (
-                        <span style={{ color: 'var(--fill-warning)', fontSize: 11, display: 'flex', alignItems: 'center', gap: 4 }}>
-                          <AlertCircle size={12} /> Не оплачен
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <>
+            {warehouseOrders.length > 0 && (
+              <div className={styles.tableWrap}>
+                <table className={styles.table}>
+                  <thead>
+                    <tr><th>Заказ</th><th>Клиент</th><th>Телефон</th><th>Позиции</th><th>Сумма</th><th>Оплата</th><th></th></tr>
+                  </thead>
+                  <tbody>
+                    {warehouseOrders.map((order) => (
+                      <ClickRow key={order.id} onClick={() => setSelectedOrderId(order.id)}>
+                        <td className={styles.tdMono}>#{order.orderNumber}</td>
+                        <td className={styles.tdName}>{order.clientName}</td>
+                        <td className={styles.tdSecondary} style={{ fontSize: 12 }}>{order.clientPhone}</td>
+                        <td className={styles.tdSecondary}>
+                          {(order.items ?? []).slice(0, 2).map((i) => i.productName).join(', ')}
+                          {(order.items ?? []).length > 2 ? ` +${(order.items ?? []).length - 2}` : ''}
+                        </td>
+                        <td className={styles.tdNum}>{fmtMoney(order.totalAmount)}</td>
+                        <td>
+                          <span style={{ color: PAY_COLOR[order.paymentStatus], fontWeight: 500, fontSize: 12 }}>
+                            {order.paymentStatus === 'paid' ? 'Оплачен' : order.paymentStatus === 'partial' ? 'Частично' : 'Не оплачен'}
+                          </span>
+                        </td>
+                        <td className={styles.tdActions} style={{ color: 'var(--text-tertiary)' }}>
+                          <ChevronRight size={14} />
+                        </td>
+                      </ClickRow>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {partialWarehouseOrders.length > 0 && (
+              <>
+                <div className={styles.sectionLabel}>
+                  Ожидает производство — {partialWarehouseOrders.length} {partialWarehouseOrders.length === 1 ? 'заказ' : partialWarehouseOrders.length < 5 ? 'заказа' : 'заказов'}
+                </div>
+                <div className={styles.tableWrap}>
+                  <table className={styles.table}>
+                    <thead>
+                      <tr><th>Заказ</th><th>Клиент</th><th>Позиции</th><th>Сумма</th><th>Статус</th><th></th></tr>
+                    </thead>
+                    <tbody>
+                      {partialWarehouseOrders.map((order) => {
+                        const whItems = order.items.filter(i => i.fulfillmentMode === 'warehouse');
+                        const prodItems = order.items.filter(i => i.fulfillmentMode === 'production');
+                        return (
+                          <ClickRow key={order.id} onClick={() => setSelectedOrderId(order.id)}>
+                            <td className={styles.tdMono}>#{order.orderNumber}</td>
+                            <td className={styles.tdName}>{order.clientName}</td>
+                            <td>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                {whItems.map(i => (
+                                  <span key={i.id} style={{ fontSize: 11, display: 'flex', alignItems: 'center', gap: 4, color: 'var(--fill-positive)' }}>
+                                    <CheckCircle2 size={11} /> {i.productName}{i.quantity > 1 ? ` ×${i.quantity}` : ''}
+                                  </span>
+                                ))}
+                                {prodItems.map(i => (
+                                  <span key={i.id} style={{ fontSize: 11, display: 'flex', alignItems: 'center', gap: 4, color: 'var(--text-tertiary)' }}>
+                                    <AlertCircle size={11} /> {i.productName}{i.quantity > 1 ? ` ×${i.quantity}` : ''} — в производстве
+                                  </span>
+                                ))}
+                              </div>
+                            </td>
+                            <td className={styles.tdNum}>{fmtMoney(order.totalAmount)}</td>
+                            <td>
+                              <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 6, background: 'rgba(245,158,11,.1)', color: '#F59E0B', fontWeight: 500 }}>
+                                В производстве
+                              </span>
+                            </td>
+                            <td className={styles.tdActions} style={{ color: 'var(--text-tertiary)' }}>
+                              <ChevronRight size={14} />
+                            </td>
+                          </ClickRow>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+          </>
         )
       )}
 
-      {/* ── To ship tab ── */}
+      {/* ── К отправке tab ── */}
       {tab === 'to_ship' && (
         whOrdersLoading ? (
-          <div className={styles.skeletons}>{[...Array(4)].map((_,i) => <Skeleton key={i} height={52} radius={8} />)}</div>
+          <div className={styles.skeletons}>{[...Array(4)].map((_, i) => <Skeleton key={i} height={52} radius={8} />)}</div>
         ) : toShipOrders.length === 0 && unpaidOrders.length === 0 ? (
           <div className={styles.empty}>
             <Send size={32} className={styles.emptyIcon} />
@@ -402,39 +712,46 @@ export default function WarehousePage() {
         ) : (
           <div className={styles.tableWrap}>
             <table className={styles.table}>
-              <thead><tr><th>Заказ</th><th>Клиент</th><th>Модель</th><th>Сумма</th><th>Оплата</th><th></th></tr></thead>
+              <thead>
+                <tr><th>Заказ</th><th>Клиент</th><th>Телефон</th><th>Позиции</th><th>Сумма</th><th>Оплата</th><th></th></tr>
+              </thead>
               <tbody>
                 {toShipOrders.map((order) => (
-                  <tr key={order.id} className={styles.row}>
+                  <ClickRow key={order.id} onClick={() => setSelectedOrderId(order.id)}>
                     <td className={styles.tdMono}>#{order.orderNumber}</td>
                     <td className={styles.tdName}>{order.clientName}</td>
-                    <td className={styles.tdSecondary}>{order.items?.[0]?.productName ?? '—'}</td>
+                    <td className={styles.tdSecondary} style={{ fontSize: 12 }}>{order.clientPhone}</td>
+                    <td className={styles.tdSecondary}>
+                      {(order.items ?? []).slice(0, 2).map((i) => i.productName).join(', ')}
+                      {(order.items ?? []).length > 2 ? ` +${(order.items ?? []).length - 2}` : ''}
+                    </td>
                     <td className={styles.tdNum}>{fmtMoney(order.totalAmount)}</td>
-                    <td><span style={{ color: PAY_COLOR[order.paymentStatus], fontWeight: 500, fontSize: 12 }}>{PAY_LABEL[order.paymentStatus]}</span></td>
-                    <td className={styles.tdActions}>
+                    <td><span style={{ color: 'var(--fill-positive)', fontWeight: 500, fontSize: 12 }}>Оплачен</span></td>
+                    <td className={styles.tdActions} onClick={(e) => e.stopPropagation()}>
                       <button
                         className={styles.incomBtn}
-                        onClick={() => shipOrder.mutate(order.id)}
-                        disabled={shipOrder.isPending}
+                        onClick={() => setSelectedOrderId(order.id)}
                       >
-                        <Send size={12} /> Отправить
+                        <Send size={12} /> Открыть
                       </button>
                     </td>
-                  </tr>
+                  </ClickRow>
                 ))}
                 {unpaidOrders.map((order) => (
-                  <tr key={order.id} className={styles.row}>
+                  <ClickRow key={order.id} onClick={() => setSelectedOrderId(order.id)}>
                     <td className={styles.tdMono}>#{order.orderNumber}</td>
                     <td className={styles.tdName}>{order.clientName}</td>
-                    <td className={styles.tdSecondary}>{order.items?.[0]?.productName ?? '—'}</td>
-                    <td className={styles.tdNum}>{fmtMoney(order.totalAmount)}</td>
-                    <td><span style={{ color: PAY_COLOR[order.paymentStatus], fontWeight: 500, fontSize: 12 }}>{PAY_LABEL[order.paymentStatus]}</span></td>
-                    <td className={styles.tdActions}>
-                      <span style={{ color: 'var(--fill-negative)', fontSize: 11, display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <AlertTriangle size={12} /> Не оплачен
-                      </span>
+                    <td className={styles.tdSecondary} style={{ fontSize: 12 }}>{order.clientPhone}</td>
+                    <td className={styles.tdSecondary}>
+                      {(order.items ?? []).slice(0, 2).map((i) => i.productName).join(', ')}
+                      {(order.items ?? []).length > 2 ? ` +${(order.items ?? []).length - 2}` : ''}
                     </td>
-                  </tr>
+                    <td className={styles.tdNum}>{fmtMoney(order.totalAmount)}</td>
+                    <td><span style={{ color: 'var(--fill-negative)', fontWeight: 500, fontSize: 12 }}>Не оплачен</span></td>
+                    <td className={styles.tdActions} style={{ color: 'var(--text-tertiary)' }}>
+                      <ChevronRight size={14} />
+                    </td>
+                  </ClickRow>
                 ))}
               </tbody>
             </table>
@@ -442,27 +759,25 @@ export default function WarehousePage() {
         )
       )}
 
-      {/* ── Items tab ── */}
+      {/* ── Остатки tab ── */}
       {tab === 'items' && (
         <>
           <div className={styles.toolbar}>
             <div className={styles.searchWrap}>
               <Search size={13} className={styles.searchIcon} />
-              <input className={styles.searchInput} value={search} onChange={e => setSearch(e.target.value)} placeholder="Поиск по названию или позиций в базе" />
+              <input className={styles.searchInput} value={search} onChange={e => setSearch(e.target.value)} placeholder="Поиск по названию..." />
             </div>
             <button className={styles.exportBtn} onClick={handleExportItems}><Download size={13} /> Excel</button>
             <button className={styles.addBtn} onClick={() => setAddItemOpen(true)}><Plus size={14} /> Добавить</button>
           </div>
 
           {itemsLoading ? (
-            <div className={styles.skeletons}>{[...Array(6)].map((_,i) => <Skeleton key={i} height={52} radius={8} />)}</div>
+            <div className={styles.skeletons}>{[...Array(6)].map((_, i) => <Skeleton key={i} height={52} radius={8} />)}</div>
           ) : (
             <div className={styles.tableWrap}>
               <table className={styles.table}>
                 <thead>
-                  <tr>
-                    <th>Название</th><th>Уникальный номер</th><th>Кат.</th><th>Остаток</th><th>Мин.</th><th>Статус</th><th></th>
-                  </tr>
+                  <tr><th>Название</th><th>Уникальный номер</th><th>Кат.</th><th>Остаток</th><th>Мин.</th><th>Статус</th><th></th></tr>
                 </thead>
                 <tbody>
                   {items.map(item => {
@@ -500,7 +815,7 @@ export default function WarehousePage() {
         </>
       )}
 
-      {/* ── Movements tab ── */}
+      {/* ── Движения tab ── */}
       {tab === 'movements' && (
         <>
           <div className={styles.toolbar}>
@@ -512,7 +827,7 @@ export default function WarehousePage() {
           </div>
 
           {movLoading ? (
-            <div className={styles.skeletons}>{[...Array(8)].map((_,i) => <Skeleton key={i} height={48} radius={8} />)}</div>
+            <div className={styles.skeletons}>{[...Array(8)].map((_, i) => <Skeleton key={i} height={48} radius={8} />)}</div>
           ) : (
             <div className={styles.tableWrap}>
               <table className={styles.table}>
@@ -550,7 +865,7 @@ export default function WarehousePage() {
         </>
       )}
 
-      {/* ── Alerts tab ── */}
+      {/* ── Оповещения tab ── */}
       {tab === 'alerts' && (
         <div className={styles.tableWrap}>
           <table className={styles.table}>
@@ -585,6 +900,12 @@ export default function WarehousePage() {
       {addItemOpen && <AddItemDrawer onClose={() => setAddItemOpen(false)} />}
       {addMovOpen && (
         <AddMovementDrawer items={items} preselectItemId={preselectItem} onClose={() => { setAddMovOpen(false); setPreselectItem(undefined); }} />
+      )}
+      {selectedInvoice && (
+        <InvoiceDetailDrawer invoice={selectedInvoice} onClose={() => setSelectedInvoice(null)} />
+      )}
+      {selectedOrderId && (
+        <OrderDetailDrawer orderId={selectedOrderId} onClose={() => setSelectedOrderId(null)} />
       )}
     </div>
   );

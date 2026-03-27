@@ -1,7 +1,7 @@
 import { api } from '../../shared/api/client';
 import type {
   ChapanOrder, ChapanInvoice, CreateOrderDto, UpdateOrderDto, AddPaymentDto, ListResponse,
-  ProductionTask, ChapanCatalogs, ChapanProfile, ChapanClient,
+  ProductionTask, ChapanCatalogs, ChapanProfile, ChapanClient, ChapanChangeRequest, CreateOrderItemDto, InvoiceDocumentPayload,
 } from './types';
 
 // ── Orders ────────────────────────────────────────────────────────────────────
@@ -17,6 +17,7 @@ export const ordersApi = {
     page?: number;
     limit?: number;
     archived?: boolean;
+    hasWarehouseItems?: boolean;
   }) =>
     api.get<ListResponse<ChapanOrder>>('/chapan/orders', params),
 
@@ -59,11 +60,29 @@ export const ordersApi = {
   fulfillFromStock: (id: string) =>
     api.post<{ ok: boolean }>(`/chapan/orders/${id}/fulfill-from-stock`, {}),
 
+  routeItems: (
+    id: string,
+    items: Array<{ itemId: string; fulfillmentMode: 'warehouse' | 'production' }>,
+  ) =>
+    api.post<ChapanOrder>(`/chapan/orders/${id}/route-items`, { items }),
+
   addActivity: (id: string, content: string) =>
     api.post<{ ok: boolean }>(`/chapan/orders/${id}/activities`, {
       type: 'comment',
       content,
     }),
+
+  setRequiresInvoice: (id: string, requiresInvoice: boolean) =>
+    api.patch<{ ok: boolean }>(`/chapan/orders/${id}/requires-invoice`, { requiresInvoice }),
+
+  returnToReady: (id: string, reason: string) =>
+    api.post<{ ok: boolean }>(`/chapan/orders/${id}/return-to-ready`, { reason }),
+
+  requestItemChange: (id: string, items: CreateOrderItemDto[], managerNote?: string) =>
+    api.post<ChapanChangeRequest>(`/chapan/orders/${id}/change-request`, { items, managerNote }),
+
+  routeItem: (orderId: string, itemId: string, fulfillmentMode: 'warehouse' | 'production') =>
+    api.post<{ ok: boolean }>(`/chapan/orders/${orderId}/items/${itemId}/route`, { fulfillmentMode }),
 };
 
 // ── Production ────────────────────────────────────────────────────────────────
@@ -99,14 +118,20 @@ export const productionApi = {
 // ── Invoices (Накладные) ──────────────────────────────────────────────────────
 
 export const invoicesApi = {
-  create: (orderIds: string[], notes?: string) =>
-    api.post<ChapanInvoice>('/chapan/invoices', { orderIds, notes }),
+  create: (orderIds: string[], notes?: string, documentPayload?: InvoiceDocumentPayload) =>
+    api.post<ChapanInvoice>('/chapan/invoices', { orderIds, notes, documentPayload }),
 
-  list: (params?: { status?: string; limit?: number }) =>
+  list: (params?: { status?: string; orderId?: string; limit?: number; offset?: number }) =>
     api.get<ListResponse<ChapanInvoice>>('/chapan/invoices', params),
 
   get: (id: string) =>
     api.get<ChapanInvoice>(`/chapan/invoices/${id}`),
+
+  previewDocument: (orderIds: string[]) =>
+    api.post<InvoiceDocumentPayload>('/chapan/invoices/preview', { orderIds }),
+
+  saveDocument: (id: string, documentPayload: InvoiceDocumentPayload) =>
+    api.patch<ChapanInvoice>(`/chapan/invoices/${id}/document`, { documentPayload }),
 
   confirmSeamstress: (id: string) =>
     api.post<{ bothConfirmed: boolean }>(`/chapan/invoices/${id}/confirm-seamstress`, {}),
@@ -116,6 +141,19 @@ export const invoicesApi = {
 
   reject: (id: string, reason: string) =>
     api.post<{ ok: boolean }>(`/chapan/invoices/${id}/reject`, { reason }),
+};
+
+// ── Change Requests ───────────────────────────────────────────────────────────
+
+export const changeRequestsApi = {
+  list: () =>
+    api.get<ChapanChangeRequest[]>('/chapan/orders/change-requests'),
+
+  approve: (crId: string) =>
+    api.post<{ ok: boolean }>(`/chapan/orders/change-requests/${crId}/approve`, {}),
+
+  reject: (crId: string, rejectReason: string) =>
+    api.post<{ ok: boolean }>(`/chapan/orders/change-requests/${crId}/reject`, { rejectReason }),
 };
 
 // ── Settings ──────────────────────────────────────────────────────────────────

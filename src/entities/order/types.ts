@@ -6,6 +6,7 @@ export type OrderStatus =
   | 'transferred' | 'on_warehouse' | 'shipped' | 'completed' | 'cancelled';
 
 export type PaymentStatus = 'not_paid' | 'partial' | 'paid';
+export type OrderItemFulfillmentMode = 'unassigned' | 'warehouse' | 'production';
 
 // Backend accepts: 'normal' | 'urgent' | 'vip'
 export type Priority = 'normal' | 'urgent' | 'vip';
@@ -28,6 +29,7 @@ export interface ChapanOrder {
   cancelReason: string | null;
   completedAt: string | null;
   cancelledAt: string | null;
+  requiresInvoice: boolean;
   isArchived: boolean;
   archivedAt: string | null;
   createdAt: string;
@@ -38,6 +40,21 @@ export interface ChapanOrder {
   payments: OrderPayment[];
   activities: OrderActivity[];
   transfer: OrderTransfer | null;
+  // Included only in getById response:
+  invoiceOrders?: Array<{
+    id: string;
+    invoiceId: string;
+    orderId: string;
+    invoice: {
+      id: string;
+      invoiceNumber: string;
+      status: InvoiceStatus;
+      seamstressConfirmed: boolean;
+      warehouseConfirmed: boolean;
+      rejectionReason: string | null;
+      createdAt: string;
+    };
+  }>;
 }
 
 export interface OrderItem {
@@ -48,6 +65,7 @@ export interface OrderItem {
   size: string;             // was: sizeName
   quantity: number;         // was: qty
   unitPrice: number;
+  fulfillmentMode?: OrderItemFulfillmentMode | null;
   notes: string | null;
   workshopNotes: string | null;
   // color is not in DB yet — will add migration
@@ -194,6 +212,31 @@ export interface ChapanClient {
   createdAt: string;
 }
 
+// ── Change Requests ───────────────────────────────────────────────────────────
+
+export type ChangeRequestStatus = 'pending' | 'approved' | 'rejected';
+
+export interface ChapanChangeRequest {
+  id: string;
+  orderId: string;
+  orgId: string;
+  status: ChangeRequestStatus;
+  requestedBy: string;
+  proposedItems: CreateOrderItemDto[];
+  managerNote: string | null;
+  rejectReason: string | null;
+  resolvedBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+  order: {
+    id: string;
+    orderNumber: string;
+    clientName: string;
+    priority: Priority;
+    status: string;
+  };
+}
+
 // ── API Response wrappers ─────────────────────────────────────────────────────
 
 export interface ListResponse<T> {
@@ -204,6 +247,47 @@ export interface ListResponse<T> {
 // ── Invoice (Накладная) types ────────────────────────────────────────────────
 
 export type InvoiceStatus = 'pending_confirmation' | 'confirmed' | 'rejected';
+
+export interface InvoiceDocumentColumns {
+  itemNumber: string;
+  productName: string;
+  gender: string;
+  length: string;
+  size: string;
+  color: string;
+  quantity: string;
+  orders: string;
+  unitPrice: string;
+  lineTotal: string;
+}
+
+export interface InvoiceDocumentRow {
+  id: string;
+  itemNumber: string;
+  productName: string;
+  gender: string;
+  length: string;
+  size: string;
+  color: string;
+  quantity: number;
+  orders: string;
+  unitPrice: number;
+  sourceOrders?: InvoiceDocumentSourceOrder[];
+}
+
+export interface InvoiceDocumentSourceOrder {
+  orderId: string;
+  orderNumber: string;
+}
+
+export interface InvoiceDocumentPayload {
+  invoiceNumber?: string;
+  invoiceDate: string;
+  route: string;
+  signatureLabel: string;
+  columns: InvoiceDocumentColumns;
+  rows: InvoiceDocumentRow[];
+}
 
 export interface ChapanInvoice {
   id: string;
@@ -220,6 +304,7 @@ export interface ChapanInvoice {
   warehouseConfirmedBy: string | null;
   rejectedBy: string | null;
   rejectionReason: string | null;
+  documentPayload?: InvoiceDocumentPayload | null;
   notes: string | null;
   createdAt: string;
   updatedAt: string;

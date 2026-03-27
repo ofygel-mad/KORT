@@ -399,26 +399,39 @@
 .floatingLeft { display: flex; align-items: center; gap: 10px; }
 .floatingRight { display: flex; align-items: center; gap: 8px; margin-left: auto; }
 .floatingCount {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 2px;
   font-size: 13px;
-  font-weight: 600;
-  color: var(--ch-text);
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.92);
   white-space: nowrap;
 }
 .floatingClear {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  background: transparent;
-  border: 1px solid var(--ch-border);
-  border-radius: 7px;
-  color: var(--ch-text-muted);
+  justify-content: center;
+  gap: 7px;
+  min-height: 40px;
+  padding: 0 16px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 12px;
+  color: rgba(226, 232, 240, 0.88);
   font: inherit;
-  font-size: 11px;
-  padding: 5px 10px;
+  font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
-  transition: color 120ms, border-color 120ms;
+  white-space: nowrap;
+  transition: color 120ms, border-color 120ms, background 120ms, transform 120ms;
 }
-.floatingClear:hover { color: var(--ch-text); border-color: var(--ch-plat-border); }
+.floatingClear:hover {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.08);
+  transform: translateY(-1px);
+}
 .floatingAction {
   display: inline-flex;
   align-items: center;

@@ -1,10 +1,12 @@
 import { useDeferredValue, useEffect, useRef, useState, type CSSProperties, type ElementType } from 'react';
-import { AlertTriangle, Bell, Check, CheckCheck, CheckCircle2, CheckSquare, Download, FileText, LayoutGrid, Layers, List, Plus, Search, Warehouse, X } from 'lucide-react';
+import { AlertTriangle, Bell, Check, CheckCheck, CheckCircle2, CheckSquare, Download, Eye, FileText, LayoutGrid, Layers, List, Plus, Search, Warehouse, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useChangeOrderStatus, useCloseOrder, useCreateInvoice, useInvoices, useOrders } from '../../../../entities/order/queries';
-import type { ChapanInvoice, ChapanOrder, OrderStatus, Priority } from '../../../../entities/order/types';
+import { useChangeOrderStatus, useCloseOrder, useCreateInvoice, useOrders, usePreviewInvoiceDocument } from '../../../../entities/order/queries';
+import type { ChapanOrder, InvoiceDocumentPayload, OrderStatus, Priority } from '../../../../entities/order/types';
 import { useAuthStore } from '@/shared/stores/auth';
 import { useCreateUnpaidAlert } from '../../../../entities/alert/queries';
+import { useChapanUiStore } from '../../../../features/workzone/chapan/store';
+import ChapanInvoicePreviewModal from '../invoices/ChapanInvoicePreviewModal';
 import styles from './ChapanReady.module.css';
 
 type ReadyStatus = Extract<OrderStatus, 'ready'>;
@@ -46,17 +48,6 @@ const VIEW_OPTIONS: { key: ViewMode; label: string; icon: ElementType }[] = [
 
 const BATCH_WINDOW_DAYS = 2;
 
-const INVOICE_STATUS_LABEL: Record<string, string> = {
-  pending_confirmation: 'Ожидает',
-  confirmed: 'Подтверждена',
-  rejected: 'Отклонена',
-};
-
-function invoiceStatusStyle(status: string): CSSProperties {
-  if (status === 'confirmed') return { background: 'rgba(79,201,153,.12)', color: '#4FC999', border: '1px solid rgba(79,201,153,.25)' };
-  if (status === 'rejected') return { background: 'rgba(217,79,79,.12)', color: '#E87272', border: '1px solid rgba(217,79,79,.25)' };
-  return { background: 'rgba(229,146,42,.12)', color: '#E5922A', border: '1px solid rgba(229,146,42,.25)' };
-}
 
 function viewStorageKey(userId?: string) {
   return `chapan_ready_view_${userId ?? 'guest'}`;
@@ -83,14 +74,23 @@ function isOverdue(date: string | null) {
   return !!date && new Date(date) < new Date();
 }
 
-function groupSignature(order: ChapanOrder) {
-  const firstItem = order.items?.[0];
+function buildItemSignature(orderItem: ChapanOrder['items'][number]) {
   return [
-    firstItem?.productName?.toLowerCase().trim() ?? '',
-    firstItem?.fabric?.toLowerCase().trim() ?? '',
-    firstItem?.size?.toLowerCase().trim() ?? '',
+    orderItem.productName?.toLowerCase().trim() ?? '',
+    orderItem.fabric?.toLowerCase().trim() ?? '',
+    orderItem.size?.toLowerCase().trim() ?? '',
+    String(orderItem.quantity ?? 0),
+    String(orderItem.unitPrice ?? 0),
+  ].join('|');
+}
+
+function groupSignature(order: ChapanOrder) {
+  return [
+    ...(order.items ?? []).map(buildItemSignature).sort(),
     order.status,
     order.priority,
+    order.paymentStatus,
+    order.requiresInvoice ? 'invoice' : 'direct',
   ].join('|');
 }
 
@@ -143,6 +143,10 @@ function buildGroups(orders: ReadyOrder[]): DisplayGroup[] {
   return result;
 }
 
+function buildOrderSelectionKey(orderIds: string[]) {
+  return [...orderIds].sort().join('|');
+}
+
 function getStageActionLabel(_status: ReadyStatus) {
   return 'На склад';
 }
@@ -164,7 +168,10 @@ export default function ChapanReadyPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [closeUnpaidTarget, setCloseUnpaidTarget] = useState<{ ids: string[]; labels: string[]; balance: number } | null>(null);
   const [transferBlockedOrders, setTransferBlockedOrders] = useState<string[] | null>(null);
-  const [invoicePanelOpen, setInvoicePanelOpen] = useState(false);
+  const [batchPreviewOpen, setBatchPreviewOpen] = useState(false);
+  const [batchPreviewDocument, setBatchPreviewDocument] = useState<InvoiceDocumentPayload | null>(null);
+  const [batchPreviewSelectionKey, setBatchPreviewSelectionKey] = useState('');
+  const setInvoicesDrawerOpen = useChapanUiStore((s) => s.setInvoicesDrawerOpen);
   const viewPickerRef = useRef<HTMLDivElement>(null);
 
   const deferredSearch = useDeferredValue(search);
@@ -219,8 +226,7 @@ export default function ChapanReadyPage() {
   const closeOrder = useCloseOrder();
   const notifyManager = useCreateUnpaidAlert();
   const createInvoice = useCreateInvoice();
-  const { data: invoicesData, isLoading: invoicesLoading } = useInvoices({ limit: 50 });
-  const invoices: ChapanInvoice[] = invoicesData?.results ?? [];
+  const previewInvoiceDocument = usePreviewInvoiceDocument();
 
   const orders = (data?.results ?? []).filter((order): order is ReadyOrder => (
     order.status === 'ready'
@@ -245,18 +251,31 @@ export default function ChapanReadyPage() {
     }
   }
 
-  function requestAdvanceOrders(targetOrders: ReadyOrder[]) {
+  async function dispatchReadyOrders(targetOrders: ReadyOrder[], onSuccess?: () => void) {
     const unpaidLabels = getUnpaidTransferLabels(targetOrders);
     if (unpaidLabels.length > 0) {
       setTransferBlockedOrders(unpaidLabels);
       return;
     }
 
-    void advancePaidOrders(targetOrders);
+    const requiresInvoice = targetOrders.some((order) => order.requiresInvoice);
+    const draftDocument = getDraftDocumentForOrders(targetOrders);
+
+    if (requiresInvoice) {
+      await createInvoice.mutateAsync({
+        orderIds: targetOrders.map((order) => order.id),
+        documentPayload: draftDocument,
+      });
+      setInvoicesDrawerOpen(true);
+    } else {
+      await advancePaidOrders(targetOrders);
+    }
+
+    onSuccess?.();
   }
 
   function handleAdvance(order: ReadyOrder) {
-    requestAdvanceOrders([order]);
+    void dispatchReadyOrders([order]);
   }
 
   function requestClose(order: ReadyOrder) {
@@ -272,7 +291,7 @@ export default function ChapanReadyPage() {
   }
 
   function handleAdvanceMany(batchOrders: ReadyOrder[]) {
-    requestAdvanceOrders(batchOrders);
+    void dispatchReadyOrders(batchOrders);
   }
 
   function requestCloseMany(batchOrders: ReadyOrder[]) {
@@ -323,20 +342,18 @@ export default function ChapanReadyPage() {
   }
 
   const selectedOrders = orders.filter((o) => selectedIds.has(o.id));
-  const hasUnpaidSelected = selectedOrders.some((o) => o.paymentStatus !== 'paid');
-  const unpaidSelectedOrders = selectedOrders.filter((o) => o.paymentStatus !== 'paid');
+  const selectedOrderIds = selectedOrders.map((order) => order.id);
+  const selectedOrderKey = buildOrderSelectionKey(selectedOrderIds);
+
+  function getDraftDocumentForOrders(targetOrders: ReadyOrder[]) {
+    const targetKey = buildOrderSelectionKey(targetOrders.map((order) => order.id));
+    return targetKey !== '' && targetKey === batchPreviewSelectionKey
+      ? batchPreviewDocument ?? undefined
+      : undefined;
+  }
 
   function handleTransferToWarehouse() {
-    if (hasUnpaidSelected) {
-      setTransferBlockedOrders(
-        unpaidSelectedOrders.map((o) => `#${o.orderNumber} — остаток: ${formatMoney(getOrderBalance(o))}`)
-      );
-      return;
-    }
-    createInvoice.mutate(
-      { orderIds: [...selectedIds] },
-      { onSuccess: () => exitSelectMode() },
-    );
+    return void dispatchReadyOrders(selectedOrders, exitSelectMode);
   }
 
   async function handleBatchInvoiceDownload() {
@@ -345,6 +362,7 @@ export default function ChapanReadyPage() {
       const response = await apiClient.post('/chapan/orders/batch-invoice', {
         orderIds: [...selectedIds],
         style: 'branded',
+        documentPayload: getDraftDocumentForOrders(selectedOrders),
       }, { responseType: 'blob' });
       const blob = new Blob([response.data], {
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -360,6 +378,18 @@ export default function ChapanReadyPage() {
     } catch {
       // Download failed silently
     }
+  }
+
+  async function handleOpenBatchPreview() {
+    if (selectedOrderIds.length === 0) return;
+
+    if (!batchPreviewDocument || batchPreviewSelectionKey !== selectedOrderKey) {
+      const document = await previewInvoiceDocument.mutateAsync({ orderIds: selectedOrderIds });
+      setBatchPreviewDocument(document);
+      setBatchPreviewSelectionKey(selectedOrderKey);
+    }
+
+    setBatchPreviewOpen(true);
   }
 
   const currentView = VIEW_OPTIONS.find((option) => option.key === viewMode)!;
@@ -430,8 +460,8 @@ export default function ChapanReadyPage() {
           </button>
 
           <button
-            className={`${styles.groupToggle} ${invoicePanelOpen ? styles.groupToggleActive : ''}`}
-            onClick={() => setInvoicePanelOpen((v) => !v)}
+            className={styles.groupToggle}
+            onClick={() => setInvoicesDrawerOpen(true)}
           >
             <FileText size={13} />
             <span>Накладные</span>
@@ -472,7 +502,7 @@ export default function ChapanReadyPage() {
                 <ReadyCard
                   key={group.order.id}
                   order={group.order}
-                  onOpen={() => navigate(`/workzone/chapan/orders/${group.order.id}`)}
+                  onOpen={() => navigate(`/workzone/chapan/ready/${group.order.id}`)}
                   onAdvance={() => handleAdvance(group.order)}
                   onClose={() => requestClose(group.order)}
                   selectMode={selectMode}
@@ -483,7 +513,7 @@ export default function ChapanReadyPage() {
                 <ReadyBatchCard
                   key={`batch-${index}`}
                   orders={group.orders}
-                  onOpen={(id) => navigate(`/workzone/chapan/orders/${id}`)}
+                  onOpen={(id) => navigate(`/workzone/chapan/ready/${id}`)}
                   onAdvance={() => handleAdvanceMany(group.orders)}
                   onClose={() => requestCloseMany(group.orders)}
                   selectMode={selectMode}
@@ -500,7 +530,7 @@ export default function ChapanReadyPage() {
                 <ReadyRow
                   key={group.order.id}
                   order={group.order}
-                  onOpen={() => navigate(`/workzone/chapan/orders/${group.order.id}`)}
+                  onOpen={() => navigate(`/workzone/chapan/ready/${group.order.id}`)}
                   onAdvance={() => handleAdvance(group.order)}
                   onClose={() => requestClose(group.order)}
                   selectMode={selectMode}
@@ -511,7 +541,7 @@ export default function ChapanReadyPage() {
                 <ReadyBatchRow
                   key={`batch-row-${index}`}
                   orders={group.orders}
-                  onOpen={(id) => navigate(`/workzone/chapan/orders/${id}`)}
+                  onOpen={(id) => navigate(`/workzone/chapan/ready/${id}`)}
                   onAdvance={() => handleAdvanceMany(group.orders)}
                   onClose={() => requestCloseMany(group.orders)}
                   selectMode={selectMode}
@@ -529,11 +559,19 @@ export default function ChapanReadyPage() {
           <div className={styles.floatingLeft}>
             <span className={styles.floatingCount}>{selectedIds.size} выбрано</span>
             <button className={styles.floatingClear} onClick={exitSelectMode}>
-              <X size={12} />
-              Снять
+              <X size={14} />
+              Снять выбор
             </button>
           </div>
           <div className={styles.floatingRight}>
+            <button
+              className={styles.floatingAction}
+              onClick={() => void handleOpenBatchPreview()}
+              disabled={previewInvoiceDocument.isPending}
+            >
+              <Eye size={13} />
+              {previewInvoiceDocument.isPending ? 'Preview...' : 'Просмотр'}
+            </button>
             <button className={styles.floatingAction} onClick={handleBatchInvoiceDownload}>
               <Download size={13} />
               Накладная
@@ -549,6 +587,18 @@ export default function ChapanReadyPage() {
           </div>
         </div>
       )}
+
+      <ChapanInvoicePreviewModal
+        open={batchPreviewOpen}
+        onClose={() => setBatchPreviewOpen(false)}
+        draftDocument={batchPreviewDocument}
+        draftTitle={selectedOrderIds.length > 0 ? `${selectedOrderIds.length} выбранных заказов` : 'Новая накладная'}
+        loading={previewInvoiceDocument.isPending}
+        onDraftSave={async (document) => {
+          setBatchPreviewDocument(document);
+          setBatchPreviewSelectionKey(selectedOrderKey);
+        }}
+      />
 
       {transferBlockedOrders && (
         <div className={styles.confirmOverlay} onClick={() => setTransferBlockedOrders(null)}>
@@ -617,84 +667,6 @@ export default function ChapanReadyPage() {
         </div>
       )}
 
-      {invoicePanelOpen && (
-        <div className={styles.invoicePanelOverlay} onClick={() => setInvoicePanelOpen(false)}>
-          <div className={styles.invoicePanel} onClick={(e) => e.stopPropagation()}>
-            <div className={styles.invoicePanelHead}>
-              <span className={styles.invoicePanelTitle}>Накладные</span>
-              <button className={styles.invoicePanelClose} onClick={() => setInvoicePanelOpen(false)}>
-                <X size={16} />
-              </button>
-            </div>
-            <div className={styles.invoicePanelBody}>
-              {selectMode && selectedIds.size > 0 && (
-                <div className={styles.invoiceSection}>
-                  <span className={styles.invoiceSectionLabel}>Создать для выбранных</span>
-                  <div className={styles.invoiceCreateBox}>
-                    <span className={styles.invoiceCreateInfo}>
-                      {hasUnpaidSelected
-                        ? `Есть ${unpaidSelectedOrders.length} неоплаченных — передача на склад заблокирована`
-                        : `${selectedIds.size} заказов будут переданы на склад через накладную`}
-                    </span>
-                    <button
-                      className={styles.invoiceCreateBtn}
-                      disabled={hasUnpaidSelected || createInvoice.isPending}
-                      onClick={() => {
-                        createInvoice.mutate(
-                          { orderIds: [...selectedIds] },
-                          { onSuccess: () => { exitSelectMode(); setInvoicePanelOpen(false); } },
-                        );
-                      }}
-                    >
-                      <Plus size={13} />
-                      {createInvoice.isPending ? 'Создание...' : `Создать накладную (${selectedIds.size})`}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              <div className={styles.invoiceSection}>
-                <span className={styles.invoiceSectionLabel}>История</span>
-                {invoicesLoading ? (
-                  <div className={styles.invoicePanelEmpty}>
-                    <span className={styles.invoicePanelEmptyNote}>Загрузка...</span>
-                  </div>
-                ) : invoices.length === 0 ? (
-                  <div className={styles.invoicePanelEmpty}>
-                    <FileText size={28} style={{ opacity: 0.3 }} />
-                    <span className={styles.invoicePanelEmptyText}>Накладных пока нет</span>
-                    <span className={styles.invoicePanelEmptyNote}>Выберите заказы и создайте первую накладную</span>
-                  </div>
-                ) : (
-                  invoices.map((inv) => (
-                    <div key={inv.id} className={styles.invoiceRow}>
-                      <div className={styles.invoiceRowHead}>
-                        <span className={styles.invoiceRowNum}>#{inv.invoiceNumber}</span>
-                        <span className={styles.invoiceStatusBadge} style={invoiceStatusStyle(inv.status)}>
-                          {INVOICE_STATUS_LABEL[inv.status] ?? inv.status}
-                        </span>
-                        <div className={styles.invoiceConfirmIcons}>
-                          <span className={styles.invoiceConfirmIcon} style={inv.seamstressConfirmed ? { background: 'rgba(79,201,153,.12)', color: '#4FC999' } : { background: 'rgba(255,255,255,.04)', color: 'var(--ch-text-muted)' }}>
-                            Швея
-                          </span>
-                          <span className={styles.invoiceConfirmIcon} style={inv.warehouseConfirmed ? { background: 'rgba(79,201,153,.12)', color: '#4FC999' } : { background: 'rgba(255,255,255,.04)', color: 'var(--ch-text-muted)' }}>
-                            Склад
-                          </span>
-                        </div>
-                      </div>
-                      <div className={styles.invoiceRowMeta}>
-                        <span>{inv.items?.length ?? 0} заказов</span>
-                        <span>{formatDate(inv.createdAt)}</span>
-                        <span>{inv.createdByName}</span>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -772,7 +744,7 @@ function ReadyCard({
 
       {!selectMode && (
         <div className={styles.actions} onClick={(event) => event.stopPropagation()}>
-          <button className={styles.primaryAction} onClick={onClose}>
+          <button className={styles.primaryAction} onClick={onAdvance}>
             На склад
           </button>
         </div>
@@ -801,7 +773,10 @@ function ReadyBatchCard({
   const [expanded, setExpanded] = useState(false);
   const firstOrder = orders[0];
   const firstItem = firstOrder.items?.[0];
-  const totalQuantity = orders.reduce((sum, order) => sum + (order.items?.[0]?.quantity ?? 1), 0);
+  const totalQuantity = orders.reduce(
+    (sum, order) => sum + (order.items ?? []).reduce((itemSum, item) => itemSum + item.quantity, 0),
+    0,
+  );
   const nextStageLabel = getStageActionLabel(firstOrder.status);
   const allSelected = selectedIds ? orders.every((o) => selectedIds.has(o.id)) : false;
 
@@ -836,7 +811,7 @@ function ReadyBatchCard({
 
       {!selectMode && (
         <div className={styles.actions}>
-          <button className={styles.primaryAction} onClick={onClose}>
+          <button className={styles.primaryAction} onClick={onAdvance}>
             На склад ×{orders.length}
           </button>
         </div>
@@ -913,7 +888,7 @@ function ReadyRow({
 
       {!selectMode && (
         <div className={styles.actions} onClick={(event) => event.stopPropagation()}>
-          <button className={styles.primaryAction} onClick={onClose}>
+          <button className={styles.primaryAction} onClick={onAdvance}>
             На склад
           </button>
         </div>
@@ -980,7 +955,7 @@ function ReadyBatchRow({
 
         {!selectMode && (
           <div className={styles.actions} onClick={(event) => event.stopPropagation()}>
-            <button className={styles.primaryAction} onClick={onClose}>
+            <button className={styles.primaryAction} onClick={onAdvance}>
               На склад ×{orders.length}
             </button>
           </div>

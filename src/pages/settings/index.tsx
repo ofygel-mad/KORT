@@ -2,13 +2,17 @@ import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Building2,
+  Check,
   Copy,
   Globe,
   Key,
   MessageSquare,
+  Monitor,
   MonitorCog,
+  Moon,
   ShieldCheck,
   Smartphone,
+  Sun,
   Users,
   Zap,
 } from 'lucide-react';
@@ -26,7 +30,7 @@ import { copyToClipboard } from '../../shared/lib/browser';
 import { useDocumentTitle } from '../../shared/hooks/useDocumentTitle';
 import { getDeviceId, usePinStore } from '../../shared/stores/pin';
 import { useAuthStore } from '../../shared/stores/auth';
-import { useUIStore, type ThemePack } from '../../shared/stores/ui';
+import { useUIStore, type Theme, type ThemePack } from '../../shared/stores/ui';
 import { Badge } from '../../shared/ui/Badge';
 import { Button } from '../../shared/ui/Button';
 import { CompanyAccessGate } from '../../shared/ui/CompanyAccessGate';
@@ -48,6 +52,12 @@ interface OrgData {
   legal_form?: string;
   director?: string;
   accountant?: string;
+  shipment_responsible_name?: string;
+  shipment_responsible_position?: string;
+  transport_organization?: string;
+  attorney_number?: string;
+  attorney_date?: string;
+  attorney_issued_by?: string;
   address?: string;
   city?: string;
   phone?: string;
@@ -219,6 +229,66 @@ function OrgSection() {
           </div>
         </div>
 
+        <div className={s.orgGroup}>
+          <div className={s.orgGroupLabel}>Документы и подписи</div>
+          <div className={s.fieldGrid}>
+            <div className={s.field}>
+              <label className={s.fieldLabel}>Ответственный за отпуск</label>
+              <input
+                {...register('shipment_responsible_name')}
+                defaultValue={org?.shipment_responsible_name ?? ''}
+                className="kort-input"
+                placeholder="ФИО сотрудника, который разрешает отпуск"
+              />
+            </div>
+            <div className={s.field}>
+              <label className={s.fieldLabel}>Должность ответственного</label>
+              <input
+                {...register('shipment_responsible_position')}
+                defaultValue={org?.shipment_responsible_position ?? ''}
+                className="kort-input"
+                placeholder="Руководитель / Зав. складом / Менеджер"
+              />
+            </div>
+            <div className={`${s.field} ${s.fieldWide}`}>
+              <label className={s.fieldLabel}>Транспортная организация</label>
+              <input
+                {...register('transport_organization')}
+                defaultValue={org?.transport_organization ?? ''}
+                className="kort-input"
+                placeholder="Если есть постоянный перевозчик, укажите здесь"
+              />
+            </div>
+            <div className={s.field}>
+              <label className={s.fieldLabel}>Номер доверенности</label>
+              <input
+                {...register('attorney_number')}
+                defaultValue={org?.attorney_number ?? ''}
+                className="kort-input"
+                placeholder="15/ДОВ-2026"
+              />
+            </div>
+            <div className={s.field}>
+              <label className={s.fieldLabel}>Дата доверенности</label>
+              <input
+                {...register('attorney_date')}
+                defaultValue={org?.attorney_date ?? ''}
+                className="kort-input"
+                type="date"
+              />
+            </div>
+            <div className={`${s.field} ${s.fieldWide}`}>
+              <label className={s.fieldLabel}>Кем выдана доверенность</label>
+              <input
+                {...register('attorney_issued_by')}
+                defaultValue={org?.attorney_issued_by ?? ''}
+                className="kort-input"
+                placeholder="ТОО «Компания» / ИП Иванов И.И."
+              />
+            </div>
+          </div>
+        </div>
+
         {/* — Блок 4: Контакты и адрес — */}
         <div className={s.orgGroup}>
           <div className={s.orgGroupLabel}>Контакты и адрес</div>
@@ -252,7 +322,7 @@ function OrgSection() {
           <div className={s.fieldGrid}>
             <div className={s.field}>
               <label className={s.fieldLabel}>Банк</label>
-              <input {...register('bank_name')} defaultValue={org?.bank_name ?? ''} className="kort-input" placeholder="Казкоммерцбанк / Халык Банк" />
+              <input {...register('bank_name')} defaultValue={org?.bank_name ?? ''} className="kort-input" placeholder="БанкЦентрКредит / Халык Банк" />
             </div>
             <div className={s.field}>
               <label className={s.fieldLabel}>БИК банка</label>
@@ -413,36 +483,74 @@ function TeamSection() {
   );
 }
 
+const THEME_MODES: Array<{ value: Theme; label: string; icon: JSX.Element }> = [
+  { value: 'light', label: 'Светлая', icon: <Sun size={15} /> },
+  { value: 'dark', label: 'Тёмная', icon: <Moon size={15} /> },
+  { value: 'system', label: 'Системная', icon: <Monitor size={15} /> },
+];
+
 function AppearanceSection() {
+  const theme = useUIStore((state) => state.theme);
+  const setTheme = useUIStore((state) => state.setTheme);
   const themePack = useUIStore((state) => state.themePack);
   const setThemePack = useUIStore((state) => state.setThemePack);
 
   return (
-    <div className={s.section}>
-      <div className={s.sectionHeader}>
-        <div>
-          <div className={s.sectionTitle}>Визуальный пакет</div>
-          <div className={s.sectionSubtitle}>Меняет только стиль интерфейса, без связи с ландшафтом или SPA-логикой</div>
+    <>
+      <div className={s.section}>
+        <div className={s.sectionHeader}>
+          <div>
+            <div className={s.sectionTitle}>Цветовая схема</div>
+            <div className={s.sectionSubtitle}>Применяется глобально ко всему интерфейсу</div>
+          </div>
+        </div>
+        <div className={s.sectionBody}>
+          <div className={s.themeToggleRow}>
+            {THEME_MODES.map((item) => (
+              <button
+                key={item.value}
+                type="button"
+                className={`${s.themeToggleBtn} ${theme === item.value ? s.themeToggleBtnActive : ''}`}
+                onClick={() => setTheme(item.value)}
+              >
+                {item.icon}
+                {item.label}
+                {theme === item.value && <Check size={13} className={s.themeToggleCheck} />}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
-      <div className={s.sectionBody}>
-        <div className={s.themeModeRow}>
-          {THEME_PACKS.map((item) => (
-            <button
-              key={item.value}
-              type="button"
-              className={`${s.themeModeBtn} ${themePack === item.value ? s.themeModeBtnActive : ''}`}
-              onClick={() => setThemePack(item.value)}
-            >
-              {item.title}
-            </button>
-          ))}
+
+      <div className={s.section}>
+        <div className={s.sectionHeader}>
+          <div>
+            <div className={s.sectionTitle}>Визуальный пакет</div>
+            <div className={s.sectionSubtitle}>Цветовая палитра и стиль компонентов</div>
+          </div>
         </div>
-        <div className={s.fieldHint}>
-          {THEME_PACKS.find((item) => item.value === themePack)?.subtitle}
+        <div className={s.sectionBody}>
+          <div className={s.themePackGrid}>
+            {THEME_PACKS.map((item) => (
+              <button
+                key={item.value}
+                type="button"
+                className={`${s.themePackCard} ${themePack === item.value ? s.themePackCardActive : ''}`}
+                onClick={() => setThemePack(item.value)}
+              >
+                <div className={s.themePackCardInner}>
+                  <div className={s.themePackName}>{item.title}</div>
+                  <div className={s.themePackSub}>{item.subtitle}</div>
+                </div>
+                {themePack === item.value && (
+                  <div className={s.themePackCheck}><Check size={12} /></div>
+                )}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -638,46 +746,45 @@ export default function SettingsPage() {
 
   return (
     <div className={s.page}>
-      <PageHeader
-        title="Настройки"
-        subtitle="Организация, доступы, безопасность и подготовка к backend"
-      />
+      <div className={s.layout}>
+        <nav className={s.sidebar} role="tablist" aria-label="Разделы настроек" onKeyDown={onTabKeyDown}>
+          {visibleSections.map((item) => (
+            <button
+              key={item.key}
+              role="tab"
+              tabIndex={section === item.key ? 0 : -1}
+              aria-selected={section === item.key}
+              className={`${s.sidebarItem} ${section === item.key ? s.sidebarItemActive : ''}`}
+              onClick={() => navigate(item.key === 'company-access' ? '/settings' : `/settings/${item.key}`)}
+            >
+              {item.icon}
+              {item.label}
+            </button>
+          ))}
+        </nav>
 
-      <div className={s.navTabs} role="tablist" aria-label="Разделы настроек" onKeyDown={onTabKeyDown}>
-        {visibleSections.map((item) => (
-          <button
-            key={item.key}
-            role="tab"
-            tabIndex={section === item.key ? 0 : -1}
-            aria-selected={section === item.key}
-            className={`${s.navTab} ${section === item.key ? s.active : ''}`}
-            onClick={() => navigate(item.key === 'company-access' ? '/settings' : `/settings/${item.key}`)}
-          >
-            {item.icon}
-            {item.label}
-          </button>
-        ))}
+        <div className={s.mainContent}>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={section}
+              initial={{ opacity: 0, y: 5 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.13 }}
+            >
+              {section === 'organization' && <OrgSection />}
+              {section === 'company-access' && <CompanyAccessSection />}
+              {section === 'appearance' && <AppearanceSection />}
+              {section === 'security' && <SecuritySection />}
+              {section === 'team' && <TeamSection />}
+              {section === 'api' && <ApiSection />}
+              {section === 'integrations' && <StubSection title="Интеграции" subtitle="Каталог внешних подключений и ключей" />}
+              {section === 'webhooks' && <StubSection title="Webhooks" subtitle="Доставка событий и автоматизации" />}
+              {section === 'templates' && <StubSection title="Шаблоны сообщений" subtitle="Повторно используемые тексты и follow-up сценарии" />}
+            </motion.div>
+          </AnimatePresence>
+        </div>
       </div>
-
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={section}
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.14 }}
-        >
-          {section === 'organization' && <OrgSection />}
-          {section === 'company-access' && <CompanyAccessSection />}
-          {section === 'appearance' && <AppearanceSection />}
-          {section === 'security' && <SecuritySection />}
-          {section === 'team' && <TeamSection />}
-          {section === 'api' && <ApiSection />}
-          {section === 'integrations' && <StubSection title="Интеграции" subtitle="Каталог внешних подключений и ключей" />}
-          {section === 'webhooks' && <StubSection title="Webhooks" subtitle="Доставка событий и автоматизации" />}
-          {section === 'templates' && <StubSection title="Шаблоны сообщений" subtitle="Повторно используемые тексты и follow-up сценарии" />}
-        </motion.div>
-      </AnimatePresence>
     </div>
   );
 }

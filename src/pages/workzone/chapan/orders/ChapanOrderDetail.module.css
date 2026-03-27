@@ -1,4 +1,33 @@
-.root { padding: 24px; }
+.root {
+  padding: 24px;
+}
+
+@media (max-width: 768px) {
+  .root {
+    padding: 14px;
+    padding-bottom: env(safe-area-inset-bottom, 14px);
+  }
+
+  .pageHeader {
+    margin-bottom: 16px;
+    gap: 10px;
+  }
+
+  .orderNum { font-size: 18px; }
+
+  .card {
+    padding: 14px 16px;
+    border-radius: 10px;
+  }
+
+  .actions { gap: 10px; }
+
+  .addPayBtn,
+  .actionBtn {
+    min-height: 48px;
+    font-size: 14px;
+  }
+}
 .loadingSkeleton { display:flex; flex-direction:column; gap:14px; }
 .skeletonBlock { height:140px; background:var(--ch-surface); border-radius:10px; animation:shimmer 1.6s infinite; }
 @keyframes shimmer { 0%,100%{opacity:.4} 50%{opacity:.8} }
@@ -68,6 +97,7 @@
 
 .addPayBtn,
 .actionBtn { width:100%; padding:13px 16px; border-radius:8px; font-size:14px; font-weight:600; font-family:inherit; cursor:pointer; transition:all 140ms; }
+.actionBtn:disabled { opacity:.45; cursor:not-allowed; }
 .addPayBtn { display:flex; align-items:center; justify-content:center; gap:8px; background:var(--ch-plat-soft); border:1px solid var(--ch-plat-border); color:var(--ch-plat-bright); }
 .addPayBtn:hover { background:rgba(180,192,210,.16); }
 .actionPrimary { background:var(--ch-plat); border:none; color:#0B0D12; box-shadow:0 2px 10px rgba(180,192,210,.18); }
@@ -216,3 +246,82 @@
 @media (max-width:640px) {
   .payFormRow { grid-template-columns:1fr; }
 }
+.itemHead { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.routeBadge { display:inline-flex; align-items:center; justify-content:center; border-radius:999px; padding:3px 8px; font-size:10px; font-weight:700; letter-spacing:.04em; border:1px solid transparent; white-space:nowrap; }
+.routeBadgeWarehouse { background:rgba(139,92,246,.12); border-color:rgba(139,92,246,.28); color:#B794F6; }
+.routeBadgeProduction { background:rgba(229,146,42,.12); border-color:rgba(229,146,42,.28); color:#E8B15D; }
+.routeBadgePending { background:rgba(255,255,255,.04); border-color:var(--ch-border); color:var(--ch-text-muted); }
+.routeBadgeDone { background:rgba(16,185,129,.10); border-color:rgba(16,185,129,.25); color:#10B981; }
+.routeActions { display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; }
+.routeActionBtn { border-radius:8px; border:1px solid var(--ch-border); background:var(--ch-surface); color:var(--ch-text-dim); padding:7px 10px; font:inherit; font-size:12px; cursor:pointer; transition:border-color 140ms, color 140ms, background 140ms; }
+.routeActionBtn:hover:not(:disabled) { border-color:var(--ch-border-plat); color:var(--ch-text); }
+.routeActionBtnActive { background:var(--ch-plat-soft); border-color:var(--ch-plat-border); color:var(--ch-plat-bright); }
+.routeActionBtnPrimary { background:rgba(229,146,42,.12); border-color:rgba(229,146,42,.35); color:#E5922A; }
+.routeActionBtnPrimary:hover:not(:disabled) { background:rgba(229,146,42,.20); border-color:rgba(229,146,42,.55); color:#F4A94A; }
+.routeActionBtn:disabled { opacity:.45; cursor:not-allowed; }
+.routeHint { font-size:11px; color:var(--ch-text-muted); margin-top:4px; }
+.routeSummaryHint { font-size:12px; color:var(--ch-text-muted); line-height:1.45; }
+.routeList { display:flex; flex-direction:column; gap:8px; }
+.routeListItem { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; padding:10px 12px; background:var(--ch-card); border:1px solid var(--ch-border); border-radius:8px; }
+.routeListInfo { display:flex; flex-direction:column; gap:3px; min-width:0; }
+.routeListName { font-size:14px; font-weight:600; color:var(--ch-text); }
+.routeListMeta { font-size:11px; color:var(--ch-text-muted); }
+.routeStatus { display:inline-flex; align-items:center; justify-content:center; border-radius:999px; padding:4px 9px; font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; white-space:nowrap; }
+.routeStatusWarehouse { background:rgba(139,92,246,.12); border:1px solid rgba(139,92,246,.28); color:#B794F6; }
+
+.invoicePanel { display:flex; flex-direction:column; gap:10px; padding:14px; border-radius:10px; background:rgba(245,158,11,.06); border:1px solid rgba(245,158,11,.25); }
+.invoicePanelTitle { font-size:12px; font-weight:700; color:var(--ch-text-dim); display:flex; align-items:center; gap:6px; }
+.invoicePanelNum { font-family:'JetBrains Mono',monospace; color:#F59E0B; }
+.invoiceConfirms { display:flex; gap:10px; flex-wrap:wrap; }
+.invoiceChip { display:inline-flex; align-items:center; gap:5px; font-size:11px; padding:4px 10px; border-radius:999px; border:1px solid var(--ch-border); color:var(--ch-text-muted); background:var(--ch-surface); }
+.invoiceChipDone { color:#10B981; border-color:rgba(16,185,129,.28); background:rgba(16,185,129,.08); }
+.invoicePanelHint { font-size:11px; color:var(--ch-text-muted); line-height:1.4; }
+.invoiceConfirmBtn { display:flex; align-items:center; justify-content:center; gap:7px; padding:10px 14px; border-radius:8px; background:rgba(16,185,129,.12); border:1px solid rgba(16,185,129,.3); color:#10B981; font:inherit; font-size:13px; font-weight:600; cursor:pointer; transition:background 130ms, border-color 130ms; }
+.invoiceConfirmBtn:hover:not(:disabled) { background:rgba(16,185,129,.2); border-color:rgba(16,185,129,.5); }
+.invoiceConfirmBtn:disabled { opacity:.5; cursor:not-allowed; }
+/* Invoice toggle card */
+.invoiceToggle {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px;
+  background: var(--ch-surface);
+  border: 1px solid var(--ch-border);
+  border-radius: 10px;
+  cursor: pointer;
+  user-select: none;
+  transition: border-color 160ms, background 160ms;
+  outline: none;
+}
+.invoiceToggle:hover { border-color: var(--ch-border-plat); }
+.invoiceToggle:focus-visible { box-shadow: 0 0 0 2px rgba(79,201,153,.35); }
+.invoiceToggleOn { background: rgba(79,201,153,.06); border-color: rgba(79,201,153,.35); }
+.invoiceToggleOn:hover { border-color: rgba(79,201,153,.55); }
+
+.invoiceToggleIcon {
+  width: 28px; height: 28px; border-radius: 7px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(240,232,212,.08); color: var(--ch-text-muted);
+  border: 1px solid var(--ch-border);
+  transition: background 160ms, color 160ms, border-color 160ms;
+}
+.invoiceToggleIconOn { background: rgba(79,201,153,.15); color: #4FC999; border-color: rgba(79,201,153,.3); }
+
+.invoiceToggleContent { flex: 1; min-width: 0; }
+.invoiceToggleLabel { font-size: 12px; font-weight: 600; color: var(--ch-text); line-height: 1.3; }
+.invoiceToggleDesc { font-size: 11px; color: var(--ch-text-muted); margin-top: 1px; }
+
+/* Toggle switch track + knob */
+.toggleTrack {
+  width: 34px; height: 19px; border-radius: 19px; flex-shrink: 0;
+  background: var(--ch-border);
+  position: relative;
+  transition: background 200ms;
+}
+.toggleTrackOn { background: #4FC999; }
+.toggleKnob {
+  position: absolute; top: 2px; left: 2px;
+  width: 15px; height: 15px; border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0,0,0,.2);
+  transition: transform 200ms cubic-bezier(.22,1,.36,1);
+}
+.toggleTrackOn .toggleKnob { transform: translateX(15px); }

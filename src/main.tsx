@@ -8,7 +8,7 @@ import { ConsoleRoot } from './console';
 import { Launch } from './pages/launch/Launch';
 import { api } from './shared/api/client';
 import type { AuthSessionResponse } from './shared/api/contracts';
-import { readApiErrorMessage } from './shared/api/errors';
+import { readApiErrorMessage, readApiErrorStatus } from './shared/api/errors';
 import { ensureDevAuthBypass } from './shared/config/devAccess';
 import './shared/design/globals.css';
 import { getNavigator, getWindow, isBrowser } from './shared/lib/browser';
@@ -58,8 +58,10 @@ function shouldSkipIntro(): boolean {
 
 function SessionBootstrap({ children }: { children: ReactNode }) {
   const token = useAuthStore((state) => state.token);
+  const refreshToken = useAuthStore((state) => state.refreshToken);
   const inviteContext = useAuthStore((state) => state.inviteContext);
   const clearAuth = useAuthStore((state) => state.clearAuth);
+  const setTokens = useAuthStore((state) => state.setTokens);
   const syncSession = useAuthStore((state) => state.syncSession);
   const [ready, setReady] = useState(() => !token);
 
@@ -75,28 +77,70 @@ function SessionBootstrap({ children }: { children: ReactNode }) {
 
     setReady(false);
 
+    const syncFromBootstrap = (session: BootstrapResponse) => {
+      syncSession({
+        user: session.user,
+        org: session.org,
+        capabilities: session.capabilities,
+        role: session.role,
+        membership: session.membership,
+        inviteContext,
+        orgs: session.orgs,
+      });
+    };
+
+    const tryRefreshSession = async () => {
+      if (!refreshToken) {
+        clearAuth();
+        return false;
+      }
+
+      try {
+        const refreshed = await api.post<{ access: string; refresh?: string }>('/auth/token/refresh/', {
+          refresh: refreshToken,
+        });
+        const nextRefreshToken = refreshed.refresh ?? refreshToken;
+        setTokens(refreshed.access, nextRefreshToken);
+
+        const session = await api.get<BootstrapResponse | null>('/auth/bootstrap/');
+        if (!session) {
+          clearAuth();
+          return false;
+        }
+
+        syncFromBootstrap(session);
+        return true;
+      } catch (error) {
+        const status = readApiErrorStatus(error);
+        if (status === 400 || status === 401 || status === 403) {
+          clearAuth();
+        }
+        return false;
+      }
+    };
+
     api.get<BootstrapResponse | null>('/auth/bootstrap/')
-      .then((session) => {
+      .then(async (session) => {
         if (cancelled) {
           return;
         }
 
         if (!session) {
-          clearAuth();
+          await tryRefreshSession();
           return;
         }
 
-        syncSession({
-          user: session.user,
-          org: session.org,
-          capabilities: session.capabilities,
-          role: session.role,
-          membership: session.membership,
-          inviteContext,
-          orgs: session.orgs,
-        });
+        syncFromBootstrap(session);
       })
-      .catch(() => {})
+      .catch(async (error) => {
+        if (cancelled) {
+          return;
+        }
+
+        if ((readApiErrorStatus(error) === 401 || readApiErrorStatus(error) === 403) && refreshToken) {
+          await tryRefreshSession();
+        }
+      })
       .finally(() => {
         if (!cancelled) {
           setReady(true);
@@ -106,7 +150,7 @@ function SessionBootstrap({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [clearAuth, inviteContext, syncSession, token]);
+  }, [clearAuth, inviteContext, refreshToken, setTokens, syncSession, token]);
 
   if (!ready) {
     return <PageLoader />;

@@ -4,16 +4,18 @@ import {
   useAssignWorker,
   useChapanCatalogs,
   useClaimProductionTask,
-  useConfirmSeamstress,
   useFlagTask,
-  useInvoices,
+  usePendingChangeRequests,
+  useApproveChangeRequest,
+  useRejectChangeRequest,
   useProductionTasks,
   useUnflagTask,
   useUpdateProductionStatus,
   useWorkshopTasks,
 } from '../../../../entities/order/queries';
-import type { ChapanInvoice, Priority, ProductionStatus, ProductionTask } from '../../../../entities/order/types';
+import type { ChapanChangeRequest, Priority, ProductionStatus, ProductionTask } from '../../../../entities/order/types';
 import { useAuthStore } from '@/shared/stores/auth';
+import { useChapanUiStore } from '../../../../features/workzone/chapan/store';
 import styles from './ChapanProduction.module.css';
 
 type ProductionMode = 'manager' | 'workshop';
@@ -99,22 +101,6 @@ function buildTaskGroups(tasks: ProductionTask[]): TaskDisplayGroup[] {
   return result;
 }
 
-const INVOICE_STATUS_LABEL: Record<string, string> = {
-  pending_confirmation: 'Ожидает',
-  confirmed: 'Подтверждена',
-  rejected: 'Отклонена',
-};
-
-function invoiceStatusStyle(status: string): CSSProperties {
-  if (status === 'confirmed') return { background: 'color-mix(in srgb, #10B981 14%, transparent)', color: '#10B981', border: '1px solid color-mix(in srgb, #10B981 28%, transparent)' };
-  if (status === 'rejected') return { background: 'color-mix(in srgb, #EF4444 14%, transparent)', color: '#EF4444', border: '1px solid color-mix(in srgb, #EF4444 28%, transparent)' };
-  return { background: 'color-mix(in srgb, #F59E0B 14%, transparent)', color: '#F59E0B', border: '1px solid color-mix(in srgb, #F59E0B 28%, transparent)' };
-}
-
-function fmtDate(d: string | null | undefined) {
-  if (!d) return '';
-  return new Date(d).toLocaleDateString('ru-KZ', { day: '2-digit', month: 'short' });
-}
 
 function getBatchColor(priority: Priority) {
   if (priority === 'urgent') return '#D94F4F';
@@ -155,7 +141,9 @@ export default function ChapanProductionPage() {
   const [flagModal, setFlagModal] = useState<{ taskId: string } | null>(null);
   const [flagReason, setFlagReason] = useState('');
   const [assignModal, setAssignModal] = useState<{ taskId: string; currentWorker: string | null } | null>(null);
-  const [invoicePanelOpen, setInvoicePanelOpen] = useState(false);
+  const [rejectModal, setRejectModal] = useState<{ crId: string; orderNumber: string } | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
+  const setInvoicesDrawerOpen = useChapanUiStore((s) => s.setInvoicesDrawerOpen);
 
   useEffect(() => {
     setView(workshopDefault ? 'workshop' : 'manager');
@@ -178,17 +166,16 @@ export default function ChapanProductionPage() {
   const { data: managerData, isLoading: managerLoading } = useProductionTasks();
   const { data: workshopData, isLoading: workshopLoading } = useWorkshopTasks();
   const { data: catalogs } = useChapanCatalogs();
+  const { data: changeRequests } = usePendingChangeRequests();
 
   const claimTask = useClaimProductionTask();
   const updateStatus = useUpdateProductionStatus();
   const assignWorker = useAssignWorker();
   const flagTask = useFlagTask();
   const unflagTask = useUnflagTask();
+  const approveChangeRequest = useApproveChangeRequest();
+  const rejectChangeRequest = useRejectChangeRequest();
 
-  const { data: invoicesData } = useInvoices({ limit: 50 });
-  const invoices: ChapanInvoice[] = invoicesData?.results ?? [];
-  const confirmSeamstress = useConfirmSeamstress();
-  const pendingSeamstress = invoices.filter((inv) => !inv.seamstressConfirmed).length;
 
   const rawTasks = view === 'manager' ? (managerData?.results ?? []) : (workshopData?.results ?? []);
   const tasks = useMemo(
@@ -234,6 +221,13 @@ export default function ChapanProductionPage() {
     await updateStatus.mutateAsync({ taskId, status: 'queued' });
   }
 
+  async function handleRejectChangeRequest() {
+    if (!rejectModal || !rejectReason.trim()) return;
+    await rejectChangeRequest.mutateAsync({ crId: rejectModal.crId, rejectReason: rejectReason.trim() });
+    setRejectModal(null);
+    setRejectReason('');
+  }
+
   return (
     <div className={styles.root}>
       <div className={styles.header}>
@@ -247,14 +241,11 @@ export default function ChapanProductionPage() {
 
         <div className={styles.headerRight}>
           <button
-            className={`${styles.groupToggle} ${invoicePanelOpen ? styles.groupToggleActive : ''}`}
-            onClick={() => setInvoicePanelOpen((v) => !v)}
+            className={styles.groupToggle}
+            onClick={() => setInvoicesDrawerOpen(true)}
           >
             <FileText size={13} />
             <span>Накладные</span>
-            {pendingSeamstress > 0 && (
-              <span className={styles.invoiceBadge}>{pendingSeamstress}</span>
-            )}
           </button>
 
           <button
@@ -282,6 +273,71 @@ export default function ChapanProductionPage() {
           </div>
         </div>
       </div>
+
+      {/* ── Change Request Alerts ──────────────────────────────────────── */}
+      {changeRequests && changeRequests.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0 }}>
+          {changeRequests.map((cr: ChapanChangeRequest) => (
+            <div
+              key={cr.id}
+              style={{
+                display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 18px',
+                background: 'rgba(217,79,79,.09)', border: '1.5px solid rgba(217,79,79,.35)',
+                borderRadius: 12, flexWrap: 'wrap',
+              }}
+            >
+              <AlertTriangle size={18} style={{ color: '#D94F4F', flexShrink: 0, marginTop: 1 }} />
+              <div style={{ flex: 1, minWidth: 200 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#D94F4F', marginBottom: 3 }}>
+                  Запрос на изменение позиций — #{cr.order.orderNumber}
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                  Менеджер <strong>{cr.requestedBy}</strong> просит изменить позиции заказа.
+                  {cr.managerNote && (
+                    <span style={{ marginLeft: 4, color: 'var(--text-tertiary)' }}>
+                      Пояснение: «{cr.managerNote}»
+                    </span>
+                  )}
+                </div>
+                <div style={{ marginTop: 6, fontSize: 11, color: 'var(--text-tertiary)' }}>
+                  Новые позиции: {(cr.proposedItems ?? []).map((item) =>
+                    `${item.productName} / ${item.size} × ${item.quantity}`
+                  ).join(', ')}
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 8, flexShrink: 0, alignItems: 'center' }}>
+                <button
+                  style={{
+                    padding: '7px 14px', background: 'rgba(16,185,129,.12)',
+                    border: '1px solid rgba(16,185,129,.3)', borderRadius: 8,
+                    color: 'var(--fill-positive, #10b981)', fontSize: 12, fontWeight: 600,
+                    fontFamily: 'inherit', cursor: 'pointer',
+                    opacity: approveChangeRequest.isPending ? .6 : 1,
+                  }}
+                  onClick={() => approveChangeRequest.mutate(cr.id)}
+                  disabled={approveChangeRequest.isPending}
+                >
+                  Одобрить
+                </button>
+                <button
+                  style={{
+                    padding: '7px 14px', background: 'rgba(239,68,68,.08)',
+                    border: '1px solid rgba(239,68,68,.25)', borderRadius: 8,
+                    color: '#D94F4F', fontSize: 12, fontWeight: 600,
+                    fontFamily: 'inherit', cursor: 'pointer',
+                  }}
+                  onClick={() => {
+                    setRejectModal({ crId: cr.id, orderNumber: cr.order.orderNumber });
+                    setRejectReason('');
+                  }}
+                >
+                  Отклонить
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {isLoading && (
         <div className={styles.loadingGrid}>
@@ -400,62 +456,41 @@ export default function ChapanProductionPage() {
         </div>
       )}
 
-      {invoicePanelOpen && (
-        <>
-          <div className={styles.invoicePanelOverlay} onClick={() => setInvoicePanelOpen(false)} />
-          <div className={styles.invoicePanel}>
-            <div className={styles.invoicePanelHead}>
-              <span className={styles.invoicePanelTitle}>Накладные</span>
-              <button className={styles.invoicePanelClose} onClick={() => setInvoicePanelOpen(false)}>
-                <X size={14} />
+
+      {rejectModal && (
+        <div className={styles.modalOverlay} onClick={() => setRejectModal(null)}>
+          <div className={styles.modal} onClick={(event) => event.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <span>Отклонить запрос — #{rejectModal.orderNumber}</span>
+              <button className={styles.modalClose} onClick={() => setRejectModal(null)}>
+                <X size={16} />
               </button>
             </div>
-            <div className={styles.invoicePanelBody}>
-              {invoices.length === 0 ? (
-                <div className={styles.invoicePanelEmpty}>
-                  <div className={styles.invoicePanelEmptyText}>Накладных нет</div>
-                  <div className={styles.invoicePanelEmptyNote}>Накладные создаются контролёром в разделе «Готово»</div>
-                </div>
-              ) : (
-                <div className={styles.invoiceSection}>
-                  {invoices.map((inv) => (
-                    <div key={inv.id} className={styles.invoiceRow}>
-                      <div className={styles.invoiceRowHead}>
-                        <span className={styles.invoiceRowNum}>№{inv.invoiceNumber}</span>
-                        <span
-                          className={styles.invoiceStatusBadge}
-                          style={invoiceStatusStyle(inv.status)}
-                        >
-                          {INVOICE_STATUS_LABEL[inv.status] ?? inv.status}
-                        </span>
-                      </div>
-                      <div className={styles.invoiceRowMeta}>
-                        {inv.items?.length ?? 0} заказ(ов) · {fmtDate(inv.createdAt)}
-                      </div>
-                      <div className={styles.invoiceConfirmIcons}>
-                        <span className={`${styles.invoiceConfirmIcon} ${inv.seamstressConfirmed ? styles.invoiceConfirmDone : ''}`}>
-                          ✓ Швея
-                        </span>
-                        <span className={`${styles.invoiceConfirmIcon} ${inv.warehouseConfirmed ? styles.invoiceConfirmDone : ''}`}>
-                          ✓ Склад
-                        </span>
-                      </div>
-                      {!inv.seamstressConfirmed && inv.status !== 'rejected' && (
-                        <button
-                          className={styles.invoiceConfirmBtn}
-                          onClick={() => confirmSeamstress.mutate(inv.id)}
-                          disabled={confirmSeamstress.isPending}
-                        >
-                          {confirmSeamstress.isPending ? '...' : 'Подтвердить отправку'}
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
+            <div className={styles.modalBody}>
+              <label className={styles.modalLabel}>Причина отказа</label>
+              <input
+                className={styles.modalInput}
+                value={rejectReason}
+                onChange={(event) => setRejectReason(event.target.value)}
+                placeholder="Например: изделие уже раскроено, нельзя изменить размер"
+                autoFocus
+                onKeyDown={(event) => event.key === 'Enter' && handleRejectChangeRequest()}
+              />
+            </div>
+            <div className={styles.modalFooter}>
+              <button className={styles.modalCancel} onClick={() => setRejectModal(null)}>
+                Отмена
+              </button>
+              <button
+                className={styles.modalSubmit}
+                onClick={handleRejectChangeRequest}
+                disabled={!rejectReason.trim() || rejectChangeRequest.isPending}
+              >
+                Отклонить запрос
+              </button>
             </div>
           </div>
-        </>
+        </div>
       )}
 
       {assignModal && (

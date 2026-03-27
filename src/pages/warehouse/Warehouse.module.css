@@ -53,13 +53,95 @@
 .emptyNote { font-size: 12px; color: var(--text-tertiary); }
 
 /* Drawer */
-.drawerOverlay { position: fixed; inset: 0; background: var(--bg-overlay); z-index: 50; display: flex; justify-content: flex-end; }
-.drawer { width: 380px; max-width: 95vw; height: 100%; background: var(--bg-surface-elevated); border-left: 1px solid var(--border-subtle); display: flex; flex-direction: column; overflow: hidden; }
-.drawerHeader { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px 16px; border-bottom: 1px solid var(--border-subtle); flex-shrink: 0; }
-.drawerTitle { font-size: 16px; font-weight: 600; color: var(--text-primary); }
-.drawerClose { background: none; border: none; color: var(--text-tertiary); cursor: pointer; font-size: 16px; transition: color 120ms; }
-.drawerClose:hover { color: var(--text-primary); }
+.drawerOverlay {
+  position: fixed;
+  top: var(--topbar-height, 56px);
+  left: 0; right: 0; bottom: 0;
+  z-index: 50;
+  display: flex; justify-content: flex-end;
+  background: rgba(0,0,0,.35);
+  animation: wOverlayIn 180ms ease;
+}
+@keyframes wOverlayIn { from { background: transparent; } }
+
+.drawer {
+  width: 520px; max-width: 100vw; height: 100%;
+  background: var(--bg-surface-elevated);
+  border-left: 1px solid var(--border-subtle);
+  border-top: 1px solid var(--border-subtle);
+  display: flex; flex-direction: column; overflow: hidden;
+  animation: wDrawerIn 220ms cubic-bezier(.22,1,.36,1);
+}
+@keyframes wDrawerIn { from { transform: translateX(40px); opacity: 0; } }
+
+.drawerHeader {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  padding: 20px 24px 16px; border-bottom: 1px solid var(--border-subtle); flex-shrink: 0;
+}
+.drawerTitle { font-size: 17px; font-weight: 700; color: var(--text-primary); letter-spacing: -.02em; }
+.drawerSubtitle { font-size: 12px; color: var(--text-tertiary); margin-top: 3px; }
+.drawerClose {
+  background: var(--bg-surface-inset); border: 1px solid var(--border-subtle);
+  border-radius: 7px; color: var(--text-tertiary); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; flex-shrink: 0; margin-left: 12px;
+  transition: color 120ms, border-color 120ms;
+}
+.drawerClose:hover { color: var(--text-primary); border-color: var(--border-default); }
 .drawerBody { flex: 1; overflow-y: auto; padding: 20px 24px; display: flex; flex-direction: column; gap: 14px; }
+.drawerFooter { padding: 16px 24px; border-top: 1px solid var(--border-subtle); flex-shrink: 0; }
+
+/* Confirm status row */
+.drawerStatusRow { display: flex; border-bottom: 1px solid var(--border-subtle); flex-shrink: 0; }
+.drawerStatusItem { flex: 1; display: flex; align-items: center; gap: 7px; padding: 10px 16px; font-size: 12px; }
+.drawerStatusItem + .drawerStatusItem { border-left: 1px solid var(--border-subtle); }
+
+/* Table wrapper — horizontal scroll on small drawers */
+.drawerTableWrap { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 9px; border: 1px solid var(--border-subtle); }
+.drawerTableWrap table { width: 100%; border-collapse: collapse; min-width: 340px; }
+
+/* Info card inside drawer */
+.drawerCard {
+  padding: 12px 14px; background: var(--bg-surface-inset);
+  border-radius: 9px; border: 1px solid var(--border-subtle);
+  display: flex; flex-direction: column; gap: 7px;
+}
+.drawerCardLabel { font-size: 10px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--text-tertiary); }
+.drawerCardRow { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-primary); }
+.drawerCardRowSecondary { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-secondary); }
+
+/* Order card in invoice drawer */
+.invOrderCard { border: 1px solid var(--border-subtle); border-radius: 10px; overflow: hidden; background: var(--bg-surface-inset); }
+.invOrderHead { padding: 10px 14px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border-subtle); background: var(--bg-surface); flex-wrap: wrap; gap: 8px; }
+.invOrderNum { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600; color: var(--text-primary); }
+.invOrderClient { display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--text-secondary); margin-left: auto; }
+.invOrderFoot { padding: 9px 14px; border-top: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center; }
+
+/* Action button inside drawer footer */
+.drawerActionBtn {
+  width: 100%; padding: 13px; border: none; border-radius: 10px;
+  color: #fff; font-weight: 600; font-size: 14px; font-family: inherit;
+  cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+  transition: opacity 140ms;
+}
+.drawerActionBtn:disabled { opacity: .5; cursor: not-allowed; }
+.drawerActionBtn:hover:not(:disabled) { opacity: .88; }
+.drawerActionBtnPrimary { background: var(--fill-accent); }
+.drawerActionBtnSuccess { background: var(--fill-positive, #10b981); }
+.drawerConfirmedNotice { display: flex; align-items: center; gap: 8px; color: var(--fill-positive); font-size: 13px; font-weight: 500; }
+.drawerUnpaidNote { padding: 10px 14px; background: rgba(239,68,68,.08); border: 1px solid rgba(239,68,68,.2); border-radius: 9px; font-size: 12px; color: var(--fill-negative); line-height: 1.5; }
+
+@media (max-width: 767px) {
+  .drawerOverlay {
+    top: var(--topbar-height, 56px);
+    bottom: calc(var(--bottom-nav-height, 60px) + env(safe-area-inset-bottom, 0px));
+  }
+  .drawer { width: 100%; border-left: none; border-top: none; }
+  .drawerHeader { padding: 16px 16px 12px; }
+  .drawerBody { padding: 14px 16px; }
+  .drawerFooter { padding: 12px 16px; }
+  .drawerStatusItem { padding: 9px 12px; font-size: 11px; }
+}
 .drawerActions { display: flex; gap: 8px; padding-top: 4px; }
 .field { display: flex; flex-direction: column; gap: 5px; }
 .label { font-size: 11px; font-weight: 500; letter-spacing: .06em; text-transform: uppercase; color: var(--text-tertiary); }
@@ -80,6 +162,16 @@
 /* Tab separator & group label */
 .tabDivider { width: 1px; height: 18px; background: var(--border-subtle); margin: 0 4px; align-self: center; flex-shrink: 0; }
 .tabGroupLabel { font-size: 10px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--text-tertiary); padding: 0 4px; align-self: center; white-space: nowrap; user-select: none; }
+
+/* Section label (between table groups) */
+.sectionLabel {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  padding: 12px 0 6px;
+}
 
 /* Summary stats bar */
 .statsBar {

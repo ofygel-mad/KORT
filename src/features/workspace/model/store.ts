@@ -29,18 +29,20 @@ const VALID_SCENE_THEMES = new Set<WorkspaceSceneTheme>(['default', 'morning', '
 const VALID_SCENE_TERRAIN_MODES = new Set<WorkspaceSceneTerrainMode>(['full', 'calm', 'void']);
 const VALID_TILE_STATUSES = new Set<WorkspaceTileStatus>(['floating', 'drifting', 'idle']);
 
+const TILE_SIZE = { width: 260, height: 168 };
+
 const DEFAULT_TILE_SIZE: Record<WorkspaceWidgetKind, { width: number; height: number }> = {
-  leads: { width: 280, height: 175 },
-  deals: { width: 260, height: 170 },
-  customers: { width: 260, height: 170 },
-  tasks: { width: 260, height: 170 },
-  warehouse: { width: 250, height: 160 },
-  production: { width: 280, height: 170 },
-  finance: { width: 260, height: 170 },
-  employees: { width: 260, height: 170 },
-  reports: { width: 260, height: 170 },
-  documents: { width: 260, height: 170 },
-  chapan: { width: 270, height: 170 },
+  leads: TILE_SIZE,
+  deals: TILE_SIZE,
+  customers: TILE_SIZE,
+  tasks: TILE_SIZE,
+  warehouse: TILE_SIZE,
+  production: TILE_SIZE,
+  finance: TILE_SIZE,
+  employees: TILE_SIZE,
+  reports: TILE_SIZE,
+  documents: TILE_SIZE,
+  chapan: TILE_SIZE,
 };
 
 const TITLES = Object.fromEntries(
@@ -275,8 +277,8 @@ function sanitizeTile(raw: unknown, fallbackZIndex: number): WorkspaceTile | nul
     title,
     x: Math.max(0, toFiniteNumber(tile.x, 20)),
     y: Math.max(0, toFiniteNumber(tile.y, 20)),
-    width: Math.max(160, toPositiveNumber(tile.width, size.width)),
-    height: Math.max(120, toPositiveNumber(tile.height, size.height)),
+    width: size.width,
+    height: size.height,
     modalSize: isWorkspaceModalSize(tile.modalSize) ? tile.modalSize : 'default',
     version: Math.max(WORKSPACE_TILE_VERSION, version),
     createdAt: toIsoString(tile.createdAt, fallbackCreatedAt),
@@ -423,26 +425,46 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
           if (!target) return state;
 
           const status: WorkspaceTileStatus = target.pinned ? 'idle' : 'floating';
-          const nextPosition =
+          const pos =
             state.viewportSize.width > 0 && state.viewportSize.height > 0 && state.sceneMode !== 'flight'
               ? clampTileToViewportBounds({ ...target, x, y }, state.viewport, state.viewportSize, state.zoom)
               : clampTileToWorldBounds({ ...target, x, y }, state.viewportSize.width, state.viewportSize.height);
 
-          return {
-            tiles: state.tiles.map((tile) =>
-              tile.id === id
-                ? {
-                    ...tile,
-                    x: nextPosition.x,
-                    y: nextPosition.y,
-                    lastInteractionAt: nowIsoString(),
-                    status,
-                    rotation3D: deriveTile3DRotation(status),
-                  }
-                : tile,
-            ),
-            contextMenu: state.contextMenu?.tileId === id ? null : state.contextMenu,
-          };
+          const PUSH_GAP = 14;
+          const dx = pos.x;
+          const dy = pos.y;
+          const dw = target.width;
+          const dh = target.height;
+
+          const tiles = state.tiles.map((tile) => {
+            if (tile.id === id) {
+              return { ...tile, x: pos.x, y: pos.y, lastInteractionAt: nowIsoString(), status, rotation3D: deriveTile3DRotation(status) };
+            }
+            if (tile.pinned) return tile;
+
+            const ox = Math.min(dx + dw, tile.x + tile.width) - Math.max(dx, tile.x);
+            const oy = Math.min(dy + dh, tile.y + tile.height) - Math.max(dy, tile.y);
+            if (ox <= 0 || oy <= 0) return tile;
+
+            const dcx = dx + dw / 2;
+            const dcy = dy + dh / 2;
+            const tcx = tile.x + tile.width / 2;
+            const tcy = tile.y + tile.height / 2;
+
+            let nx = tile.x;
+            let ny = tile.y;
+            if (ox < oy) {
+              nx = tcx > dcx ? dx + dw + PUSH_GAP : dx - tile.width - PUSH_GAP;
+            } else {
+              ny = tcy > dcy ? dy + dh + PUSH_GAP : dy - tile.height - PUSH_GAP;
+            }
+            nx = Math.max(0, nx);
+            ny = Math.max(0, ny);
+            if (nx === tile.x && ny === tile.y) return tile;
+            return { ...tile, x: nx, y: ny };
+          });
+
+          return { tiles, contextMenu: state.contextMenu?.tileId === id ? null : state.contextMenu };
         }),
       bringToFront: (id) => {
         const newZIndex = get().topZIndex + 1;

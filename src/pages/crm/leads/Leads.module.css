@@ -85,3 +85,30 @@
 /* ── Tab separator & group label ── */
 .tabDivider { width:1px; height:18px; background:var(--border-subtle); margin:0 4px; align-self:center; flex-shrink:0; }
 .tabGroupLabel { font-size:10px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--text-tertiary); padding:0 4px; align-self:center; white-space:nowrap; user-select:none; }
+
+/* ── Mobile ── */
+@media (max-width: 768px) {
+  .root { padding:14px; gap:12px; }
+  .title { font-size:18px; }
+  .headerRight { gap:6px; flex-wrap:wrap; }
+  /* Search takes full width */
+  .searchWrap { flex:1; min-width:0; }
+  .searchInput { width:100%; font-size:16px; /* prevents zoom on iOS */ }
+  /* Larger touch targets */
+  .pipelineTab { padding:7px 12px; min-height:36px; }
+  .viewBtn { width:36px; height:32px; }
+  .addBtn { padding:8px 14px; min-height:38px; }
+  /* Kanban: snap scroll on mobile */
+  .kanban {
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+  }
+  .column {
+    flex: 0 0 80vw;
+    max-width: 320px;
+    scroll-snap-align: start;
+  }
+  /* List view: hide less important columns */
+  .table th:nth-child(n+4),
+  .table td:nth-child(n+4) { display: none; }
+}

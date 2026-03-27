@@ -607,7 +607,7 @@ export function installMockAdapter(client: AxiosInstance) {
 
       const workspace = {
         id: `ws-${Date.now()}`,
-        name: String(body.name ?? '').trim() || 'РќРѕРІРѕРµ РїСЂРѕРёР·РІРѕРґСЃС‚РІРѕ',
+        name: String(body.name ?? '').trim() || 'Новое производство',
         description: String(body.description ?? '').trim(),
         prefix: String(body.prefix ?? '').trim().toUpperCase(),
         status: 'created',

@@ -164,6 +164,10 @@ export const appRouter = createBrowserRouter([
         element: <RequireAuth><RequireOrg><WarehousePage /></RequireOrg></RequireAuth>,
       },
       {
+        path: 'warehouse/:id',
+        element: <RequireAuth><RequireOrg><ChapanOrderDetailPage /></RequireOrg></RequireAuth>,
+      },
+      {
         path: 'production',
         element: <RequireAuth><RequireOrg><RequirePlan tier="advanced"><ProductionPage /></RequirePlan></RequireOrg></RequireAuth>,
       },
@@ -234,12 +238,20 @@ export const appRouter = createBrowserRouter([
         element: <ChapanReadyPage />,
       },
       {
+        path: 'ready/:id',
+        element: <ChapanOrderDetailPage />,
+      },
+      {
         path: 'invoices',
         element: <ChapanInvoicesPage />,
       },
       {
         path: 'archive',
         element: <ChapanArchivePage />,
+      },
+      {
+        path: 'archive/:id',
+        element: <ChapanOrderDetailPage />,
       },
       {
         path: 'settings',

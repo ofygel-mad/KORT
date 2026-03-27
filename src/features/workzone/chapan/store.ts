@@ -3,6 +3,8 @@ import { create } from 'zustand';
 interface ChapanUiState {
   selectedOrderId: string | null;
   setSelectedOrderId: (id: string | null) => void;
+  invoicesDrawerOpen: boolean;
+  setInvoicesDrawerOpen: (open: boolean) => void;
 }
 
 export const useChapanUiStore = create<ChapanUiState>((set) => {
@@ -19,5 +21,7 @@ export const useChapanUiStore = create<ChapanUiState>((set) => {
       }
       set({ selectedOrderId: id });
     },
+    invoicesDrawerOpen: false,
+    setInvoicesDrawerOpen: (open) => set({ invoicesDrawerOpen: open }),
   };
 });

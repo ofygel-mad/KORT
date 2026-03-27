@@ -1,7 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { ordersApi, productionApi, chapanSettingsApi, invoicesApi } from './api';
-import type { CreateOrderDto, UpdateOrderDto, AddPaymentDto, ChapanCatalogs, ChapanProfile } from './types';
+import { ordersApi, productionApi, chapanSettingsApi, invoicesApi, changeRequestsApi } from './api';
+import type {
+  CreateOrderDto,
+  UpdateOrderDto,
+  AddPaymentDto,
+  ChapanCatalogs,
+  ChapanProfile,
+  CreateOrderItemDto,
+  InvoiceDocumentPayload,
+} from './types';
 import { readApiErrorMessage } from '../../shared/api/errors';
 
 // ── Query keys ────────────────────────────────────────────────────────────────
@@ -18,6 +26,7 @@ export const orderKeys = {
   settings: ['chapan_settings'] as const,
   catalogs: ['chapan_catalogs'] as const,
   clients: ['chapan_clients'] as const,
+  changeRequests: ['chapan_change_requests'] as const,
 };
 
 // ── Orders ────────────────────────────────────────────────────────────────────
@@ -107,9 +116,24 @@ export const useFulfillFromStock = () => {
     onSuccess: (_data, id) => {
       qc.invalidateQueries({ queryKey: orderKeys.all });
       qc.invalidateQueries({ queryKey: orderKeys.detail(id) });
-      toast.success('Заказ выполнен со склада — готов к выдаче');
+      toast.success('Заказ переведён в «Готово»');
     },
     onError: (error) => toast.error(readApiErrorMessage(error, 'Не удалось выполнить со склада')),
+  });
+};
+
+export const useRouteOrderItems = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, items }: { id: string; items: Array<{ itemId: string; fulfillmentMode: 'warehouse' | 'production' }> }) =>
+      ordersApi.routeItems(id, items),
+    onSuccess: (_data, { id }) => {
+      qc.invalidateQueries({ queryKey: orderKeys.all });
+      qc.invalidateQueries({ queryKey: orderKeys.detail(id) });
+      qc.invalidateQueries({ queryKey: orderKeys.production });
+      toast.success('Маршрут позиций обновлён');
+    },
+    onError: (error) => toast.error(readApiErrorMessage(error, 'Не удалось сохранить маршрут позиций')),
   });
 };
 
@@ -175,6 +199,33 @@ export const useAddOrderActivity = () => {
     onSuccess: (_data, { id }) => {
       qc.invalidateQueries({ queryKey: orderKeys.detail(id) });
     },
+  });
+};
+
+export const useSetRequiresInvoice = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, requiresInvoice }: { id: string; requiresInvoice: boolean }) =>
+      ordersApi.setRequiresInvoice(id, requiresInvoice),
+    onSuccess: (_data, { id }) => {
+      qc.invalidateQueries({ queryKey: orderKeys.detail(id) });
+    },
+    onError: () => toast.error('Не удалось обновить настройку'),
+  });
+};
+
+export const useReturnToReady = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason: string }) =>
+      ordersApi.returnToReady(id, reason),
+    onSuccess: (_data, { id }) => {
+      qc.invalidateQueries({ queryKey: orderKeys.all });
+      qc.invalidateQueries({ queryKey: orderKeys.detail(id) });
+      qc.invalidateQueries({ queryKey: orderKeys.invoices });
+      toast.success('Заказ возвращён в раздел «Готово»');
+    },
+    onError: (error) => toast.error(readApiErrorMessage(error, 'Не удалось вернуть заказ')),
   });
 };
 
@@ -261,14 +312,35 @@ export const useInvoice = (id: string) =>
 export const useCreateInvoice = () => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ orderIds, notes }: { orderIds: string[]; notes?: string }) =>
-      invoicesApi.create(orderIds, notes),
+    mutationFn: ({ orderIds, notes, documentPayload }: { orderIds: string[]; notes?: string; documentPayload?: InvoiceDocumentPayload }) =>
+      invoicesApi.create(orderIds, notes, documentPayload),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: orderKeys.invoices });
       qc.invalidateQueries({ queryKey: orderKeys.all });
       toast.success('Накладная создана');
     },
     onError: (error) => toast.error(readApiErrorMessage(error, 'Не удалось создать накладную')),
+  });
+};
+
+export const usePreviewInvoiceDocument = () =>
+  useMutation({
+    mutationFn: ({ orderIds }: { orderIds: string[] }) =>
+      invoicesApi.previewDocument(orderIds),
+    onError: (error) => toast.error(readApiErrorMessage(error, 'РќРµ СѓРґР°Р»РѕСЃСЊ СЃРѕР·РґР°С‚СЊ preview РЅР°РєР»Р°РґРЅРѕР№')),
+  });
+
+export const useSaveInvoiceDocument = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, documentPayload }: { id: string; documentPayload: InvoiceDocumentPayload }) =>
+      invoicesApi.saveDocument(id, documentPayload),
+    onSuccess: (_data, { id }) => {
+      qc.invalidateQueries({ queryKey: orderKeys.invoices });
+      qc.invalidateQueries({ queryKey: orderKeys.invoiceDetail(id) });
+      toast.success('Накладная сохранена');
+    },
+    onError: (error) => toast.error(readApiErrorMessage(error, 'Не удалось сохранить накладную')),
   });
 };
 
@@ -312,6 +384,70 @@ export const useRejectInvoice = () => {
       toast.success('Накладная отклонена');
     },
     onError: (error) => toast.error(readApiErrorMessage(error, 'Не удалось отклонить')),
+  });
+};
+
+// ── Change Requests ───────────────────────────────────────────────────────────
+
+export const usePendingChangeRequests = () =>
+  useQuery({
+    queryKey: orderKeys.changeRequests,
+    queryFn: () => changeRequestsApi.list(),
+    refetchInterval: 30_000,
+  });
+
+export const useRequestItemChange = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, items, managerNote }: { id: string; items: CreateOrderItemDto[]; managerNote?: string }) =>
+      ordersApi.requestItemChange(id, items, managerNote),
+    onSuccess: (_data, { id }) => {
+      qc.invalidateQueries({ queryKey: orderKeys.detail(id) });
+      qc.invalidateQueries({ queryKey: orderKeys.changeRequests });
+      toast.success('Запрос отправлен в цех. Ожидайте согласования.');
+    },
+    onError: (error) => toast.error(readApiErrorMessage(error, 'Не удалось отправить запрос')),
+  });
+};
+
+export const useApproveChangeRequest = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (crId: string) => changeRequestsApi.approve(crId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: orderKeys.changeRequests });
+      qc.invalidateQueries({ queryKey: orderKeys.all });
+      qc.invalidateQueries({ queryKey: orderKeys.production });
+      toast.success('Изменения согласованы, заказ возвращён на маршрутизацию');
+    },
+    onError: (error) => toast.error(readApiErrorMessage(error, 'Не удалось согласовать')),
+  });
+};
+
+export const useRejectChangeRequest = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ crId, rejectReason }: { crId: string; rejectReason: string }) =>
+      changeRequestsApi.reject(crId, rejectReason),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: orderKeys.changeRequests });
+      toast.success('Запрос на изменение отклонён');
+    },
+    onError: (error) => toast.error(readApiErrorMessage(error, 'Не удалось отклонить')),
+  });
+};
+
+export const useRouteSingleItem = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orderId, itemId, fulfillmentMode }: { orderId: string; itemId: string; fulfillmentMode: 'warehouse' | 'production' }) =>
+      ordersApi.routeItem(orderId, itemId, fulfillmentMode),
+    onSuccess: (_data, { orderId }) => {
+      void qc.invalidateQueries({ queryKey: orderKeys.detail(orderId) });
+      void qc.invalidateQueries({ queryKey: orderKeys.all });
+      void qc.invalidateQueries({ queryKey: orderKeys.production });
+    },
+    onError: (error) => toast.error(readApiErrorMessage(error, 'Не удалось маршрутизировать позицию')),
   });
 };
 

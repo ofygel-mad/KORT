@@ -55,7 +55,7 @@ export class WorkspaceSceneRuntime {
   private readonly fogInteractionWeights = [0, 0, 0];
   private readonly invisiblePlane = new THREE.Mesh(
     new THREE.PlaneGeometry(1600, 1600, 1, 1),
-    new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false }),
+    new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide }),
   );
   private readonly ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
   private readonly hemiLight = new THREE.HemisphereLight(0xffffff, 0x223040, 0.38);

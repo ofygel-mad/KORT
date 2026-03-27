@@ -41,6 +41,7 @@ function buildOrder(): ChapanOrder {
     cancelReason: null,
     completedAt: null,
     cancelledAt: null,
+    requiresInvoice: true,
     isArchived: false,
     archivedAt: null,
     createdAt: '2026-03-23T00:00:00.000Z',

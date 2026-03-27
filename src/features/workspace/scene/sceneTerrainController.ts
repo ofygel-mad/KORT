@@ -70,8 +70,6 @@ export class WorkspaceSceneTerrainController {
   private readonly terrainProbeNormal = new THREE.Vector3();
   private readonly normalMatrix = new THREE.Matrix3();
   private readonly projectedRayOrigin = new THREE.Vector3();
-  private readonly planeWorldNormal = new THREE.Vector3();
-  private readonly planeWorldQuaternion = new THREE.Quaternion();
   private readonly terrainLocalPointerTarget = new THREE.Vector3(9999, 9999, 0);
   private peakBeaconsEnabled = true;
   private amplitudePulse = 1.0;
@@ -234,7 +232,7 @@ export class WorkspaceSceneTerrainController {
     }
 
     if (staticFrame) {
-      trimExpiredWavesInPlace(this.waves, time, 3.2);
+      trimExpiredWavesInPlace(this.waves, time, 2.8);
       return;
     }
 
@@ -290,14 +288,14 @@ export class WorkspaceSceneTerrainController {
           const dx = baseX - wave.localPoint.x;
           const dy = baseY - wave.localPoint.y;
           const dist = Math.sqrt(dx * dx + dy * dy);
-          const waveFront = waveAge * 18;
-          const waveWidth = 12 + wave.strength * 5;
+          const waveFront = waveAge * 21;
+          const waveWidth = 10 + wave.strength * 4;
           const envelope = Math.exp(-Math.pow((dist - waveFront) / waveWidth, 2));
-          const decay = Math.max(0, 1 - waveAge / 3.2) * this.motionFactor;
-          const ring = Math.sin((dist - waveFront) * 0.28) * envelope * 3.4 * wave.strength * decay;
-          const crater = -Math.max(0, 1 - dist / (15 + wave.strength * 10))
-            * Math.max(0, 1 - waveAge / 0.42)
-            * 2.8
+          const decay = Math.max(0, 1 - waveAge / 2.8) * this.motionFactor;
+          const ring = Math.sin((dist - waveFront) * 0.34) * envelope * 4.2 * wave.strength * decay;
+          const crater = -Math.max(0, 1 - dist / (14 + wave.strength * 10))
+            * Math.max(0, 1 - waveAge / 0.32)
+            * 3.4
             * wave.strength
             * this.motionFactor;
           z += (ring + crater) * (1 - edgeBlend * 0.7);
@@ -340,7 +338,7 @@ export class WorkspaceSceneTerrainController {
       geometry.computeVertexNormals();
     }
 
-    trimExpiredWavesInPlace(this.waves, time, 3.2);
+    trimExpiredWavesInPlace(this.waves, time, 2.8);
   }
 
   private updatePeakBeacons() {
@@ -569,29 +567,8 @@ export class WorkspaceSceneTerrainController {
       return;
     }
     this.raycaster.setFromCamera(this.pointer, this.camera);
-    this.invisiblePlane.getWorldQuaternion(this.planeWorldQuaternion);
-    this.planeWorldNormal
-      .set(0, 0, 1)
-      .applyQuaternion(this.planeWorldQuaternion)
-      .normalize();
-
-    const incidence = Math.abs(this.raycaster.ray.direction.dot(this.planeWorldNormal));
-    if (incidence < 0.31) {
-      this.clearPointerInfluence();
-      return;
-    }
-
     const hits = this.raycaster.intersectObject(this.invisiblePlane, false);
     if (!hits.length) {
-      this.clearPointerInfluence();
-      return;
-    }
-
-    const hitDistance = hits[0].distance;
-    const distanceFade = 1 - THREE.MathUtils.smoothstep(hitDistance, 80, 104);
-    const incidenceFade = THREE.MathUtils.smoothstep(incidence, 0.31, 0.44);
-    const nextPointerStrength = distanceFade * incidenceFade;
-    if (nextPointerStrength <= 0.025) {
       this.clearPointerInfluence();
       return;
     }
@@ -600,18 +577,7 @@ export class WorkspaceSceneTerrainController {
     this.terrainGroup.worldToLocal(this.terrainLocalPointerTarget);
 
     const radialDistance = Math.hypot(this.terrainLocalPointerTarget.x, this.terrainLocalPointerTarget.y);
-    this.terrainLocalPosition.copy(this.camera.position);
-    this.terrainGroup.worldToLocal(this.terrainLocalPosition);
-    const pointerDistanceFromCamera = Math.hypot(
-      this.terrainLocalPointerTarget.x - this.terrainLocalPosition.x,
-      this.terrainLocalPointerTarget.y - this.terrainLocalPosition.y,
-    );
-
-    if (
-      radialDistance > TERRAIN_RADIUS * 0.84
-      || pointerDistanceFromCamera > TERRAIN_RADIUS * 0.68
-      || Math.abs(this.terrainLocalPointerTarget.z) > 14
-    ) {
+    if (radialDistance > TERRAIN_RADIUS * 0.84 || Math.abs(this.terrainLocalPointerTarget.z) > 14) {
       this.clearPointerInfluence();
       return;
     }
@@ -619,11 +585,11 @@ export class WorkspaceSceneTerrainController {
     if (!this.hasPointerInfluence()) {
       this.terrainLocalPointer.copy(this.terrainLocalPointerTarget);
     } else {
-      this.terrainLocalPointer.lerp(this.terrainLocalPointerTarget, 0.26);
+      this.terrainLocalPointer.lerp(this.terrainLocalPointerTarget, 0.4);
     }
 
     this.terrainLocalPointer.z = 0;
-    this.pointerInfluenceStrength = nextPointerStrength;
+    this.pointerInfluenceStrength = 1;
   }
 
   private clearPointerInfluence() {
@@ -657,9 +623,9 @@ export class WorkspaceSceneTerrainController {
     if (this.hasPointerInfluence() && this.pointerInfluenceStrength > 0.025) {
       const inf = this.getPooledInfluence(count);
       inf.localPoint = this.terrainLocalPointer;
-      inf.radius = THREE.MathUtils.lerp(flightMode ? 18 : 20, flightMode ? 30 : 38, this.pointerInfluenceStrength);
-      inf.depth = (flightMode ? 6.2 : 9.4) * this.pointerInfluenceStrength;
-      inf.ripple = (flightMode ? 0.9 : 1.35) * this.pointerInfluenceStrength;
+      inf.radius = flightMode ? 30 : 38;
+      inf.depth = flightMode ? 6.2 : 9.4;
+      inf.ripple = flightMode ? 0.9 : 1.35;
       inf.wobble = flightMode ? 8.2 : 8.8;
       count += 1;
     }

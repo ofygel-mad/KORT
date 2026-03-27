@@ -271,6 +271,7 @@ export const useAuthStore = create<AuthState>()(
         inviteContext: state.inviteContext,
         userOrgs: state.userOrgs,
         selectedOrgId: state.selectedOrgId,
+        isUnlocked: state.isUnlocked,
       }),
     },
   ),

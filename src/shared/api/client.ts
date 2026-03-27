@@ -53,8 +53,18 @@ function isSessionEstablishingRequest(url?: string) {
 
   return normalized.includes('/auth/login')
     || normalized.includes('/auth/register/')
+    || normalized.includes('/auth/token/refresh')
     || normalized.includes('/auth/set-password')
     || (normalized.includes('/invites/') && normalized.includes('/accept'));
+}
+
+function shouldClearAuthAfterRefreshFailure(error: unknown) {
+  if (!(error instanceof AxiosError)) {
+    return false;
+  }
+
+  const status = error.response?.status ?? 0;
+  return status === 400 || status === 401 || status === 403;
 }
 
 function shouldSuppressPermissionToast(status: number) {
@@ -172,7 +182,7 @@ apiClient.interceptors.response.use(
         return apiClient(originalRequest!);
       } catch (refreshError) {
         processQueue(refreshError, null);
-        if (!DEV_AUTH_BYPASS_ENABLED) {
+        if (!DEV_AUTH_BYPASS_ENABLED && shouldClearAuthAfterRefreshFailure(refreshError)) {
           useAuthStore.getState().clearAuth();
           redirectTo('/');
         }

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
+  AlertTriangle,
   ArrowLeft,
   Building2,
   Eye,
@@ -8,9 +9,9 @@ import {
   Factory,
   KeyRound,
   ShieldCheck,
+  ShieldX,
   TrendingUp,
   Workflow,
-  X,
 } from 'lucide-react';
 import { api } from '../../shared/api/client';
 import type { AuthSessionResponse } from '../../shared/api/contracts';
@@ -600,17 +601,6 @@ export function AuthModal({ open, onClose, onAuthSuccess, initialStep }: AuthMod
                   </button>
                 )}
               </div>
-              {/* Не показываем кнопку закрытия на set-password: обязательный шаг */}
-              {step !== 'set-password' && (
-                <button
-                  type="button"
-                  className={styles.closeButton}
-                  onClick={onClose}
-                  aria-label="Закрыть"
-                >
-                  <X size={16} />
-                </button>
-              )}
             </div>
 
             <div className={styles.formViewport}>
@@ -667,25 +657,36 @@ export function AuthModal({ open, onClose, onAuthSuccess, initialStep }: AuthMod
                     />
                   </div>
 
-                  {error && <div className={styles.errorMessage}>{error}</div>}
+                  {error && error !== '__device_unrecognized__' && <div className={styles.errorMessage}>{error}</div>}
 
-                  <button type="submit" className={styles.primaryButton} disabled={loading}>
-                    <KeyRound size={16} />
-                    {loading ? 'Входим...' : 'Войти'}
-                  </button>
+                  <div className={styles.loginActionsRow}>
+                    <button type="submit" className={styles.primaryButton} disabled={loading}>
+                      <KeyRound size={16} />
+                      {loading ? 'Входим...' : 'Войти'}
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.pinQuickButton}
+                      onClick={() => {
+                        if (pin && isTrustedDevice && user) {
+                          setError('');
+                          setStep('pin');
+                        } else {
+                          setError('__device_unrecognized__');
+                        }
+                      }}
+                      title="Войти по PIN-коду"
+                      aria-label="Войти по PIN-коду"
+                    >
+                      <ShieldX size={18} />
+                    </button>
+                  </div>
 
-                  {pin && isTrustedDevice && user && (
-                    <>
-                      <div className={styles.orDivider}><span>или</span></div>
-                      <button
-                        type="button"
-                        className={styles.pinButton}
-                        onClick={() => { setError(''); setStep('pin'); }}
-                      >
-                        <KeyRound size={15} />
-                        Быстрый вход по PIN-коду
-                      </button>
-                    </>
+                  {error === '__device_unrecognized__' && (
+                    <div className={styles.deviceWarningBox}>
+                      <AlertTriangle size={15} />
+                      Устройство не распознано. Рекомендуем войти через логин и пароль.
+                    </div>
                   )}
 
                   <div className={styles.footerRow}>

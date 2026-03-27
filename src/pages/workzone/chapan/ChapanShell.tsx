@@ -3,6 +3,8 @@ import { Archive, CheckCheck, ChevronLeft, Factory, Package, Settings, Warehouse
 import { useAuthStore } from '../../../shared/stores/auth';
 import { useEmployeePermissions } from '../../../shared/hooks/useEmployeePermissions';
 import { ThemeSwitcher } from '../../../shared/ui/ThemeSwitcher';
+import { useChapanUiStore } from '../../../features/workzone/chapan/store';
+import ChapanInvoicesDrawer from './invoices/ChapanInvoicesDrawer';
 import styles from './ChapanShell.module.css';
 
 export default function ChapanShell() {
@@ -10,6 +12,8 @@ export default function ChapanShell() {
   const role = useAuthStore((state) => state.membership.role);
   const isAdmin = role === 'owner' || role === 'admin';
   const { canAccessWarehouse } = useEmployeePermissions();
+  const invoicesDrawerOpen = useChapanUiStore((s) => s.invoicesDrawerOpen);
+  const setInvoicesDrawerOpen = useChapanUiStore((s) => s.setInvoicesDrawerOpen);
 
   return (
     <div className={styles.root}>
@@ -91,6 +95,8 @@ export default function ChapanShell() {
           <Outlet />
         </main>
       </div>
+
+      <ChapanInvoicesDrawer open={invoicesDrawerOpen} onClose={() => setInvoicesDrawerOpen(false)} />
     </div>
   );
 }

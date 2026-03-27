@@ -88,6 +88,10 @@ function readRouteLabel() {
   return `${location.pathname}${location.search}`;
 }
 
+function deferConsoleEvent(callback: () => void) {
+  window.setTimeout(callback, 0);
+}
+
 export function useConsoleLifecycle() {
   useEffect(() => {
     const addEntry = useConsoleStore.getState().addEntry;
@@ -181,22 +185,26 @@ Warning: Unverified signature detected. Root access granted.`,
     };
 
     const errorHandler = (event: ErrorEvent) => {
-      emitConsoleEvent({
-        source: 'system',
-        level: 'error',
-        message: `Unhandled error: ${event.message || 'runtime failure'}`,
-        details: event.filename
-          ? `${event.filename}:${event.lineno}:${event.colno}`
-          : undefined,
+      deferConsoleEvent(() => {
+        emitConsoleEvent({
+          source: 'system',
+          level: 'error',
+          message: `Unhandled error: ${event.message || 'runtime failure'}`,
+          details: event.filename
+            ? `${event.filename}:${event.lineno}:${event.colno}`
+            : undefined,
+        });
       });
     };
 
     const rejectionHandler = (event: PromiseRejectionEvent) => {
-      emitConsoleEvent({
-        source: 'system',
-        level: 'error',
-        message: 'Unhandled promise rejection.',
-        details: readErrorMessage(event.reason),
+      deferConsoleEvent(() => {
+        emitConsoleEvent({
+          source: 'system',
+          level: 'error',
+          message: 'Unhandled promise rejection.',
+          details: readErrorMessage(event.reason),
+        });
       });
     };
 

@@ -102,3 +102,10 @@
   font-size: 13px;
   font-weight: 700;
 }
+
+/* ── Mobile: make room for bottom nav bar ──────────────────── */
+@media (max-width: 767px) {
+  .main {
+    padding-bottom: calc(var(--bottom-nav-height, 60px) + env(safe-area-inset-bottom, 0px));
+  }
+}

@@ -129,7 +129,7 @@ export default function ChapanArchivePage() {
             <ArchiveRow
               key={order.id}
               order={order}
-              onClick={() => navigate(`/workzone/chapan/orders/${order.id}`)}
+              onClick={() => navigate(`/workzone/chapan/archive/${order.id}`)}
             />
           ))}
         </div>

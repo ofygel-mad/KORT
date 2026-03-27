@@ -13,6 +13,25 @@ import { AddEmployeeModal } from './AddEmployeeModal';
 import { EmployeeDetailModal } from './EmployeeDetailModal';
 import styles from './EmployeePanel.module.css';
 
+type EmployeeListResponse =
+  | EmployeeRecord[]
+  | {
+      count?: number;
+      results?: EmployeeRecord[];
+    };
+
+function normalizeEmployees(payload: EmployeeListResponse | null | undefined) {
+  if (Array.isArray(payload)) {
+    return payload;
+  }
+
+  if (Array.isArray(payload?.results)) {
+    return payload.results;
+  }
+
+  return [];
+}
+
 // ─── Status badge ─────────────────────────────────────────────────────────────
 
 const STATUS_META: Record<
@@ -70,13 +89,13 @@ export function EmployeePanel() {
   const [search, setSearch] = useState('');
 
   // ── Queries ──────────────────────────────────────────────────────────────
-  const { data, isLoading } = useQuery<EmployeeRecord[]>({
+  const { data, isLoading } = useQuery<EmployeeListResponse>({
     queryKey: ['company/employees'],
     queryFn: () => api.get('/company/employees/'),
     enabled: isAdmin,
   });
 
-  const employees = data ?? [];
+  const employees = normalizeEmployees(data);
 
   // Filter by search (client-side filtering по ФИО, телефону, отделу)
   const filtered = search.trim().length < 2
@@ -113,8 +132,10 @@ export function EmployeePanel() {
       // Обновляем selectedEmployee свежими данными из кеша
       setSelectedEmployee((prev) => {
         if (!prev) return prev;
-        const fresh = queryClient.getQueryData<EmployeeRecord[]>(['company/employees']);
-        return fresh?.find((e) => e.id === prev.id) ?? prev;
+        const fresh = normalizeEmployees(
+          queryClient.getQueryData<EmployeeListResponse>(['company/employees']),
+        );
+        return fresh.find((e) => e.id === prev.id) ?? prev;
       });
     },
     onError: (err: any) => {

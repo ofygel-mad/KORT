@@ -431,10 +431,17 @@
 
 .planCardCheckmark {
   position: absolute;
-  top: 14px;
-  right: 50px; /* offset from top-right badge on recommended card */
+  bottom: 14px;
+  right: 14px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--plan-color) 18%, rgba(255,255,255,0.06));
+  border: 1px solid color-mix(in srgb, var(--plan-color) 38%, transparent);
   color: color-mix(in srgb, var(--plan-color) 90%, white);
-  opacity: 0.9;
 }
 
 /* ── Success screen ──────────────────────────────────────────── */
