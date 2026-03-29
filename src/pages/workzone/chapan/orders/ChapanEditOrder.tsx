@@ -429,7 +429,7 @@ export default function ChapanEditOrderPage() {
                       className={`${styles.priorityBtn} ${priority === value ? styles.priorityBtnActive : ''} ${value === 'urgent' ? styles.priorityBtnUrgent : ''} ${value === 'vip' ? styles.priorityBtnVip : ''}`}
                       onClick={() => setValue('priority', value)}
                     >
-                      {value === 'normal' ? 'Обычный' : value === 'urgent' ? '🔴 Срочно' : '⭐ VIP'}
+                      {value === 'normal' ? 'Обычный' : value === 'urgent' ? '🔴 Срочно' : '⭐ Требовательный'}
                     </button>
                   ))}
                 </div>

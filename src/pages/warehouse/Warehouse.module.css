@@ -89,7 +89,7 @@
 }
 .drawerClose:hover { color: var(--text-primary); border-color: var(--border-default); }
 .drawerBody { flex: 1; overflow-y: auto; padding: 20px 24px; display: flex; flex-direction: column; gap: 14px; }
-.drawerFooter { padding: 16px 24px; border-top: 1px solid var(--border-subtle); flex-shrink: 0; }
+.drawerFooter { padding: 16px 24px; border-top: 1px solid var(--border-subtle); flex-shrink: 0; display: flex; flex-direction: column; gap: 8px; }
 
 /* Confirm status row */
 .drawerStatusRow { display: flex; border-bottom: 1px solid var(--border-subtle); flex-shrink: 0; }
@@ -132,6 +132,27 @@
 .drawerUnpaidNote { padding: 10px 14px; background: rgba(239,68,68,.08); border: 1px solid rgba(239,68,68,.2); border-radius: 9px; font-size: 12px; color: var(--fill-negative); line-height: 1.5; }
 
 @media (max-width: 767px) {
+  /* Layout */
+  .root { padding: 12px; gap: 10px; }
+  .title { font-size: 18px; }
+
+  /* Tabs: scroll horizontally instead of wrapping */
+  .tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; flex-shrink: 0; }
+  .tabs::-webkit-scrollbar { display: none; }
+
+  /* Stats bar */
+  .statItem { padding: 8px 12px; }
+  .statValue { font-size: 16px; }
+
+  /* Toolbar */
+  .toolbar { flex-wrap: wrap; }
+  .searchWrap { max-width: 100%; }
+
+  /* Table: horizontal scroll so columns don't squish */
+  .tableWrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .table { min-width: 520px; }
+
+  /* Drawer */
   .drawerOverlay {
     top: var(--topbar-height, 56px);
     bottom: calc(var(--bottom-nav-height, 60px) + env(safe-area-inset-bottom, 0px));

@@ -5,6 +5,7 @@ import { WORKSPACE_WIDGETS } from '../registry';
 import type {
   WorkspaceEuler3D,
   WorkspaceModalSize,
+  WorkspaceSceneBgMode,
   WorkspaceSceneMode,
   WorkspaceSceneTerrainMode,
   WorkspaceSceneTheme,
@@ -27,9 +28,10 @@ const VALID_WIDGET_KINDS = new Set<WorkspaceWidgetKind>(
 const VALID_MODAL_SIZES = new Set<WorkspaceModalSize>(['compact', 'default', 'wide']);
 const VALID_SCENE_THEMES = new Set<WorkspaceSceneTheme>(['default', 'morning', 'overcast', 'dusk', 'night']);
 const VALID_SCENE_TERRAIN_MODES = new Set<WorkspaceSceneTerrainMode>(['full', 'calm', 'void']);
+const VALID_SCENE_BG_MODES = new Set<WorkspaceSceneBgMode>(['scene', 'photo']);
 const VALID_TILE_STATUSES = new Set<WorkspaceTileStatus>(['floating', 'drifting', 'idle']);
 
-const TILE_SIZE = { width: 260, height: 168 };
+const TILE_SIZE = { width: 260, height: 170 };
 
 const DEFAULT_TILE_SIZE: Record<WorkspaceWidgetKind, { width: number; height: number }> = {
   leads: TILE_SIZE,
@@ -67,6 +69,7 @@ interface PersistedWorkspaceState {
   topZIndex?: unknown;
   sceneTheme?: unknown;
   sceneTerrainMode?: unknown;
+  sceneBgMode?: unknown;
 }
 
 interface WorkspaceStore {
@@ -82,6 +85,7 @@ interface WorkspaceStore {
   sceneThemeAuto: boolean;
   sceneMode: WorkspaceSceneMode;
   sceneTerrainMode: WorkspaceSceneTerrainMode;
+  sceneBgMode: WorkspaceSceneBgMode;
   addTile: (kind: WorkspaceWidgetKind) => string;
   alignTilesToGrid: () => void;
   setTilePosition: (id: string, x: number, y: number) => void;
@@ -107,6 +111,7 @@ interface WorkspaceStore {
   setSceneThemeAuto: (auto: boolean) => void;
   setSceneMode: (mode: WorkspaceSceneMode) => void;
   setSceneTerrainMode: (mode: WorkspaceSceneTerrainMode) => void;
+  setSceneBgMode: (mode: WorkspaceSceneBgMode) => void;
 }
 
 function clamp(v: number, lo: number, hi: number) {
@@ -127,6 +132,10 @@ function isWorkspaceSceneTheme(v: unknown): v is WorkspaceSceneTheme {
 
 function isWorkspaceSceneTerrainMode(v: unknown): v is WorkspaceSceneTerrainMode {
   return typeof v === 'string' && VALID_SCENE_TERRAIN_MODES.has(v as WorkspaceSceneTerrainMode);
+}
+
+function isWorkspaceSceneBgMode(v: unknown): v is WorkspaceSceneBgMode {
+  return typeof v === 'string' && VALID_SCENE_BG_MODES.has(v as WorkspaceSceneBgMode);
 }
 
 function isWorkspaceTileStatus(v: unknown): v is WorkspaceTileStatus {
@@ -325,6 +334,7 @@ export function sanitizeWorkspacePersistedState(persistedRaw: unknown) {
     sceneTerrainMode: isWorkspaceSceneTerrainMode(persisted.sceneTerrainMode)
       ? persisted.sceneTerrainMode
       : 'full',
+    sceneBgMode: isWorkspaceSceneBgMode(persisted.sceneBgMode) ? persisted.sceneBgMode : 'photo',
   };
 }
 
@@ -343,6 +353,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
       sceneThemeAuto: false,
       sceneMode: 'surface',
       sceneTerrainMode: 'full',
+      sceneBgMode: 'photo',
       addTile: (kind) => {
         const { viewport, viewportSize, topZIndex, zoom } = get();
         const size = DEFAULT_TILE_SIZE[kind];
@@ -635,6 +646,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
       setSceneThemeAuto: (sceneThemeAuto) => set({ sceneThemeAuto }),
       setSceneMode: (sceneMode) => set({ sceneMode }),
       setSceneTerrainMode: (sceneTerrainMode) => set({ sceneTerrainMode }),
+      setSceneBgMode: (sceneBgMode) => set({ sceneBgMode }),
     }),
     {
       name: 'kort-workspace',
@@ -646,6 +658,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
         topZIndex: state.topZIndex,
         sceneTheme: state.sceneTheme,
         sceneTerrainMode: state.sceneTerrainMode,
+        sceneBgMode: state.sceneBgMode,
       }),
       merge: (persisted, current) => ({
         ...current,

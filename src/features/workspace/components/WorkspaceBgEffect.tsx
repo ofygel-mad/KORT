@@ -1,6 +1,6 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
-import { ChevronLeft, Clock, CloudMoon, Plane, Sparkles } from 'lucide-react';
+import { ChevronLeft, Clock, CloudMoon, Image, Plane, Sparkles } from 'lucide-react';
 import { readStorage } from '../../../shared/lib/browser';
 import { useDevicePerformance } from '../../../shared/hooks/useDevicePerformance';
 import { useWorkspaceStore, WORLD_FACTOR } from '../model/store';
@@ -78,10 +78,12 @@ export const WorkspaceBgEffect = memo(function WorkspaceBgEffect({ onFlightTileP
   const sceneThemeAuto = useWorkspaceStore((state) => state.sceneThemeAuto);
   const sceneMode = useWorkspaceStore((state) => state.sceneMode);
   const sceneTerrainMode = useWorkspaceStore((state) => state.sceneTerrainMode);
+  const sceneBgMode = useWorkspaceStore((state) => state.sceneBgMode);
   const setSceneTheme = useWorkspaceStore((state) => state.setSceneTheme);
   const setSceneThemeAuto = useWorkspaceStore((state) => state.setSceneThemeAuto);
   const setSceneMode = useWorkspaceStore((state) => state.setSceneMode);
   const setSceneTerrainMode = useWorkspaceStore((state) => state.setSceneTerrainMode);
+  const setSceneBgMode = useWorkspaceStore((state) => state.setSceneBgMode);
 
   useEffect(() => {
     const syncLifecycle = () => useWorkspaceStore.getState().updateIdleTiles();
@@ -238,6 +240,16 @@ export const WorkspaceBgEffect = memo(function WorkspaceBgEffect({ onFlightTileP
   }, []);
 
   useEffect(() => {
+    const runtime = runtimeRef.current;
+    if (!runtime) return;
+    if (sceneBgMode === 'photo') {
+      runtime.pause();
+    } else if (!tabHiddenRef.current && !offscreenRef.current) {
+      runtime.resume();
+    }
+  }, [sceneBgMode]);
+
+  useEffect(() => {
     const node = layerRef.current;
     if (!node || typeof IntersectionObserver === 'undefined') {
       return;
@@ -289,7 +301,9 @@ export const WorkspaceBgEffect = memo(function WorkspaceBgEffect({ onFlightTileP
     : sceneTerrainMode === 'calm'
       ? 'Спокойный'
       : 'Живой';
-  const sceneStatus = `${themeLabel} • ${sceneMode === 'flight' ? 'Полёт' : 'Поверхность'} • ${terrainModeLabel}`;
+  const sceneStatus = sceneBgMode === 'photo'
+    ? 'Фото фон'
+    : `${themeLabel} • ${sceneMode === 'flight' ? 'Полёт' : 'Поверхность'} • ${terrainModeLabel}`;
   const sceneStyle = {
     '--scene-sky-top': theme.skyTop,
     '--scene-sky-bottom': theme.skyBottom,
@@ -306,7 +320,14 @@ export const WorkspaceBgEffect = memo(function WorkspaceBgEffect({ onFlightTileP
         style={sceneStyle}
         aria-hidden="true"
       >
-        <canvas ref={canvasRef} className={styles.workspaceBgCanvas} />
+        <canvas
+          ref={canvasRef}
+          className={styles.workspaceBgCanvas}
+          style={sceneBgMode === 'photo' ? { visibility: 'hidden' } : undefined}
+        />
+        {sceneBgMode === 'photo' && (
+          <div className={styles.workspaceBgPhoto} />
+        )}
       </div>
 
       <div
@@ -348,6 +369,29 @@ export const WorkspaceBgEffect = memo(function WorkspaceBgEffect({ onFlightTileP
               Атмосфера
             </div>
             <div className={styles.sceneControlSectionSub}>Управление интерактивной сценой workspace</div>
+          </div>
+
+          <div className={styles.sceneControlSection}>
+            <div className={styles.sceneControlSectionTitle}>
+              <Image size={16} />
+              Фон
+            </div>
+            <div className={styles.sceneControlBgGrid}>
+              <button
+                type="button"
+                className={`${styles.sceneControlTerrainButton} ${sceneBgMode === 'scene' ? styles.sceneControlTerrainButtonActive : ''}`}
+                onClick={() => setSceneBgMode('scene')}
+              >
+                3D сцена
+              </button>
+              <button
+                type="button"
+                className={`${styles.sceneControlTerrainButton} ${sceneBgMode === 'photo' ? styles.sceneControlTerrainButtonActive : ''}`}
+                onClick={() => setSceneBgMode('photo')}
+              >
+                Фото
+              </button>
+            </div>
           </div>
 
           <div className={styles.sceneControlThemeGrid}>

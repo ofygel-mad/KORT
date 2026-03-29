@@ -2,6 +2,7 @@ import type { PointerEvent as ReactPointerEvent, WheelEvent } from 'react';
 import { memo, startTransition, useEffect, useRef, useCallback, useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { useDevicePerformance } from '../../../shared/hooks/useDevicePerformance';
+import { useIsMobile } from '../../../shared/hooks/useIsMobile';
 import { useWorkspaceStore, ZOOM_MIN, ZOOM_MAX } from '../model/store';
 import type { WorkspaceTile as WorkspaceTileType } from '../model/types';
 import type { WorkspaceSceneFlightTileProjection } from '../scene/sceneRuntime';
@@ -55,6 +56,7 @@ export const WorkspaceCanvas = memo(function WorkspaceCanvas() {
   const [flightTileLayouts, setFlightTileLayouts] = useState<Record<string, WorkspaceFlightTileLayout>>({});
   const lastFlightProjectionAtRef = useRef(0);
   const performanceProfile = useDevicePerformance();
+  const isMobile = useIsMobile(981);
 
   useEffect(() => {
     const node = viewportRef.current;
@@ -177,7 +179,7 @@ export const WorkspaceCanvas = memo(function WorkspaceCanvas() {
       className={`${styles.workspaceViewport} ${styles.workspaceViewportEffect} ${sceneMode === 'flight' ? styles.workspaceViewportFlight : ''}`}
       onPointerDown={startPan} onWheel={handleWheel}
     >
-      <WorkspaceBgEffect onFlightTileProjection={handleFlightTileProjection} />
+      {!isMobile && <WorkspaceBgEffect onFlightTileProjection={handleFlightTileProjection} />}
 
       {sceneMode !== 'flight' && (
         <div className={styles.workspaceWorld} style={{ transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${zoom})`, transformOrigin: '0 0' }}>

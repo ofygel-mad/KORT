@@ -131,8 +131,8 @@
 .emptyIcon { font-size: 42px; opacity: .4; }
 .emptyTitle { font-size: 16px; font-weight: 600; color: var(--ch-text); }
 .emptyText { font-size: 13px; color: var(--ch-text-muted); }
-.emptyAction { margin-top: 4px; padding: 9px 20px; background: var(--ch-plat-soft); border: 1px solid var(--ch-plat-border); border-radius: 8px; color: var(--ch-plat-bright); font-family: inherit; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 120ms; }
-.emptyAction:hover { background: rgba(180,192,210,0.16); }
+.emptyAction { margin-top: 4px; padding: 10px 22px; background: var(--fill-accent); border: none; border-radius: 8px; color: var(--text-on-accent); font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; transition: background 120ms; box-shadow: var(--shadow-accent); }
+.emptyAction:hover { background: color-mix(in srgb, var(--fill-accent) 88%, white); }
 
 /* ── View content transition ── */
 @keyframes viewFadeIn {
@@ -668,4 +668,13 @@
   color: #EF4444;
   border: 1px solid rgba(239, 68, 68, 0.22);
   white-space: nowrap;
+}
+
+@media (max-width: 767px) {
+  .root { padding: 12px; gap: 12px; }
+  .searchWrap { min-width: 0; flex: 1; }
+  .toolbarRight { flex-shrink: 0; gap: 6px; }
+  .filterGroup { min-width: 110px; }
+  /* Cards already responsive via auto-fill; ensure single column on smallest screens */
+  .grid { grid-template-columns: 1fr; }
 }

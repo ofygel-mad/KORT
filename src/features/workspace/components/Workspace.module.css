@@ -88,6 +88,16 @@
   pointer-events: auto;
 }
 
+.workspaceBgPhoto {
+  position: absolute;
+  inset: 0;
+  background-image: url('/canvasbg.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  pointer-events: none;
+}
+
 .sceneControlDock {
   position: absolute;
   top: calc(var(--topbar-height) + 18px);
@@ -227,6 +237,12 @@
 .sceneControlTerrainGrid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.sceneControlBgGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
 

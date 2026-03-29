@@ -98,6 +98,64 @@
   gap: 14px;
 }
 
+/* ── Discount compound field (₸ + %) ────────────────────── */
+.discountCompound {
+  display: flex;
+  gap: 6px;
+  align-items: stretch;
+}
+
+.discountAmtInput {
+  flex: 1;
+  min-width: 0;
+}
+
+.discountPctWrap {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 0 10px 0 8px;
+  flex-shrink: 0;
+  width: 74px;
+  transition: border-color 140ms;
+}
+.discountPctWrap:focus-within {
+  border-color: var(--fill-accent);
+}
+
+.discountPctInput {
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 13px;
+  color: var(--text-primary);
+  font-family: inherit;
+  min-width: 0;
+  padding: 0;
+}
+.discountPctInput::placeholder { color: var(--text-tertiary); }
+.discountPctInput::-webkit-inner-spin-button,
+.discountPctInput::-webkit-outer-spin-button { -webkit-appearance: none; }
+
+.discountPctSymbol {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.discountHint {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  margin-top: 4px;
+  padding-left: 2px;
+}
+
 @media (max-width: 640px) {
   .row2,
   .row3 {
@@ -395,7 +453,8 @@
 }
 
 .priorityBtnUrgent {
-  color: var(--ch-red);
+  color: #EF4444;
+  border-color: rgba(239, 68, 68, 0.3);
 }
 
 .priorityBtnVip {
@@ -403,9 +462,17 @@
 }
 
 .priorityBtnUrgent.priorityBtnActive {
-  background: rgba(239, 68, 68, 0.08);
-  border-color: rgba(239, 68, 68, 0.22);
-  color: var(--fill-negative);
+  background: rgba(239, 68, 68, 0.12);
+  border-color: #EF4444;
+  color: #EF4444;
+  font-weight: 700;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.18), 0 0 16px rgba(239, 68, 68, 0.25);
+  animation: urgentPulse 1.6s ease-in-out infinite;
+}
+
+@keyframes urgentPulse {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(239,68,68,0.18), 0 0 16px rgba(239,68,68,0.25); }
+  50%       { box-shadow: 0 0 0 5px rgba(239,68,68,0.28), 0 0 28px rgba(239,68,68,0.40); }
 }
 
 .priorityBtnVip.priorityBtnActive {

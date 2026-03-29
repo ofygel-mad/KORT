@@ -1,7 +1,7 @@
 ﻿import { useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { ChevronLeft, CheckCircle2, Clock, CreditCard, MessageSquare, AlertTriangle, Pencil, ArchiveIcon, RotateCcw, Download, Package, XCircle, FileText } from 'lucide-react';
-import { useOrder, useFulfillFromStock, useConfirmOrder, useChangeOrderStatus, useAddPayment, useAddOrderActivity, useRestoreOrder, useCloseOrder, useCreateInvoice, useSetRequiresInvoice, useConfirmSeamstress } from '../../../../entities/order/queries';
+import { CheckCircle2, Clock, CreditCard, MessageSquare, AlertTriangle, Pencil, ArchiveIcon, RotateCcw, Download, Package, XCircle, FileText } from 'lucide-react';
+import { useOrder, useFulfillFromStock, useConfirmOrder, useChangeOrderStatus, useAddPayment, useAddOrderActivity, useRestoreOrder, useCloseOrder, useCreateInvoice, useSetRequiresInvoice, useConfirmSeamstress, useRouteSingleItem } from '../../../../entities/order/queries';
 import { useProductsAvailability } from '../../../../entities/warehouse/queries';
 import type { OrderItem, OrderItemFulfillmentMode, OrderStatus, Priority } from '../../../../entities/order/types';
 import { useForm } from 'react-hook-form';
@@ -65,12 +65,12 @@ const PROD_STATUS_LABEL: Record<string, string> = {
 const PRIORITY_LABEL: Record<Priority, string> = {
   normal: 'Обычный',
   urgent: 'Срочно',
-  vip: 'VIP',
+  vip: 'Требовательный',
 };
 
 const ROUTE_LABEL: Record<OrderItemFulfillmentMode, string> = {
   unassigned: 'Не выбран',
-  warehouse: 'На склад',
+  warehouse: 'Готово',
   production: 'В производство',
 };
 
@@ -160,6 +160,7 @@ export default function ChapanOrderDetailPage() {
   const createInvoice = useCreateInvoice();
   const setRequiresInvoice = useSetRequiresInvoice();
   const confirmSeamstress = useConfirmSeamstress();
+  const routeSingleItem = useRouteSingleItem();
 
   const pendingInvoice = order?.status === 'ready'
     ? order.invoiceOrders?.find((io) => io.invoice.status === 'pending_confirmation')?.invoice
@@ -174,7 +175,6 @@ export default function ChapanOrderDetailPage() {
   const [restorePromptOpen, setRestorePromptOpen] = useState(false);
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
   const [closeUnpaidWarning, setCloseUnpaidWarning] = useState(false);
-  const [transferUnpaidWarning, setTransferUnpaidWarning] = useState(false);
   const [invoiceDownloading, setInvoiceDownloading] = useState(false);
 
   const {
@@ -221,10 +221,6 @@ export default function ChapanOrderDetailPage() {
 
   async function handleTransferToWarehouse() {
     if (!order) return;
-    if (order.paymentStatus !== 'paid') {
-      setTransferUnpaidWarning(true);
-      return;
-    }
     try {
       if (order.requiresInvoice) {
         // Create накладная — stay on page; order detail will show pending invoice state
@@ -261,6 +257,10 @@ export default function ChapanOrderDetailPage() {
 
   const warehouseItems = orderItems.filter((item) => currentRoutes[item.id] === 'warehouse');
   const productionItems = orderItems.filter((item) => currentRoutes[item.id] === 'production');
+  const hasUnfinishedProduction = productionItems.some((pItem) => {
+    const pTask = productionTaskByItemId.get(pItem.id);
+    return !pTask || pTask.status !== 'done';
+  });
   const allInStock = orderItems.length > 0 && orderItems.every((item) => {
     const stock = stockMap?.[item.productName];
     return (stock?.qty ?? 0) >= item.quantity;
@@ -269,10 +269,6 @@ export default function ChapanOrderDetailPage() {
   return (
     <div className={styles.root}>
       <div className={styles.pageHeader}>
-        <button className={styles.backLink} onClick={() => { setSelectedOrderId(null); navigate(detailContext.backPath); }}>
-          <ChevronLeft size={14} />
-          <span>{detailContext.backLabel}</span>
-        </button>
         <div className={styles.orderMeta}>
           <h1 className={styles.orderNum}>#{order.orderNumber}</h1>
           <span className={styles.statusChip} style={{ '--sc': STATUS_COLOR[order.status] } as React.CSSProperties}>{STATUS_LABEL[order.status]}</span>
@@ -287,9 +283,38 @@ export default function ChapanOrderDetailPage() {
             <div className={styles.cardLabel}>Клиент</div>
             <div className={styles.clientName}>{order.clientName}</div>
             <a href={`tel:${order.clientPhone}`} className={styles.clientPhone}>{order.clientPhone}</a>
-            {order.dueDate && (
-              <div className={styles.clientDeadline} style={{ color: isOverdue ? '#D94F4F' : 'rgba(240,232,212,.45)' }}>
-                Дедлайн: {new Date(order.dueDate).toLocaleDateString('ru-KZ', { day: '2-digit', month: 'long', year: 'numeric' })}
+            {(order.city || (order as any).deliveryType || (order as any).source || order.dueDate) && (
+              <div className={styles.clientMeta}>
+                {order.city && (
+                  <div className={styles.clientMetaRow}>
+                    <span className={styles.clientMetaIcon}>🏙</span>
+                    <span className={styles.clientMetaLabel}>Город</span>
+                    <span className={styles.clientMetaValue}>{order.city}</span>
+                  </div>
+                )}
+                {(order as any).deliveryType && (
+                  <div className={styles.clientMetaRow}>
+                    <span className={styles.clientMetaIcon}>📦</span>
+                    <span className={styles.clientMetaLabel}>Доставка</span>
+                    <span className={styles.clientMetaValue}>{(order as any).deliveryType}</span>
+                  </div>
+                )}
+                {(order as any).source && (
+                  <div className={styles.clientMetaRow}>
+                    <span className={styles.clientMetaIcon}>📣</span>
+                    <span className={styles.clientMetaLabel}>Источник</span>
+                    <span className={styles.clientMetaValue}>{(order as any).source}</span>
+                  </div>
+                )}
+                {order.dueDate && (
+                  <div className={styles.clientMetaRow}>
+                    <span className={styles.clientMetaIcon}>📅</span>
+                    <span className={styles.clientMetaLabel}>Дедлайн</span>
+                    <span className={`${styles.clientMetaValue} ${isOverdue ? styles.clientMetaOverdue : ''}`}>
+                      {new Date(order.dueDate).toLocaleDateString('ru-KZ', { day: '2-digit', month: 'long', year: 'numeric' })}
+                    </span>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -306,20 +331,30 @@ export default function ChapanOrderDetailPage() {
                 const badgeLabel = route === 'production' && task && order.status !== 'new'
                   ? (PROD_STATUS_LABEL[task.status] ?? ROUTE_LABEL[route])
                   : ROUTE_LABEL[route];
-                const badgeClass = route === 'warehouse'
-                  ? styles.routeBadgeWarehouse
-                  : route === 'production'
-                    ? (task?.status === 'done' ? styles.routeBadgeDone : styles.routeBadgeProduction)
-                    : styles.routeBadgePending;
+                const isRouteable = ['new', 'confirmed', 'in_production'].includes(order.status);
+                const isTerminal = ['ready', 'transferred', 'on_warehouse', 'shipped', 'completed', 'cancelled'].includes(order.status);
+
+                // For warehouse items that are waiting for production items to finish
+                const isWaiting = route === 'warehouse' && order.status === 'in_production' && hasUnfinishedProduction;
+                const effectiveBadgeLabel = isWaiting ? 'Ожидает цех' : badgeLabel;
+                const badgeClass = isWaiting
+                  ? styles.routeBadgeWaiting
+                  : route === 'warehouse'
+                    ? styles.routeBadgeWarehouse
+                    : route === 'production'
+                      ? (task?.status === 'done' ? styles.routeBadgeDone : styles.routeBadgeProduction)
+                      : styles.routeBadgePending;
+
+                const showBadge = isTerminal || (order.status !== 'new' && route !== 'unassigned');
 
                 return (
                   <div key={item.id} className={styles.itemRow}>
                     <div className={styles.itemInfo}>
                       <div className={styles.itemHead}>
                         <span className={styles.itemName}>{item.productName}</span>
-                        {order.status !== 'new' && (
+                        {showBadge && (
                           <span className={`${styles.routeBadge} ${badgeClass}`}>
-                            {badgeLabel}
+                            {effectiveBadgeLabel}
                           </span>
                         )}
                       </div>
@@ -329,6 +364,26 @@ export default function ChapanOrderDetailPage() {
                         <span className={hasEnoughStock ? styles.stockBadgeIn : styles.stockBadgeOut}>
                           {hasEnoughStock ? <><CheckCircle2 size={10} /> В наличии ({stock.qty} шт.)</> : <><XCircle size={10} /> Нет в наличии</>}
                         </span>
+                      )}
+                      {isRouteable && (
+                        <div className={styles.routeActions}>
+                          <button
+                            type="button"
+                            className={`${styles.routeActionBtn} ${route === 'warehouse' ? styles.routeActionBtnActive : ''}`}
+                            onClick={() => routeSingleItem.mutate({ orderId: order.id, itemId: item.id, fulfillmentMode: 'warehouse' })}
+                            disabled={routeSingleItem.isPending || route === 'warehouse'}
+                          >
+                            Готово
+                          </button>
+                          <button
+                            type="button"
+                            className={`${styles.routeActionBtn} ${styles.routeActionBtnPrimary} ${route === 'production' ? styles.routeActionBtnActive : ''}`}
+                            onClick={() => routeSingleItem.mutate({ orderId: order.id, itemId: item.id, fulfillmentMode: 'production' })}
+                            disabled={routeSingleItem.isPending || route === 'production'}
+                          >
+                            В производство
+                          </button>
+                        </div>
                       )}
                     </div>
                     <span className={styles.itemPrice}>{fmt(item.quantity * item.unitPrice)}</span>
@@ -347,6 +402,9 @@ export default function ChapanOrderDetailPage() {
               <div className={styles.finRow}><span>Оплачено</span><strong style={{ color: '#4FC999' }}>{fmt(order.paidAmount)}</strong></div>
               <div className={`${styles.finRow} ${styles.finRowBalance}`}><span>Остаток</span><strong style={{ color: balance > 0 ? '#E8C97A' : '#4FC999' }}>{fmt(balance)}</strong></div>
               <div className={styles.finRow}><span>Статус оплаты</span><span style={{ color: PAY_COLOR[order.paymentStatus], fontWeight: 500, fontSize: 12 }}>{PAY_LABEL[order.paymentStatus]}</span></div>
+              {(order as any).expectedPaymentMethod && (
+                <div className={styles.finRow}><span>Ожидаемый способ доплаты</span><span style={{ fontWeight: 500 }}>{(order as any).expectedPaymentMethod}</span></div>
+              )}
             </div>
 
             {(order.payments ?? []).length > 0 && (
@@ -408,19 +466,28 @@ export default function ChapanOrderDetailPage() {
 
               {order.status === 'new' && (
                 <>
-                  {allInStock ? (
-                    <>
-                      <button
-                        className={`${styles.actionBtn} ${styles.actionSecondary}`}
-                        onClick={() => fulfillFromStock.mutate(order.id, {
-                          onSuccess: () => { setSelectedOrderId(null); navigate('/workzone/chapan/ready'); },
-                        })}
-                        disabled={fulfillFromStock.isPending}
-                      >
-                        <Package size={14} />
-                        {fulfillFromStock.isPending ? 'Перевод...' : 'Перевести в Готово'}
-                      </button>
-                    </>
+                  {warehouseItems.length > 0 && productionItems.length > 0 ? (
+                    <button
+                      className={`${styles.actionBtn} ${styles.actionPrimary}`}
+                      onClick={() => confirmOrder.mutate(order.id, {
+                        onSuccess: () => { setSelectedOrderId(null); navigate('/workzone/chapan/orders'); },
+                      })}
+                      disabled={confirmOrder.isPending}
+                    >
+                      <Package size={14} />
+                      {confirmOrder.isPending ? 'Отправка...' : 'Подтвердить маршрут'}
+                    </button>
+                  ) : allInStock ? (
+                    <button
+                      className={`${styles.actionBtn} ${styles.actionSecondary}`}
+                      onClick={() => fulfillFromStock.mutate(order.id, {
+                        onSuccess: () => { setSelectedOrderId(null); navigate('/workzone/chapan/ready'); },
+                      })}
+                      disabled={fulfillFromStock.isPending}
+                    >
+                      <Package size={14} />
+                      {fulfillFromStock.isPending ? 'Перевод...' : 'Перевести в Готово'}
+                    </button>
                   ) : (
                     <button
                       className={`${styles.actionBtn} ${styles.actionPrimary}`}
@@ -652,18 +719,6 @@ export default function ChapanOrderDetailPage() {
             <div className={styles.confirmActions}>
               <button type="button" className={styles.confirmSecondary} onClick={() => setCloseUnpaidWarning(false)}>Отмена</button>
               <button type="button" className={styles.confirmDanger} onClick={() => { setCloseUnpaidWarning(false); closeOrder.mutate(order.id); }} disabled={closeOrder.isPending}>Закрыть всё равно</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {transferUnpaidWarning && (
-        <div className={styles.confirmOverlay} role="dialog" aria-modal="true" aria-labelledby="transfer-unpaid-title" onClick={() => setTransferUnpaidWarning(false)}>
-          <div className={styles.confirmDialog} onClick={(e) => e.stopPropagation()}>
-            <div className={styles.confirmTitle} id="transfer-unpaid-title">Заказ не полностью оплачен</div>
-            <div className={styles.confirmText}>Передача на склад невозможна, пока по заказу #{order.orderNumber} не закрыт остаток. Остаток к оплате: <strong>{fmt(balance)}</strong>.</div>
-            <div className={styles.confirmActions}>
-              <button type="button" className={styles.confirmSecondary} onClick={() => setTransferUnpaidWarning(false)}>Понятно</button>
             </div>
           </div>
         </div>

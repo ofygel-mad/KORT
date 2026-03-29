@@ -4,6 +4,7 @@ export type WorkspaceWidgetKind = ShortcutNavItemId;
 export type WorkspaceSceneTheme = 'default' | 'morning' | 'overcast' | 'dusk' | 'night';
 export type WorkspaceSceneMode = 'surface' | 'flight';
 export type WorkspaceSceneTerrainMode = 'full' | 'calm' | 'void';
+export type WorkspaceSceneBgMode = 'scene' | 'photo';
 export type WorkspaceTileDistance = 'near' | 'mid' | 'far';
 
 export interface WorkspaceViewport { x: number; y: number; }
