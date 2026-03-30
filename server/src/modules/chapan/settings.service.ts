@@ -56,20 +56,11 @@ export async function updateProfile(orgId: string, data: Record<string, unknown>
 // ── Catalogs ────────────────────────────────────────────
 
 // ── Size sort helpers ──────────────────────────────────
-const LETTER_SORT_ORDER: Record<string, number> = {
-  'XS': 142, 'xs': 142,
-  'S': 144,  's': 144,
-  'M': 146,  'm': 146,
-  'L': 148,  'l': 148,
-  'XL': 150, 'xl': 150,
-  'XXL': 152, 'xxl': 152, '2XL': 152, '2xl': 152,
-  'XXXL': 154, 'xxxl': 154, '3XL': 154, '3xl': 154,
-};
-
+// Only numeric sizes allowed (e.g., 36, 38, 40, 42)
 function sizeToSortOrder(name: string): number {
-  const n = parseInt(name, 10);
-  if (!isNaN(n) && String(n) === name.trim()) return n; // pure numeric: 38, 40...
-  return LETTER_SORT_ORDER[name.trim()] ?? 999;
+  const n = parseInt(name.trim(), 10);
+  // Return numeric value for valid numbers, or 999 for invalid entries
+  return !isNaN(n) ? n : 999;
 }
 
 export async function getCatalogs(orgId: string) {
