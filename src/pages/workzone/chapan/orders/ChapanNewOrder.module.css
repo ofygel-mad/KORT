@@ -1085,3 +1085,80 @@
   color: #EF4444;
   border: 1px solid rgba(239, 68, 68, 0.22);
 }
+
+/* ── Sprint 7: F1 финансовый пайплайн ─────────────────────────────────────── */
+.finPipeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 1px solid var(--border-default);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
+.finRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-subtle);
+  min-height: 44px;
+}
+
+.finRow:last-child {
+  border-bottom: none;
+}
+
+.finLabel {
+  font-size: 13px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.finValue {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  text-align: right;
+}
+
+.finValueBold {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-align: right;
+}
+
+.finValueDebt {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ch-yellow, #E8C97A);
+  text-align: right;
+}
+
+.finRowTotal {
+  background: var(--bg-surface-raised, rgba(255,255,255,.04));
+}
+
+.finRowBalance {
+  background: var(--bg-surface-raised, rgba(255,255,255,.04));
+}
+
+.finInput {
+  width: 110px;
+  padding: 6px 10px;
+  border: 1px solid var(--border-default);
+  border-radius: 7px;
+  background: var(--bg-input, var(--bg-surface));
+  color: var(--text-primary);
+  font-size: 13px;
+  text-align: right;
+  transition: border-color 120ms;
+}
+
+.finInput:focus {
+  outline: none;
+  border-color: var(--accent-primary, #7c3aed);
+}

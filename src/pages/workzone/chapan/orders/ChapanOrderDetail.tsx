@@ -424,7 +424,16 @@ export default function ChapanOrderDetailPage() {
           <div className={styles.card}>
             <div className={styles.cardLabel}>Финансы</div>
             <div className={styles.finTable}>
-              <div className={styles.finRow}><span>Сумма заказа</span><strong>{fmt(order.totalAmount)}</strong></div>
+              {order.deliveryFee > 0 && (
+                <div className={styles.finRow}><span>Доставка</span><strong>{fmt(order.deliveryFee)}</strong></div>
+              )}
+              {order.bankCommissionAmount > 0 && (
+                <div className={styles.finRow}><span>Комиссия банка{order.bankCommissionPercent > 0 ? ` (${order.bankCommissionPercent}%)` : ''}</span><strong>{fmt(order.bankCommissionAmount)}</strong></div>
+              )}
+              {order.orderDiscount > 0 && (
+                <div className={styles.finRow}><span>Скидка</span><strong style={{ color: '#4FC999' }}>−{fmt(order.orderDiscount)}</strong></div>
+              )}
+              <div className={styles.finRow}><span>Итого к оплате</span><strong>{fmt(order.totalAmount)}</strong></div>
               <div className={styles.finRow}><span>Оплачено</span><strong style={{ color: '#4FC999' }}>{fmt(order.paidAmount)}</strong></div>
               <div className={`${styles.finRow} ${styles.finRowBalance}`}><span>Остаток</span><strong style={{ color: balance > 0 ? '#E8C97A' : '#4FC999' }}>{fmt(balance)}</strong></div>
               <div className={styles.finRow}><span>Статус оплаты</span><span style={{ color: PAY_COLOR[order.paymentStatus], fontWeight: 500, fontSize: 12 }}>{PAY_LABEL[order.paymentStatus]}</span></div>

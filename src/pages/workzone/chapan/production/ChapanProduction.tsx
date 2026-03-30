@@ -561,11 +561,21 @@ function TaskCard({
   const isDemanding = task.order.isDemandingClient ?? (task.order.priority === 'vip');
 
   return (
-    <article className={`${styles.card} ${task.isBlocked ? styles.cardBlocked : ''} ${isUrgent ? styles.cardUrgent : ''}`}>
+    <article className={`${styles.card} ${task.isBlocked ? styles.cardBlocked : ''} ${isUrgent ? styles.cardUrgent : ''} ${isDemanding && !isUrgent ? styles.cardDemanding : ''}`}>
       {isUrgent && !task.isBlocked && (
         <div className={styles.urgentBanner}>
           <AlertTriangle size={11} />
           <span>Срочно</span>
+        </div>
+      )}
+      {isDemanding && !isUrgent && !task.isBlocked && (
+        <div className={styles.demandBanner}>
+          <span>⭐ Требовательный клиент</span>
+        </div>
+      )}
+      {isUrgent && isDemanding && !task.isBlocked && (
+        <div className={styles.demandBanner} style={{ marginTop: 2 }}>
+          <span>⭐ Требовательный</span>
         </div>
       )}
       {task.isBlocked && task.blockReason && (
