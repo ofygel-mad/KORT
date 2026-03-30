@@ -214,7 +214,8 @@ export default function ChapanNewOrderPage() {
   const [discountPercent, setDiscountPercent] = useState('');
   const [draftRestored, setDraftRestored] = useState(false);
 
-  // File state (UI only — upload endpoint TBD)
+  // File state — UI selection only; server upload endpoint not yet implemented.
+  // receiptFileNames sends file names to order metadata; actual bytes are not persisted yet.
   const [itemPhotos, setItemPhotos] = useState<Record<number, File | null>>({});
   const [receipts, setReceipts]     = useState<File[]>([]);
   const receiptInputRef = useRef<HTMLInputElement>(null);
@@ -341,7 +342,7 @@ export default function ChapanNewOrderPage() {
         mixedKaspiTerminal: data.mixedKaspiTerminal ?? 0,
         mixedTransfer:      data.mixedTransfer      ?? 0,
       } : undefined,
-      receiptFileNames: receipts.length > 0 ? receipts.map((f) => f.name) : undefined,
+      // receiptFileNames: receipts.length > 0 ? receipts.map((f) => f.name) : undefined, // Sprint 9: re-enable when upload endpoint is ready
       items: payloadItems,
       managerNote: data.managerNote?.trim() || undefined,
     });
@@ -959,6 +960,7 @@ export default function ChapanNewOrderPage() {
               <label className={styles.receiptUpload}>
                 <Paperclip size={14} />
                 <span>Прикрепить чек...</span>
+                <span className={styles.uploadBadge}>локально</span>
                 <input
                   ref={receiptInputRef}
                   type="file"

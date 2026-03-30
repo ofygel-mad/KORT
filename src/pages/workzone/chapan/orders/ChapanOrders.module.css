@@ -722,3 +722,39 @@
 }
 
 .itemMetaSub { font-size: 10px; color: var(--text-tertiary); letter-spacing: 0.01em; }
+
+/* ── Sprint 12: Mobile optimizations ── */
+@media (max-width: 768px) {
+  .root {
+    padding: 12px;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .card {
+    padding: 10px 12px;
+    gap: 6px;
+    /* Disable costly hover transform on touch */
+    transform: none !important;
+  }
+
+  .card:hover {
+    transform: none;
+  }
+
+  .row {
+    grid-template-columns: auto 1fr auto auto;
+  }
+
+  .toolbar {
+    gap: 6px;
+  }
+
+  .searchWrap {
+    flex: 1;
+    min-width: 0;
+  }
+}

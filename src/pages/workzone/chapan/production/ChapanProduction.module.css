@@ -96,7 +96,7 @@
   font-weight: 700;
 }
 
-.columnCards { display: flex; flex-direction: column; gap: 6px; padding: 12px; }
+.columnCards { display: flex; flex-direction: column; gap: 5px; padding: 10px; } /* E3 */
 
 .columnEmpty {
   display: flex;
@@ -113,8 +113,8 @@
 .card {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 12px 14px;
+  gap: 5px;           /* E3: reduced from 8px */
+  padding: 9px 12px;  /* E3: reduced from 12px 14px */
   border-radius: 8px;
   border: 1px solid var(--ch-border);
   background: var(--ch-card);
@@ -178,6 +178,7 @@
 }
 
 .cardHead { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.cardHeadRight { display: flex; align-items: center; gap: 6px; } /* E3 */
 .orderNumber {
   padding-left: 8px;
   border-left: 3px solid var(--ch-border);
@@ -189,15 +190,15 @@
 }
 .clientName { font-size: 11px; color: var(--ch-text-muted); }
 
-.productName { font-size: 14px; font-weight: 600; color: var(--ch-text); line-height: 1.3; }
+.productName { font-size: 13px; font-weight: 600; color: var(--ch-text); line-height: 1.25; } /* E3 */
 .metaLine { font-size: 11px; color: var(--ch-text-muted); }
 
 /* ── Workshop note (E2) ── */
 .workshopNote {
   display: flex;
   align-items: flex-start;
-  gap: 6px;
-  padding: 7px 10px;
+  gap: 5px;
+  padding: 5px 8px;  /* E3 */
   border-radius: 6px;
   background: color-mix(in srgb, var(--ch-gold, #C9A84C) 8%, transparent);
   border: 1px solid color-mix(in srgb, var(--ch-gold, #C9A84C) 22%, transparent);
@@ -212,19 +213,19 @@
 }
 
 
-.infoRow { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.infoRow { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-top: 1px; }
 .workerChip {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 4px 10px;
+  gap: 4px;
+  padding: 3px 8px;  /* E3 */
   border-radius: 999px;
   background: var(--ch-surface);
   border: 1px solid var(--ch-border);
   font-size: 11px;
   color: var(--ch-text-muted);
 }
-.deadline { font-size: 11px; color: var(--ch-text-muted); }
+.deadline { font-size: 11px; font-weight: 600; color: var(--ch-text-dim); letter-spacing: 0.01em; }
 
 /* ── Card actions ── */
 .cardActions { display: flex; align-items: center; justify-content: space-between; gap: 6px; flex-wrap: wrap; }
@@ -607,4 +608,45 @@
 @media (max-width: 960px) {
   .header, .headerRight { flex-direction: column; align-items: stretch; }
   .board, .loadingGrid { grid-template-columns: 1fr; }
+}
+
+/* ── Sprint 12: Mobile production board ── */
+@media (max-width: 768px) {
+  .root {
+    padding: 12px;
+  }
+
+  .board {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .column {
+    width: 100%;
+    min-width: 0;
+    max-height: none;
+  }
+
+  .columnCards {
+    max-height: 60vh;
+    overflow-y: auto;
+  }
+
+  .card {
+    padding: 8px 10px;
+  }
+
+  .cardActions {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .primaryAction,
+  .successAction,
+  .secondaryAction {
+    flex: 1;
+    min-width: 80px;
+    font-size: 12px;
+    padding: 7px 10px;
+  }
 }
