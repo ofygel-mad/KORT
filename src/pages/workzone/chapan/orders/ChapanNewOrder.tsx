@@ -634,9 +634,7 @@ export default function ChapanNewOrderPage() {
                       {lineDisc > 0 ? (
                         <>
                           <span className={styles.lineTotalOld}>{fmt(linePrice)}</span>
-                          <span className={styles.lineTotalArrow}>→</span>
                           <span className={styles.lineTotalFinal}>{fmt(lineTotal)}</span>
-                          <span className={styles.lineTotalSave}>экономия {fmt(lineDisc)}</span>
                         </>
                       ) : (
                         <span className={styles.lineTotalFinal}>{fmt(linePrice)}</span>

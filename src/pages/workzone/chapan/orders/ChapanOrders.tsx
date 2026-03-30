@@ -565,9 +565,9 @@ const BatchCard = memo(function BatchCard({ group, onSelectOrder }: { group: { o
 
         {item && (
           <div className={styles.batchProduct}>
-            <span className={styles.batchProductName}>{item.productName}</span>
-            {(item.fabric || item.size) && (
-              <span className={styles.cardItemMeta}>{[item.fabric, item.size].filter(Boolean).join(' · ')}</span>
+            <span className={styles.batchProductName}>{buildItemLine(item)}</span>
+            {item.size && (
+              <span className={styles.cardItemMeta}>{item.size}</span>
             )}
           </div>
         )}
@@ -756,9 +756,9 @@ const BatchRow = memo(function BatchRow({ group, onSelectOrder }: { group: { ord
         <div className={styles.rowProduct}>
           {item ? (
             <>
-              <span className={styles.cardItemName}>{item.productName}</span>
-              {(item.fabric || item.size) && (
-                <span className={styles.cardItemMeta}>{[item.fabric, item.size].filter(Boolean).join(' · ')}</span>
+              <span className={styles.cardItemName}>{buildItemLine(item)}</span>
+              {item.size && (
+                <span className={styles.cardItemMeta}>{item.size}</span>
               )}
             </>
           ) : <span className={styles.cardItemMeta}>—</span>}
