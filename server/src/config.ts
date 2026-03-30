@@ -8,7 +8,12 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 loadEnv({ path: resolve(__dirname, '../.env') });
 
 export function normalizeCorsOrigin(origin: string) {
-  return origin.trim().replace(/\/+$/, '');
+  const trimmed = origin.trim();
+  let end = trimmed.length;
+  while (end > 0 && trimmed[end - 1] === '/') {
+    end--;
+  }
+  return trimmed.slice(0, end);
 }
 
 function parseCorsOrigins(value: string) {

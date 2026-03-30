@@ -1,5 +1,6 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
+import rateLimit from '@fastify/rate-limit';
 import sensible from '@fastify/sensible';
 import { ZodError } from 'zod';
 import { config, normalizeCorsOrigin } from './config.js';
@@ -69,6 +70,10 @@ export async function buildApp() {
     },
     credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID', 'Idempotency-Key', 'X-Org-Id'],
+  });
+  await app.register(rateLimit, {
+    max: 100,
+    timeWindow: '1 minute',
   });
   await app.register(sensible);
   await app.register(authPlugin);
