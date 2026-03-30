@@ -2,6 +2,16 @@ import type { Prisma } from '@prisma/client';
 import { prisma } from '../../lib/prisma.js';
 import { NotFoundError, ValidationError } from '../../lib/errors.js';
 import { normalizeProductionStatus } from './workflow.js';
+import { syncOrderToSheets } from './sheets.sync.js';
+
+// Async fire-and-forget helper — never throws, never blocks the main flow
+function fireSheetSync(orgId: string, orderId: string) {
+  syncOrderToSheets(orgId, orderId).then(result => {
+    if (!result.ok) console.warn('[sheets.sync] non-blocking error:', result.error);
+  }).catch(err => {
+    console.error('[sheets.sync] unexpected error:', err);
+  });
+}
 
 type CreateOrderInput = {
   clientId?: string;
@@ -571,7 +581,10 @@ export async function create(orgId: string, authorId: string, authorName: string
       });
     }
 
-    return mapOrder(order);
+    const mapped = mapOrder(order);
+    // Sprint 10: async sync to Google Sheets — fire-and-forget, never blocks
+    fireSheetSync(orgId, order.id);
+    return mapped;
   });
 }
 
@@ -745,6 +758,7 @@ export async function fulfillFromStock(orgId: string, id: string, authorId: stri
 
 // Update order status
 
+// Sprint 10: status change triggers Sheets sync
 export async function updateStatus(orgId: string, id: string, status: string, authorId: string, authorName: string, cancelReason?: string) {
   const order = await prisma.chapanOrder.findFirst({ where: { id, orgId } });
   if (!order) throw new NotFoundError('ChapanOrder', id);
@@ -813,6 +827,7 @@ export async function updateStatus(orgId: string, id: string, status: string, au
 
 // Add payment
 
+// Sprint 10: payment also triggers Sheets sync
 export async function addPayment(orgId: string, orderId: string, authorId: string, authorName: string, data: {
   amount: number;
   method: string;
