@@ -120,7 +120,7 @@ export default function ChapanEditOrderPage() {
   useEffect(() => {
     const autoFee = DELIVERY_FEE_MAP[deliveryType ?? ''];
     if (autoFee !== undefined) setValue('deliveryFee', autoFee);
-  }, [deliveryType]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [deliveryType]);
 
   const itemsTotal            = items.reduce((s, i) => s + (Number(i.quantity) || 0) * (Number(i.unitPrice) || 0), 0);
   const orderDiscount         = Number.isFinite(orderDiscountRaw)  ? (orderDiscountRaw  ?? 0) : 0;
