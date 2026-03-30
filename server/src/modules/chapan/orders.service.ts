@@ -13,6 +13,9 @@ type CreateOrderInput = {
   items: Array<{
     productName: string;
     fabric?: string;
+    color?: string;
+    gender?: string;
+    length?: string;
     size: string;
     quantity: number;
     unitPrice: number;
@@ -30,9 +33,15 @@ type CreateOrderInput = {
   };
   streetAddress?: string;
   city?: string;
+  postalCode?: string;
   deliveryType?: string;
   source?: string;
   expectedPaymentMethod?: string;
+  orderDate?: string;
+  orderDiscount?: number;
+  deliveryFee?: number;
+  bankCommissionPercent?: number;
+  bankCommissionAmount?: number;
   managerNote?: string;
   sourceRequestId?: string;
 };
@@ -496,15 +505,24 @@ export async function create(orgId: string, authorId: string, authorName: string
         paymentStatus: computePaymentStatus(prepayment, totalAmount),
         streetAddress: data.streetAddress?.trim() || undefined,
         city: data.city?.trim() || undefined,
+        postalCode: data.postalCode?.trim() || undefined,
         deliveryType: data.deliveryType?.trim() || undefined,
         source: data.source?.trim() || undefined,
         expectedPaymentMethod: data.expectedPaymentMethod?.trim() || undefined,
         internalNote: data.managerNote?.trim() || undefined,
+        orderDate: data.orderDate ? new Date(data.orderDate) : undefined,
+        orderDiscount: data.orderDiscount ?? 0,
+        deliveryFee: data.deliveryFee ?? 0,
+        bankCommissionPercent: data.bankCommissionPercent ?? 0,
+        bankCommissionAmount: data.bankCommissionAmount ?? 0,
         dueDate: data.dueDate ? new Date(data.dueDate) : undefined,
         items: {
           create: data.items.map((item) => ({
             productName: item.productName,
             fabric: item.fabric?.trim() || '',
+            color: item.color?.trim() || undefined,
+            gender: item.gender?.trim() || undefined,
+            length: item.length?.trim() || undefined,
             size: item.size,
             quantity: item.quantity,
             unitPrice: item.unitPrice,

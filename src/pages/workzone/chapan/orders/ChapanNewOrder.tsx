@@ -174,7 +174,10 @@ function buildPayloadItems(items: FormData['items'], orderDiscount: number) {
 
     return {
       productName: line.item.productName,
-      fabric: line.item.color?.trim() || undefined,
+      fabric: line.item.color?.trim() || undefined,  // color goes to fabric for invoice compat
+      color: line.item.color?.trim() || undefined,
+      gender: line.item.gender?.trim() || undefined,
+      length: line.item.length?.trim() || undefined,
       size: line.item.size,
       quantity: line.quantity,
       unitPrice: effectiveUnitPrice,
@@ -295,7 +298,9 @@ export default function ChapanNewOrderPage() {
       priority:      data.urgency === 'urgent' ? 'urgent' : data.isDemandingClient ? 'vip' : 'normal',
       urgency:       data.urgency as Urgency,
       isDemandingClient: data.isDemandingClient,
+      postalCode:    data.postalCode?.trim() || undefined,
       orderDate:     data.orderDate || undefined,
+      orderDiscount: orderDiscount > 0 ? orderDiscount : undefined,
       dueDate:       data.dueDate   || undefined,
       prepayment:    hasPrepayment ? data.prepayment : undefined,
       paymentMethod: hasPrepayment ? data.paymentMethod : undefined,

@@ -370,6 +370,11 @@ export default function ChapanOrderDetailPage() {
                         )}
                       </div>
                       <span className={styles.itemMeta}>{formatItemMeta(item)}</span>
+                      {(item.color || item.gender || item.length) && (
+                        <span className={styles.itemMeta} style={{ color: 'var(--text-tertiary)', fontSize: 11 }}>
+                          {[item.color, item.gender, item.length ? `дл. ${item.length}` : null].filter(Boolean).join(' · ')}
+                        </span>
+                      )}
                       {item.workshopNotes && <span className={styles.itemNote}>↳ {item.workshopNotes}</span>}
                       {order.status === 'new' && stock !== undefined && (
                         <span className={hasEnoughStock ? styles.stockBadgeIn : styles.stockBadgeOut}>
@@ -425,6 +430,12 @@ export default function ChapanOrderDetailPage() {
               <div className={styles.finRow}><span>Статус оплаты</span><span style={{ color: PAY_COLOR[order.paymentStatus], fontWeight: 500, fontSize: 12 }}>{PAY_LABEL[order.paymentStatus]}</span></div>
               {(order as any).expectedPaymentMethod && (
                 <div className={styles.finRow}><span>Ожидаемый способ доплаты</span><span style={{ fontWeight: 500 }}>{(order as any).expectedPaymentMethod}</span></div>
+              )}
+              {order.postalCode && (
+                <div className={styles.finRow}><span>Индекс</span><span style={{ fontWeight: 500 }}>{order.postalCode}</span></div>
+              )}
+              {order.orderDate && (
+                <div className={styles.finRow}><span>Дата заказа</span><span style={{ fontWeight: 500 }}>{new Date(order.orderDate).toLocaleDateString('ru-KZ', { day: '2-digit', month: 'long', year: 'numeric' })}</span></div>
               )}
             </div>
 

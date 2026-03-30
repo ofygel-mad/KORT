@@ -611,6 +611,12 @@ model ChapanOrder {
   expectedPaymentMethod String?   @map("expected_payment_method")
   shippingNote          String?   @map("shipping_note")
   internalNote          String?   @map("internal_note")
+  postalCode            String?   @map("postal_code")
+  orderDate             DateTime? @map("order_date")
+  orderDiscount         Float     @default(0) @map("order_discount")
+  deliveryFee           Float     @default(0) @map("delivery_fee")
+  bankCommissionPercent Float     @default(0) @map("bank_commission_percent")
+  bankCommissionAmount  Float     @default(0) @map("bank_commission_amount")
   requiresInvoice       Boolean   @default(true) @map("requires_invoice")
   isArchived      Boolean   @default(false) @map("is_archived")
   archivedAt    DateTime? @map("archived_at")
@@ -642,6 +648,8 @@ model ChapanOrderItem {
   quantity      Int     @default(1)
   unitPrice     Float   @map("unit_price")
   fulfillmentMode String @default("unassigned") @map("fulfillment_mode")
+  gender        String?
+  length        String?
   notes         String?
   workshopNotes String? @map("workshop_notes")
   color         String?

@@ -36,6 +36,12 @@ export interface ChapanOrder {
   expectedPaymentMethod: string | null;
   shippingNote: string | null;
   cancelReason: string | null;
+  postalCode: string | null;
+  orderDate: string | null;
+  orderDiscount: number;
+  deliveryFee: number;
+  bankCommissionPercent: number;
+  bankCommissionAmount: number;
   completedAt: string | null;
   cancelledAt: string | null;
   requiresInvoice: boolean;
@@ -77,7 +83,9 @@ export interface OrderItem {
   fulfillmentMode?: OrderItemFulfillmentMode | null;
   notes: string | null;
   workshopNotes: string | null;
-  // color is not in DB yet — will add migration
+  color: string | null;
+  gender: string | null;
+  length: string | null;
 }
 
 export interface ProductionTask {
@@ -154,11 +162,15 @@ export interface CreateOrderDto {
   dueDate?: string;            // ISO date: '2026-03-25'
   streetAddress?: string;
   city?: string;
+  postalCode?: string;
   deliveryType?: string;
   source?: string;
   expectedPaymentMethod?: string;
   totalAmount?: number;
   orderDiscount?: number;
+  deliveryFee?: number;
+  bankCommissionPercent?: number;
+  bankCommissionAmount?: number;
   prepayment?: number;
   paymentMethod?: 'cash' | 'kaspi_qr' | 'kaspi_terminal' | 'transfer' | 'mixed';
   mixedBreakdown?: {
@@ -176,6 +188,9 @@ export interface CreateOrderDto {
 export interface CreateOrderItemDto {
   productName: string;
   fabric?: string;             // optional; backend will default when omitted
+  color?: string;
+  gender?: string;
+  length?: string;
   size: string;                // was: sizeName
   quantity: number;            // was: qty (min 1)
   unitPrice: number;
