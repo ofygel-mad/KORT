@@ -266,8 +266,7 @@ export async function ensureSheetHeader(): Promise<void> {
 function isSheetsConfigured(): boolean {
   return !!(
     process.env.GOOGLE_SHEETS_SPREADSHEET_ID &&
-    process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL &&
-    process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY
+    process.env.GOOGLE_SHEETS_API_KEY
   );
 }
 
@@ -282,20 +281,16 @@ async function upsertRow(
   orderId: string,
   values: string[],
 ): Promise<SyncResult> {
-  /*
-  // ── Activate this block after: npm install googleapis ──────────────────────
+  // ── Using Google Sheets API with API Key ──────────────────────────────────
   const { google } = await import('googleapis');
 
-  const auth = new google.auth.JWT({
-    email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-    key: (process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY ?? '')
-      .replace(/\\n/g, '\n'),
-    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+  const sheets = google.sheets({
+    version: 'v4',
+    auth: process.env.GOOGLE_SHEETS_API_KEY,
   });
 
-  const sheets = google.sheets({ version: 'v4', auth });
   const spreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID!;
-  const sheetName = process.env.GOOGLE_SHEETS_SHEET_NAME ?? 'Заказы';
+  const sheetName = process.env.GOOGLE_SHEETS_SHEET_NAME ?? 'Orders';
 
   // Find existing row
   const existing = await sheets.spreadsheets.values.get({
@@ -331,25 +326,17 @@ async function upsertRow(
     return { ok: true, rowIndex };
   }
   // ─────────────────────────────────────────────────────────────────────────
-  */
-
-  // Placeholder until googleapis is installed:
-  console.log(`[sheets.sync] Would sync order ${orderId} (googleapis not installed)`);
-  return { ok: true, rowIndex: -1 };
 }
 
 async function ensureHeaderRow(): Promise<void> {
-  /*
-  // ── Activate alongside upsertRow ──────────────────────────────────────────
+  // ── Using Google Sheets API with API Key ──────────────────────────────────
   const { google } = await import('googleapis');
-  const auth = new google.auth.JWT({
-    email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-    key: (process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY ?? '').replace(/\\n/g, '\n'),
-    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+  const sheets = google.sheets({
+    version: 'v4',
+    auth: process.env.GOOGLE_SHEETS_API_KEY,
   });
-  const sheets = google.sheets({ version: 'v4', auth });
   const spreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID!;
-  const sheetName = process.env.GOOGLE_SHEETS_SHEET_NAME ?? 'Заказы';
+  const sheetName = process.env.GOOGLE_SHEETS_SHEET_NAME ?? 'Orders';
 
   const existing = await sheets.spreadsheets.values.get({
     spreadsheetId,
@@ -365,5 +352,4 @@ async function ensureHeaderRow(): Promise<void> {
     });
   }
   // ─────────────────────────────────────────────────────────────────────────
-  */
 }
