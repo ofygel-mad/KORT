@@ -190,14 +190,13 @@ export interface CreateOrderDto {
   bankCommissionAmount?: number;
   prepayment?: number;
   paymentMethod?: 'cash' | 'kaspi_qr' | 'kaspi_terminal' | 'transfer' | 'mixed';
-  mixedBreakdown?: {
-    mixedCash: number;
-    mixedKaspiQr: number;
-    mixedKaspiTerminal: number;
-    mixedTransfer: number;
-  };
+  // Flat breakdown (backend accepts flat fields, not nested)
+  mixedCash?: number;
+  mixedKaspiQr?: number;
+  mixedKaspiTerminal?: number;
+  mixedTransfer?: number;
   receiptFileNames?: string[];
-  items: CreateOrderItemDto[];
+  items?: CreateOrderItemDto[];
   sourceRequestId?: string;
   managerNote?: string;
 }
@@ -234,6 +233,14 @@ export interface UpdateOrderDto {
   deliveryFee?: number;
   bankCommissionPercent?: number;
   bankCommissionAmount?: number;
+  // Payment
+  prepayment?: number;
+  paymentMethod?: 'cash' | 'kaspi_qr' | 'kaspi_terminal' | 'transfer' | 'mixed';
+  expectedPaymentMethod?: string;
+  mixedCash?: number;
+  mixedKaspiQr?: number;
+  mixedKaspiTerminal?: number;
+  mixedTransfer?: number;
   items?: CreateOrderItemDto[];
 }
 

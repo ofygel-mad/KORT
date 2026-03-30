@@ -217,9 +217,10 @@ export default function ChapanEditOrderPage() {
       orderDiscount: order.orderDiscount > 0 ? order.orderDiscount : undefined,
       deliveryFee:   order.deliveryFee   > 0 ? order.deliveryFee   : undefined,
       bankCommissionPercent: order.bankCommissionPercent > 0 ? order.bankCommissionPercent : undefined,
+      // Shows current paidAmount so manager can see what was already paid
       prepayment:    order.paidAmount   > 0 ? order.paidAmount   : undefined,
-      paymentMethod: (order.expectedPaymentMethod as PaymentMethodValue | undefined) ?? undefined,
-      expectedPaymentMethod: undefined,
+      paymentMethod: undefined,  // payment method for THIS edit session, not inherited
+      expectedPaymentMethod: order.expectedPaymentMethod ?? undefined,
       mixedCash: undefined, mixedKaspiQr: undefined, mixedKaspiTerminal: undefined, mixedTransfer: undefined,
       items: (order.items ?? []).map(item => ({
         fabric:        item.fabric ?? '',

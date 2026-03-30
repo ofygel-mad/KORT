@@ -960,6 +960,14 @@ type UpdateOrderInput = {
   deliveryFee?: number;
   bankCommissionPercent?: number;
   bankCommissionAmount?: number;
+  // Payment
+  prepayment?: number;
+  paymentMethod?: string;
+  expectedPaymentMethod?: string;
+  mixedCash?: number;
+  mixedKaspiQr?: number;
+  mixedKaspiTerminal?: number;
+  mixedTransfer?: number;
   items?: Array<{
     productName: string;
     fabric?: string;
@@ -1016,6 +1024,17 @@ export async function update(orgId: string, id: string, authorId: string, author
     if (data.deliveryFee !== undefined)          updateData.deliveryFee = data.deliveryFee ?? 0;
     if (data.bankCommissionPercent !== undefined) updateData.bankCommissionPercent = data.bankCommissionPercent ?? 0;
     if (data.bankCommissionAmount !== undefined)  updateData.bankCommissionAmount = data.bankCommissionAmount ?? 0;
+    // Payment update: only replace paidAmount if prepayment is explicitly provided
+    if (data.prepayment !== undefined) {
+      const newPaid = Math.max(0, data.prepayment);
+      updateData.paidAmount = newPaid;
+      // Recalculate paymentStatus against current or incoming totalAmount
+      const totalAmount = typeof updateData.totalAmount === 'number'
+        ? updateData.totalAmount
+        : order.totalAmount;
+      updateData.paymentStatus = computePaymentStatus(newPaid, totalAmount);
+    }
+    if (data.expectedPaymentMethod !== undefined) updateData.expectedPaymentMethod = data.expectedPaymentMethod || null;
 
     if (data.items) {
       const totalAmount = data.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);

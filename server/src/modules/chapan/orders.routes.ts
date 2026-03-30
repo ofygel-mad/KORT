@@ -107,6 +107,14 @@ export async function chapanOrdersRoutes(app: FastifyInstance) {
       deliveryFee: z.number().min(0).optional(),
       bankCommissionPercent: z.number().min(0).max(100).optional(),
       bankCommissionAmount: z.number().min(0).optional(),
+      // Payment fields
+      prepayment: z.number().min(0).optional(),
+      paymentMethod: z.string().optional(),
+      expectedPaymentMethod: z.string().optional(),
+      mixedCash: z.number().min(0).optional(),
+      mixedKaspiQr: z.number().min(0).optional(),
+      mixedKaspiTerminal: z.number().min(0).optional(),
+      mixedTransfer: z.number().min(0).optional(),
       items: z.array(orderItemSchema).optional(),
     }).parse(request.body);
 
