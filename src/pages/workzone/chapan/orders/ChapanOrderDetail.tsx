@@ -140,7 +140,7 @@ export default function ChapanOrderDetailPage() {
   // чтобы возврат на список заказов не вызывал повторный редирект.
   useEffect(() => {
     setSelectedOrderId(null);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   const detailContext = (() => {
     if (location.pathname.startsWith('/workzone/chapan/ready/')) {

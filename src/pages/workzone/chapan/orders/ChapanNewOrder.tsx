@@ -250,7 +250,6 @@ export default function ChapanNewOrderPage() {
       if (!isEmpty) saveDraft(snapshot);
     }, 800);
     return () => { if (autosaveTimer.current) clearTimeout(autosaveTimer.current); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [JSON.stringify(watch())]);
 
   // F3: Автоматически проставляем сумму доставки при выборе типа
@@ -259,7 +258,6 @@ export default function ChapanNewOrderPage() {
     if (autoFee !== undefined) {
       setValue('deliveryFee', autoFee);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deliveryType]);
 
   // Показываем тост один раз, если черновик был восстановлен
@@ -267,7 +265,6 @@ export default function ChapanNewOrderPage() {
     if (savedDraft.current && !draftRestored) {
       setDraftRestored(true);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Derived values

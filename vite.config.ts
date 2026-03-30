@@ -167,16 +167,10 @@ export default defineConfig({
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
     exclude: ['src/**/*.e2e.{test,spec}.{ts,tsx}', 'tests/e2e/**', '**/node_modules/**', 'dist/**'],
     isolate: false,
-    threads: false,
+    pool: 'forks',
     poolOptions: {
       forks: {
         singleFork: true,
-      },
-    },
-    server: {
-      deps: {
-        inline: [/./],
-        external: ['@adobe/css-tools'],
       },
     },
     coverage: {
