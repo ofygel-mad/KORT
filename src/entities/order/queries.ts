@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { ordersApi, productionApi, chapanSettingsApi, invoicesApi, changeRequestsApi } from './api';
+import { ordersApi, productionApi, chapanSettingsApi, invoicesApi, changeRequestsApi, attachmentsApi } from './api';
 import type {
   CreateOrderDto,
   UpdateOrderDto,
@@ -510,3 +510,25 @@ export const useChapanClients = () =>
     queryKey: orderKeys.clients,
     queryFn: () => chapanSettingsApi.getClients(),
   });
+
+// ── Attachments ───────────────────────────────────────────────────────────────
+
+export function useUploadAttachment(orderId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (file: File) => attachmentsApi.upload(orderId, file),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: orderKeys.detail(orderId) });
+    },
+  });
+}
+
+export function useDeleteAttachment(orderId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (attachmentId: string) => attachmentsApi.delete(orderId, attachmentId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: orderKeys.detail(orderId) });
+    },
+  });
+}

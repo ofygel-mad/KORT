@@ -111,3 +111,53 @@
   color: var(--fill-negative, #ef4444);
   opacity: 0.8;
 }
+
+/* ── Sprint 4: catalog action buttons + hint ─────────────────────────────── */
+.catalogActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.catalogActionBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface-elevated);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 120ms, background 120ms, color 120ms;
+}
+.catalogActionBtn:hover {
+  border-color: var(--border-default);
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.catalogActionBtnWarn {
+  border-color: rgba(245, 158, 11, 0.3);
+  color: #F59E0B;
+  background: rgba(245, 158, 11, 0.06);
+}
+.catalogActionBtnWarn:hover {
+  border-color: rgba(245, 158, 11, 0.5);
+  background: rgba(245, 158, 11, 0.12);
+  color: #F59E0B;
+}
+
+.catalogHint {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--text-tertiary);
+}

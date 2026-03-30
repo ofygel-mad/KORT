@@ -5,7 +5,7 @@
 @media (max-width: 768px) {
   .root {
     padding: 14px;
-    padding-bottom: env(safe-area-inset-bottom, 14px);
+    padding-bottom: calc(var(--bottom-nav-height, 60px) + env(safe-area-inset-bottom, 0px) + 14px);
   }
 
   .pageHeader {
@@ -20,12 +20,33 @@
     border-radius: 10px;
   }
 
-  .actions { gap: 10px; }
+  .actions { gap: 8px; flex-wrap: wrap; }
 
   .addPayBtn,
   .actionBtn {
-    min-height: 48px;
-    font-size: 14px;
+    min-height: 44px;
+    font-size: 13px;
+    flex: 1;
+    min-width: 120px;
+  }
+}
+
+@media (max-width: 480px) {
+  .root { padding: 10px; }
+
+  .orderMeta { gap: 6px; }
+  .orderNum  { font-size: 16px; }
+
+  /* Stack action buttons full-width */
+  .actions {
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .addPayBtn,
+  .actionBtn {
+    width: 100%;
+    min-width: 0;
   }
 }
 .loadingSkeleton { display:flex; flex-direction:column; gap:14px; }

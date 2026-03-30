@@ -758,3 +758,30 @@
     min-width: 0;
   }
 }
+
+@media (max-width: 480px) {
+  .toolbar {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  /* Search takes full row on very narrow screens */
+  .searchWrap {
+    order: -1;
+    width: 100%;
+    max-width: 100%;
+    flex: 0 0 100%;
+  }
+
+  .toolbarRight {
+    margin-left: 0;
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  /* View switch compact — icons only hint via smaller padding */
+  .viewBtn {
+    padding: 6px 10px;
+    font-size: 11px;
+  }
+}

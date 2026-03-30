@@ -603,7 +603,14 @@ function TaskCard({
 
       <div className={styles.productName}>{task.productName}</div>
       <div className={styles.metaLine}>
-        {[task.fabric, task.size, task.quantity > 1 ? `× ${task.quantity}` : ''].filter(Boolean).join(' · ')}
+        {[
+          task.color,
+          task.gender ? `(${task.gender})` : '',
+          task.fabric,
+          task.size,
+          task.length ? `дл. ${task.length}` : '',
+          task.quantity > 1 ? `× ${task.quantity}` : '',
+        ].filter(Boolean).join(' · ')}
       </div>
 
       {task.notes && (
@@ -747,7 +754,13 @@ function BatchTaskCard({
 
         <div className={styles.productName}>{firstTask.productName}</div>
         <div className={styles.metaLine}>
-          {[firstTask.fabric, firstTask.size].filter(Boolean).join(' · ')} · {totalQty} шт.
+          {[
+            firstTask.color,
+            firstTask.gender ? `(${firstTask.gender})` : '',
+            firstTask.fabric,
+            firstTask.size,
+            firstTask.length ? `дл. ${firstTask.length}` : '',
+          ].filter(Boolean).join(' · ')} · {totalQty} шт.
         </div>
 
         <div className={styles.batchMeta}>

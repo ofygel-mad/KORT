@@ -39,6 +39,9 @@ const envSchema = z.object({
   GOOGLE_SHEETS_SPREADSHEET_ID: z.string().optional(),
   GOOGLE_SHEETS_SHEET_NAME: z.string().optional(),
   GOOGLE_SHEETS_API_KEY: z.string().optional(),
+  // Sprint 9: file uploads
+  UPLOAD_DIR: z.string().default('./uploads'),
+  UPLOAD_MAX_FILE_SIZE_MB: z.coerce.number().default(10),
 });
 
 function loadConfig() {

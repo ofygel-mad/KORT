@@ -1,14 +1,47 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
+import type { InputHTMLAttributes } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { AlertTriangle, ChevronLeft, Plus, Trash2, X } from 'lucide-react';
+import { AlertTriangle, Calculator, ChevronLeft, Plus, Trash2, X } from 'lucide-react';
 import { useOrder, useUpdateOrder, useChapanCatalogs, useRequestItemChange } from '../../../../entities/order/queries';
 import type { Urgency } from '../../../../entities/order/types';
 import { formatPersonNameInput } from '../../../../shared/utils/person';
 import { formatKazakhPhoneInput, isKazakhPhoneComplete } from '../../../../shared/utils/kz';
 import styles from './ChapanNewOrder.module.css';
+
+// ── Constants ─────────────────────────────────────────────────────────────────
+
+const CITIES   = ['Алматы', 'Астана', 'Шымкент', 'Атырау', 'Актобе', 'Тараз', 'Павлодар', 'Другой город'];
+const SOURCES  = ['Instagram', 'WhatsApp', 'Telegram', 'Звонок', 'Рекомендация', 'Сайт', 'Другое'];
+const DELIVERY_OPTIONS = ['Самовывоз', 'Курьер по городу', 'Казпочта', 'Жд', 'Авиа', 'СДЭК', 'Другое'];
+
+// ── SelectOrText ──────────────────────────────────────────────────────────────
+
+function SelectOrText({ options, placeholder, className, ...props }: InputHTMLAttributes<HTMLInputElement> & { options: string[] }) {
+  const id = useId();
+  return (
+    <>
+      <datalist id={id}>{options.map((o) => <option key={o} value={o} />)}</datalist>
+      <input {...props} list={id} placeholder={placeholder} className={className} autoComplete="off" />
+    </>
+  );
+}
+
+function parseOptionalAmount(value: string) {
+  if (!value.trim()) return undefined;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : undefined;
+}
+
+const DELIVERY_FEE_MAP: Record<string, number> = {
+  'Казпочта': 2000,
+  'Жд': 3000,
+  'Авиа': 5000,
+};
+
+const DELIVERY = ['Самовывоз', 'Курьер по городу', 'Казпочта', 'СДЭК', 'Другое'];
 
 // ── Schema ────────────────────────────────────────────────────────────────────
 
@@ -18,6 +51,9 @@ const itemSchema = z.object({
   size:        z.string().min(1, 'Укажите размер'),
   quantity:    z.coerce.number().int().min(1),
   unitPrice:   z.coerce.number().min(0).default(0),
+  color:        z.string().optional(),
+  gender:       z.string().optional(),
+  length:       z.string().optional(),
   workshopNotes: z.string().optional(),
 });
 
@@ -27,8 +63,17 @@ const schema = z.object({
     .min(1, 'Телефон обязателен')
     .refine((value) => isKazakhPhoneComplete(value), 'Введите номер в формате +7 (777)-777-77-77'),
   dueDate:     z.string().optional(),
+  city:         z.string().optional(),
+  streetAddress: z.string().optional(),
+  postalCode:   z.string().optional(),
+  deliveryType: z.string().optional(),
+  source:       z.string().optional(),
+  orderDate:    z.string().optional(),
   urgency:     z.enum(['normal', 'urgent']).default('normal'),
   isDemandingClient: z.boolean().default(false),
+  orderDiscount: z.coerce.number().min(0).optional(),
+  deliveryFee:   z.coerce.number().min(0).optional(),
+  bankCommissionPercent: z.coerce.number().min(0).max(100).optional(),
   items:       z.array(itemSchema).min(1, 'Добавьте хотя бы одну позицию'),
 });
 
@@ -62,11 +107,28 @@ export default function ChapanEditOrderPage() {
   });
 
   const { fields, append, remove } = useFieldArray({ control, name: 'items' });
-  const urgency          = watch('urgency');
+  const urgency           = watch('urgency');
   const isDemandingClient = watch('isDemandingClient');
-  const items            = watch('items');
+  const items             = watch('items');
+  const deliveryType      = watch('deliveryType');
+  const orderDiscountRaw  = watch('orderDiscount');
+  const deliveryFeeRaw    = watch('deliveryFee');
+  const bankCommPctRaw    = watch('bankCommissionPercent');
+  const [discountPercent, setDiscountPercent] = useState('');
 
-  // Populate form once when order first loads — do not re-run on background refetches
+  // F3: auto-fill delivery fee when delivery type changes
+  useEffect(() => {
+    const autoFee = DELIVERY_FEE_MAP[deliveryType ?? ''];
+    if (autoFee !== undefined) setValue('deliveryFee', autoFee);
+  }, [deliveryType]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const itemsTotal            = items.reduce((s, i) => s + (Number(i.quantity) || 0) * (Number(i.unitPrice) || 0), 0);
+  const orderDiscount         = Number.isFinite(orderDiscountRaw)  ? (orderDiscountRaw  ?? 0) : 0;
+  const deliveryFee           = Number.isFinite(deliveryFeeRaw)    ? (deliveryFeeRaw    ?? 0) : 0;
+  const bankCommPct           = Number.isFinite(bankCommPctRaw)    ? (bankCommPctRaw    ?? 0) : 0;
+  const subtotalAfterDiscount = Math.max(0, itemsTotal - orderDiscount);
+  const bankCommAmount        = Math.round(subtotalAfterDiscount * bankCommPct / 100);
+  const finalTotal            = Math.max(0, subtotalAfterDiscount + deliveryFee + bankCommAmount);
   // to avoid wiping user's in-progress edits (React Query refetchOnMount reuses the same
   // component instance but may deliver a new object reference for the same data).
   const formPopulated = useRef(false);
@@ -79,12 +141,24 @@ export default function ChapanEditOrderPage() {
       dueDate:     order.dueDate ? order.dueDate.slice(0, 10) : '',
       urgency:     (order.urgency ?? (order.priority === 'urgent' ? 'urgent' : 'normal')) as Urgency,
       isDemandingClient: order.isDemandingClient ?? (order.priority === 'vip'),
+      city:          order.city ?? '',
+      streetAddress: order.streetAddress ?? '',
+      postalCode:    order.postalCode ?? '',
+      deliveryType:  order.deliveryType ?? '',
+      source:        order.source ?? '',
+      orderDate:     order.orderDate ? order.orderDate.slice(0, 10) : '',
+      orderDiscount: order.orderDiscount > 0 ? order.orderDiscount : undefined,
+      deliveryFee:   order.deliveryFee   > 0 ? order.deliveryFee   : undefined,
+      bankCommissionPercent: order.bankCommissionPercent > 0 ? order.bankCommissionPercent : undefined,
       items: (order.items ?? []).map(item => ({
         fabric:        item.fabric ?? '',
         productName:   item.productName,
         size:          item.size,
         quantity:      item.quantity,
         unitPrice:     item.unitPrice,
+        color:         item.color ?? '',
+        gender:        item.gender ?? '',
+        length:        item.length ?? '',
         workshopNotes: item.workshopNotes ?? '',
       })),
     });
@@ -97,9 +171,6 @@ export default function ChapanEditOrderPage() {
     return `${new Intl.NumberFormat('ru-KZ', { maximumFractionDigits: 0 }).format(n)} ₸`;
   }
 
-  const itemsTotal = items.reduce((sum, item) => {
-    return sum + (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0);
-  }, 0);
 
   async function onSubmit(data: FormData) {
     if (!id) return;
@@ -120,12 +191,25 @@ export default function ChapanEditOrderPage() {
         priority:    data.urgency === 'urgent' ? 'urgent' : data.isDemandingClient ? 'vip' : 'normal',
         urgency:     data.urgency as Urgency,
         isDemandingClient: data.isDemandingClient,
+        city:          data.city?.trim() || undefined,
+        streetAddress: data.streetAddress?.trim() || undefined,
+        postalCode:    data.postalCode?.trim() || undefined,
+        deliveryType:  data.deliveryType?.trim() || undefined,
+        source:        data.source?.trim() || undefined,
+        orderDate:     data.orderDate || undefined,
+        orderDiscount: orderDiscount > 0 ? orderDiscount : 0,
+        deliveryFee:   deliveryFee   > 0 ? deliveryFee   : 0,
+        bankCommissionPercent: bankCommPct > 0 ? bankCommPct : 0,
+        bankCommissionAmount:  bankCommAmount > 0 ? bankCommAmount : 0,
         items:       canEditItems ? data.items.map(item => ({
           fabric:        item.fabric?.trim() || undefined,
           productName:   item.productName,
           size:          item.size,
           quantity:      item.quantity,
           unitPrice:     item.unitPrice,
+          color:         item.color?.trim() || undefined,
+          gender:        item.gender?.trim() || undefined,
+          length:        item.length?.trim() || undefined,
           workshopNotes: item.workshopNotes || undefined,
         })) : undefined,
       },
@@ -158,6 +242,16 @@ export default function ChapanEditOrderPage() {
         priority:    pendingFormData.urgency === 'urgent' ? 'urgent' : pendingFormData.isDemandingClient ? 'vip' : 'normal',
         urgency:     pendingFormData.urgency as Urgency,
         isDemandingClient: pendingFormData.isDemandingClient,
+        city:          pendingFormData.city?.trim() || undefined,
+        streetAddress: pendingFormData.streetAddress?.trim() || undefined,
+        postalCode:    pendingFormData.postalCode?.trim() || undefined,
+        deliveryType:  pendingFormData.deliveryType?.trim() || undefined,
+        source:        pendingFormData.source?.trim() || undefined,
+        orderDate:     pendingFormData.orderDate || undefined,
+        orderDiscount: orderDiscount > 0 ? orderDiscount : 0,
+        deliveryFee:   deliveryFee   > 0 ? deliveryFee   : 0,
+        bankCommissionPercent: bankCommPct > 0 ? bankCommPct : 0,
+        bankCommissionAmount:  bankCommAmount > 0 ? bankCommAmount : 0,
       },
     });
 
@@ -171,6 +265,9 @@ export default function ChapanEditOrderPage() {
           size:          item.size,
           quantity:      item.quantity,
           unitPrice:     item.unitPrice,
+          color:         item.color?.trim() || undefined,
+          gender:        item.gender?.trim() || undefined,
+          length:        item.length?.trim() || undefined,
           workshopNotes: item.workshopNotes || undefined,
         })),
         managerNote: managerNote.trim() || undefined,
@@ -275,6 +372,44 @@ export default function ChapanEditOrderPage() {
                 {errors.clientPhone && <span className={styles.fieldError}>{errors.clientPhone.message}</span>}
               </div>
             </div>
+
+            {/* Адрес и доставка */}
+            <div className={styles.row3}>
+              <div className={styles.field}>
+                <label className={styles.label}>Город</label>
+                <Controller control={control} name="city" render={({ field }) => (
+                  <SelectOrText {...field} value={field.value ?? ''} options={CITIES} placeholder="Алматы" className={styles.input} />
+                )} />
+              </div>
+              <div className={styles.field}>
+                <label className={styles.label}>Почтовый индекс</label>
+                <input {...register('postalCode')} className={styles.input} placeholder="050000" maxLength={10} />
+              </div>
+              <div className={styles.field}>
+                <label className={styles.label}>Доставка</label>
+                <Controller control={control} name="deliveryType" render={({ field }) => (
+                  <SelectOrText {...field} value={field.value ?? ''} options={DELIVERY_OPTIONS} placeholder="Выберите или введите" className={styles.input} />
+                )} />
+              </div>
+            </div>
+            <div className={styles.rowFull}>
+              <div className={styles.field}>
+                <label className={styles.label}>Адрес доставки</label>
+                <input {...register('streetAddress')} className={styles.input} placeholder="ул. Абая 10, кв. 5 / ориентир" />
+              </div>
+            </div>
+            <div className={styles.row2}>
+              <div className={styles.field}>
+                <label className={styles.label}>Источник</label>
+                <Controller control={control} name="source" render={({ field }) => (
+                  <SelectOrText {...field} value={field.value ?? ''} options={SOURCES} placeholder="Instagram, звонок..." className={styles.input} />
+                )} />
+              </div>
+              <div className={styles.field}>
+                <label className={styles.label}>Дата заказа</label>
+                <input {...register('orderDate')} type="date" className={styles.input} />
+              </div>
+            </div>
           </div>
         </section>
 
@@ -377,6 +512,42 @@ export default function ChapanEditOrderPage() {
                     </div>
                   )}
 
+                  {/* Цвет + Пол + Длина */}
+                  <div className={styles.itemRow2}>
+                    <div className={styles.field}>
+                      <label className={styles.label}>Цвет</label>
+                      <input
+                        {...register(`items.${idx}.color`)}
+                        disabled={!editable}
+                        className={styles.input}
+                        placeholder="Тёмно-синий, бордо..."
+                      />
+                    </div>
+                    <div className={styles.field}>
+                      <label className={styles.label}>Пол</label>
+                      <Controller control={control} name={`items.${idx}.gender`} render={({ field: f }) => (
+                        <select {...f} disabled={!editable} className={styles.select}>
+                          <option value="">— не указан —</option>
+                          <option value="муж">Мужской</option>
+                          <option value="жен">Женский</option>
+                          <option value="унисекс">Унисекс</option>
+                        </select>
+                      )} />
+                    </div>
+                  </div>
+                  <div className={styles.itemRow2}>
+                    <div className={styles.field}>
+                      <label className={styles.label}>Длина</label>
+                      <input
+                        {...register(`items.${idx}.length`)}
+                        disabled={!editable}
+                        className={styles.input}
+                        placeholder="Макси, 120 см..."
+                      />
+                    </div>
+                    <div className={styles.field} />
+                  </div>
+
                   <div className={styles.itemNoteField}>
                     <input
                       {...register(`items.${idx}.fabric`)}
@@ -398,7 +569,7 @@ export default function ChapanEditOrderPage() {
                 <button
                   type="button"
                   className={styles.addItemBtn}
-                  onClick={() => append({ productName: '', size: '', quantity: 1, unitPrice: 0, workshopNotes: '' })}
+                  onClick={() => append({ productName: '', size: '', quantity: 1, unitPrice: 0, color: '', gender: '', length: '', workshopNotes: '' })}
                 >
                   <Plus size={13} />
                   Добавить позицию
@@ -454,6 +625,132 @@ export default function ChapanEditOrderPage() {
                   <span>⭐ Требовательный клиент</span>
                 </label>
               </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ── 04 Финансы ────────────────────────────────────────────────────── */}
+        <section className={styles.section}>
+          <div className={styles.sectionHead}>
+            <span className={styles.sectionNum}>04</span>
+            <span className={styles.sectionTitle}>Финансы</span>
+          </div>
+          <div className={styles.sectionBody}>
+
+            {/* Доставка */}
+            <div className={styles.row2}>
+              <div className={styles.field}>
+                <label className={styles.label}>Способ доставки</label>
+                <Controller control={control} name="deliveryType" render={({ field }) => (
+                  <SelectOrText {...field} value={field.value ?? ''} options={DELIVERY_OPTIONS} placeholder="Выберите или введите" className={styles.input} />
+                )} />
+              </div>
+              <div className={styles.field}>
+                <label className={styles.label}>Сумма доставки (₸)</label>
+                <Controller control={control} name="deliveryFee" render={({ field }) => (
+                  <input
+                    type="number" min="0" inputMode="numeric"
+                    className={styles.input}
+                    placeholder="0 ₸"
+                    value={field.value ?? ''}
+                    onChange={e => field.onChange(parseOptionalAmount(e.target.value))}
+                    onWheel={e => e.currentTarget.blur()}
+                    onFocus={e => e.target.select()}
+                  />
+                )} />
+              </div>
+            </div>
+
+            {/* Финансовый пайплайн */}
+            <div className={styles.finPipeline}>
+
+              {/* Сумма по позициям */}
+              <div className={styles.finRow}>
+                <div>
+                  <span className={styles.finLabel}>Сумма по позициям</span>
+                  {items.length > 0 && (
+                    <div className={styles.finLabelSub}>
+                      {items.length} {items.length === 1 ? 'позиция' : items.length < 5 ? 'позиции' : 'позиций'}
+                      {' · '}
+                      {items.reduce((s, i) => s + (Number(i.quantity) || 0), 0)} шт.
+                    </div>
+                  )}
+                </div>
+                <span className={styles.finValue}>{itemsTotal > 0 ? fmt(itemsTotal) : '—'}</span>
+              </div>
+
+              {/* Скидка */}
+              <div className={styles.finRow}>
+                <span className={styles.finLabel}>Скидка</span>
+                <div className={styles.discountCompound}>
+                  <Controller control={control} name="orderDiscount" render={({ field }) => (
+                    <input
+                      type="number" min="0" inputMode="numeric"
+                      className={`${styles.finInput} ${styles.discountAmtInput}`}
+                      placeholder="0 ₸"
+                      value={field.value ?? ''}
+                      onChange={e => {
+                        const amt = parseOptionalAmount(e.target.value);
+                        field.onChange(amt);
+                        if (itemsTotal > 0 && Number.isFinite(amt) && (amt ?? 0) > 0) {
+                          setDiscountPercent(((amt! / itemsTotal) * 100).toFixed(1));
+                        } else { setDiscountPercent(''); }
+                      }}
+                      onWheel={e => e.currentTarget.blur()}
+                      onFocus={e => e.target.select()}
+                    />
+                  )} />
+                  <div className={styles.discountPctWrap}>
+                    <input
+                      type="number" min="0" max="100" step="0.1"
+                      className={styles.discountPctInput}
+                      placeholder="0"
+                      value={discountPercent}
+                      onChange={e => {
+                        setDiscountPercent(e.target.value);
+                        const pct = parseFloat(e.target.value);
+                        if (Number.isFinite(pct) && itemsTotal > 0) {
+                          setValue('orderDiscount', Math.round(itemsTotal * pct / 100));
+                        } else if (!e.target.value) { setValue('orderDiscount', 0); }
+                      }}
+                      onWheel={e => e.currentTarget.blur()}
+                      onFocus={e => e.target.select()}
+                    />
+                    <span className={styles.discountPctSymbol}>%</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Банковская комиссия */}
+              <div className={styles.finRow}>
+                <span className={styles.finLabel}>Комиссия банка</span>
+                <div className={styles.discountCompound}>
+                  <div className={styles.finValue} style={{ minWidth: 80 }}>
+                    {bankCommAmount > 0 ? fmt(bankCommAmount) : '—'}
+                  </div>
+                  <div className={styles.discountPctWrap}>
+                    <Controller control={control} name="bankCommissionPercent" render={({ field }) => (
+                      <input
+                        type="number" min="0" max="100" step="0.1"
+                        className={styles.discountPctInput}
+                        placeholder="0"
+                        value={field.value ?? ''}
+                        onChange={e => field.onChange(parseOptionalAmount(e.target.value))}
+                        onWheel={e => e.currentTarget.blur()}
+                        onFocus={e => e.target.select()}
+                      />
+                    )} />
+                    <span className={styles.discountPctSymbol}>%</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Итого к оплате */}
+              <div className={`${styles.finRow} ${styles.finRowTotal}`}>
+                <span className={styles.finLabel}>Итого к оплате</span>
+                <span className={styles.finValueBold}>{itemsTotal > 0 ? fmt(finalTotal) : '—'}</span>
+              </div>
+
             </div>
           </div>
         </section>

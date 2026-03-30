@@ -1,9 +1,10 @@
-﻿import { useState, useEffect } from 'react';
+﻿import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { CheckCircle2, Clock, CreditCard, MessageSquare, AlertTriangle, Pencil, ArchiveIcon, RotateCcw, Download, Package, XCircle, FileText } from 'lucide-react';
-import { useOrder, useFulfillFromStock, useConfirmOrder, useChangeOrderStatus, useAddPayment, useAddOrderActivity, useRestoreOrder, useCloseOrder, useCreateInvoice, useSetRequiresInvoice, useConfirmSeamstress, useRouteSingleItem } from '../../../../entities/order/queries';
+import { CheckCircle2, Clock, CreditCard, MessageSquare, AlertTriangle, Pencil, ArchiveIcon, RotateCcw, Download, Package, XCircle, FileText, Paperclip, Trash2, Upload } from 'lucide-react';
+import { useOrder, useFulfillFromStock, useConfirmOrder, useChangeOrderStatus, useAddPayment, useAddOrderActivity, useRestoreOrder, useCloseOrder, useCreateInvoice, useSetRequiresInvoice, useConfirmSeamstress, useRouteSingleItem, useUploadAttachment, useDeleteAttachment } from '../../../../entities/order/queries';
 import { useProductsAvailability } from '../../../../entities/warehouse/queries';
-import type { OrderItem, OrderItemFulfillmentMode, OrderStatus, Priority, Urgency } from '../../../../entities/order/types';
+import type { OrderItem, OrderItemFulfillmentMode, OrderStatus, Priority, Urgency, OrderAttachment } from '../../../../entities/order/types';
+import { attachmentsApi } from '../../../../entities/order/api';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -167,6 +168,9 @@ export default function ChapanOrderDetailPage() {
   const setRequiresInvoice = useSetRequiresInvoice();
   const confirmSeamstress = useConfirmSeamstress();
   const routeSingleItem = useRouteSingleItem();
+  const uploadAttachment = useUploadAttachment(id!);
+  const deleteAttachment = useDeleteAttachment(id!);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const pendingInvoice = order?.status === 'ready'
     ? order.invoiceOrders?.find((io) => io.invoice.status === 'pending_confirmation')?.invoice
@@ -689,6 +693,92 @@ export default function ChapanOrderDetailPage() {
               </div>
             </div>
           )}
+
+          <div className={styles.card}>
+            <div className={styles.cardLabel}>
+              <Paperclip size={13} style={{ marginRight: 6, opacity: 0.6 }} />
+              Вложения
+              {(order.attachments ?? []).length > 0 && (
+                <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 600, color: 'var(--text-tertiary)' }}>
+                  {(order.attachments ?? []).length}
+                </span>
+              )}
+            </div>
+
+            {/* File list */}
+            {(order.attachments ?? []).length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 10 }}>
+                {(order.attachments as OrderAttachment[]).map(att => (
+                  <div
+                    key={att.id}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 8,
+                      padding: '7px 10px', borderRadius: 8,
+                      border: '1px solid var(--border-subtle)',
+                      background: 'var(--bg-surface)',
+                    }}
+                  >
+                    <FileText size={13} style={{ flexShrink: 0, color: 'var(--text-tertiary)' }} />
+                    <span style={{ flex: 1, fontSize: 12, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {att.fileName}
+                    </span>
+                    <span style={{ fontSize: 11, color: 'var(--text-tertiary)', flexShrink: 0 }}>
+                      {(att.sizeBytes / 1024).toFixed(0)} КБ
+                    </span>
+                    <a
+                      href={attachmentsApi.download(id!, att.id)}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{ display: 'flex', alignItems: 'center', color: 'var(--text-secondary)', flexShrink: 0 }}
+                      title="Скачать"
+                    >
+                      <Download size={13} />
+                    </a>
+                    <button
+                      style={{ display: 'flex', alignItems: 'center', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', padding: 2, flexShrink: 0 }}
+                      title="Удалить"
+                      onClick={() => deleteAttachment.mutate(att.id)}
+                      disabled={deleteAttachment.isPending}
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Upload button */}
+            <button
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '7px 12px', borderRadius: 8,
+                border: '1px dashed var(--border-default)',
+                background: 'transparent', cursor: 'pointer',
+                color: 'var(--text-secondary)', fontSize: 12, fontWeight: 500,
+                fontFamily: 'inherit',
+                opacity: uploadAttachment.isPending ? 0.6 : 1,
+              }}
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadAttachment.isPending}
+            >
+              <Upload size={13} />
+              {uploadAttachment.isPending ? 'Загрузка...' : 'Прикрепить файл'}
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              style={{ display: 'none' }}
+              accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.xlsx,.xls"
+              multiple
+              onChange={async (e) => {
+                const files = Array.from(e.target.files ?? []);
+                for (const file of files) {
+                  await uploadAttachment.mutateAsync(file);
+                }
+                e.target.value = '';
+              }}
+            />
+          </div>
 
           <div className={styles.card}>
             <div className={styles.cardLabel}>История</div>

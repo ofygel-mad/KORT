@@ -1,11 +1,23 @@
 import { useState } from 'react';
-import { Plus, X, Save } from 'lucide-react';
+import { AlertCircle, Plus, RefreshCw, Save, X } from 'lucide-react';
 import { useChapanCatalogs, useChapanProfile, useSaveCatalogs, useSaveProfile } from '../../../../entities/order/queries';
 import { useChapanClients } from '../../../../entities/order/queries';
 import type { ChapanCatalogs } from '../../../../entities/order/types';
 import styles from './ChapanSettings.module.css';
 
-type CatalogKey = 'productCatalog' | 'fabricCatalog' | 'sizeCatalog' | 'workers';
+// ── Sprint 4 catalog key includes paymentMethodCatalog ────────────────────────
+type CatalogKey = 'productCatalog' | 'fabricCatalog' | 'sizeCatalog' | 'workers' | 'paymentMethodCatalog';
+
+// ── Sprint 4: буква → число ───────────────────────────────────────────────────
+const LETTER_TO_NUMBER: Record<string, string> = {
+  'XS': '42', 'S': '44', 'M': '46', 'L': '48',
+  'XL': '50', 'XXL': '52', 'XXXL': '54', '3XL': '54',
+  'xs': '42', 's': '44', 'm': '46', 'l': '48',
+  'xl': '50', 'xxl': '52', 'xxxl': '54',
+};
+
+const SIZE_PRESET_EVEN = ['38', '40', '42', '44', '46', '48', '50', '52', '54', '56', '58', '60'];
+const PAYMENT_METHOD_DEFAULTS = ['Наличные', 'Kaspi QR', 'Kaspi Терминал', 'Перевод'];
 
 const PRESET_COLORS: Array<{ name: string; hex: string }> = [
   { name: 'Синий',                hex: '#1d4ed8' },
@@ -60,6 +72,10 @@ export default function ChapanSettingsPage() {
 
 // ── Catalogs tab ──────────────────────────────────────────────────────────────
 
+function emptyDraft(): ChapanCatalogs {
+  return { productCatalog: [], fabricCatalog: [], sizeCatalog: [], workers: [], paymentMethodCatalog: [] };
+}
+
 function CatalogsTab() {
   const { data: catalogs, isLoading } = useChapanCatalogs();
   const saveCatalogs = useSaveCatalogs();
@@ -71,20 +87,47 @@ function CatalogsTab() {
     return current?.[key] ?? [];
   }
 
+  function setList(key: CatalogKey, list: string[]) {
+    setDraft({ ...(current ?? emptyDraft()), [key]: list });
+  }
+
   function addItem(key: CatalogKey, value: string): boolean {
     const trimmed = value.trim();
     if (!trimmed) return false;
-    if (getList(key).map(v => v.toLowerCase()).includes(trimmed.toLowerCase())) return false; // дубль
-    const next = { ...(current ?? { productCatalog: [], fabricCatalog: [], sizeCatalog: [], workers: [] }) };
-    next[key] = [...(next[key] ?? []), trimmed];
-    setDraft(next);
+    if (getList(key).map(v => v.toLowerCase()).includes(trimmed.toLowerCase())) return false;
+    setList(key, [...getList(key), trimmed]);
     return true;
   }
 
   function removeItem(key: CatalogKey, value: string) {
-    const next = { ...(current ?? { productCatalog: [], fabricCatalog: [], sizeCatalog: [], workers: [] }) };
-    next[key] = (next[key] ?? []).filter(v => v !== value);
-    setDraft(next);
+    setList(key, getList(key).filter(v => v !== value));
+  }
+
+  function normalizeSizes() {
+    const normalized = getList('sizeCatalog').map(s => LETTER_TO_NUMBER[s.trim()] ?? s);
+    setList('sizeCatalog', [...new Set(normalized)]);
+  }
+
+  const hasLetterSizes = getList('sizeCatalog').some(s => LETTER_TO_NUMBER[s.trim()] !== undefined);
+
+  function applySizePreset() {
+    const nonLetter = getList('sizeCatalog').filter(s => !LETTER_TO_NUMBER[s.trim()]);
+    const merged = [...new Set([...SIZE_PRESET_EVEN, ...nonLetter])].sort((a, b) => {
+      const na = parseInt(a); const nb = parseInt(b);
+      if (!isNaN(na) && !isNaN(nb)) return na - nb;
+      return a.localeCompare(b);
+    });
+    setList('sizeCatalog', merged);
+  }
+
+  function loadPaymentDefaults() {
+    if (getList('paymentMethodCatalog').length > 0) return;
+    setList('paymentMethodCatalog', [...PAYMENT_METHOD_DEFAULTS]);
+  }
+
+  function toggleColor(name: string) {
+    const active = getList('fabricCatalog');
+    setList('fabricCatalog', active.includes(name) ? active.filter(v => v !== name) : [...active, name]);
   }
 
   async function handleSave() {
@@ -95,19 +138,6 @@ function CatalogsTab() {
 
   if (isLoading) return <div className={styles.loading}>Загрузка...</div>;
 
-  const sections: { key: CatalogKey; title: string; placeholder: string }[] = [
-    { key: 'productCatalog', title: 'Модели продуктов', placeholder: 'Назар — жұп шапан...' },
-    { key: 'sizeCatalog',    title: 'Размеры',           placeholder: '44, 46, 48...' },
-    { key: 'workers',        title: 'Работники цеха',    placeholder: 'Имя работника...' },
-  ];
-
-  function toggleColor(name: string) {
-    const next = { ...(current ?? { productCatalog: [], fabricCatalog: [], sizeCatalog: [], workers: [] }) };
-    const active = next.fabricCatalog ?? [];
-    next.fabricCatalog = active.includes(name) ? active.filter(v => v !== name) : [...active, name];
-    setDraft(next);
-  }
-
   return (
     <div className={styles.tabContent}>
       {draft && (
@@ -117,11 +147,7 @@ function CatalogsTab() {
             <button className={styles.saveBarDiscard} onClick={() => setDraft(null)}>
               Отменить
             </button>
-            <button
-              className={styles.saveBarSave}
-              onClick={handleSave}
-              disabled={saveCatalogs.isPending}
-            >
+            <button className={styles.saveBarSave} onClick={handleSave} disabled={saveCatalogs.isPending}>
               <Save size={13} />
               {saveCatalogs.isPending ? 'Сохранение...' : 'Сохранить'}
             </button>
@@ -129,22 +155,67 @@ function CatalogsTab() {
         </div>
       )}
 
-      <ColorCatalogSection
-        activeColors={getList('fabricCatalog')}
-        onToggle={toggleColor}
-      />
+      <ColorCatalogSection activeColors={getList('fabricCatalog')} onToggle={toggleColor} />
 
       <div className={styles.catalogGrid}>
-        {sections.map(({ key, title, placeholder }) => (
-          <CatalogSection
-            key={key}
-            title={title}
-            items={getList(key)}
-            placeholder={placeholder}
-            onAdd={v => addItem(key, v)}
-            onRemove={v => removeItem(key, v)}
-          />
-        ))}
+        <CatalogSection
+          title="Модели продуктов"
+          items={getList('productCatalog')}
+          placeholder="Назар — жұп шапан..."
+          onAdd={v => addItem('productCatalog', v)}
+          onRemove={v => removeItem('productCatalog', v)}
+        />
+
+        <CatalogSection
+          title="Размеры"
+          items={getList('sizeCatalog')}
+          placeholder="44, 46, 48..."
+          onAdd={v => addItem('sizeCatalog', v)}
+          onRemove={v => removeItem('sizeCatalog', v)}
+          actions={
+            <div className={styles.catalogActions}>
+              <button type="button" className={styles.catalogActionBtn} onClick={applySizePreset}>
+                <Plus size={11} />Пресет 38–60
+              </button>
+              {hasLetterSizes && (
+                <button type="button" className={`${styles.catalogActionBtn} ${styles.catalogActionBtnWarn}`} onClick={normalizeSizes}>
+                  <RefreshCw size={11} />XS→число
+                </button>
+              )}
+            </div>
+          }
+        />
+
+        <CatalogSection
+          title="Работники цеха"
+          items={getList('workers')}
+          placeholder="Имя работника..."
+          onAdd={v => addItem('workers', v)}
+          onRemove={v => removeItem('workers', v)}
+        />
+
+        <CatalogSection
+          title="Способы оплаты"
+          items={getList('paymentMethodCatalog')}
+          placeholder="Наличные, Kaspi QR..."
+          onAdd={v => addItem('paymentMethodCatalog', v)}
+          onRemove={v => removeItem('paymentMethodCatalog', v)}
+          actions={
+            getList('paymentMethodCatalog').length === 0 ? (
+              <div className={styles.catalogActions}>
+                <button type="button" className={styles.catalogActionBtn} onClick={loadPaymentDefaults}>
+                  <Plus size={11} />Загрузить стандартные
+                </button>
+              </div>
+            ) : undefined
+          }
+          hint={
+            <div className={styles.catalogHint}>
+              <AlertCircle size={11} />
+              Используется в форме создания/редактирования заказа
+            </div>
+          }
+        />
       </div>
     </div>
   );
@@ -153,13 +224,15 @@ function CatalogsTab() {
 // ── Catalog section ───────────────────────────────────────────────────────────
 
 function CatalogSection({
-  title, items, placeholder, onAdd, onRemove,
+  title, items, placeholder, onAdd, onRemove, actions, hint,
 }: {
   title: string;
   items: string[];
   placeholder: string;
   onAdd: (v: string) => boolean;
   onRemove: (v: string) => void;
+  actions?: React.ReactNode;
+  hint?: React.ReactNode;
 }) {
   const [input, setInput] = useState('');
   const [dupError, setDupError] = useState(false);
@@ -182,6 +255,7 @@ function CatalogSection({
         <span className={styles.catalogTitle}>{title}</span>
         {items.length > 0 && <span className={styles.catalogCount}>{items.length}</span>}
       </div>
+      {actions && actions}
       <div className={styles.catalogAddRow}>
         <input
           className={`${styles.catalogInput} ${dupError ? styles.catalogInputError : ''}`}
@@ -198,18 +272,14 @@ function CatalogSection({
         {items.map(item => (
           <div key={item} className={styles.catalogItem}>
             <span className={styles.catalogItemName}>{item}</span>
-            <button
-              className={styles.catalogItemRemove}
-              onClick={() => onRemove(item)}
-            >
+            <button className={styles.catalogItemRemove} onClick={() => onRemove(item)}>
               <X size={12} />
             </button>
           </div>
         ))}
-        {items.length === 0 && (
-          <div className={styles.catalogEmpty}>Список пуст</div>
-        )}
+        {items.length === 0 && <div className={styles.catalogEmpty}>Список пуст</div>}
       </div>
+      {hint && hint}
     </div>
   );
 }

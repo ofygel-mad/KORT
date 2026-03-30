@@ -8,6 +8,7 @@ import { ChevronLeft, Plus, Trash2, Calculator, AlertCircle, Paperclip, X, Image
 import { useId } from 'react';
 import { useCreateOrder, useChapanCatalogs } from '../../../../entities/order/queries';
 import { useProductsAvailability } from '../../../../entities/warehouse/queries';
+import { attachmentsApi } from '../../../../entities/order/api';
 import type { Urgency } from '../../../../entities/order/types';
 import { formatPersonNameInput } from '../../../../shared/utils/person';
 import { formatKazakhPhoneInput, isKazakhPhoneComplete } from '../../../../shared/utils/kz';
@@ -314,7 +315,7 @@ export default function ChapanNewOrderPage() {
     const isMixed = data.paymentMethod === 'mixed';
     const payloadItems = buildPayloadItems(data.items, orderDiscount);
 
-    await createOrder.mutateAsync({
+    const created = await createOrder.mutateAsync({
       clientName:    formatPersonNameInput(data.clientName).trim(),
       clientPhone:   formatKazakhPhoneInput(data.clientPhone),
       streetAddress: data.streetAddress?.trim() || undefined,
@@ -340,16 +341,36 @@ export default function ChapanNewOrderPage() {
         mixedKaspiTerminal: data.mixedKaspiTerminal ?? 0,
         mixedTransfer:      data.mixedTransfer      ?? 0,
       } : undefined,
-      // receiptFileNames: receipts.length > 0 ? receipts.map((f) => f.name) : undefined, // Sprint 9: re-enable when upload endpoint is ready
       items: payloadItems,
       managerNote: data.managerNote?.trim() || undefined,
     });
+
+    // Sprint 9: upload receipt files after order is created
+    if (receipts.length > 0 && created?.id) {
+      for (const file of receipts) {
+        try {
+          await attachmentsApi.upload(created.id, file);
+        } catch {
+          // non-blocking: order already saved, file upload failure is recoverable
+        }
+      }
+    }
+
     clearDraft();
     navigate('/workzone/chapan/orders');
   }
 
-  const products = catalogs?.productCatalog ?? [];
-  const sizes    = catalogs?.sizeCatalog    ?? [];
+  const products        = catalogs?.productCatalog        ?? [];
+  const sizes           = catalogs?.sizeCatalog           ?? [];
+  // Sprint 4: способы оплаты из каталога; fallback на hardcoded если каталог пуст
+  const catalogPaymentMethods = (catalogs?.paymentMethodCatalog ?? []);
+  const activePaymentMethods: Array<{ value: string; label: string }> =
+    catalogPaymentMethods.length > 0
+      ? [
+          ...catalogPaymentMethods.map(name => ({ value: name, label: name })),
+          { value: 'mixed', label: 'Смешанный' },
+        ]
+      : PAYMENT_METHODS;
 
   return (
     <div className={styles.root}>
@@ -749,9 +770,18 @@ export default function ChapanNewOrderPage() {
             {/* F1: Правильный порядок вычислений */}
             <div className={styles.finPipeline}>
 
-              {/* 1. Сумма по позициям */}
+              {/* 1. Сумма по позициям — F2 */}
               <div className={styles.finRow}>
-                <span className={styles.finLabel}>Сумма по позициям</span>
+                <div>
+                  <span className={styles.finLabel}>Сумма по позициям</span>
+                  {items.length > 0 && (
+                    <div className={styles.finLabelSub}>
+                      {items.length} {items.length === 1 ? 'позиция' : items.length < 5 ? 'позиции' : 'позиций'}
+                      {' · '}
+                      {items.reduce((s, i) => s + (Number(i.quantity) || 0), 0)} шт.
+                    </div>
+                  )}
+                </div>
                 <span className={styles.finValue}>{itemsTotal > 0 ? fmt(itemsTotal) : '—'}</span>
               </div>
 
@@ -875,7 +905,7 @@ export default function ChapanNewOrderPage() {
                 {prepayment > 0 && <span className={styles.req}> *</span>}
               </label>
               <div className={styles.payMethodBtns}>
-                {PAYMENT_METHODS.map((m) => (
+                {activePaymentMethods.map((m) => (
                   <button
                     key={m.value}
                     type="button"
@@ -884,7 +914,7 @@ export default function ChapanNewOrderPage() {
                       paymentMethod === m.value ? styles.payMethodBtnActive : '',
                       m.value === 'mixed' ? styles.payMethodBtnMixed : '',
                     ].join(' ')}
-                    onClick={() => setValue('paymentMethod', paymentMethod === m.value ? undefined : m.value)}
+                    onClick={() => setValue('paymentMethod', paymentMethod === m.value ? undefined : m.value as typeof paymentMethod)}
                   >
                     {m.label}
                   </button>
@@ -900,7 +930,7 @@ export default function ChapanNewOrderPage() {
                 <SelectOrText
                   {...field}
                   value={field.value ?? ''}
-                  options={['Наличные', 'Kaspi QR', 'Kaspi Терминал', 'Перевод', 'Смешанный']}
+                  options={activePaymentMethods.map(m => m.label)}
                   placeholder="Как клиент заплатит остаток..."
                   className={styles.input}
                 />
@@ -958,7 +988,7 @@ export default function ChapanNewOrderPage() {
               <label className={styles.receiptUpload}>
                 <Paperclip size={14} />
                 <span>Прикрепить чек...</span>
-                <span className={styles.uploadBadge}>локально</span>
+                <span className={styles.uploadBadge}>jpg / pdf</span>
                 <input
                   ref={receiptInputRef}
                   type="file"

@@ -1,7 +1,8 @@
-import { api } from '../../shared/api/client';
+import { api, apiClient } from '../../shared/api/client';
 import type {
   ChapanOrder, ChapanInvoice, CreateOrderDto, UpdateOrderDto, AddPaymentDto, ListResponse,
   ProductionTask, ChapanCatalogs, ChapanProfile, ChapanClient, ChapanChangeRequest, CreateOrderItemDto, InvoiceDocumentPayload,
+  OrderAttachment,
 } from './types';
 
 // ── Orders ────────────────────────────────────────────────────────────────────
@@ -186,4 +187,27 @@ export const chapanSettingsApi = {
 
   createClient: (data: { fullName: string; phone: string; email?: string; company?: string; notes?: string }) =>
     api.post<ChapanClient>('/chapan/settings/clients', data),
+};
+
+// ── Attachments ───────────────────────────────────────────────────────────────
+
+export const attachmentsApi = {
+  list: (orderId: string) =>
+    api.get<OrderAttachment[]>(`/chapan/orders/${orderId}/attachments`),
+
+  upload: (orderId: string, file: File) => {
+    const form = new FormData();
+    form.append('file', file, file.name);
+    return apiClient
+      .post<OrderAttachment>(`/chapan/orders/${orderId}/attachments`, form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      .then(r => r.data);
+  },
+
+  download: (orderId: string, attachmentId: string) =>
+    `/api/v1/chapan/orders/${orderId}/attachments/${attachmentId}/file`,
+
+  delete: (orderId: string, attachmentId: string) =>
+    api.delete<{ ok: boolean }>(`/chapan/orders/${orderId}/attachments/${attachmentId}`),
 };
