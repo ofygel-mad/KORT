@@ -252,6 +252,8 @@ export default function ChapanNewOrderPage() {
     return () => { if (autosaveTimer.current) clearTimeout(autosaveTimer.current); };
   }, [JSON.stringify(watch())]);
 
+  const deliveryType          = watch('deliveryType');
+
   // F3: Автоматически проставляем сумму доставки при выборе типа
   useEffect(() => {
     const autoFee = DELIVERY_FEE_MAP[deliveryType ?? ''];
@@ -290,7 +292,6 @@ export default function ChapanNewOrderPage() {
 
   const deliveryFeeRaw        = watch('deliveryFee');
   const bankCommissionPctRaw  = watch('bankCommissionPercent');
-  const deliveryType          = watch('deliveryType');
 
   const orderDiscount       = Number.isFinite(orderDiscountRaw)       ? (orderDiscountRaw       ?? 0) : 0;
   const prepayment          = Number.isFinite(prepaymentRaw)          ? (prepaymentRaw          ?? 0) : 0;
