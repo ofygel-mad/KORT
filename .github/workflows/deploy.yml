@@ -165,6 +165,9 @@ jobs:
           DATABASE_URL: postgresql://kort:kort_secret@localhost:5432/kort_db_staging
           PORT: 8000
           NODE_ENV: production
+          JWT_ACCESS_SECRET: "test-secret-key-for-ci-only-min32chars!!"
+          JWT_REFRESH_SECRET: "test-refresh-key-for-ci-only-min32chars!!"
+          CORS_ORIGIN: "http://localhost:5173"
         run: |
           node dist/index.js &
           sleep 5

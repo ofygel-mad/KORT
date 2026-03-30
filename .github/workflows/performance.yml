@@ -90,6 +90,9 @@ jobs:
         working-directory: server
         env:
           DATABASE_URL: postgresql://kort:kort_secret@localhost:5432/kort_db_test
+          NODE_ENV: test
+          JWT_ACCESS_SECRET: "test-secret-key-for-ci-only-min32chars!!"
+          JWT_REFRESH_SECRET: "test-refresh-key-for-ci-only-min32chars!!"
         run: |
           echo "### 🚀 Backend Performance Benchmarks" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -144,6 +147,19 @@ jobs:
 
       - name: Build frontend
         run: pnpm build
+
+      - name: Start backend server
+        working-directory: server
+        env:
+          DATABASE_URL: postgresql://kort:kort_secret@localhost:5432/kort_db_test
+          PORT: 8000
+          NODE_ENV: test
+          JWT_ACCESS_SECRET: "test-secret-key-for-ci-only-min32chars!!"
+          JWT_REFRESH_SECRET: "test-refresh-key-for-ci-only-min32chars!!"
+          CORS_ORIGIN: "http://localhost:5173"
+        run: |
+          node dist/index.js &
+          sleep 3
 
       - name: Start preview server
         run: |
@@ -204,6 +220,9 @@ jobs:
         working-directory: server
         env:
           DATABASE_URL: postgresql://kort:kort_secret@localhost:5432/kort_db_test
+          NODE_ENV: test
+          JWT_ACCESS_SECRET: "test-secret-key-for-ci-only-min32chars!!"
+          JWT_REFRESH_SECRET: "test-refresh-key-for-ci-only-min32chars!!"
         run: |
           echo "### 📊 Database Query Performance" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY

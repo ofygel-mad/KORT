@@ -79,6 +79,9 @@ jobs:
         working-directory: server
         env:
           DATABASE_URL: postgresql://kort:kort_secret@localhost:5432/kort_db_test
+          NODE_ENV: test
+          JWT_ACCESS_SECRET: "test-secret-key-for-ci-only-min32chars!!"
+          JWT_REFRESH_SECRET: "test-refresh-key-for-ci-only-min32chars!!"
         run: pnpm test -- --run --coverage
 
       - name: Upload backend coverage
@@ -155,6 +158,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Install server dependencies
+        working-directory: server
+        run: pnpm install --frozen-lockfile
+
       - name: Setup backend for E2E
         working-directory: server
         env:
@@ -163,13 +170,22 @@ jobs:
           pnpm run db:push
           pnpm run build
 
+      - name: Build frontend
+        run: pnpm build
+
       - name: Start backend server
         working-directory: server
         env:
           DATABASE_URL: postgresql://kort:kort_secret@localhost:5432/kort_db_test
           PORT: 8000
-        run: node dist/index.js &
-        timeout-minutes: 2
+          NODE_ENV: test
+          JWT_ACCESS_SECRET: "test-secret-key-for-ci-only-min32chars!!"
+          JWT_REFRESH_SECRET: "test-refresh-key-for-ci-only-min32chars!!"
+          CORS_ORIGIN: "http://localhost:5173"
+        run: |
+          node dist/index.js &
+          sleep 3
+          curl -s http://localhost:8000/health || echo "⚠️ Backend health check timeout"
 
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps
