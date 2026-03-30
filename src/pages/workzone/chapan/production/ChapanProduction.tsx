@@ -585,6 +585,7 @@ function TaskCard({
         </div>
       )}
 
+      {/* E3: compact head — номер + клиент в одну строку */}
       <div className={styles.cardHead}>
         <span
           className={styles.orderNumber}
@@ -592,15 +593,17 @@ function TaskCard({
         >
           #{task.order.orderNumber}
         </span>
-        {mode === 'manager' && task.order.clientName && (
-          <span className={styles.clientName}>{task.order.clientName.split(' ')[0]}</span>
-        )}
+        <div className={styles.cardHeadRight}>
+          {deadline && <span className={styles.deadline}>{deadline}</span>}
+          {mode === 'manager' && task.order.clientName && (
+            <span className={styles.clientName}>{task.order.clientName.split(' ')[0]}</span>
+          )}
+        </div>
       </div>
 
       <div className={styles.productName}>{task.productName}</div>
       <div className={styles.metaLine}>
-        {[task.fabric, task.size].filter(Boolean).join(' · ')}
-        {task.quantity > 1 && ` × ${task.quantity}`}
+        {[task.fabric, task.size, task.quantity > 1 ? `× ${task.quantity}` : ''].filter(Boolean).join(' · ')}
       </div>
 
       {task.notes && (
@@ -610,15 +613,14 @@ function TaskCard({
         </div>
       )}
 
-      <div className={styles.infoRow}>
-        {task.assignedTo && (
+      {task.assignedTo && (
+        <div className={styles.infoRow}>
           <span className={styles.workerChip}>
             <User size={11} />
             {task.assignedTo}
           </span>
-        )}
-        {deadline && <span className={styles.deadline}>{deadline}</span>}
-      </div>
+        </div>
+      )}
 
       <div className={styles.cardActions}>
         {column === 'queued' && mode === 'workshop' && (

@@ -39,6 +39,16 @@ function fmtDate(d: string | null) {
 const ORDER_MONEY_FORMATTER = new Intl.NumberFormat('ru-KZ', { maximumFractionDigits: 0 });
 const ORDER_DATE_FORMATTER = new Intl.DateTimeFormat('ru-KZ', { day: '2-digit', month: 'short' });
 
+// D2: Unified item line — «Товар · Цвет · Модель (муж/жен)»
+function buildItemLine(item: ChapanOrder['items'][number]): string {
+  const parts: string[] = [];
+  if (item.productName) parts.push(item.productName);
+  if (item.color)       parts.push(item.color);
+  const genderPart = item.gender ? `(${item.gender})` : '';
+  const line = parts.join(' · ');
+  return genderPart ? `${line} ${genderPart}` : line;
+}
+
 type ViewMode = 'grid' | 'list';
 
 const VIEW_OPTIONS: { key: ViewMode; label: string; Icon: React.ElementType }[] = [
@@ -482,11 +492,15 @@ const OrderCard = memo(function OrderCard({ order, onSelectOrder, hasAlert, stoc
           </span>
         )}
       </div>
+      <div className={styles.cardOrderNum}>#{order.orderNumber}</div>
       {first && (
         <div className={styles.cardItems}>
-          <span className={styles.cardItemName}>{first.productName} <span className={styles.cardNum}>(#{order.orderNumber})</span></span>
-          {(first.fabric || first.size) && (
-            <span className={styles.cardItemMeta}>{[first.fabric, first.size].filter(Boolean).join(' · ')}{first.quantity > 1 && ` × ${first.quantity}`}</span>
+          <span className={styles.cardItemName}>{buildItemLine(first)}</span>
+          {(first.size) && (
+            <span className={styles.cardItemMeta}>
+              {[first.size, first.length ? `дл. ${first.length}` : ''].filter(Boolean).join(' · ')}
+              {first.quantity > 1 && ` × ${first.quantity}`}
+            </span>
           )}
           {more > 0 && <span className={styles.cardMoreItems}>+ещё {more}</span>}
         </div>
@@ -646,6 +660,7 @@ const OrderRow = memo(function OrderRow({ order, onSelectOrder, hasAlert, stockM
     >
       <span className={styles.rowStripe} />
       <div className={styles.rowNum}>
+        <span className={styles.rowOrderNum}>#{order.orderNumber}</span>
         <span className={styles.statusBadge}>{STATUS_LABEL[order.status]}</span>
         {isUrgent && (
           <span className={`${styles.priorityBadge} ${styles.urgent}`}>{URGENCY_LABEL['urgent']}</span>
@@ -666,10 +681,10 @@ const OrderRow = memo(function OrderRow({ order, onSelectOrder, hasAlert, stockM
       <div className={styles.rowProduct}>
         {first ? (
           <>
-            <span className={styles.cardItemName}>{first.productName} <span className={styles.cardNum}>(#{order.orderNumber})</span></span>
-            {(first.fabric || first.size) && (
+            <span className={styles.cardItemName}>{buildItemLine(first)}</span>
+            {first.size && (
               <span className={styles.cardItemMeta}>
-                {[first.fabric, first.size].filter(Boolean).join(' · ')}
+                {[first.size, first.length ? `дл. ${first.length}` : ''].filter(Boolean).join(' · ')}
                 {first.quantity > 1 && ` × ${first.quantity}`}
               </span>
             )}

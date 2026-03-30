@@ -176,19 +176,19 @@
 }
 .row:hover .rowStripe { opacity: 1; }
 
-.rowNum { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 12px 14px; min-width: 0; }
-.rowClient { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; border-left: 1px solid var(--ch-border); min-width: 0; }
-.rowProduct { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; border-left: 1px solid var(--ch-border); min-width: 0; overflow: hidden; }
+.rowNum { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 10px 14px; min-width: 0; }
+.rowClient { display: flex; flex-direction: column; gap: 2px; padding: 10px 14px; border-left: 1px solid var(--ch-border); min-width: 0; }
+.rowProduct { display: flex; flex-direction: column; gap: 2px; padding: 10px 14px; border-left: 1px solid var(--ch-border); min-width: 0; overflow: hidden; }
 .rowProduct .cardItemName { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.rowFin { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; border-left: 1px solid var(--ch-border); min-width: 0; }
-.rowDate { padding: 12px 14px; border-left: 1px solid var(--ch-border); font-size: 11px; text-align: right; min-width: 0; display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+.rowFin { display: flex; flex-direction: column; gap: 2px; padding: 10px 14px; border-left: 1px solid var(--ch-border); min-width: 0; }
+.rowDate { padding: 10px 14px; border-left: 1px solid var(--ch-border); font-size: 11px; text-align: right; min-width: 0; display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
 .rowDateEmpty { color: var(--ch-text-muted); }
 
 /* ── Card (grid view) ── */
 .card {
   background: var(--ch-surface); border: 1px solid var(--ch-border); border-radius: 12px;
-  padding: 16px; cursor: pointer; text-align: left; width: 100%; font-family: inherit;
-  color: inherit; display: flex; flex-direction: column; gap: 10px;
+  padding: 12px 14px; cursor: pointer; text-align: left; width: 100%; font-family: inherit;
+  color: inherit; display: flex; flex-direction: column; gap: 7px;
   position: relative; overflow: hidden;
   transition: border-color 150ms, background 150ms, box-shadow 150ms, transform 100ms;
 }
@@ -700,3 +700,25 @@
   /* Cards already responsive via auto-fill; ensure single column on smallest screens */
   .grid { grid-template-columns: 1fr; }
 }
+
+/* ── D2: Unified order number + item line ─────────────────────────────────── */
+.cardOrderNum {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-tertiary);
+  letter-spacing: .04em;
+  margin-bottom: -2px;
+}
+
+.rowOrderNum {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-tertiary);
+  letter-spacing: .04em;
+  white-space: nowrap;
+  margin-right: 6px;
+}
+
+.itemMetaSub { font-size: 10px; color: var(--text-tertiary); letter-spacing: 0.01em; }
