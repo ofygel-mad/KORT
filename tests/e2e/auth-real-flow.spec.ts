@@ -36,7 +36,7 @@ test('company registration creates an account that can log in again', async ({ p
 
   await fields.nth(0).fill(email);
   await fields.nth(1).fill(password);
-  await page.getByRole('button', { name: 'Войти' }).click();
+  await page.getByRole('button', { name: 'Войти', exact: true }).click();
 
   await expect(page).not.toHaveURL(/\/auth\/login$/);
 });

@@ -171,6 +171,9 @@ jobs:
           pnpm run build
 
       - name: Build frontend
+        env:
+          VITE_API_BASE_URL: /api/v1
+          VITE_MOCK_API: "false"
         run: pnpm build
 
       - name: Start backend server
