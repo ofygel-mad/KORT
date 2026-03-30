@@ -166,6 +166,8 @@ export default defineConfig({
     setupFiles: './src/test/setup.ts',
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
     exclude: ['src/**/*.e2e.{test,spec}.{ts,tsx}', 'tests/e2e/**', '**/node_modules/**', 'dist/**'],
+    isolate: false,
+    threads: false,
     poolOptions: {
       forks: {
         singleFork: true,
@@ -174,7 +176,16 @@ export default defineConfig({
     server: {
       deps: {
         inline: [/./],
+        external: ['@adobe/css-tools'],
       },
+    },
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json', 'html'],
+      exclude: [
+        'node_modules/',
+        'src/test/',
+      ],
     },
   },
 });
