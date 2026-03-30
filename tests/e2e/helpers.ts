@@ -11,7 +11,7 @@ async function setInputValue(page: Page, placeholder: string, value: string) {
 }
 
 async function triggerClickByRole(page: Page, name: string) {
-  await page.getByRole('button', { name }).evaluate((element) => {
+  await page.getByRole('button', { name, exact: true }).evaluate((element) => {
     (element as HTMLButtonElement).click();
   });
 }

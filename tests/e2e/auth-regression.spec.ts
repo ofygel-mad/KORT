@@ -65,7 +65,7 @@ test('login rejects an invalid password for an existing account', async ({ page,
 
   await fields.nth(0).fill(email);
   await fields.nth(1).fill('wrong-password');
-  await page.getByRole('button', { name: 'Войти' }).click();
+  await page.getByRole('button', { name: 'Войти', exact: true }).click();
 
   await expect(page).toHaveURL(/\/auth\/login$/);
   await expect(page.locator('form')).toContainText(/Неверный пароль|Неверный логин или пароль/i);
