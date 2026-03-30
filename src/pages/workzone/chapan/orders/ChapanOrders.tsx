@@ -663,7 +663,7 @@ const BatchCard = memo(function BatchCard({ group, onSelectOrder }: { group: { o
 
 // ── Single list row ───────────────────────────────────────────────────────────
 
-const OrderRow = memo(function OrderRow({ order, onSelectOrder, hasAlert, stockMap, onTrash }: { order: ChapanOrder; onSelectOrder: (id: string) => void; hasAlert?: boolean; stockMap?: ProductsAvailabilityMap }) {
+const OrderRow = memo(function OrderRow({ order, onSelectOrder, hasAlert, stockMap, onTrash }: { order: ChapanOrder; onSelectOrder: (id: string) => void; hasAlert?: boolean; stockMap?: ProductsAvailabilityMap; onTrash?: (id: string) => void }) {
   const overdue = isOverdue(order.dueDate);
   const first = order.items?.[0];
   const more = (order.items?.length ?? 0) - 1;

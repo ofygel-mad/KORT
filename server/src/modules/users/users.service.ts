@@ -105,7 +105,7 @@ export async function changeEmail(
   newEmail: string,
   currentPassword: string,
 ) {
-  const { verifyPassword, hashPassword } = await import('../../lib/hash.js');
+  const { verifyPassword } = await import('../../lib/hash.js');
   const { ConflictError, ValidationError, ForbiddenError } = await import('../../lib/errors.js');
   const { prisma } = await import('../../lib/prisma.js');
 

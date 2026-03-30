@@ -76,7 +76,7 @@ export function SetPasswordStep({ tempToken, userName, onSuccess }: Props) {
       // We call axios directly with the temp_token in Authorization.
       // We intentionally bypass the shared api client's auth interceptor
       // (which would inject the store access token instead).
-      const { data } = await axios.post<AuthSessionResponse>(
+      const { data } = await axios.post<{ ok: boolean; requires_login?: boolean }>(
         `${API_BASE_URL}/auth/set-password/`,
         { new_password: password, confirm_password: confirm },
         {

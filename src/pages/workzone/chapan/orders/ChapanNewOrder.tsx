@@ -345,12 +345,10 @@ export default function ChapanNewOrderPage() {
       dueDate:       data.dueDate   || undefined,
       prepayment:    hasPrepayment ? data.prepayment : undefined,
       paymentMethod: hasPrepayment ? data.paymentMethod : undefined,
-      mixedBreakdown: hasPrepayment && isMixed ? {
-        mixedCash:          data.mixedCash          ?? 0,
-        mixedKaspiQr:       data.mixedKaspiQr       ?? 0,
-        mixedKaspiTerminal: data.mixedKaspiTerminal ?? 0,
-        mixedTransfer:      data.mixedTransfer      ?? 0,
-      } : undefined,
+      mixedCash:          hasPrepayment && isMixed ? (data.mixedCash ?? 0) : undefined,
+      mixedKaspiQr:       hasPrepayment && isMixed ? (data.mixedKaspiQr ?? 0) : undefined,
+      mixedKaspiTerminal: hasPrepayment && isMixed ? (data.mixedKaspiTerminal ?? 0) : undefined,
+      mixedTransfer:      hasPrepayment && isMixed ? (data.mixedTransfer ?? 0) : undefined,
       items: payloadItems,
       managerNote: data.managerNote?.trim() || undefined,
     });

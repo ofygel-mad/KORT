@@ -506,7 +506,7 @@ function AccountTab({ isOwner }: { isOwner: boolean }) {
         <div className={styles.accountInfo}>
           <div className={styles.accountInfoRow}>
             <span className={styles.accountInfoLabel}>Имя</span>
-            <span className={styles.accountInfoValue}>{user?.fullName ?? '—'}</span>
+            <span className={styles.accountInfoValue}>{user?.full_name ?? '—'}</span>
           </div>
           {user?.phone && (
             <div className={styles.accountInfoRow}>
