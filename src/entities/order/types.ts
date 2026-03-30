@@ -188,6 +188,8 @@ export interface UpdateOrderDto {
   clientPhone?: string;
   dueDate?: string | null;
   priority?: Priority;
+  urgency?: Urgency;
+  isDemandingClient?: boolean;
   items?: CreateOrderItemDto[];
 }
 

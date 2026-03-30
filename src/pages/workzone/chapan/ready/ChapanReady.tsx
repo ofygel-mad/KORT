@@ -89,7 +89,8 @@ function groupSignature(order: ChapanOrder) {
   return [
     ...(order.items ?? []).map(buildItemSignature).sort(),
     order.status,
-    order.priority,
+    order.urgency ?? order.priority,
+    String(order.isDemandingClient ?? (order.priority === 'vip')),
     order.paymentStatus,
     order.requiresInvoice ? 'invoice' : 'direct',
   ].join('|');

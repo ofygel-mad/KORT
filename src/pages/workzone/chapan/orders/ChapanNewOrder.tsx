@@ -644,6 +644,11 @@ export default function ChapanNewOrderPage() {
                   <Calculator size={13} />
                   <span>Итого по позициям:</span>
                   <strong>{fmt(itemsTotal)}</strong>
+                  <span style={{ color: 'var(--text-tertiary)', fontSize: 11, fontWeight: 400, marginLeft: 8 }}>
+                    {items.length} {items.length === 1 ? 'позиция' : items.length < 5 ? 'позиции' : 'позиций'}
+                    {' · '}
+                    {items.reduce((s, i) => s + (Number(i.quantity) || 0), 0)} шт.
+                  </span>
                 </div>
               )}
             </div>
