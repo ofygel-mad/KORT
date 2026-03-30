@@ -2,8 +2,10 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
 
-COPY package.json package-lock.json* ./
-RUN npm ci
+RUN corepack enable && corepack prepare pnpm@10 --activate
+
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
 
 # VITE_API_BASE_URL — переопределяется в Railway через build variable.
 # По умолчанию /api/v1 → nginx-proxy (для docker-compose).
@@ -12,7 +14,7 @@ ARG VITE_API_BASE_URL=/api/v1
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 
 COPY . .
-RUN npm run build
+RUN pnpm run build
 
 # ── Stage 2: Serve ───────────────────────────────────────────────────────────
 FROM nginx:1.27-alpine

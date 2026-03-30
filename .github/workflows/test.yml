@@ -224,6 +224,10 @@ jobs:
       - name: Build frontend
         run: pnpm build
 
+      - name: Install server dependencies
+        working-directory: server
+        run: pnpm install --frozen-lockfile
+
       - name: Build backend
         working-directory: server
         run: pnpm run build
