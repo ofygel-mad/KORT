@@ -1,5 +1,5 @@
 import { useDeferredValue, useEffect, useMemo, useState, type CSSProperties } from 'react';
-import { AlertTriangle, CheckCircle2, Factory, FileText, Flag, Layers, Search, User, X } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Factory, FileText, Flag, Layers, MessageSquare, Search, User, X } from 'lucide-react';
 import {
   useAssignWorker,
   useChapanCatalogs,
@@ -13,7 +13,7 @@ import {
   useUpdateProductionStatus,
   useWorkshopTasks,
 } from '../../../../entities/order/queries';
-import type { ChapanChangeRequest, Priority, ProductionStatus, ProductionTask } from '../../../../entities/order/types';
+import type { ChapanChangeRequest, Priority, ProductionStatus, ProductionTask, Urgency } from '../../../../entities/order/types';
 import { useAuthStore } from '@/shared/stores/auth';
 import { useChapanUiStore } from '../../../../features/workzone/chapan/store';
 import styles from './ChapanProduction.module.css';
@@ -26,11 +26,13 @@ const COLUMNS: { key: ColumnKey; label: string }[] = [
   { key: 'in_progress', label: 'Выполнение' },
 ];
 
-const PRIORITY_DOT: Record<Priority, string> = {
-  normal: 'rgba(180,192,210,.32)',
-  urgent: '#D94F4F',
-  vip: '#C9A84C',
-};
+// Left-border colour on task card — driven by urgency (new) with priority fallback
+function getUrgencyDot(task: ProductionTask): string {
+  const urgency = task.order.urgency ?? task.order.priority;
+  if (urgency === 'urgent') return '#D94F4F';
+  if (task.order.isDemandingClient ?? task.order.priority === 'vip') return '#C9A84C';
+  return 'rgba(180,192,210,.32)';
+}
 
 const BATCH_WINDOW_DAYS = 2;
 
@@ -47,7 +49,8 @@ function taskBatchKey(task: ProductionTask): string {
     task.productName?.toLowerCase().trim() ?? '',
     task.fabric?.toLowerCase().trim() ?? '',
     task.size?.toLowerCase().trim() ?? '',
-    task.order.priority,
+    task.order.urgency ?? task.order.priority,
+    String(task.order.isDemandingClient ?? (task.order.priority === 'vip')),
     task.status,
   ].join('|');
 }
@@ -102,9 +105,10 @@ function buildTaskGroups(tasks: ProductionTask[]): TaskDisplayGroup[] {
 }
 
 
-function getBatchColor(priority: Priority) {
-  if (priority === 'urgent') return '#D94F4F';
-  if (priority === 'vip') return '#C9A84C';
+function getTaskBatchColor(task: ProductionTask) {
+  const urgency = task.order.urgency ?? task.order.priority;
+  if (urgency === 'urgent') return '#D94F4F';
+  if (task.order.isDemandingClient ?? task.order.priority === 'vip') return '#C9A84C';
   return 'rgba(180,192,210,.4)';
 }
 
@@ -197,14 +201,24 @@ export default function ChapanProductionPage() {
   const isLoading = view === 'manager' ? managerLoading : workshopLoading;
   const workers = catalogs?.workers ?? [];
 
-  const queuedTasks = useMemo(
-    () => tasks.filter((task) => task.status === 'queued'),
-    [tasks],
-  );
-  const runningTasks = useMemo(
-    () => tasks.filter((task) => task.status === 'in_progress'),
-    [tasks],
-  );
+  const queuedTasks = useMemo(() => {
+    const filtered = tasks.filter((task) => task.status === 'queued');
+    // E1: срочные задачи всегда наверху колонки
+    return [...filtered].sort((a, b) => {
+      const ua = (a.order.urgency ?? a.order.priority) === 'urgent' ? 0 : 1;
+      const ub = (b.order.urgency ?? b.order.priority) === 'urgent' ? 0 : 1;
+      return ua - ub;
+    });
+  }, [tasks]);
+  const runningTasks = useMemo(() => {
+    const filtered = tasks.filter((task) => task.status === 'in_progress');
+    // E1: срочные задачи всегда наверху колонки
+    return [...filtered].sort((a, b) => {
+      const ua = (a.order.urgency ?? a.order.priority) === 'urgent' ? 0 : 1;
+      const ub = (b.order.urgency ?? b.order.priority) === 'urgent' ? 0 : 1;
+      return ua - ub;
+    });
+  }, [tasks]);
 
   async function handleFlag() {
     if (!flagModal || !flagReason.trim()) return;
@@ -543,9 +557,17 @@ function TaskCard({
 }: TaskCardProps) {
   const deadline = formatDeadline(task.order.dueDate);
   const canClaim = !task.isBlocked && (!task.assignedTo || task.assignedTo === currentWorkerName);
+  const isUrgent = (task.order.urgency ?? task.order.priority) === 'urgent';
+  const isDemanding = task.order.isDemandingClient ?? (task.order.priority === 'vip');
 
   return (
-    <article className={`${styles.card} ${task.isBlocked ? styles.cardBlocked : ''}`}>
+    <article className={`${styles.card} ${task.isBlocked ? styles.cardBlocked : ''} ${isUrgent ? styles.cardUrgent : ''}`}>
+      {isUrgent && !task.isBlocked && (
+        <div className={styles.urgentBanner}>
+          <AlertTriangle size={11} />
+          <span>Срочно</span>
+        </div>
+      )}
       {task.isBlocked && task.blockReason && (
         <div className={styles.blockBanner}>
           <AlertTriangle size={12} />
@@ -556,7 +578,7 @@ function TaskCard({
       <div className={styles.cardHead}>
         <span
           className={styles.orderNumber}
-          style={{ borderLeftColor: PRIORITY_DOT[task.order.priority] }}
+          style={{ borderLeftColor: getUrgencyDot(task) }}
         >
           #{task.order.orderNumber}
         </span>
@@ -570,6 +592,13 @@ function TaskCard({
         {[task.fabric, task.size].filter(Boolean).join(' · ')}
         {task.quantity > 1 && ` × ${task.quantity}`}
       </div>
+
+      {task.notes && (
+        <div className={styles.workshopNote}>
+          <MessageSquare size={11} className={styles.workshopNoteIcon} />
+          <span>{task.notes}</span>
+        </div>
+      )}
 
       <div className={styles.infoRow}>
         {task.assignedTo && (
@@ -651,7 +680,7 @@ function BatchTaskCard({
 }: BatchTaskCardProps) {
   const [expanded, setExpanded] = useState(false);
   const firstTask = tasks[0];
-  const batchColor = getBatchColor(firstTask.order.priority);
+  const batchColor = getTaskBatchColor(firstTask);
   const totalQty = tasks.reduce((sum, task) => sum + task.quantity, 0);
   const blockedCount = tasks.filter((task) => task.isBlocked).length;
 

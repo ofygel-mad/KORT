@@ -1,9 +1,9 @@
-﻿import { useState } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { CheckCircle2, Clock, CreditCard, MessageSquare, AlertTriangle, Pencil, ArchiveIcon, RotateCcw, Download, Package, XCircle, FileText } from 'lucide-react';
 import { useOrder, useFulfillFromStock, useConfirmOrder, useChangeOrderStatus, useAddPayment, useAddOrderActivity, useRestoreOrder, useCloseOrder, useCreateInvoice, useSetRequiresInvoice, useConfirmSeamstress, useRouteSingleItem } from '../../../../entities/order/queries';
 import { useProductsAvailability } from '../../../../entities/warehouse/queries';
-import type { OrderItem, OrderItemFulfillmentMode, OrderStatus, Priority } from '../../../../entities/order/types';
+import type { OrderItem, OrderItemFulfillmentMode, OrderStatus, Priority, Urgency } from '../../../../entities/order/types';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -62,11 +62,11 @@ const PROD_STATUS_LABEL: Record<string, string> = {
   done: 'Готово',
 };
 
-const PRIORITY_LABEL: Record<Priority, string> = {
-  normal: 'Обычный',
-  urgent: 'Срочно',
-  vip: 'Требовательный',
+const URGENCY_LABEL: Record<Urgency, string> = {
+  normal: '',
+  urgent: '🔴 Срочно',
 };
+const DEMANDING_LABEL = '⭐ Требовательный';
 
 const ROUTE_LABEL: Record<OrderItemFulfillmentMode, string> = {
   unassigned: 'Не выбран',
@@ -135,6 +135,12 @@ export default function ChapanOrderDetailPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const setSelectedOrderId = useChapanUiStore((state) => state.setSelectedOrderId);
+
+  // A1 fix: очищаем selectedOrderId при входе в карточку,
+  // чтобы возврат на список заказов не вызывал повторный редирект.
+  useEffect(() => {
+    setSelectedOrderId(null);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const detailContext = (() => {
     if (location.pathname.startsWith('/workzone/chapan/ready/')) {
@@ -272,7 +278,12 @@ export default function ChapanOrderDetailPage() {
         <div className={styles.orderMeta}>
           <h1 className={styles.orderNum}>#{order.orderNumber}</h1>
           <span className={styles.statusChip} style={{ '--sc': STATUS_COLOR[order.status] } as React.CSSProperties}>{STATUS_LABEL[order.status]}</span>
-          {order.priority !== 'normal' && <span className={styles.priorityChip}>{PRIORITY_LABEL[order.priority]}</span>}
+          {(order.urgency ?? order.priority) === 'urgent' && (
+            <span className={styles.priorityChip} data-urgency="urgent">🔴 Срочно</span>
+          )}
+          {(order.isDemandingClient ?? (order.priority === 'vip')) && (
+            <span className={styles.priorityChip} data-urgency="demanding">⭐ Требовательный</span>
+          )}
           {isOverdue && <span className={styles.overdueChip}>Просрочен</span>}
         </div>
       </div>
@@ -392,7 +403,17 @@ export default function ChapanOrderDetailPage() {
               })}
               {(order.items ?? []).length === 0 && <div className={styles.noItems}>Позиции не указаны</div>}
             </div>
-            <div className={styles.itemsTotal}><span>Итого:</span><strong>{fmt(order.totalAmount)}</strong></div>
+            <div className={styles.itemsTotal}>
+              <span>
+                Итого
+                <span style={{ color: 'var(--text-tertiary)', fontWeight: 400, fontSize: 11, marginLeft: 6 }}>
+                  {orderItems.length} {orderItems.length === 1 ? 'позиция' : orderItems.length < 5 ? 'позиции' : 'позиций'}
+                  {' · '}
+                  {orderItems.reduce((s, i) => s + (i.quantity ?? 1), 0)} шт.
+                </span>
+              </span>
+              <strong>{fmt(order.totalAmount)}</strong>
+            </div>
           </div>
 
           <div className={styles.card}>

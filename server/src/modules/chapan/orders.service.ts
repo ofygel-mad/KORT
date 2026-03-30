@@ -8,6 +8,8 @@ type CreateOrderInput = {
   clientName: string;
   clientPhone: string;
   priority: string;
+  urgency?: string;
+  isDemandingClient?: boolean;
   items: Array<{
     productName: string;
     fabric?: string;
@@ -487,6 +489,8 @@ export async function create(orgId: string, authorId: string, authorName: string
         clientName: client.clientName,
         clientPhone: client.clientPhone,
         priority: data.priority,
+        urgency: data.urgency ?? (data.priority === 'urgent' ? 'urgent' : 'normal'),
+        isDemandingClient: data.isDemandingClient ?? (data.priority === 'vip'),
         totalAmount,
         paidAmount: prepayment,
         paymentStatus: computePaymentStatus(prepayment, totalAmount),
@@ -908,6 +912,8 @@ type UpdateOrderInput = {
   clientPhone?: string;
   dueDate?: string | null;
   priority?: string;
+  urgency?: string;
+  isDemandingClient?: boolean;
   items?: Array<{
     productName: string;
     fabric?: string;
@@ -947,6 +953,8 @@ export async function update(orgId: string, id: string, authorId: string, author
     }
     if (data.dueDate !== undefined) updateData.dueDate = data.dueDate ? new Date(data.dueDate) : null;
     if (data.priority) updateData.priority = data.priority;
+    if (data.urgency !== undefined) updateData.urgency = data.urgency;
+    if (data.isDemandingClient !== undefined) updateData.isDemandingClient = data.isDemandingClient;
 
     if (data.items) {
       const totalAmount = data.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);

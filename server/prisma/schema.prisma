@@ -595,7 +595,9 @@ model ChapanOrder {
   clientPhone   String    @map("client_phone")
   status        String    @default("new")
   paymentStatus String    @default("not_paid") @map("payment_status")
-  priority      String    @default("normal")
+  priority      String    @default("normal")   // legacy: kept for backward compat; use urgency + isDemandingClient
+  urgency           String  @default("normal")  @map("urgency")          // normal | urgent
+  isDemandingClient Boolean @default(false)     @map("is_demanding_client")
   totalAmount   Float     @default(0) @map("total_amount")
   paidAmount    Float     @default(0) @map("paid_amount")
   dueDate       DateTime? @map("due_date")

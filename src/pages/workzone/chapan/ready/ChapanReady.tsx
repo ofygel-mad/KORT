@@ -2,7 +2,7 @@ import { useDeferredValue, useEffect, useRef, useState, type CSSProperties, type
 import { AlertTriangle, Archive, Bell, Check, CheckCheck, CheckCircle2, CheckSquare, Clock, Download, Eye, FileText, LayoutGrid, Layers, List, Plus, Search, Warehouse, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useArchiveOrder, useChangeOrderStatus, useCloseOrder, useCreateInvoice, useOrders, usePreviewInvoiceDocument } from '../../../../entities/order/queries';
-import type { ChapanOrder, InvoiceDocumentPayload, OrderStatus, Priority } from '../../../../entities/order/types';
+import type { ChapanOrder, InvoiceDocumentPayload, OrderStatus, Priority, Urgency } from '../../../../entities/order/types';
 import { useAuthStore } from '@/shared/stores/auth';
 import { useCreateUnpaidAlert } from '../../../../entities/alert/queries';
 import { useChapanUiStore } from '../../../../features/workzone/chapan/store';
@@ -24,11 +24,8 @@ const STATUS_COLOR: Record<ReadyStatus, string> = {
   ready: '#4FC999',
 };
 
-const PRIORITY_LABEL: Record<Priority, string> = {
-  normal: '',
-  urgent: 'Срочно',
-  vip: 'Требовательный',
-};
+const URGENCY_LABEL = '🔴 Срочно';
+const DEMANDING_LABEL = '⭐ Требовательный';
 
 const PAY_LABEL: Record<string, string> = {
   not_paid: 'Не оплачен',
@@ -725,8 +722,11 @@ function ReadyCard({
         {isPendingWorkshop && (
           <span className={styles.workshopBadge}><Clock size={10} /> Ждём цех</span>
         )}
-        {order.priority !== 'normal' && (
-          <span className={styles.priorityBadge}>{PRIORITY_LABEL[order.priority]}</span>
+        {(order.urgency ?? order.priority) === 'urgent' && (
+          <span className={styles.priorityBadge}>{URGENCY_LABEL}</span>
+        )}
+        {(order.isDemandingClient ?? (order.priority === 'vip')) && (
+          <span className={styles.priorityBadge}>{DEMANDING_LABEL}</span>
         )}
       </div>
 

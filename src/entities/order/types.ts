@@ -8,8 +8,10 @@ export type OrderStatus =
 export type PaymentStatus = 'not_paid' | 'partial' | 'paid';
 export type OrderItemFulfillmentMode = 'unassigned' | 'warehouse' | 'production';
 
-// Backend accepts: 'normal' | 'urgent' | 'vip'
+// Legacy: kept for backward compat with old data/API calls
 export type Priority = 'normal' | 'urgent' | 'vip';
+// New domain model: urgency and demanding are independent
+export type Urgency = 'normal' | 'urgent';
 
 export interface ChapanOrder {
   id: string;
@@ -21,7 +23,9 @@ export interface ChapanOrder {
   clientPhone: string;
   status: OrderStatus;
   paymentStatus: PaymentStatus;
-  priority: Priority;
+  priority: Priority;          // legacy field, still returned by backend
+  urgency: Urgency;            // new: 'normal' | 'urgent'
+  isDemandingClient: boolean;  // new: independent demanding-client flag
   totalAmount: number;
   paidAmount: number;
   dueDate: string | null;          // was: deadline
@@ -97,6 +101,8 @@ export interface ProductionTask {
     id: string;
     orderNumber: string;
     priority: Priority;
+    urgency: Urgency;
+    isDemandingClient: boolean;
     dueDate: string | null;
     clientName?: string;        // only in manager view
     clientPhone?: string;       // only in manager view
@@ -142,6 +148,8 @@ export interface CreateOrderDto {
   clientPhone: string;         // required
   clientId?: string;           // optional: link to existing ChapanClient
   priority: Priority;
+  urgency?: Urgency;
+  isDemandingClient?: boolean;
   orderDate?: string;
   dueDate?: string;            // ISO date: '2026-03-25'
   streetAddress?: string;

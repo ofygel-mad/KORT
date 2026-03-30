@@ -51,6 +51,8 @@ export async function chapanOrdersRoutes(app: FastifyInstance) {
       clientName: z.string().min(1),
       clientPhone: z.string().min(1),
       priority: z.enum(['normal', 'urgent', 'vip']).default('normal'),
+      urgency: z.enum(['normal', 'urgent']).optional(),
+      isDemandingClient: z.boolean().optional(),
       items: z.array(orderItemSchema).min(1),
       dueDate: z.string().optional(),
       prepayment: z.number().min(0).optional(),
@@ -82,6 +84,8 @@ export async function chapanOrdersRoutes(app: FastifyInstance) {
       clientPhone: z.string().min(1).optional(),
       dueDate: z.string().nullable().optional(),
       priority: z.enum(['normal', 'urgent', 'vip']).optional(),
+      urgency: z.enum(['normal', 'urgent']).optional(),
+      isDemandingClient: z.boolean().optional(),
       items: z.array(orderItemSchema).optional(),
     }).parse(request.body);
 

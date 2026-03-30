@@ -1,5 +1,5 @@
 import type { InputHTMLAttributes } from 'react';
-import { useRef, useState, useDeferredValue } from 'react';
+import { useEffect, useRef, useState, useDeferredValue } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -8,10 +8,34 @@ import { ChevronLeft, Plus, Trash2, Calculator, AlertCircle, Paperclip, X, Image
 import { useId } from 'react';
 import { useCreateOrder, useChapanCatalogs } from '../../../../entities/order/queries';
 import { useProductsAvailability } from '../../../../entities/warehouse/queries';
-import type { Priority } from '../../../../entities/order/types';
+import type { Urgency } from '../../../../entities/order/types';
 import { formatPersonNameInput } from '../../../../shared/utils/person';
 import { formatKazakhPhoneInput, isKazakhPhoneComplete } from '../../../../shared/utils/kz';
 import styles from './ChapanNewOrder.module.css';
+
+// ─── Draft autosave ───────────────────────────────────────────────────────────
+const DRAFT_KEY = 'chapan_new_order_draft_v1';
+
+function loadDraft(): Partial<FormData> | null {
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveDraft(data: Partial<FormData>) {
+  try {
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(data));
+  } catch { /* ignore */ }
+}
+
+function clearDraft() {
+  try {
+    localStorage.removeItem(DRAFT_KEY);
+  } catch { /* ignore */ }
+}
 
 // ─── Payment methods ──────────────────────────────────────────────────────────
 type PaymentMethodValue = 'cash' | 'kaspi_qr' | 'kaspi_terminal' | 'transfer' | 'mixed';
@@ -58,7 +82,8 @@ const schema = z
     postalCode:    z.string().optional(),
     deliveryType:  z.string().optional(),
     source:       z.string().optional(),
-    priority:     z.enum(['normal', 'urgent', 'vip']),
+    urgency:      z.enum(['normal', 'urgent']).default('normal'),
+    isDemandingClient: z.boolean().default(false),
     orderDate:    z.string(),
     dueDate:      z.string().optional(),
     orderDiscount: z.coerce.number().min(0).optional(),
@@ -175,19 +200,23 @@ export default function ChapanNewOrderPage() {
   const { data: catalogs } = useChapanCatalogs();
 
   const [discountPercent, setDiscountPercent] = useState('');
+  const [draftRestored, setDraftRestored] = useState(false);
 
   // File state (UI only — upload endpoint TBD)
   const [itemPhotos, setItemPhotos] = useState<Record<number, File | null>>({});
   const [receipts, setReceipts]     = useState<File[]>([]);
   const receiptInputRef = useRef<HTMLInputElement>(null);
 
+  const savedDraft = useRef(loadDraft());
+
   const {
-    register, control, handleSubmit, watch, setValue,
+    register, control, handleSubmit, watch, setValue, reset,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: {
-      priority:  'normal',
+    defaultValues: savedDraft.current ?? {
+      urgency:  'normal',
+      isDemandingClient: false,
       orderDate: todayIso(),
       items: [{ productName: '', gender: '', length: '', color: '', size: '', quantity: 1, unitPrice: undefined, itemDiscount: undefined, workshopNotes: '' }],
     },
@@ -195,9 +224,34 @@ export default function ChapanNewOrderPage() {
 
   const { fields, append, remove } = useFieldArray({ control, name: 'items' });
 
+  // Draft autosave — дебаунс 800 мс, не сохраняем пустой стартовый стейт
+  const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+    autosaveTimer.current = setTimeout(() => {
+      const snapshot = watch();
+      const isEmpty =
+        !snapshot.clientName &&
+        !snapshot.clientPhone &&
+        (snapshot.items ?? []).every((i) => !i.productName && !i.size);
+      if (!isEmpty) saveDraft(snapshot);
+    }, 800);
+    return () => { if (autosaveTimer.current) clearTimeout(autosaveTimer.current); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(watch())]);
+
+  // Показываем тост один раз, если черновик был восстановлен
+  useEffect(() => {
+    if (savedDraft.current && !draftRestored) {
+      setDraftRestored(true);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Derived values
   const items            = watch('items');
-  const priority         = watch('priority');
+  const urgency          = watch('urgency');
+  const isDemandingClient = watch('isDemandingClient');
   const deferredProductNames = useDeferredValue(
     items.map((i) => i.productName).filter(Boolean),
   );
@@ -238,7 +292,9 @@ export default function ChapanNewOrderPage() {
       deliveryType:  data.deliveryType?.trim() || undefined,
       source:        data.source?.trim() || undefined,
       expectedPaymentMethod: data.expectedPaymentMethod?.trim() || undefined,
-      priority:      data.priority as Priority,
+      priority:      data.urgency === 'urgent' ? 'urgent' : data.isDemandingClient ? 'vip' : 'normal',
+      urgency:       data.urgency as Urgency,
+      isDemandingClient: data.isDemandingClient,
       orderDate:     data.orderDate || undefined,
       dueDate:       data.dueDate   || undefined,
       prepayment:    hasPrepayment ? data.prepayment : undefined,
@@ -253,6 +309,7 @@ export default function ChapanNewOrderPage() {
       items: payloadItems,
       managerNote: data.managerNote?.trim() || undefined,
     });
+    clearDraft();
     navigate('/workzone/chapan/orders');
   }
 
@@ -262,12 +319,35 @@ export default function ChapanNewOrderPage() {
   return (
     <div className={styles.root}>
       <div className={styles.pageHeader}>
-        <button className={styles.backLink} onClick={() => navigate('/workzone/chapan/orders')}>
+        <button className={styles.backLink} onClick={() => { clearDraft(); navigate('/workzone/chapan/orders'); }}>
           <ChevronLeft size={14} />
           <span>Заказы</span>
         </button>
         <h1 className={styles.pageTitle}>Новый заказ</h1>
       </div>
+
+      {draftRestored && (
+        <div className={styles.draftBanner}>
+          <span>Восстановлен незавершённый черновик</span>
+          <button
+            type="button"
+            className={styles.draftClear}
+            onClick={() => {
+              clearDraft();
+              savedDraft.current = null;
+              reset({
+                urgency: 'normal',
+                isDemandingClient: false,
+                orderDate: todayIso(),
+                items: [{ productName: '', gender: '', length: '', color: '', size: '', quantity: 1, unitPrice: undefined, itemDiscount: undefined, workshopNotes: '' }],
+              });
+              setDraftRestored(false);
+            }}
+          >
+            Сбросить
+          </button>
+        </div>
+      )}
 
       <form className={styles.form} onSubmit={handleSubmit(onSubmit)}>
 
@@ -589,17 +669,30 @@ export default function ChapanNewOrderPage() {
               <div className={styles.field}>
                 <label className={styles.label}>Приоритет</label>
                 <div className={styles.priorityGroup}>
-                  {(['normal', 'urgent', 'vip'] as Priority[]).map((value) => (
-                    <button
-                      key={value}
-                      type="button"
-                      className={`${styles.priorityBtn} ${priority === value ? styles.priorityBtnActive : ''} ${value === 'urgent' ? styles.priorityBtnUrgent : ''} ${value === 'vip' ? styles.priorityBtnVip : ''}`}
-                      onClick={() => setValue('priority', value)}
-                    >
-                      {value === 'normal' ? 'Обычный' : value === 'urgent' ? '🔴 Срочно' : '⭐ Требовательный'}
-                    </button>
-                  ))}
+                  <button
+                    type="button"
+                    className={`${styles.priorityBtn} ${urgency === 'normal' ? styles.priorityBtnActive : ''}`}
+                    onClick={() => setValue('urgency', 'normal')}
+                  >
+                    Обычный
+                  </button>
+                  <button
+                    type="button"
+                    className={`${styles.priorityBtn} ${styles.priorityBtnUrgent} ${urgency === 'urgent' ? styles.priorityBtnActive : ''}`}
+                    onClick={() => setValue('urgency', 'urgent')}
+                  >
+                    🔴 Срочно
+                  </button>
                 </div>
+                <label className={styles.demandingToggle}>
+                  <input
+                    type="checkbox"
+                    checked={isDemandingClient}
+                    onChange={e => setValue('isDemandingClient', e.target.checked)}
+                    className={styles.demandingCheckbox}
+                  />
+                  <span>⭐ Требовательный клиент</span>
+                </label>
               </div>
             </div>
           </div>

@@ -2,7 +2,7 @@ import { memo, useDeferredValue, useEffect, useMemo, useRef, useState } from 're
 import { useNavigate } from 'react-router-dom';
 import { Bell, Check, LayoutGrid, Layers, List, Plus, Search, SlidersHorizontal, X } from 'lucide-react';
 import { useOrders } from '../../../../entities/order/queries';
-import type { ChapanOrder, OrderStatus, Priority } from '../../../../entities/order/types';
+import type { ChapanOrder, OrderStatus } from '../../../../entities/order/types';
 import { useProductsAvailability } from '../../../../entities/warehouse/queries';
 import type { ProductsAvailabilityMap } from '../../../../entities/warehouse/types';
 import { useAuthStore } from '@/shared/stores/auth';
@@ -26,7 +26,8 @@ const STATUS_COLOR: Record<OrderStatus, string> = {
 };
 const PAY_LABEL: Record<string, string> = { not_paid: 'Не оплачен', partial: 'Частично', paid: 'Оплачен' };
 const PAY_COLOR: Record<string, string> = { not_paid: '#EF4444', partial: '#F59E0B', paid: '#10B981' };
-const PRIORITY_LABEL: Record<Priority, string> = { normal: '', urgent: '🔴 Срочно', vip: '⭐ Требовательный' };
+const URGENCY_LABEL: Record<string, string> = { normal: '', urgent: '🔴 Срочно' };
+const DEMANDING_LABEL = '⭐ Требовательный';
 
 function fmt(n: number) { return new Intl.NumberFormat('ru-KZ', { maximumFractionDigits: 0 }).format(n) + ' ₸'; }
 function isOverdue(d: string | null) { return !!d && new Date(d) < new Date(); }
@@ -71,7 +72,8 @@ function groupSignature(order: ChapanOrder): string {
   return [
     ...(order.items).map(itemSignature).sort(),
     order.status,
-    order.priority,
+    order.urgency ?? order.priority,
+    String(order.isDemandingClient ?? (order.priority === 'vip')),
   ].join('||');
 }
 
@@ -139,14 +141,8 @@ export default function ChapanOrdersPage() {
     if (savedGroup !== null) setGroupedState(savedGroup !== 'false');
   }, [userId]);
 
-  // Restore selected order from store when returning to this page
-  useEffect(() => {
-    if (selectedOrderId) {
-      navigate(`/workzone/chapan/orders/${selectedOrderId}`);
-    }
-    // Empty dependency array - only run once on mount
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // A1 fix: авторедирект убран — он вызывал цикл возврата.
+  // selectedOrderId теперь очищается при входе в ChapanOrderDetail.
 
   useEffect(() => {
     if (!showViewMenu) return;
@@ -177,7 +173,15 @@ export default function ChapanOrdersPage() {
     archived: false,
     limit: 100,
   });
-  const orders: ChapanOrder[] = useMemo(() => data?.results ?? [], [data?.results]);
+  const orders: ChapanOrder[] = useMemo(() => {
+    const raw = data?.results ?? [];
+    // D1: urgent-заказы всегда наверху, внутри каждой группы — порядок сервера
+    return [...raw].sort((a, b) => {
+      const urgA = (a.urgency ?? a.priority) === 'urgent' ? 0 : 1;
+      const urgB = (b.urgency ?? b.priority) === 'urgent' ? 0 : 1;
+      return urgA - urgB;
+    });
+  }, [data?.results]);
 
   const newProductNames = useMemo(() => [
     ...new Set(
@@ -455,19 +459,22 @@ const OrderCard = memo(function OrderCard({ order, onSelectOrder, hasAlert, stoc
   const more = (order.items?.length ?? 0) - 1;
   const showStock = (order.status === 'new' || order.status === 'confirmed') && !!first?.productName && !!stockMap;
   const stockInfo = showStock ? stockMap![first!.productName] : undefined;
+  const isUrgent = (order.urgency ?? order.priority) === 'urgent';
+  const isDemanding = order.isDemandingClient ?? (order.priority === 'vip');
 
   return (
     <button
-      className={`${styles.card} ${hasAlert ? styles.cardAlert : ''}`}
+      className={`${styles.card} ${hasAlert ? styles.cardAlert : ''} ${isUrgent && !hasAlert ? styles.cardUrgent : ''}`}
       style={{ '--status-color': STATUS_COLOR[order.status] } as React.CSSProperties}
       onClick={() => onSelectOrder(order.id)}
     >
       <div className={styles.cardHead}>
         <span className={styles.statusBadge}>{STATUS_LABEL[order.status]}</span>
-        {order.priority !== 'normal' && (
-          <span className={`${styles.priorityBadge} ${order.priority === 'vip' ? styles.vip : styles.urgent}`}>
-            {PRIORITY_LABEL[order.priority]}
-          </span>
+        {isUrgent && (
+          <span className={`${styles.priorityBadge} ${styles.urgent}`}>{URGENCY_LABEL['urgent']}</span>
+        )}
+        {isDemanding && (
+          <span className={`${styles.priorityBadge} ${styles.vip}`}>{DEMANDING_LABEL}</span>
         )}
         {stockInfo !== undefined && (
           <span className={stockInfo.available ? styles.stockPillIn : styles.stockPillOut}>
@@ -533,10 +540,11 @@ const BatchCard = memo(function BatchCard({ group, onSelectOrder }: { group: { o
           <span className={styles.batchCountBadge}>{orders.length}</span>
           <span className={styles.batchLabel}>заказа</span>
           <span className={styles.statusBadge}>{STATUS_LABEL[first.status]}</span>
-          {first.priority !== 'normal' && (
-            <span className={`${styles.priorityBadge} ${first.priority === 'vip' ? styles.vip : styles.urgent}`}>
-              {PRIORITY_LABEL[first.priority]}
-            </span>
+          {(first.urgency ?? first.priority) === 'urgent' && (
+            <span className={`${styles.priorityBadge} ${styles.urgent}`}>{URGENCY_LABEL['urgent']}</span>
+          )}
+          {(first.isDemandingClient ?? (first.priority === 'vip')) && (
+            <span className={`${styles.priorityBadge} ${styles.vip}`}>{DEMANDING_LABEL}</span>
           )}
           <span className={`${styles.batchChevron} ${expanded ? styles.batchChevronOpen : ''}`}>›</span>
         </div>
@@ -592,10 +600,11 @@ const BatchCard = memo(function BatchCard({ group, onSelectOrder }: { group: { o
                   <div className={styles.batchMiniTop}>
                     <span className={styles.cardNum}>#{o.orderNumber}</span>
                     <span className={styles.batchMiniClient}>{o.clientName}</span>
-                    {o.priority !== 'normal' && (
-                      <span className={`${styles.priorityBadge} ${o.priority === 'vip' ? styles.vip : styles.urgent}`} style={{ fontSize: '9px' }}>
-                        {PRIORITY_LABEL[o.priority]}
-                      </span>
+                    {(o.urgency ?? o.priority) === 'urgent' && (
+                      <span className={`${styles.priorityBadge} ${styles.urgent}`} style={{ fontSize: '9px' }}>{URGENCY_LABEL['urgent']}</span>
+                    )}
+                    {(o.isDemandingClient ?? (o.priority === 'vip')) && (
+                      <span className={`${styles.priorityBadge} ${styles.vip}`} style={{ fontSize: '9px' }}>{DEMANDING_LABEL}</span>
                     )}
                   </div>
                   <div className={styles.batchMiniBot}>
@@ -626,20 +635,23 @@ const OrderRow = memo(function OrderRow({ order, onSelectOrder, hasAlert, stockM
   const more = (order.items?.length ?? 0) - 1;
   const showStock = (order.status === 'new' || order.status === 'confirmed') && !!first?.productName && !!stockMap;
   const stockInfo = showStock ? stockMap![first!.productName] : undefined;
+  const isUrgent = (order.urgency ?? order.priority) === 'urgent';
+  const isDemanding = order.isDemandingClient ?? (order.priority === 'vip');
 
   return (
     <button
-      className={`${styles.row} ${hasAlert ? styles.rowAlert : ''}`}
+      className={`${styles.row} ${hasAlert ? styles.rowAlert : ''} ${isUrgent && !hasAlert ? styles.rowUrgent : ''}`}
       style={{ '--status-color': STATUS_COLOR[order.status] } as React.CSSProperties}
       onClick={() => onSelectOrder(order.id)}
     >
       <span className={styles.rowStripe} />
       <div className={styles.rowNum}>
         <span className={styles.statusBadge}>{STATUS_LABEL[order.status]}</span>
-        {order.priority !== 'normal' && (
-          <span className={`${styles.priorityBadge} ${order.priority === 'vip' ? styles.vip : styles.urgent}`}>
-            {PRIORITY_LABEL[order.priority]}
-          </span>
+        {isUrgent && (
+          <span className={`${styles.priorityBadge} ${styles.urgent}`}>{URGENCY_LABEL['urgent']}</span>
+        )}
+        {isDemanding && (
+          <span className={`${styles.priorityBadge} ${styles.vip}`}>{DEMANDING_LABEL}</span>
         )}
         {stockInfo !== undefined && (
           <span className={stockInfo.available ? styles.stockPillIn : styles.stockPillOut}>
@@ -709,10 +721,11 @@ const BatchRow = memo(function BatchRow({ group, onSelectOrder }: { group: { ord
         <div className={styles.rowNum}>
           <span className={styles.batchCountBadge}>{orders.length}</span>
           <span className={styles.statusBadge}>{STATUS_LABEL[first.status]}</span>
-          {first.priority !== 'normal' && (
-            <span className={`${styles.priorityBadge} ${first.priority === 'vip' ? styles.vip : styles.urgent}`}>
-              {PRIORITY_LABEL[first.priority]}
-            </span>
+          {(first.urgency ?? first.priority) === 'urgent' && (
+            <span className={`${styles.priorityBadge} ${styles.urgent}`}>{URGENCY_LABEL['urgent']}</span>
+          )}
+          {(first.isDemandingClient ?? (first.priority === 'vip')) && (
+            <span className={`${styles.priorityBadge} ${styles.vip}`}>{DEMANDING_LABEL}</span>
           )}
         </div>
         <div className={styles.rowClient}>
