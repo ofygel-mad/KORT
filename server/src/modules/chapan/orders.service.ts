@@ -1570,3 +1570,75 @@ export async function routeSingleItem(
     });
   });
 }
+
+
+// ── Trash (soft-delete) ───────────────────────────────────────────────────────
+
+/** Manager moves an order to trash (soft-delete). Owner can permanently delete. */
+export async function trashOrder(orgId: string, id: string, authorId: string, authorName: string) {
+  const order = await prisma.chapanOrder.findFirst({ where: { id, orgId } });
+  if (!order) throw new NotFoundError('ChapanOrder', id);
+  if (order.deletedAt) throw new ValidationError('Заказ уже в корзине.');
+  if (['completed', 'cancelled'].includes(order.status)) {
+    // Allow trashing completed/cancelled orders
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.chapanOrder.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    });
+    await tx.chapanActivity.create({
+      data: { orderId: id, type: 'edit', content: 'Заказ перемещён в корзину', authorId, authorName },
+    });
+  });
+
+  return { ok: true };
+}
+
+/** Restore an order from trash. Owner/full_access only. */
+export async function restoreFromTrash(orgId: string, id: string, authorId: string, authorName: string) {
+  const order = await prisma.chapanOrder.findFirst({ where: { id, orgId } });
+  if (!order) throw new NotFoundError('ChapanOrder', id);
+  if (!order.deletedAt) throw new ValidationError('Заказ не в корзине.');
+
+  await prisma.$transaction(async (tx) => {
+    await tx.chapanOrder.update({
+      where: { id },
+      data: { deletedAt: null },
+    });
+    await tx.chapanActivity.create({
+      data: { orderId: id, type: 'edit', content: 'Заказ восстановлен из корзины', authorId, authorName },
+    });
+  });
+
+  return { ok: true };
+}
+
+/** Permanently delete an order. Owner/full_access only. */
+export async function permanentDelete(orgId: string, id: string) {
+  const order = await prisma.chapanOrder.findFirst({
+    where: { id, orgId },
+    include: { items: true, productionTasks: true, payments: true },
+  });
+  if (!order) throw new NotFoundError('ChapanOrder', id);
+  if (!order.deletedAt) {
+    throw new ValidationError(
+      'Заказ не в корзине. Сначала переместите его в корзину.',
+    );
+  }
+
+  // Hard delete — cascades to items, tasks, payments via Prisma relations
+  await prisma.chapanOrder.delete({ where: { id } });
+
+  return { ok: true };
+}
+
+/** List trashed orders. Owner/full_access only. */
+export async function listTrashed(orgId: string) {
+  return prisma.chapanOrder.findMany({
+    where: { orgId, deletedAt: { not: null } },
+    include: { items: true, payments: true },
+    orderBy: { deletedAt: 'desc' },
+  });
+}

@@ -46,6 +46,7 @@ export interface ChapanOrder {
   cancelledAt: string | null;
   requiresInvoice: boolean;
   isArchived: boolean;
+  deletedAt?: string | null;   // present when order is in trash
   archivedAt: string | null;
   createdAt: string;
   updatedAt: string;
