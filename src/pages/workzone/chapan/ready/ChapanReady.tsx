@@ -20,7 +20,7 @@ const STATUS_LABEL: Record<ReadyStatus, string> = {
   ready: 'Готово',
 };
 
-function buildItemLine(item: { productName?: string; color?: string; gender?: string } | undefined): string {
+function buildItemLine(item: { productName?: string; color?: string | null; gender?: string | null } | undefined): string {
   if (!item) return '—';
   const parts: string[] = [];
   if (item.productName) parts.push(item.productName);
