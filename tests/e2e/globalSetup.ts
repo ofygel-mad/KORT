@@ -27,8 +27,8 @@ async function globalSetup() {
     await page.getByPlaceholder('Email или номер телефона').fill(email);
     await page.getByPlaceholder('Пароль').fill(password);
 
-    // Submit form
-    await page.getByRole('button', { name: /Войти/i }).click();
+    // Submit form (use exact: true to avoid matching PIN button)
+    await page.getByRole('button', { name: 'Войти', exact: true }).click();
 
     // Wait for navigation away from login page
     await page.waitForURL((url) => !url.pathname.includes('/auth/login'), { timeout: 10000 });
