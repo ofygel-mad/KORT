@@ -16,22 +16,33 @@ async function globalSetup() {
   const page = await browser.newPage();
 
   try {
+    // Listen for console errors
+    page.on('console', (msg) => {
+      if (msg.type() === 'error') console.error('🔴 Browser console error:', msg.text());
+    });
+
     // Navigate to login page
-    await page.goto('http://localhost:4173/auth/login');
+    console.log('📍 Navigating to login page...');
+    await page.goto('http://localhost:4173/auth/login', { waitUntil: 'networkidle' });
+    console.log('✅ Login page loaded');
 
     // Test credentials for CI/E2E tests
     const email = 'admin@kort.local';
     const password = 'demo1234';
 
     // Fill in login form
+    console.log('🔑 Filling login form...');
     await page.getByPlaceholder('Email или номер телефона').fill(email);
     await page.getByPlaceholder('Пароль').fill(password);
 
     // Submit form (use exact: true to avoid matching PIN button)
+    console.log('📤 Submitting login form...');
     await page.getByRole('button', { name: 'Войти', exact: true }).click();
 
     // Wait for navigation away from login page
+    console.log('⏳ Waiting for redirect from login page (30s timeout)...');
     await page.waitForURL((url) => !url.pathname.includes('/auth/login'), { timeout: 30000 });
+    console.log('✅ Successfully redirected from login page');
 
     // Add intro flag to sessionStorage (from helpers)
     await page.evaluate(() => {
