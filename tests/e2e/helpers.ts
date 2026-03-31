@@ -22,6 +22,14 @@ export async function preparePage(page: Page) {
   });
 }
 
+export async function clearSession(page: Page) {
+  await page.context().clearCookies();
+  await page.evaluate(() => {
+    window.localStorage.clear();
+    window.sessionStorage.clear();
+  }).catch(() => {});
+}
+
 export async function navigateWithinApp(page: Page, route: string) {
   await page.evaluate((nextRoute) => {
     window.history.pushState({}, '', nextRoute);
@@ -31,6 +39,13 @@ export async function navigateWithinApp(page: Page, route: string) {
 }
 
 export async function loginAs(page: Page, email: string, password = 'demo') {
+  // Clear existing session so the login page is always shown
+  await page.context().clearCookies();
+  await page.evaluate(() => {
+    window.localStorage.clear();
+    window.sessionStorage.setItem('kort.workspace:intro-v1', '1');
+  }).catch(() => {});
+
   await preparePage(page);
   await page.goto('/auth/login', { waitUntil: 'load' });
 

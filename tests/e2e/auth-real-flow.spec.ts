@@ -1,7 +1,8 @@
 import { expect, test } from '@playwright/test';
-import { preparePage } from './helpers';
+import { clearSession, preparePage } from './helpers';
 
 test('company registration creates an account that can log in again', async ({ page }) => {
+  await clearSession(page);
   await preparePage(page);
 
   const unique = Date.now();
