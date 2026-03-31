@@ -122,10 +122,43 @@ jobs:
           flags: frontend
           token: ${{ secrets.CODECOV_TOKEN }}
 
+  # ─── Prepare Playwright browsers (run once) ───────────────────────────────
+  prepare-playwright:
+    name: Cache Playwright Browsers
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-browsers-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            playwright-browsers-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium firefox webkit
+
   # ─── Frontend: E2E Tests with Playwright (Sharded) ─────────────────────────
   frontend-e2e:
     name: Frontend E2E Tests (Playwright) - Shard ${{ matrix.shard }}/${{ matrix.totalShards }}
     runs-on: ubuntu-latest
+    needs: [prepare-playwright]
     strategy:
       fail-fast: false
       matrix:
@@ -160,12 +193,13 @@ jobs:
           node-version: '20'
           cache: 'pnpm'
 
-      - name: Cache Playwright browsers
+      - name: Restore Playwright browsers cache
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-browsers-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: playwright-browsers-
+          key: playwright-browsers-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            playwright-browsers-
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -201,9 +235,6 @@ jobs:
           node dist/index.js &
           sleep 3
           curl -s http://localhost:8000/health || echo "⚠️ Backend health check timeout"
-
-      - name: Install Playwright browsers
-        run: pnpm exec playwright install --with-deps chromium firefox webkit
 
       - name: Run E2E tests (Shard ${{ matrix.shard }}/${{ matrix.totalShards }})
         run: pnpm test:e2e --shard=${{ matrix.shard }}/${{ matrix.totalShards }}
