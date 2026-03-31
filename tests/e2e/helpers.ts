@@ -24,10 +24,12 @@ export async function preparePage(page: Page) {
 
 export async function clearSession(page: Page) {
   await page.context().clearCookies();
+  // Navigate to the app to get same-origin window context, then clear storage
+  await page.goto('/', { waitUntil: 'load' });
   await page.evaluate(() => {
     window.localStorage.clear();
     window.sessionStorage.clear();
-  }).catch(() => {});
+  });
 }
 
 export async function navigateWithinApp(page: Page, route: string) {
@@ -39,15 +41,22 @@ export async function navigateWithinApp(page: Page, route: string) {
 }
 
 export async function loginAs(page: Page, email: string, password = 'demo') {
-  // Clear existing session so the login page is always shown
+  // Clear cookies first
   await page.context().clearCookies();
-  await page.evaluate(() => {
-    window.localStorage.clear();
-    window.sessionStorage.setItem('kort.workspace:intro-v1', '1');
-  }).catch(() => {});
 
+  // Navigate to login page; the app may redirect us away if localStorage still has tokens
   await preparePage(page);
   await page.goto('/auth/login', { waitUntil: 'load' });
+
+  // Now we have a window context — clear storage and reload so the app starts fresh
+  await page.evaluate(() => {
+    window.localStorage.clear();
+    window.sessionStorage.clear();
+    window.sessionStorage.setItem('kort.workspace:intro-v1', '1');
+  });
+
+  // Reload so the app re-reads the now-empty storage and stays on the login page
+  await page.reload({ waitUntil: 'load' });
 
   // Wait for form elements to be visible before interacting
   await expect(page.getByPlaceholder('Email или номер телефона')).toBeVisible({ timeout: 10000 });
