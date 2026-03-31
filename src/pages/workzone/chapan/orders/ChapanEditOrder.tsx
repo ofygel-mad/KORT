@@ -161,7 +161,6 @@ export default function ChapanEditOrderPage() {
   useEffect(() => {
     const autoFee = deliveryFeeMap[deliveryType ?? ''];
     if (autoFee !== undefined) setValue('deliveryFee', autoFee);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deliveryType, profile?.kazpostDeliveryFee, profile?.railDeliveryFee, profile?.airDeliveryFee]);
 
   const itemsTotal            = items.reduce((s, i) => s + (Number(i.quantity) || 0) * (Number(i.unitPrice) || 0), 0);

@@ -251,7 +251,6 @@ export default function ChapanNewOrderPage() {
     if (autoFee !== undefined) {
       setValue('deliveryFee', autoFee);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deliveryType, profile?.kazpostDeliveryFee, profile?.railDeliveryFee, profile?.airDeliveryFee]);
 
   // Показываем тост один раз, если черновик был восстановлен
