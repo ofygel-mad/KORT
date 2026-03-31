@@ -25,11 +25,7 @@ test('company registration creates an account that can log in again', async ({ p
   await page.getByRole('button', { name: 'Создать компанию' }).click();
   await expect(page).not.toHaveURL(/\/auth\/register$/);
 
-  await page.evaluate(() => {
-    window.localStorage.clear();
-    window.sessionStorage.setItem('kort.workspace:intro-v1', '1');
-  });
-
+  await clearSession(page);
   await page.goto('/auth/login');
 
   fields = page.locator('form input');

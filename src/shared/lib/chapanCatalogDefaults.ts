@@ -23,7 +23,7 @@ export const DEFAULT_NUMERIC_SIZE_CATALOG = [
 ] as const;
 
 export const DEFAULT_PAYMENT_METHODS = [
-  'Наличные', 'Kaspi QR', 'Kaspi Терминал', 'Перевод',
+  'Наличные', 'Kaspi QR', 'Kaspi Терминал', 'Перевод', 'Халык',
 ] as const;
 
 export const DEFAULT_DELIVERY_OPTIONS = [
@@ -44,6 +44,7 @@ const PAYMENT_ALIAS: Record<string, string> = {
   kaspi_terminal:   'Kaspi Терминал',
   terminal:         'Kaspi Терминал',
   transfer:         'Перевод',
+  halyk:            'Халык',
   mixed:            'Смешанный',
 };
 
@@ -113,6 +114,7 @@ export function buildPaymentMethodOptions(
         label === 'Kaspi QR'      ? 'kaspi_qr' :
         label === 'Kaspi Терминал'? 'kaspi_terminal' :
         label === 'Перевод'       ? 'transfer' :
+        label === 'Халык'         ? 'halyk' :
         label.toLowerCase(),
       label,
     })),
@@ -123,7 +125,7 @@ export function buildPaymentMethodOptions(
 // ── Mixed breakdown rows ──────────────────────────────────────────────────────
 
 export type MixedBreakdownRow = {
-  value: 'cash' | 'kaspi_qr' | 'kaspi_terminal' | 'transfer';
+  value: 'cash' | 'kaspi_qr' | 'kaspi_terminal' | 'transfer' | 'halyk';
   label: string;
 };
 
@@ -136,7 +138,8 @@ export function buildMixedBreakdownRows(
       opt.value === 'cash' ||
       opt.value === 'kaspi_qr' ||
       opt.value === 'kaspi_terminal' ||
-      opt.value === 'transfer'
+      opt.value === 'transfer' ||
+      opt.value === 'halyk'
     ))
     .map(opt => ({ value: opt.value, label: opt.label }));
 }

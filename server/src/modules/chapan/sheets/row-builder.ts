@@ -75,6 +75,7 @@ function paymentLabel(method: string): string {
   if (method === 'kaspi_qr')         return 'Kaspi QR';
   if (method === 'kaspi_terminal')   return 'Kaspi Терминал';
   if (method === 'transfer')         return 'Перевод';
+  if (method === 'halyk')            return 'Халык';
   if (method === 'mixed')            return 'Смешанный';
   return method;
 }

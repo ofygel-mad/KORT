@@ -257,26 +257,41 @@
 .urgent { background: rgba(239,68,68,.12); color: var(--ch-red); border: 1px solid rgba(239,68,68,.25); }
 .vip    { background: rgba(180,192,210,.12); color: var(--ch-plat-bright); border: 1px solid var(--ch-plat-border); }
 
-/* ── D1: urgent card/row — отдельно от финансового alert ── */
+/* ── D1: urgent card/row — пульсирующий красный glow ── */
+@keyframes urgentPulse {
+  0%   { box-shadow: 0 0 0 1px rgba(239,68,68,0.5), 0 0 10px rgba(239,68,68,0.18); }
+  50%  { box-shadow: 0 0 0 1px rgba(239,68,68,0.8), 0 0 22px rgba(239,68,68,0.38); }
+  100% { box-shadow: 0 0 0 1px rgba(239,68,68,0.5), 0 0 10px rgba(239,68,68,0.18); }
+}
+
+@keyframes urgentPulseRow {
+  0%   { box-shadow: 0 0 0 1px rgba(239,68,68,0.4), 0 2px 14px rgba(239,68,68,0.12); }
+  50%  { box-shadow: 0 0 0 1px rgba(239,68,68,0.7), 0 2px 24px rgba(239,68,68,0.28); }
+  100% { box-shadow: 0 0 0 1px rgba(239,68,68,0.4), 0 2px 14px rgba(239,68,68,0.12); }
+}
+
 .cardUrgent {
-  border-color: rgba(239, 68, 68, 0.45) !important;
-  background: linear-gradient(160deg, rgba(239,68,68,0.07) 0%, var(--ch-surface) 60%) !important;
+  border-color: rgba(239, 68, 68, 0.65) !important;
+  background: linear-gradient(160deg, rgba(239,68,68,0.10) 0%, var(--ch-surface) 55%) !important;
+  animation: urgentPulse 2.4s ease-in-out infinite;
 }
 .cardUrgent::after {
   content: '';
   position: absolute;
   top: 0; left: 0; right: 0;
-  height: 2px;
-  background: linear-gradient(90deg, #EF4444 0%, #F97316 50%, #EF4444 100%);
+  height: 3px;
+  background: linear-gradient(90deg, transparent 0%, #EF4444 30%, #F97316 50%, #EF4444 70%, transparent 100%);
   border-radius: 12px 12px 0 0;
+  opacity: 1 !important;
 }
 .rowUrgent {
-  border-color: rgba(239, 68, 68, 0.4) !important;
-  background: linear-gradient(90deg, rgba(239,68,68,0.07) 0%, var(--ch-surface) 35%) !important;
+  border-color: rgba(239, 68, 68, 0.55) !important;
+  background: linear-gradient(90deg, rgba(239,68,68,0.10) 0%, var(--ch-surface) 30%) !important;
+  animation: urgentPulseRow 2.4s ease-in-out infinite;
 }
 .rowUrgent .rowStripe {
   background: #EF4444 !important;
-  opacity: 0.85 !important;
+  opacity: 1 !important;
 }
 
 .cardClient { font-size: 14px; font-weight: 600; color: var(--ch-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

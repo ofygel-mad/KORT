@@ -4,11 +4,12 @@ import { useNavigate } from 'react-router-dom';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { ChevronLeft, Plus, Trash2, Calculator, AlertCircle, Paperclip, X, ImagePlus } from 'lucide-react';
+import { ChevronLeft, Plus, Trash2, Calculator, AlertCircle, Paperclip, X, ImagePlus, Pencil } from 'lucide-react';
 import { useId } from 'react';
-import { useCreateOrder, useChapanCatalogs, useChapanProfile } from '../../../../entities/order/queries';
+import { useCreateOrder, useChapanCatalogs, useChapanProfile, useUpdateBankCommission } from '../../../../entities/order/queries';
 import { useAuthStore } from '../../../../shared/stores/auth';
-import { useProductsAvailability } from '../../../../entities/warehouse/queries';
+import { useProductsAvailability, useOrderFormCatalog } from '../../../../entities/warehouse/queries';
+import type { OrderFormField } from '../../../../entities/warehouse/types';
 import { attachmentsApi } from '../../../../entities/order/api';
 import type { Urgency } from '../../../../entities/order/types';
 import {
@@ -82,7 +83,7 @@ const schema = z
     deliveryFee:   z.coerce.number().min(0).optional(),
     bankCommissionPercent: z.coerce.number().min(0).max(100).optional(),
     prepayment:   z.coerce.number().min(0).optional(),
-    paymentMethod: z.enum(['cash', 'kaspi_qr', 'kaspi_terminal', 'transfer', 'mixed']).optional(),
+    paymentMethod: z.enum(['cash', 'kaspi_qr', 'kaspi_terminal', 'transfer', 'halyk', 'mixed']).optional(),
     paymentBreakdown: z.record(z.string(), z.coerce.number().min(0)).optional(),
     expectedPaymentMethod: z.string().optional(),
     items:        z.array(itemSchema).min(1, 'Добавьте хотя бы одну позицию'),
@@ -188,9 +189,12 @@ export default function ChapanNewOrderPage() {
   const createOrder = useCreateOrder();
   const { data: catalogs } = useChapanCatalogs();
   const { data: profile } = useChapanProfile();
+  const updateBankCommission = useUpdateBankCommission();
 
   const [discountPercent, setDiscountPercent] = useState('');
   const [draftRestored, setDraftRestored] = useState(false);
+  const [editingRate, setEditingRate] = useState(false);
+  const [rateInput, setRateInput] = useState('');
 
   // File state — UI selection only; server upload endpoint not yet implemented.
   // receiptFileNames sends file names to order metadata; actual bytes are not persisted yet.
@@ -252,6 +256,14 @@ export default function ChapanNewOrderPage() {
       setValue('deliveryFee', autoFee);
     }
   }, [deliveryType, profile?.kazpostDeliveryFee, profile?.railDeliveryFee, profile?.airDeliveryFee]);
+
+  // Авто-подстановка глобальной ставки комиссии если поле пустое
+  useEffect(() => {
+    if (profile?.bankCommissionPercent && !savedDraft.current?.bankCommissionPercent) {
+      const current = watch('bankCommissionPercent');
+      if (!current) setValue('bankCommissionPercent', profile.bankCommissionPercent);
+    }
+  }, [profile?.bankCommissionPercent]);
 
   // Показываем тост один раз, если черновик был восстановлен
   useEffect(() => {
@@ -350,6 +362,25 @@ export default function ChapanNewOrderPage() {
   const mixedBreakdownRows    = buildMixedBreakdownRows(catalogPaymentMethods);
   const sizeOptions           = buildSizeCatalog(catalogs?.sizeCatalog ?? []);
   const deliveryOptions       = buildDeliveryOptions();
+
+  // Warehouse smart catalog: live dropdowns per product
+  const { data: orderFormCatalog } = useOrderFormCatalog();
+  const warehouseProductMap: Record<string, OrderFormField[]> = {};
+  if (orderFormCatalog) {
+    for (const p of orderFormCatalog.products) {
+      warehouseProductMap[p.name] = p.fields;
+    }
+  }
+  const warehouseProductNames = Object.keys(warehouseProductMap);
+  // Merged product list: chapan catalog + warehouse catalog (deduped)
+  const allProductNames = [...new Set([...products, ...warehouseProductNames])];
+  // Helper: get catalog options for a field code given current productName
+  function getCatalogOptions(productName: string, code: string): string[] {
+    const fields = warehouseProductMap[productName];
+    if (!fields) return [];
+    const field = fields.find((f) => f.code === code);
+    return field?.options.map((o) => o.label) ?? [];
+  }
 
   return (
     <div className={styles.root}>
@@ -484,6 +515,9 @@ export default function ChapanNewOrderPage() {
               const lineTotal   = Math.max(0, linePrice - lineDisc);
               const itemStockName = items[idx]?.productName;
               const itemStock = itemStockName && stockMap ? stockMap[itemStockName] : undefined;
+              // Warehouse smart catalog: check if this product has catalog fields
+              const catalogFields = warehouseProductMap[itemStockName ?? ''] ?? [];
+              const hasWarehouseCatalog = catalogFields.length > 0;
 
               return (
                 <div key={field.id} className={styles.itemCard}>
@@ -501,10 +535,10 @@ export default function ChapanNewOrderPage() {
                     <div className={styles.field}>
                       <label className={styles.label}>Модель <span className={styles.req}>*</span></label>
                       <Controller control={control} name={`items.${idx}.productName`} render={({ field: f }) => (
-                        products.length > 0 ? (
+                        allProductNames.length > 0 ? (
                           <select {...f} className={`${styles.select} ${errors.items?.[idx]?.productName ? styles.inputError : ''}`}>
                             <option value="">Выберите модель</option>
-                            {products.map((p) => <option key={p} value={p}>{p}</option>)}
+                            {allProductNames.map((p) => <option key={p} value={p}>{p}</option>)}
                             <option value="__other">Другая модель...</option>
                           </select>
                         ) : (
@@ -512,7 +546,12 @@ export default function ChapanNewOrderPage() {
                         )
                       )} />
                       {errors.items?.[idx]?.productName && <span className={styles.fieldError}>{errors.items[idx]?.productName?.message}</span>}
-                      {itemStock !== undefined && (
+                      {hasWarehouseCatalog && (
+                        <span style={{ fontSize: 10, color: 'var(--fill-accent)', fontWeight: 500 }}>
+                          ✦ Умный склад
+                        </span>
+                      )}
+                      {!hasWarehouseCatalog && itemStock !== undefined && (
                         <span className={itemStock.available ? styles.stockBadgeIn : styles.stockBadgeOut}>
                           {itemStock.available ? `В наличии: ${itemStock.qty} шт.` : 'Нет на складе'}
                         </span>
@@ -520,16 +559,18 @@ export default function ChapanNewOrderPage() {
                     </div>
                     <div className={styles.field}>
                       <label className={styles.label}>Размер <span className={styles.req}>*</span></label>
-                      <Controller control={control} name={`items.${idx}.size`} render={({ field: f }) => (
-                        sizeOptions.length > 0 ? (
+                      <Controller control={control} name={`items.${idx}.size`} render={({ field: f }) => {
+                        const catalogSizes = getCatalogOptions(items[idx]?.productName ?? '', 'size');
+                        const opts = catalogSizes.length > 0 ? catalogSizes : sizeOptions;
+                        return opts.length > 0 ? (
                           <select {...f} className={`${styles.select} ${errors.items?.[idx]?.size ? styles.inputError : ''}`}>
                             <option value="">— выбрать —</option>
-                            {sizeOptions.map((s) => <option key={s} value={s}>{s}</option>)}
+                            {opts.map((s) => <option key={s} value={s}>{s}</option>)}
                           </select>
                         ) : (
                           <input {...f} className={`${styles.input} ${errors.items?.[idx]?.size ? styles.inputError : ''}`} placeholder="48" />
-                        )
-                      )} />
+                        );
+                      }} />
                       {errors.items?.[idx]?.size && <span className={styles.fieldError}>{errors.items[idx]?.size?.message}</span>}
                     </div>
                   </div>
@@ -555,15 +596,19 @@ export default function ChapanNewOrderPage() {
                     </div>
                     <div className={styles.field}>
                       <label className={styles.label}>Длина изделия</label>
-                      <Controller control={control} name={`items.${idx}.length`} render={({ field: f }) => (
-                        <SelectOrText
-                          {...f}
-                          value={f.value ?? ''}
-                          options={['Стандарт', 'Удлинённый', 'Укороченный']}
-                          placeholder="Стандарт"
-                          className={styles.input}
-                        />
-                      )} />
+                      <Controller control={control} name={`items.${idx}.length`} render={({ field: f }) => {
+                        const catalogLengths = getCatalogOptions(items[idx]?.productName ?? '', 'length');
+                        const opts = catalogLengths.length > 0 ? catalogLengths : ['Стандарт', 'Удлинённый', 'Укороченный'];
+                        return (
+                          <SelectOrText
+                            {...f}
+                            value={f.value ?? ''}
+                            options={opts}
+                            placeholder="Стандарт"
+                            className={styles.input}
+                          />
+                        );
+                      }} />
                     </div>
                   </div>
 
@@ -571,7 +616,18 @@ export default function ChapanNewOrderPage() {
                   <div className={styles.itemRow4}>
                     <div className={styles.field}>
                       <label className={styles.label}>Цвет / материал</label>
-                      <input {...register(`items.${idx}.color`)} className={styles.input} placeholder="Тёмно-синий, бордо..." />
+                      <Controller control={control} name={`items.${idx}.color`} render={({ field: f }) => {
+                        const catalogColors = getCatalogOptions(items[idx]?.productName ?? '', 'color');
+                        return catalogColors.length > 0 ? (
+                          <select {...f} value={f.value ?? ''} className={styles.select}>
+                            <option value="">— выбрать —</option>
+                            {catalogColors.map((c) => <option key={c} value={c}>{c}</option>)}
+                            <option value="__other">Другой...</option>
+                          </select>
+                        ) : (
+                          <input {...f} value={f.value ?? ''} className={styles.input} placeholder="Тёмно-синий, бордо..." />
+                        );
+                      }} />
                     </div>
                     <div className={styles.field}>
                       <label className={styles.label}>Кол-во</label>
@@ -827,20 +883,55 @@ export default function ChapanNewOrderPage() {
                   <div className={styles.finValue} style={{ minWidth: 80 }}>
                     {bankCommissionAmount > 0 ? fmt(bankCommissionAmount) : '—'}
                   </div>
-                  <div className={styles.discountPctWrap}>
-                    <Controller control={control} name="bankCommissionPercent" render={({ field }) => (
-                      <input
-                        type="number" min="0" max="100" step="0.1"
-                        className={styles.discountPctInput}
-                        placeholder="0"
-                        value={field.value ?? ''}
-                        onChange={(e) => field.onChange(parseOptionalAmount(e.target.value))}
-                        onWheel={(e) => e.currentTarget.blur()}
-                        onFocus={(e) => e.target.select()}
-                      />
-                    )} />
-                    <span className={styles.discountPctSymbol}>%</span>
-                  </div>
+                  {editingRate ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <div className={styles.discountPctWrap}>
+                        <input
+                          type="number" min="0" max="100" step="0.1"
+                          className={styles.discountPctInput}
+                          placeholder="0"
+                          value={rateInput}
+                          autoFocus
+                          onChange={(e) => setRateInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Escape') { setEditingRate(false); }
+                          }}
+                          onWheel={(e) => e.currentTarget.blur()}
+                        />
+                        <span className={styles.discountPctSymbol}>%</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const v = parseFloat(rateInput);
+                          const safe = isNaN(v) ? 0 : Math.min(100, Math.max(0, v));
+                          setValue('bankCommissionPercent', safe || undefined);
+                          updateBankCommission.mutate(safe);
+                          setEditingRate(false);
+                        }}
+                        style={{ padding: '4px 10px', fontSize: 12, fontWeight: 600, background: 'var(--fill-accent)', color: 'var(--text-on-accent)', border: 'none', borderRadius: 6, cursor: 'pointer', flexShrink: 0 }}
+                      >Сохранить</button>
+                      <button
+                        type="button"
+                        onClick={() => setEditingRate(false)}
+                        style={{ padding: '4px 8px', fontSize: 12, background: 'none', color: 'var(--text-tertiary)', border: '1px solid var(--border-subtle)', borderRadius: 6, cursor: 'pointer', flexShrink: 0 }}
+                      >Отмена</button>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: bankCommissionPct > 0 ? 'var(--text-primary)' : 'var(--text-tertiary)' }}>
+                        {bankCommissionPct > 0 ? `${bankCommissionPct}%` : '—'}
+                      </span>
+                      <button
+                        type="button"
+                        title="Изменить ставку комиссии"
+                        onClick={() => { setRateInput(bankCommissionPct > 0 ? String(bankCommissionPct) : ''); setEditingRate(true); }}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', display: 'inline-flex', alignItems: 'center', color: 'var(--text-tertiary)', borderRadius: 4 }}
+                      >
+                        <Pencil size={12} />
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
 

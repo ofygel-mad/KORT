@@ -55,6 +55,7 @@ const PAYMENT_METHOD_LABEL: Record<string, string> = {
   kaspi_qr: 'Kaspi QR',
   kaspi_terminal: 'Kaspi терминал',
   transfer: 'Перевод',
+  halyk: 'Халык',
   mixed: 'Смешанный',
 };
 

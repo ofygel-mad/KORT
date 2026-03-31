@@ -6,17 +6,17 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   testDir: './tests/e2e',
-  fullyParallel: true,
+  fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  workers: 1,
   reporter: [
     ['html'],
     ['junit', { outputFile: 'test-results/junit.xml' }],
   ],
   globalSetup: path.resolve(__dirname, './tests/e2e/globalSetup.ts'),
   use: {
-    baseURL: 'http://localhost:4173',
+    baseURL: 'http://127.0.0.1:4173',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
@@ -39,9 +39,18 @@ export default defineConfig({
     }]),
   ],
 
-  webServer: {
-    command: 'pnpm preview',
-    url: 'http://localhost:4173',
-    reuseExistingServer: !process.env.CI,
-  },
+  webServer: [
+    {
+      command: 'powershell -NoProfile -ExecutionPolicy Bypass -File tests/e2e/start-backend.ps1',
+      url: 'http://127.0.0.1:8001/api/v1/health',
+      reuseExistingServer: !process.env.CI,
+      timeout: 240_000,
+    },
+    {
+      command: 'powershell -NoProfile -ExecutionPolicy Bypass -File tests/e2e/start-frontend.ps1',
+      url: 'http://127.0.0.1:4173',
+      reuseExistingServer: !process.env.CI,
+      timeout: 240_000,
+    },
+  ],
 });

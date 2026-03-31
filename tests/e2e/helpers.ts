@@ -1,19 +1,15 @@
 import { expect, type Page } from '@playwright/test';
 
 async function setInputValue(page: Page, placeholder: string, value: string) {
-  await page.getByPlaceholder(placeholder).evaluate((element, nextValue) => {
-    const input = element as HTMLInputElement;
-    const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
-    descriptor?.set?.call(input, nextValue);
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-    input.dispatchEvent(new Event('change', { bubbles: true }));
-  }, value);
+  const input = page.getByPlaceholder(placeholder);
+  await expect(input).toBeVisible({ timeout: 10000 });
+  await input.fill(value);
 }
 
 async function triggerClickByRole(page: Page, name: string) {
-  await page.getByRole('button', { name, exact: true }).evaluate((element) => {
-    (element as HTMLButtonElement).click();
-  });
+  const button = page.getByRole('button', { name, exact: true });
+  await expect(button).toBeVisible({ timeout: 10000 });
+  await button.click();
 }
 
 export async function preparePage(page: Page) {
@@ -24,12 +20,29 @@ export async function preparePage(page: Page) {
 
 export async function clearSession(page: Page) {
   await page.context().clearCookies();
-  // Navigate to the app to get same-origin window context, then clear storage
-  await page.goto('/', { waitUntil: 'load' });
-  await page.evaluate(() => {
+  await page.goto('/auth/login', { waitUntil: 'load' });
+  await page.evaluate(async () => {
+    try {
+      const auth = await import('/src/shared/stores/auth.ts');
+      auth.useAuthStore.getState().clearAuth();
+    } catch {
+      // Ignore while the app bundle is still booting.
+    }
+
+    try {
+      const pin = await import('/src/shared/stores/pin.ts');
+      pin.usePinStore.getState().clearPin();
+    } catch {
+      // Ignore while the app bundle is still booting.
+    }
+
     window.localStorage.clear();
     window.sessionStorage.clear();
+    window.sessionStorage.setItem('kort.workspace:intro-v1', '1');
   });
+  await page.reload({ waitUntil: 'load' });
+  await page.goto('/auth/login', { waitUntil: 'load' });
+  await expect(page).toHaveURL(/\/auth\/login$/);
 }
 
 export async function navigateWithinApp(page: Page, route: string) {
@@ -40,29 +53,11 @@ export async function navigateWithinApp(page: Page, route: string) {
   await expect(page).toHaveURL(new RegExp(`${route.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`));
 }
 
-export async function loginAs(page: Page, email: string, password = 'demo') {
-  // Clear cookies first
-  await page.context().clearCookies();
-
-  // Navigate to login page; the app may redirect us away if localStorage still has tokens
+export async function loginAs(page: Page, email: string, password = 'demo1234') {
   await preparePage(page);
-  await page.goto('/auth/login', { waitUntil: 'load' });
-
-  // Now we have a window context — clear storage and reload so the app starts fresh
-  await page.evaluate(() => {
-    window.localStorage.clear();
-    window.sessionStorage.clear();
-    window.sessionStorage.setItem('kort.workspace:intro-v1', '1');
-  });
-
-  // Reload so the app re-reads the now-empty storage and stays on the login page
-  await page.reload({ waitUntil: 'load' });
-
-  // Wait for form elements to be visible before interacting
-  await expect(page.getByPlaceholder('Email или номер телефона')).toBeVisible({ timeout: 10000 });
-
+  await clearSession(page);
   await setInputValue(page, 'Email или номер телефона', email);
   await setInputValue(page, 'Пароль', password);
   await triggerClickByRole(page, 'Войти');
-  await expect(page).not.toHaveURL(/\/auth\/login/);
+  await page.waitForURL((url) => !url.pathname.includes('/auth/login'), { timeout: 15000 });
 }

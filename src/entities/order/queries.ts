@@ -505,6 +505,18 @@ export const useSaveProfile = () => {
   });
 };
 
+export const useUpdateBankCommission = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (percent: number) => chapanSettingsApi.updateBankCommission(percent),
+    onSuccess: (_data, percent) => {
+      qc.invalidateQueries({ queryKey: orderKeys.settings });
+      toast.success(`Ставка комиссии банка сохранена: ${percent}%`);
+    },
+    onError: () => toast.error('Не удалось сохранить ставку комиссии'),
+  });
+};
+
 export const useChapanClients = () =>
   useQuery({
     queryKey: orderKeys.clients,

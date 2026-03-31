@@ -23,7 +23,7 @@ async function globalSetup() {
 
     // Navigate to login page
     console.log('📍 Navigating to login page...');
-    await page.goto('http://localhost:4173/auth/login', { waitUntil: 'networkidle' });
+    await page.goto('http://127.0.0.1:4173/auth/login', { waitUntil: 'networkidle' });
     console.log('✅ Login page loaded');
 
     // Test credentials for CI/E2E tests

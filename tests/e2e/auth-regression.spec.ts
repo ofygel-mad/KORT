@@ -50,7 +50,7 @@ test('login rejects an invalid password for an existing account', async ({ page,
   const email = `invalid-password+${unique}@demo.kz`;
   const password = 'superpass1';
 
-  await request.post('http://127.0.0.1:8000/api/v1/auth/register/company', {
+  await request.post('http://127.0.0.1:8001/api/v1/auth/register/company', {
     data: {
       company_name: `Password Check ${unique}`,
       full_name: `Password Owner ${unique}`,

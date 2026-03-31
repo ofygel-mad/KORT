@@ -191,7 +191,7 @@ export interface CreateOrderDto {
   bankCommissionPercent?: number;
   bankCommissionAmount?: number;
   prepayment?: number;
-  paymentMethod?: 'cash' | 'kaspi_qr' | 'kaspi_terminal' | 'transfer' | 'mixed';
+  paymentMethod?: 'cash' | 'kaspi_qr' | 'kaspi_terminal' | 'transfer' | 'halyk' | 'mixed';
   paymentBreakdown?: Record<string, number>;
   receiptFileNames?: string[];
   items?: CreateOrderItemDto[];
@@ -233,7 +233,7 @@ export interface UpdateOrderDto {
   bankCommissionAmount?: number;
   // Payment
   prepayment?: number;
-  paymentMethod?: 'cash' | 'kaspi_qr' | 'kaspi_terminal' | 'transfer' | 'mixed';
+  paymentMethod?: 'cash' | 'kaspi_qr' | 'kaspi_terminal' | 'transfer' | 'halyk' | 'mixed';
   expectedPaymentMethod?: string;
   paymentBreakdown?: Record<string, number>;
   items?: CreateOrderItemDto[];
@@ -267,6 +267,7 @@ export interface ChapanProfile {
   kazpostDeliveryFee: number;
   railDeliveryFee: number;
   airDeliveryFee: number;
+  bankCommissionPercent: number;
 }
 
 export interface ChapanClient {

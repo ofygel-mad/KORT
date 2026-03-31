@@ -4,8 +4,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { AlertTriangle, Calculator, ChevronLeft, Plus, Trash2, X } from 'lucide-react';
-import { useOrder, useUpdateOrder, useChapanCatalogs, useChapanProfile, useRequestItemChange } from '../../../../entities/order/queries';
+import { AlertTriangle, Calculator, ChevronLeft, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { useOrder, useUpdateOrder, useChapanCatalogs, useChapanProfile, useRequestItemChange, useUpdateBankCommission } from '../../../../entities/order/queries';
 import type { Urgency } from '../../../../entities/order/types';
 import { formatPersonNameInput } from '../../../../shared/utils/person';
 import { formatKazakhPhoneInput, isKazakhPhoneComplete } from '../../../../shared/utils/kz';
@@ -77,7 +77,7 @@ const schema = z.object({
   deliveryFee:   z.coerce.number().min(0).optional(),
   bankCommissionPercent: z.coerce.number().min(0).max(100).optional(),
   prepayment:   z.coerce.number().min(0).optional(),
-  paymentMethod: z.enum(['cash', 'kaspi_qr', 'kaspi_terminal', 'transfer', 'mixed']).optional(),
+  paymentMethod: z.enum(['cash', 'kaspi_qr', 'kaspi_terminal', 'transfer', 'halyk', 'mixed']).optional(),
   expectedPaymentMethod: z.string().optional(),
   paymentBreakdown: z.record(z.string(), z.coerce.number().min(0)).optional(),
   items:       z.array(itemSchema).min(1, 'Добавьте хотя бы одну позицию'),
@@ -115,6 +115,7 @@ export default function ChapanEditOrderPage() {
   const { data: order, isLoading, isError } = useOrder(id!);
   const updateOrder = useUpdateOrder();
   const requestItemChange = useRequestItemChange();
+  const updateBankCommission = useUpdateBankCommission();
   const { data: catalogs } = useChapanCatalogs();
   const { data: profile } = useChapanProfile();
 
@@ -150,6 +151,8 @@ export default function ChapanEditOrderPage() {
   const prepaymentRaw    = watch('prepayment');
   const paymentBreakdownWatch = watch('paymentBreakdown');
   const [discountPercent, setDiscountPercent] = useState('');
+  const [editingRate, setEditingRate] = useState(false);
+  const [rateInput, setRateInput] = useState('');
 
   const deliveryFeeMap: Record<string, number> = {
     'Казпочта': profile?.kazpostDeliveryFee ?? 2000,
@@ -788,20 +791,57 @@ export default function ChapanEditOrderPage() {
                   <div className={styles.finValue} style={{ minWidth: 80 }}>
                     {bankCommAmount > 0 ? fmt(bankCommAmount) : '—'}
                   </div>
-                  <div className={styles.discountPctWrap}>
-                    <Controller control={control} name="bankCommissionPercent" render={({ field }) => (
-                      <input
-                        type="number" min="0" max="100" step="0.1"
-                        className={styles.discountPctInput}
-                        placeholder="0"
-                        value={field.value ?? ''}
-                        onChange={e => field.onChange(parseOptionalAmount(e.target.value))}
-                        onWheel={e => e.currentTarget.blur()}
-                        onFocus={e => e.target.select()}
-                      />
-                    )} />
-                    <span className={styles.discountPctSymbol}>%</span>
-                  </div>
+                  {editingRate ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <div className={styles.discountPctWrap}>
+                        <input
+                          type="number" min="0" max="100" step="0.1"
+                          className={styles.discountPctInput}
+                          placeholder="0"
+                          value={rateInput}
+                          autoFocus
+                          onChange={e => {
+                            setRateInput(e.target.value);
+                            const v = parseFloat(e.target.value);
+                            setValue('bankCommissionPercent', isNaN(v) ? undefined : Math.min(100, Math.max(0, v)));
+                          }}
+                          onWheel={e => e.currentTarget.blur()}
+                          onFocus={e => e.target.select()}
+                        />
+                        <span className={styles.discountPctSymbol}>%</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const v = parseFloat(rateInput);
+                          const safe = isNaN(v) ? 0 : Math.min(100, Math.max(0, v));
+                          setValue('bankCommissionPercent', safe || undefined);
+                          updateBankCommission.mutate(safe);
+                          setEditingRate(false);
+                        }}
+                        style={{ padding: '4px 10px', fontSize: 12, fontWeight: 600, background: 'var(--fill-accent)', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', whiteSpace: 'nowrap' }}
+                      >Сохранить</button>
+                      <button
+                        type="button"
+                        onClick={() => setEditingRate(false)}
+                        style={{ padding: '4px 8px', fontSize: 12, background: 'none', border: '1px solid var(--border-secondary)', borderRadius: 6, cursor: 'pointer', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}
+                      >Отмена</button>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: (bankCommPctRaw ?? 0) > 0 ? 'var(--text-primary)' : 'var(--text-tertiary)' }}>
+                        {(bankCommPctRaw ?? 0) > 0 ? `${bankCommPctRaw}%` : '—'}
+                      </span>
+                      <button
+                        type="button"
+                        title="Изменить ставку комиссии"
+                        onClick={() => { setRateInput((bankCommPctRaw ?? 0) > 0 ? String(bankCommPctRaw) : ''); setEditingRate(true); }}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', display: 'inline-flex', alignItems: 'center', color: 'var(--text-tertiary)', borderRadius: 4 }}
+                      >
+                        <Pencil size={12} />
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
 

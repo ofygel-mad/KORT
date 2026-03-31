@@ -52,6 +52,15 @@ const VIEW_OPTIONS: { key: ViewMode; label: string; Icon: React.ElementType }[] 
 function viewStorageKey(userId?: string) { return `chapan_orders_view_${userId ?? 'guest'}`; }
 function groupStorageKey(userId?: string) { return `chapan_orders_grouped_${userId ?? 'guest'}`; }
 
+function handleClickableKey(event: React.KeyboardEvent, onActivate: () => void) {
+  if (event.key !== 'Enter' && event.key !== ' ') {
+    return;
+  }
+
+  event.preventDefault();
+  onActivate();
+}
+
 // ── Grouping logic ────────────────────────────────────────────────────────────
 
 const BATCH_WINDOW_DAYS = 2;
@@ -475,10 +484,13 @@ const OrderCard = memo(function OrderCard({ order, onSelectOrder, hasAlert, stoc
   const isDemanding = order.isDemandingClient ?? (order.priority === 'vip');
 
   return (
-    <button
-      className={`${styles.card} ${hasAlert ? styles.cardAlert : ''} ${isUrgent && !hasAlert ? styles.cardUrgent : ''}`}
+    <div
+      className={`${styles.card} ${hasAlert ? styles.cardAlert : ''} ${isUrgent ? styles.cardUrgent : ''}`}
       style={{ '--status-color': STATUS_COLOR[order.status] } as React.CSSProperties}
+      role="button"
+      tabIndex={0}
       onClick={() => onSelectOrder(order.id)}
+      onKeyDown={(event) => handleClickableKey(event, () => onSelectOrder(order.id))}
     >
       {first && (
         <div className={styles.cardItems}>
@@ -529,7 +541,7 @@ const OrderCard = memo(function OrderCard({ order, onSelectOrder, hasAlert, stoc
           </span>
         )}
       </div>
-    </button>
+    </div>
   );
 });
 
@@ -665,10 +677,13 @@ const OrderRow = memo(function OrderRow({ order, onSelectOrder, hasAlert, stockM
   const isDemanding = order.isDemandingClient ?? (order.priority === 'vip');
 
   return (
-    <button
-      className={`${styles.row} ${hasAlert ? styles.rowAlert : ''} ${isUrgent && !hasAlert ? styles.rowUrgent : ''}`}
+    <div
+      className={`${styles.row} ${hasAlert ? styles.rowAlert : ''} ${isUrgent ? styles.rowUrgent : ''}`}
       style={{ '--status-color': STATUS_COLOR[order.status] } as React.CSSProperties}
+      role="button"
+      tabIndex={0}
       onClick={() => onSelectOrder(order.id)}
+      onKeyDown={(event) => handleClickableKey(event, () => onSelectOrder(order.id))}
     >
       <span className={styles.rowStripe} />
       <div className={styles.rowProduct}>
@@ -723,7 +738,7 @@ const OrderRow = memo(function OrderRow({ order, onSelectOrder, hasAlert, stockM
           </button>
         )}
       </div>
-    </button>
+    </div>
   );
 });
 
