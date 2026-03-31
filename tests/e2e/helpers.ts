@@ -32,7 +32,11 @@ export async function navigateWithinApp(page: Page, route: string) {
 
 export async function loginAs(page: Page, email: string, password = 'demo') {
   await preparePage(page);
-  await page.goto('/auth/login');
+  await page.goto('/auth/login', { waitUntil: 'networkidle' });
+
+  // Wait for form elements to be visible before interacting
+  await expect(page.getByPlaceholder('Email или номер телефона')).toBeVisible({ timeout: 10000 });
+
   await setInputValue(page, 'Email или номер телефона', email);
   await setInputValue(page, 'Пароль', password);
   await triggerClickByRole(page, 'Войти');
