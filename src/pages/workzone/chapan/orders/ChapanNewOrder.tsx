@@ -6,11 +6,17 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { ChevronLeft, Plus, Trash2, Calculator, AlertCircle, Paperclip, X, ImagePlus } from 'lucide-react';
 import { useId } from 'react';
-import { useCreateOrder, useChapanCatalogs } from '../../../../entities/order/queries';
+import { useCreateOrder, useChapanCatalogs, useChapanProfile } from '../../../../entities/order/queries';
 import { useAuthStore } from '../../../../shared/stores/auth';
 import { useProductsAvailability } from '../../../../entities/warehouse/queries';
 import { attachmentsApi } from '../../../../entities/order/api';
 import type { Urgency } from '../../../../entities/order/types';
+import {
+  buildDeliveryOptions,
+  buildMixedBreakdownRows,
+  buildPaymentMethodOptions,
+  buildSizeCatalog,
+} from '../../../../shared/lib/chapanCatalogDefaults';
 import { formatPersonNameInput } from '../../../../shared/utils/person';
 import { formatKazakhPhoneInput, isKazakhPhoneComplete } from '../../../../shared/utils/kz';
 import styles from './ChapanNewOrder.module.css';
@@ -43,24 +49,6 @@ function clearDraft(userId?: string) {
 
 // ─── Payment methods ──────────────────────────────────────────────────────────
 type PaymentMethodValue = 'cash' | 'kaspi_qr' | 'kaspi_terminal' | 'transfer' | 'mixed';
-
-const PAYMENT_METHODS: Array<{ value: PaymentMethodValue; label: string }> = [
-  { value: 'cash',           label: 'Наличные' },
-  { value: 'kaspi_qr',       label: 'Kaspi QR' },
-  { value: 'kaspi_terminal', label: 'Kaspi Терминал' },
-  { value: 'transfer',       label: 'Перевод' },
-  { value: 'mixed',          label: 'Смешанный' },
-];
-
-const MIXED_METHODS: Array<{
-  key: 'mixedCash' | 'mixedKaspiQr' | 'mixedKaspiTerminal' | 'mixedTransfer';
-  label: string;
-}> = [
-  { key: 'mixedCash',          label: 'Наличные' },
-  { key: 'mixedKaspiQr',       label: 'Kaspi QR' },
-  { key: 'mixedKaspiTerminal', label: 'Kaspi Терминал' },
-  { key: 'mixedTransfer',      label: 'Перевод' },
-];
 
 // ─── Schemas ──────────────────────────────────────────────────────────────────
 const itemSchema = z.object({
@@ -95,10 +83,7 @@ const schema = z
     bankCommissionPercent: z.coerce.number().min(0).max(100).optional(),
     prepayment:   z.coerce.number().min(0).optional(),
     paymentMethod: z.enum(['cash', 'kaspi_qr', 'kaspi_terminal', 'transfer', 'mixed']).optional(),
-    mixedCash:          z.coerce.number().min(0).optional(),
-    mixedKaspiQr:       z.coerce.number().min(0).optional(),
-    mixedKaspiTerminal: z.coerce.number().min(0).optional(),
-    mixedTransfer:      z.coerce.number().min(0).optional(),
+    paymentBreakdown: z.record(z.string(), z.coerce.number().min(0)).optional(),
     expectedPaymentMethod: z.string().optional(),
     items:        z.array(itemSchema).min(1, 'Добавьте хотя бы одну позицию'),
     managerNote:  z.string().optional(),
@@ -120,13 +105,9 @@ const schema = z
     }
 
     if (data.paymentMethod === 'mixed' && (data.prepayment ?? 0) > 0) {
-      const mixedSum =
-        (Number(data.mixedCash) || 0) +
-        (Number(data.mixedKaspiQr) || 0) +
-        (Number(data.mixedKaspiTerminal) || 0) +
-        (Number(data.mixedTransfer) || 0);
+      const mixedSum = Object.values(data.paymentBreakdown ?? {}).reduce((s, v) => s + (Number(v) || 0), 0);
       if (mixedSum > 0 && Math.abs(mixedSum - (data.prepayment ?? 0)) > 1) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Сумма разбивки должна совпадать с предоплатой', path: ['mixedCash'] });
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Сумма разбивки должна совпадать с предоплатой', path: ['paymentBreakdown'] });
       }
     }
   });
@@ -134,15 +115,7 @@ const schema = z
 type FormData = z.infer<typeof schema>;
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-// F3: Автоматическая сумма доставки по типу
-const DELIVERY_FEE_MAP: Record<string, number> = {
-  'Казпочта': 2000,
-  'Жд': 3000,
-  'Авиа': 5000,
-};
-
 const CITIES   = ['Алматы', 'Астана', 'Шымкент', 'Атырау', 'Актобе', 'Тараз', 'Павлодар', 'Другой город'];
-const DELIVERY = ['Самовывоз', 'Курьер по городу', 'Казпочта', 'СДЭК', 'Другое'];
 const SOURCES  = ['Instagram', 'WhatsApp', 'Telegram', 'Звонок', 'Рекомендация', 'Сайт', 'Другое'];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -214,6 +187,7 @@ export default function ChapanNewOrderPage() {
   const navigate    = useNavigate();
   const createOrder = useCreateOrder();
   const { data: catalogs } = useChapanCatalogs();
+  const { data: profile } = useChapanProfile();
 
   const [discountPercent, setDiscountPercent] = useState('');
   const [draftRestored, setDraftRestored] = useState(false);
@@ -265,13 +239,20 @@ export default function ChapanNewOrderPage() {
 
   const deliveryType          = watch('deliveryType');
 
+  const deliveryFeeMap: Record<string, number> = {
+    'Казпочта': profile?.kazpostDeliveryFee ?? 2000,
+    'Жд':       profile?.railDeliveryFee    ?? 3000,
+    'Авиа':     profile?.airDeliveryFee     ?? 5000,
+  };
+
   // F3: Автоматически проставляем сумму доставки при выборе типа
   useEffect(() => {
-    const autoFee = DELIVERY_FEE_MAP[deliveryType ?? ''];
+    const autoFee = deliveryFeeMap[deliveryType ?? ''];
     if (autoFee !== undefined) {
       setValue('deliveryFee', autoFee);
     }
-  }, [deliveryType]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deliveryType, profile?.kazpostDeliveryFee, profile?.railDeliveryFee, profile?.airDeliveryFee]);
 
   // Показываем тост один раз, если черновик был восстановлен
   useEffect(() => {
@@ -291,10 +272,7 @@ export default function ChapanNewOrderPage() {
   const paymentMethod    = watch('paymentMethod');
   const orderDiscountRaw = watch('orderDiscount');
   const prepaymentRaw    = watch('prepayment');
-  const mixedCash          = Number(watch('mixedCash'))          || 0;
-  const mixedKaspiQr       = Number(watch('mixedKaspiQr'))       || 0;
-  const mixedKaspiTerminal = Number(watch('mixedKaspiTerminal')) || 0;
-  const mixedTransfer      = Number(watch('mixedTransfer'))      || 0;
+  const paymentBreakdownWatch = watch('paymentBreakdown');
 
   const itemsTotal = items.reduce((sum, item) => {
     const line = (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0);
@@ -314,7 +292,7 @@ export default function ChapanNewOrderPage() {
   const bankCommissionAmount  = Math.round(subtotalAfterDiscount * bankCommissionPct / 100);
   const finalTotal            = Math.max(0, subtotalAfterDiscount + deliveryFee + bankCommissionAmount);
   const debt                  = Math.max(0, finalTotal - prepayment);
-  const mixedSum      = mixedCash + mixedKaspiQr + mixedKaspiTerminal + mixedTransfer;
+  const mixedSum = Object.values(paymentBreakdownWatch ?? {}).reduce((s, v) => s + (Number(v) || 0), 0);
 
   function fmt(n: number) {
     return `${new Intl.NumberFormat('ru-KZ', { maximumFractionDigits: 0 }).format(n)} ₸`;
@@ -343,12 +321,11 @@ export default function ChapanNewOrderPage() {
       bankCommissionPercent: bankCommissionPct > 0 ? bankCommissionPct : undefined,
       bankCommissionAmount:  bankCommissionAmount > 0 ? bankCommissionAmount : undefined,
       dueDate:       data.dueDate   || undefined,
-      prepayment:    hasPrepayment ? data.prepayment : undefined,
-      paymentMethod: hasPrepayment ? data.paymentMethod : undefined,
-      mixedCash:          hasPrepayment && isMixed ? (data.mixedCash ?? 0) : undefined,
-      mixedKaspiQr:       hasPrepayment && isMixed ? (data.mixedKaspiQr ?? 0) : undefined,
-      mixedKaspiTerminal: hasPrepayment && isMixed ? (data.mixedKaspiTerminal ?? 0) : undefined,
-      mixedTransfer:      hasPrepayment && isMixed ? (data.mixedTransfer ?? 0) : undefined,
+      prepayment:       hasPrepayment ? data.prepayment : undefined,
+      paymentMethod:    hasPrepayment ? data.paymentMethod : undefined,
+      paymentBreakdown: hasPrepayment && isMixed
+        ? Object.fromEntries(Object.entries(data.paymentBreakdown ?? {}).filter(([, v]) => Number(v) > 0))
+        : undefined,
       items: payloadItems,
       managerNote: data.managerNote?.trim() || undefined,
     });
@@ -368,17 +345,12 @@ export default function ChapanNewOrderPage() {
     navigate('/workzone/chapan/orders');
   }
 
-  const products        = catalogs?.productCatalog        ?? [];
-  const sizes           = catalogs?.sizeCatalog           ?? [];
-  // Sprint 4: способы оплаты из каталога; fallback на hardcoded если каталог пуст
-  const catalogPaymentMethods = (catalogs?.paymentMethodCatalog ?? []);
-  const activePaymentMethods: Array<{ value: string; label: string }> =
-    catalogPaymentMethods.length > 0
-      ? [
-          ...catalogPaymentMethods.map(name => ({ value: name, label: name })),
-          { value: 'mixed', label: 'Смешанный' },
-        ]
-      : PAYMENT_METHODS;
+  const products             = catalogs?.productCatalog ?? [];
+  const catalogPaymentMethods = catalogs?.paymentMethodCatalog ?? [];
+  const activePaymentMethods  = buildPaymentMethodOptions(catalogPaymentMethods);
+  const mixedBreakdownRows    = buildMixedBreakdownRows(catalogPaymentMethods);
+  const sizeOptions           = buildSizeCatalog(catalogs?.sizeCatalog ?? []);
+  const deliveryOptions       = buildDeliveryOptions();
 
   return (
     <div className={styles.root}>
@@ -475,7 +447,7 @@ export default function ChapanNewOrderPage() {
               <div className={styles.field}>
                 <label className={styles.label}>Доставка</label>
                 <Controller control={control} name="deliveryType" render={({ field }) => (
-                  <SelectOrText {...field} value={field.value ?? ''} options={DELIVERY} placeholder="Выберите или введите" className={styles.input} />
+                  <SelectOrText {...field} value={field.value ?? ''} options={deliveryOptions} placeholder="Выберите или введите" className={styles.input} />
                 )} />
               </div>
             </div>
@@ -550,10 +522,10 @@ export default function ChapanNewOrderPage() {
                     <div className={styles.field}>
                       <label className={styles.label}>Размер <span className={styles.req}>*</span></label>
                       <Controller control={control} name={`items.${idx}.size`} render={({ field: f }) => (
-                        sizes.length > 0 ? (
+                        sizeOptions.length > 0 ? (
                           <select {...f} className={`${styles.select} ${errors.items?.[idx]?.size ? styles.inputError : ''}`}>
                             <option value="">— выбрать —</option>
-                            {sizes.map((s) => <option key={s} value={s}>{s}</option>)}
+                            {sizeOptions.map((s) => <option key={s} value={s}>{s}</option>)}
                           </select>
                         ) : (
                           <input {...f} className={`${styles.input} ${errors.items?.[idx]?.size ? styles.inputError : ''}`} placeholder="48" />
@@ -947,10 +919,10 @@ export default function ChapanNewOrderPage() {
             {paymentMethod === 'mixed' && (
               <div className={styles.mixedBreakdown}>
                 <div className={styles.mixedBreakdownTitle}>Разбивка по способам оплаты</div>
-                {MIXED_METHODS.map((m) => (
-                  <div key={m.key} className={styles.mixedRow}>
+                {mixedBreakdownRows.map((m) => (
+                  <div key={m.value} className={styles.mixedRow}>
                     <span className={styles.mixedLabel}>{m.label}</span>
-                    <Controller control={control} name={m.key} render={({ field }) => (
+                    <Controller control={control} name={`paymentBreakdown.${m.value}`} render={({ field }) => (
                       <input
                         type="number" min="0" inputMode="numeric"
                         className={styles.mixedInput}
@@ -971,7 +943,7 @@ export default function ChapanNewOrderPage() {
                     )}
                   </div>
                 )}
-                {errors.mixedCash && <span className={styles.fieldError}>{errors.mixedCash.message}</span>}
+                {(errors as any).paymentBreakdown?.message && <span className={styles.fieldError}>{(errors as any).paymentBreakdown.message}</span>}
               </div>
             )}
 

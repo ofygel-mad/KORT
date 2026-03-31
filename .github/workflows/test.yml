@@ -122,10 +122,15 @@ jobs:
           flags: frontend
           token: ${{ secrets.CODECOV_TOKEN }}
 
-  # ─── Frontend: E2E Tests with Playwright ──────────────────────────────────
+  # ─── Frontend: E2E Tests with Playwright (Sharded) ─────────────────────────
   frontend-e2e:
-    name: Frontend E2E Tests (Playwright)
+    name: Frontend E2E Tests (Playwright) - Shard ${{ matrix.shard }}/${{ matrix.totalShards }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+        totalShards: [2]
     services:
       postgres:
         image: postgres:16-alpine
@@ -154,6 +159,13 @@ jobs:
         with:
           node-version: '20'
           cache: 'pnpm'
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-browsers-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: playwright-browsers-
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -184,23 +196,23 @@ jobs:
           NODE_ENV: test
           JWT_ACCESS_SECRET: "test-secret-key-for-ci-only-min32chars!!"
           JWT_REFRESH_SECRET: "test-refresh-key-for-ci-only-min32chars!!"
-          CORS_ORIGIN: "http://localhost:5173"
+          CORS_ORIGIN: "http://localhost:4173"
         run: |
           node dist/index.js &
           sleep 3
           curl -s http://localhost:8000/health || echo "⚠️ Backend health check timeout"
 
       - name: Install Playwright browsers
-        run: pnpm exec playwright install --with-deps
+        run: pnpm exec playwright install --with-deps chromium firefox webkit
 
-      - name: Run E2E tests
-        run: pnpm test:e2e
+      - name: Run E2E tests (Shard ${{ matrix.shard }}/${{ matrix.totalShards }})
+        run: pnpm test:e2e --shard=${{ matrix.shard }}/${{ matrix.totalShards }}
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: playwright-report
+          name: playwright-report-shard-${{ matrix.shard }}
           path: playwright-report/
 
   # ─── Build verification ───────────────────────────────────────────────────

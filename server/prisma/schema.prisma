@@ -480,6 +480,9 @@ model ChapanProfile {
   publicIntakeDescription String  @default("") @map("public_intake_description")
   publicIntakeEnabled     Boolean @default(true) @map("public_intake_enabled")
   supportLabel            String  @default("") @map("support_label")
+  kazpostDeliveryFee      Int     @default(2000) @map("kazpost_delivery_fee")
+  railDeliveryFee         Int     @default(3000) @map("rail_delivery_fee")
+  airDeliveryFee          Int     @default(5000) @map("air_delivery_fee")
 
   org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
 
@@ -632,6 +635,7 @@ model ChapanOrder {
   deliveryFee           Float     @default(0) @map("delivery_fee")
   bankCommissionPercent Float     @default(0) @map("bank_commission_percent")
   bankCommissionAmount  Float     @default(0) @map("bank_commission_amount")
+  paymentBreakdown      Json?     @map("payment_breakdown")
   requiresInvoice       Boolean   @default(true) @map("requires_invoice")
   isArchived      Boolean   @default(false) @map("is_archived")
   archivedAt    DateTime? @map("archived_at")

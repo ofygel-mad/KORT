@@ -7,6 +7,7 @@ import { useProductsAvailability } from '../../../../entities/warehouse/queries'
 import type { ProductsAvailabilityMap } from '../../../../entities/warehouse/types';
 import { useAuthStore } from '../../../../shared/stores/auth';
 import { useEmployeePermissions } from '../../../../shared/hooks/useEmployeePermissions';
+import { buildItemLine } from '../../../../shared/utils/itemLine';
 import { useChapanUiStore } from '../../../../features/workzone/chapan/store';
 import { useUnpaidAlerts } from '../../../../entities/alert/queries';
 import OrderDetailDrawer from './OrderDetailDrawer';
@@ -40,15 +41,6 @@ function fmtDate(d: string | null) {
 const ORDER_MONEY_FORMATTER = new Intl.NumberFormat('ru-KZ', { maximumFractionDigits: 0 });
 const ORDER_DATE_FORMATTER = new Intl.DateTimeFormat('ru-KZ', { day: '2-digit', month: 'short' });
 
-// D2: Unified item line — «Товар · Цвет · Модель (муж/жен)»
-function buildItemLine(item: ChapanOrder['items'][number]): string {
-  const parts: string[] = [];
-  if (item.productName) parts.push(item.productName);
-  if (item.color)       parts.push(item.color);
-  const genderPart = item.gender ? `(${item.gender})` : '';
-  const line = parts.join(' · ');
-  return genderPart ? `${line} ${genderPart}` : line;
-}
 
 type ViewMode = 'grid' | 'list';
 
