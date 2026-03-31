@@ -214,6 +214,7 @@ jobs:
           DATABASE_URL: postgresql://kort:kort_secret@localhost:5432/kort_db_test
         run: |
           pnpm run db:push
+          pnpm run db:seed
           pnpm run build
 
       - name: Build frontend
