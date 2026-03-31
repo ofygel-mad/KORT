@@ -32,7 +32,7 @@ export async function navigateWithinApp(page: Page, route: string) {
 
 export async function loginAs(page: Page, email: string, password = 'demo') {
   await preparePage(page);
-  await page.goto('/auth/login', { waitUntil: 'networkidle' });
+  await page.goto('/auth/login', { waitUntil: 'load' });
 
   // Wait for form elements to be visible before interacting
   await expect(page.getByPlaceholder('Email или номер телефона')).toBeVisible({ timeout: 10000 });

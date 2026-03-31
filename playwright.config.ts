@@ -32,10 +32,11 @@ export default defineConfig({
       name: 'firefox',
       use: { ...devices['Desktop Firefox'], storageState: 'tests/e2e/.auth/firefox.json' },
     },
-    {
+    // WebKit requires libwoff2dec which is unavailable on GitHub Actions Linux runners
+    ...(process.env.CI ? [] : [{
       name: 'webkit',
       use: { ...devices['Desktop Safari'], storageState: 'tests/e2e/.auth/webkit.json' },
-    },
+    }]),
   ],
 
   webServer: {
