@@ -8,10 +8,14 @@ import type { WorkspaceWidgetKind } from '../../features/workspace/model/types';
 import { usePlan, planIncludes } from '../../shared/hooks/usePlan';
 import { useIsMobile } from '../../shared/hooks/useIsMobile';
 import { useAuthStore } from '../../shared/stores/auth';
+import { useRole } from '../../shared/hooks/useRole';
+import { useEmployeePermissions } from '../../shared/hooks/useEmployeePermissions';
+import { useChapanPermissions } from '../../shared/hooks/useChapanPermissions';
 import {
   CHAPAN_NAV_ITEM,
   SETTINGS_NAV_ITEM,
   SIDEBAR_NAV_SECTIONS,
+  type ShortcutNavItemId,
 } from '../../shared/navigation/appNavigation';
 import styles from './Canvas.module.css';
 
@@ -49,6 +53,38 @@ function MobileMenuCard({ item }: { item: MobileMenuItem }) {
   );
 }
 
+/** Возвращает true, если сотрудник имеет доступ к данному nav-разделу */
+function useCanAccessNavItem(id: ShortcutNavItemId): boolean {
+  const { isOwner, isAdmin } = useRole();
+  const perms = useEmployeePermissions();
+  const chapan = useChapanPermissions();
+
+  if (isOwner || isAdmin) return true;
+  if (perms.permissions.length === 0) return true; // обычный member
+
+  switch (id) {
+    case 'leads':
+    case 'deals':
+    case 'customers':
+    case 'tasks':
+      return perms.canAccessSales;
+    case 'warehouse':
+      return perms.canAccessWarehouse;
+    case 'production':
+      return perms.canAccessProduction;
+    case 'finance':
+    case 'reports':
+    case 'documents':
+      return perms.canAccessFinancial;
+    case 'employees':
+      return perms.canManageTeam;
+    case 'chapan':
+      return chapan.hasAnyAccess;
+    default:
+      return true;
+  }
+}
+
 export default function CanvasPage() {
   const [addMenuOpen, setAddMenuOpen] = useState(false);
   const addTile = useWorkspaceStore((s) => s.addTile);
@@ -58,14 +94,32 @@ export default function CanvasPage() {
   const plan = usePlan();
   const isMobile = useIsMobile();
   const navigate = useNavigate();
+  const { isOwner, isAdmin } = useRole();
+  const perms = useEmployeePermissions();
+  const chapan = useChapanPermissions();
+
+  const hasEmployeePerms = perms.permissions.length > 0 && !isOwner && !isAdmin;
 
   const visibleSections = useMemo(
     () =>
       SIDEBAR_NAV_SECTIONS.map((section) => ({
         ...section,
-        items: section.items.filter((item) => planIncludes(plan, item.planTier)),
+        items: section.items.filter((item) => {
+          if (!planIncludes(plan, item.planTier)) return false;
+          if (!hasEmployeePerms) return true;
+          switch (item.id) {
+            case 'leads': case 'deals': case 'customers': case 'tasks':
+              return perms.canAccessSales;
+            case 'warehouse': return perms.canAccessWarehouse;
+            case 'production': return perms.canAccessProduction;
+            case 'finance': case 'reports': case 'documents':
+              return perms.canAccessFinancial;
+            case 'employees': return perms.canManageTeam;
+            default: return true;
+          }
+        }),
       })).filter((section) => section.items.length > 0),
-    [plan],
+    [plan, hasEmployeePerms, perms, chapan],
   );
 
   function handleAddTile(kind: WorkspaceWidgetKind) {
@@ -114,7 +168,7 @@ export default function CanvasPage() {
             </section>
           ))}
 
-          {planIncludes(plan, 'industrial') && (
+          {planIncludes(plan, 'industrial') && (!hasEmployeePerms || chapan.hasAnyAccess) && (
             <section className={styles.mobileSection}>
               <div className={styles.mobileSectionLabel}>Воркзоны</div>
               <div className={styles.mobileSectionGrid}>

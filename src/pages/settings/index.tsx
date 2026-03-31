@@ -554,7 +554,195 @@ function AppearanceSection() {
   );
 }
 
+function OwnerCredentialsCard() {
+  const clearAuth = useAuthStore((state) => state.clearAuth);
+  const navigate = useNavigate();
+  const user = useAuthStore((state) => state.user);
+
+  const [showEmailForm, setShowEmailForm] = useState(false);
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+
+  const [newEmail, setNewEmail] = useState('');
+  const [emailCurrentPassword, setEmailCurrentPassword] = useState('');
+  const [emailLoading, setEmailLoading] = useState(false);
+
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [newPasswordConfirm, setNewPasswordConfirm] = useState('');
+  const [passwordLoading, setPasswordLoading] = useState(false);
+
+  async function handleChangeEmail() {
+    if (!newEmail.trim() || !emailCurrentPassword.trim()) {
+      toast.error('Заполните все поля.');
+      return;
+    }
+    setEmailLoading(true);
+    try {
+      await api.post('/users/me/change-email/', {
+        new_email: newEmail.trim().toLowerCase(),
+        current_password: emailCurrentPassword,
+      });
+      toast.success('Email изменён. Войдите заново с новым адресом.');
+      clearAuth();
+      navigate('/auth/login', { replace: true });
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      toast.error(msg ?? 'Не удалось изменить email.');
+    } finally {
+      setEmailLoading(false);
+    }
+  }
+
+  async function handleChangePassword() {
+    if (!currentPassword.trim() || !newPassword.trim() || !newPasswordConfirm.trim()) {
+      toast.error('Заполните все поля.');
+      return;
+    }
+    if (newPassword !== newPasswordConfirm) {
+      toast.error('Пароли не совпадают.');
+      return;
+    }
+    if (newPassword.length < 6) {
+      toast.error('Пароль должен содержать не менее 6 символов.');
+      return;
+    }
+    setPasswordLoading(true);
+    try {
+      await api.post('/auth/change-password/', {
+        current_password: currentPassword,
+        new_password: newPassword,
+      });
+      toast.success('Пароль изменён. Войдите заново.');
+      clearAuth();
+      navigate('/auth/login', { replace: true });
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      toast.error(msg ?? 'Не удалось изменить пароль.');
+    } finally {
+      setPasswordLoading(false);
+    }
+  }
+
+  return (
+    <div className={s.section}>
+      <div className={s.sectionHeader}>
+        <div>
+          <div className={s.sectionTitle}>Учётная запись руководителя</div>
+          <div className={s.sectionSubtitle}>
+            После смены данных сессия владельца завершится. Сотрудники не будут выброшены из системы.
+          </div>
+        </div>
+      </div>
+      <div className={s.sectionBody}>
+        {/* ── Смена email ── */}
+        <div className={s.securityCard}>
+          <div className={s.securityCardBody}>
+            <div className={s.securityCardTitle}>Email</div>
+            <div className={s.securityCardMeta}>{user?.email ?? '—'}</div>
+            <div className={s.securityActions}>
+              <button className={s.securityBtn} onClick={() => { setShowEmailForm((v) => !v); setShowPasswordForm(false); }}>
+                Изменить email
+              </button>
+            </div>
+          </div>
+        </div>
+        {showEmailForm && (
+          <div className={s.pinSetupCard}>
+            <div className={s.pinSetupFields}>
+              <div className={s.field}>
+                <label className={s.fieldLabel}>Новый email</label>
+                <input
+                  className="kort-input"
+                  type="email"
+                  value={newEmail}
+                  onChange={(e) => setNewEmail(e.target.value)}
+                  placeholder="новый@email.com"
+                  autoComplete="email"
+                />
+              </div>
+              <div className={s.field}>
+                <label className={s.fieldLabel}>Текущий пароль для подтверждения</label>
+                <input
+                  className="kort-input"
+                  type="password"
+                  value={emailCurrentPassword}
+                  onChange={(e) => setEmailCurrentPassword(e.target.value)}
+                  placeholder="Введите текущий пароль"
+                  autoComplete="current-password"
+                />
+              </div>
+            </div>
+            <div className={s.pinSetupActions}>
+              <button className={s.securityBtn} disabled={emailLoading} onClick={() => void handleChangeEmail()}>
+                {emailLoading ? 'Сохраняем...' : 'Сохранить email'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── Смена пароля ── */}
+        <div className={s.securityCard}>
+          <div className={s.securityCardBody}>
+            <div className={s.securityCardTitle}>Пароль</div>
+            <div className={s.securityCardMeta}>••••••••</div>
+            <div className={s.securityActions}>
+              <button className={s.securityBtn} onClick={() => { setShowPasswordForm((v) => !v); setShowEmailForm(false); }}>
+                Изменить пароль
+              </button>
+            </div>
+          </div>
+        </div>
+        {showPasswordForm && (
+          <div className={s.pinSetupCard}>
+            <div className={s.pinSetupFields}>
+              <div className={s.field}>
+                <label className={s.fieldLabel}>Текущий пароль</label>
+                <input
+                  className="kort-input"
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  placeholder="Текущий пароль"
+                  autoComplete="current-password"
+                />
+              </div>
+              <div className={s.field}>
+                <label className={s.fieldLabel}>Новый пароль</label>
+                <input
+                  className="kort-input"
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Минимум 6 символов"
+                  autoComplete="new-password"
+                />
+              </div>
+              <div className={s.field}>
+                <label className={s.fieldLabel}>Повторите новый пароль</label>
+                <input
+                  className="kort-input"
+                  type="password"
+                  value={newPasswordConfirm}
+                  onChange={(e) => setNewPasswordConfirm(e.target.value)}
+                  placeholder="Повторите пароль"
+                  autoComplete="new-password"
+                />
+              </div>
+            </div>
+            <div className={s.pinSetupActions}>
+              <button className={s.securityBtn} disabled={passwordLoading} onClick={() => void handleChangePassword()}>
+                {passwordLoading ? 'Сохраняем...' : 'Сохранить пароль'}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function SecuritySection() {
+  const { isOwner } = useRole();
   const pin = usePinStore((state) => state.pin);
   const isTrustedDevice = usePinStore((state) => state.isTrustedDevice);
   const setPin = usePinStore((state) => state.setPin);
@@ -563,6 +751,8 @@ function SecuritySection() {
   const [showForm, setShowForm] = useState(false);
 
   return (
+    <>
+    {isOwner && <OwnerCredentialsCard />}
     <div className={s.section}>
       <div className={s.sectionHeader}>
         <div>
@@ -643,6 +833,7 @@ function SecuritySection() {
         )}
       </div>
     </div>
+    </>
   );
 }
 

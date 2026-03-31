@@ -363,6 +363,12 @@ export function AuthModal({ open, onClose, onAuthSuccess, initialStep }: AuthMod
   const [loginIdentifier, setLoginIdentifier] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
 
+  // ── Employee login mode ───────────────────────────────────────────────────
+  // isEmployeeMode: пользователь нажал «Войти как сотрудник»
+  // employeeLookupDone: телефон найден, показываем поле пароля
+  const [isEmployeeMode, setIsEmployeeMode] = useState(false);
+  const [employeeLookupDone, setEmployeeLookupDone] = useState(false);
+
   // ── First-login set-password state ────────────────────────────────────────
   const [firstLoginTempToken, setFirstLoginTempToken] = useState('');
   const [firstLoginUserName, setFirstLoginUserName] = useState('');
@@ -384,6 +390,10 @@ export function AuthModal({ open, onClose, onAuthSuccess, initialStep }: AuthMod
     setStep(defaultStep);
     setError('');
     setLoading(false);
+    setIsEmployeeMode(false);
+    setEmployeeLookupDone(false);
+    setLoginIdentifier('');
+    setLoginPassword('');
   }, [defaultStep, open]);
 
   useEffect(() => {
@@ -471,6 +481,49 @@ export function AuthModal({ open, onClose, onAuthSuccess, initialStep }: AuthMod
       applySession(response);
     } catch (cause) {
       setError(readAuthError(cause, 'Не удалось выполнить вход.'));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // ── Employee lookup submit ─────────────────────────────────────────────────
+  // Первый шаг в режиме «Войти как сотрудник»: проверяем телефон без пароля.
+  async function submitEmployeeLookup() {
+    const rawPhone = loginIdentifier.trim();
+    if (!rawPhone) { setError('Введите номер телефона.'); return; }
+
+    const normalized = normalizeKazakhPhone(rawPhone);
+    if (!normalized || !isKazakhPhoneComplete(rawPhone)) {
+      setError('Введите полный номер телефона (10 цифр после +7).');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    try {
+      const result = await api.post<
+        | { found: false }
+        | { found: true; account_status: 'active'; requires_password: true; full_name: string }
+        | { found: true; account_status: 'pending_first_login'; requires_password: false; full_name: string; temp_token: string }
+      >('/auth/employee/lookup/', { phone: normalized });
+
+      if (!result || !result.found) {
+        setError('Номер телефона не найден в системе. Уточните у руководителя.');
+        return;
+      }
+
+      if (result.account_status === 'pending_first_login') {
+        setFirstLoginTempToken(result.temp_token);
+        setFirstLoginUserName(result.full_name);
+        setStep('set-password');
+        return;
+      }
+
+      // Активный сотрудник: показываем поле пароля
+      setFirstLoginUserName(result.full_name);
+      setEmployeeLookupDone(true);
+    } catch (cause) {
+      setError(readAuthError(cause, 'Не удалось проверить номер телефона.'));
     } finally {
       setLoading(false);
     }
@@ -637,12 +690,23 @@ export function AuthModal({ open, onClose, onAuthSuccess, initialStep }: AuthMod
               {step === 'login' && (
                 <form
                   className={styles.stepContent}
-                  onSubmit={(e) => { e.preventDefault(); void submitLogin(); }}
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (isEmployeeMode && !employeeLookupDone) {
+                      void submitEmployeeLookup();
+                    } else {
+                      void submitLogin();
+                    }
+                  }}
                 >
                   <div className={styles.stepHeader}>
                     <h2 className={styles.title}>Вход</h2>
                     <p className={styles.subtitle}>
-                      Войдите по email или номеру телефона.
+                      {isEmployeeMode
+                        ? employeeLookupDone
+                          ? `Добро пожаловать, ${firstLoginUserName.split(' ')[0]}. Введите пароль.`
+                          : 'Введите номер телефона, которым вас зарегистрировал руководитель.'
+                        : 'Войдите по email или номеру телефона.'}
                     </p>
                     {inviteContext && (
                       <div className={styles.pinInfo}>
@@ -657,50 +721,86 @@ export function AuthModal({ open, onClose, onAuthSuccess, initialStep }: AuthMod
                       value={loginIdentifier}
                       onChange={(e) => {
                         const v = e.target.value;
-                        // Если это похоже на телефон — форматируем, иначе оставляем как есть
-                        if (looksLikePhone(v)) {
+                        if (isEmployeeMode || looksLikePhone(v)) {
                           setLoginIdentifier(formatKazakhPhoneInput(v));
                         } else {
                           setLoginIdentifier(v);
                         }
                         setError('');
+                        // При изменении телефона в employee-режиме — сбрасываем lookup
+                        if (isEmployeeMode && employeeLookupDone) {
+                          setEmployeeLookupDone(false);
+                          setLoginPassword('');
+                        }
                       }}
-                      placeholder="Email или номер телефона"
+                      placeholder={isEmployeeMode ? 'Номер телефона' : 'Email или номер телефона'}
                       autoComplete="username"
-                      inputMode="email"
+                      inputMode={isEmployeeMode ? 'tel' : 'email'}
                       type="text"
+                      disabled={isEmployeeMode && employeeLookupDone}
                     />
-                    <PasswordField
-                      value={loginPassword}
-                      onChange={(v) => { setLoginPassword(v); setError(''); }}
-                      placeholder="Пароль"
-                      autoComplete="current-password"
-                    />
+                    {(!isEmployeeMode || employeeLookupDone) && (
+                      <PasswordField
+                        value={loginPassword}
+                        onChange={(v) => { setLoginPassword(v); setError(''); }}
+                        placeholder="Пароль"
+                        autoComplete="current-password"
+                      />
+                    )}
+                    {isEmployeeMode && !employeeLookupDone && (
+                      <p className={styles.employeeLookupHint}>
+                        Пароль появится после проверки номера.
+                      </p>
+                    )}
                   </div>
+
+                  {/* Переключатель «Войти как сотрудник» */}
+                  <label
+                    className={`${styles.employeeToggleRow} ${isEmployeeMode ? styles.employeeToggleRowActive : ''}`}
+                  >
+                    <input
+                      type="checkbox"
+                      className={styles.employeeCheckbox}
+                      checked={isEmployeeMode}
+                      onChange={(e) => {
+                        setIsEmployeeMode(e.target.checked);
+                        setEmployeeLookupDone(false);
+                        setLoginIdentifier('');
+                        setLoginPassword('');
+                        setFirstLoginUserName('');
+                        setError('');
+                      }}
+                    />
+                    Войти как сотрудник
+                  </label>
 
                   {error && error !== '__device_unrecognized__' && <div className={styles.errorMessage}>{error}</div>}
 
                   <div className={styles.loginActionsRow}>
                     <button type="submit" className={styles.primaryButton} disabled={loading}>
                       <KeyRound size={16} />
-                      {loading ? 'Входим...' : 'Войти'}
+                      {loading
+                        ? (isEmployeeMode && !employeeLookupDone ? 'Проверяем...' : 'Входим...')
+                        : (isEmployeeMode && !employeeLookupDone ? 'Продолжить' : 'Войти')}
                     </button>
-                    <button
-                      type="button"
-                      className={styles.pinQuickButton}
-                      onClick={() => {
-                        if (pin && isTrustedDevice && user) {
-                          setError('');
-                          setStep('pin');
-                        } else {
-                          setError('__device_unrecognized__');
-                        }
-                      }}
-                      title="Войти по PIN-коду"
-                      aria-label="Войти по PIN-коду"
-                    >
-                      <ShieldX size={18} />
-                    </button>
+                    {!isEmployeeMode && (
+                      <button
+                        type="button"
+                        className={styles.pinQuickButton}
+                        onClick={() => {
+                          if (pin && isTrustedDevice && user) {
+                            setError('');
+                            setStep('pin');
+                          } else {
+                            setError('__device_unrecognized__');
+                          }
+                        }}
+                        title="Войти по PIN-коду"
+                        aria-label="Войти по PIN-коду"
+                      >
+                        <ShieldX size={18} />
+                      </button>
+                    )}
                   </div>
 
                   {error === '__device_unrecognized__' && (
@@ -710,22 +810,24 @@ export function AuthModal({ open, onClose, onAuthSuccess, initialStep }: AuthMod
                     </div>
                   )}
 
-                  <div className={styles.footerRow}>
-                    <button
-                      type="button"
-                      className={styles.linkButton}
-                      onClick={() => { setError(''); setForgotSent(false); setForgotEmail(''); setStep('forgot'); }}
-                    >
-                      Забыли пароль?
-                    </button>
-                    <button
-                      type="button"
-                      className={styles.linkButton}
-                      onClick={() => { setError(''); setStep('company'); }}
-                    >
-                      Создать компанию
-                    </button>
-                  </div>
+                  {!isEmployeeMode && (
+                    <div className={styles.footerRow}>
+                      <button
+                        type="button"
+                        className={styles.linkButton}
+                        onClick={() => { setError(''); setForgotSent(false); setForgotEmail(''); setStep('forgot'); }}
+                      >
+                        Забыли пароль?
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.linkButton}
+                        onClick={() => { setError(''); setStep('company'); }}
+                      >
+                        Создать компанию
+                      </button>
+                    </div>
+                  )}
                 </form>
               )}
 

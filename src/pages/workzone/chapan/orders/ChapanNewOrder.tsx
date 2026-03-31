@@ -8,7 +8,7 @@ import { ChevronLeft, Plus, Trash2, Calculator, AlertCircle, Paperclip, X, Image
 import { useId } from 'react';
 import { useCreateOrder, useChapanCatalogs, useChapanProfile, useUpdateBankCommission } from '../../../../entities/order/queries';
 import { useAuthStore } from '../../../../shared/stores/auth';
-import { useProductsAvailability, useOrderFormCatalog } from '../../../../entities/warehouse/queries';
+import { useProductsAvailability, useOrderFormCatalog, useCatalogDefinitions } from '../../../../entities/warehouse/queries';
 import type { OrderFormField } from '../../../../entities/warehouse/types';
 import { attachmentsApi } from '../../../../entities/order/api';
 import type { Urgency } from '../../../../entities/order/types';
@@ -180,6 +180,66 @@ function SelectOrText({ options, placeholder, className, ...props }: InputHTMLAt
       <datalist id={id}>{options.map((o) => <option key={o} value={o} />)}</datalist>
       <input {...props} list={id} placeholder={placeholder} className={className} autoComplete="off" />
     </>
+  );
+}
+
+function SearchableSelect({ options, placeholder, className, value, onChange, onBlur, disabled }: {
+  options: string[];
+  placeholder?: string;
+  className?: string;
+  value: string;
+  onChange: (val: string) => void;
+  onBlur?: () => void;
+  disabled?: boolean;
+}) {
+  const [inputText, setInputText] = useState(value || '');
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => { setInputText(value || ''); }, [value]);
+
+  const filtered = !inputText
+    ? options
+    : options.filter(o => o.toLowerCase().includes(inputText.toLowerCase()));
+
+  const commit = (opt: string) => {
+    setInputText(opt);
+    onChange(opt);
+    setOpen(false);
+  };
+
+  return (
+    <div style={{ position: 'relative', width: '100%' }}>
+      <input
+        type="text"
+        value={inputText}
+        className={className}
+        placeholder={placeholder}
+        autoComplete="off"
+        disabled={disabled}
+        onFocus={() => setOpen(true)}
+        onChange={(e) => { setInputText(e.target.value); setOpen(true); }}
+        onBlur={() => {
+          setTimeout(() => {
+            setOpen(false);
+            if (inputText !== value) onChange(inputText);
+            onBlur?.();
+          }, 150);
+        }}
+      />
+      {open && filtered.length > 0 && (
+        <ul className={styles.searchableDropdown}>
+          {filtered.map((opt) => (
+            <li
+              key={opt}
+              className={`${styles.searchableDropdownItem}${opt === value ? ` ${styles.searchableDropdownItemSelected}` : ''}`}
+              onMouseDown={(e) => { e.preventDefault(); commit(opt); }}
+            >
+              {opt}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 
@@ -365,6 +425,7 @@ export default function ChapanNewOrderPage() {
 
   // Warehouse smart catalog: live dropdowns per product
   const { data: orderFormCatalog } = useOrderFormCatalog();
+  const { data: fieldDefinitions } = useCatalogDefinitions();
   const warehouseProductMap: Record<string, OrderFormField[]> = {};
   if (orderFormCatalog) {
     for (const p of orderFormCatalog.products) {
@@ -374,6 +435,8 @@ export default function ChapanNewOrderPage() {
   const warehouseProductNames = Object.keys(warehouseProductMap);
   // Merged product list: chapan catalog + warehouse catalog (deduped)
   const allProductNames = [...new Set([...products, ...warehouseProductNames])];
+  // Global color options from warehouse field definitions (fallback when product has no linked color field)
+  const globalWarehouseColors = fieldDefinitions?.find(d => d.code === 'color')?.options.map(o => o.label) ?? [];
   // Helper: get catalog options for a field code given current productName
   function getCatalogOptions(productName: string, code: string): string[] {
     const fields = warehouseProductMap[productName];
@@ -535,23 +598,17 @@ export default function ChapanNewOrderPage() {
                     <div className={styles.field}>
                       <label className={styles.label}>Модель <span className={styles.req}>*</span></label>
                       <Controller control={control} name={`items.${idx}.productName`} render={({ field: f }) => (
-                        allProductNames.length > 0 ? (
-                          <select {...f} className={`${styles.select} ${errors.items?.[idx]?.productName ? styles.inputError : ''}`}>
-                            <option value="">Выберите модель</option>
-                            {allProductNames.map((p) => <option key={p} value={p}>{p}</option>)}
-                            <option value="__other">Другая модель...</option>
-                          </select>
-                        ) : (
-                          <input {...f} className={`${styles.input} ${errors.items?.[idx]?.productName ? styles.inputError : ''}`} placeholder="Назар — жуп шапан" />
-                        )
+                        <SearchableSelect
+                          options={allProductNames}
+                          value={f.value}
+                          onChange={f.onChange}
+                          onBlur={f.onBlur}
+                          placeholder="Назар — жуп шапан"
+                          className={`${styles.input} ${errors.items?.[idx]?.productName ? styles.inputError : ''}`}
+                        />
                       )} />
                       {errors.items?.[idx]?.productName && <span className={styles.fieldError}>{errors.items[idx]?.productName?.message}</span>}
-                      {hasWarehouseCatalog && (
-                        <span style={{ fontSize: 10, color: 'var(--fill-accent)', fontWeight: 500 }}>
-                          ✦ Умный склад
-                        </span>
-                      )}
-                      {!hasWarehouseCatalog && itemStock !== undefined && (
+                      {itemStock !== undefined && (
                         <span className={itemStock.available ? styles.stockBadgeIn : styles.stockBadgeOut}>
                           {itemStock.available ? `В наличии: ${itemStock.qty} шт.` : 'Нет на складе'}
                         </span>
@@ -562,13 +619,15 @@ export default function ChapanNewOrderPage() {
                       <Controller control={control} name={`items.${idx}.size`} render={({ field: f }) => {
                         const catalogSizes = getCatalogOptions(items[idx]?.productName ?? '', 'size');
                         const opts = catalogSizes.length > 0 ? catalogSizes : sizeOptions;
-                        return opts.length > 0 ? (
-                          <select {...f} className={`${styles.select} ${errors.items?.[idx]?.size ? styles.inputError : ''}`}>
-                            <option value="">— выбрать —</option>
-                            {opts.map((s) => <option key={s} value={s}>{s}</option>)}
-                          </select>
-                        ) : (
-                          <input {...f} className={`${styles.input} ${errors.items?.[idx]?.size ? styles.inputError : ''}`} placeholder="48" />
+                        return (
+                          <SearchableSelect
+                            options={opts}
+                            value={f.value}
+                            onChange={f.onChange}
+                            onBlur={f.onBlur}
+                            placeholder="48"
+                            className={`${styles.input} ${errors.items?.[idx]?.size ? styles.inputError : ''}`}
+                          />
                         );
                       }} />
                       {errors.items?.[idx]?.size && <span className={styles.fieldError}>{errors.items[idx]?.size?.message}</span>}
@@ -618,14 +677,20 @@ export default function ChapanNewOrderPage() {
                       <label className={styles.label}>Цвет / материал</label>
                       <Controller control={control} name={`items.${idx}.color`} render={({ field: f }) => {
                         const catalogColors = getCatalogOptions(items[idx]?.productName ?? '', 'color');
-                        return catalogColors.length > 0 ? (
-                          <select {...f} value={f.value ?? ''} className={styles.select}>
-                            <option value="">— выбрать —</option>
-                            {catalogColors.map((c) => <option key={c} value={c}>{c}</option>)}
-                            <option value="__other">Другой...</option>
-                          </select>
-                        ) : (
-                          <input {...f} value={f.value ?? ''} className={styles.input} placeholder="Тёмно-синий, бордо..." />
+                        const colorOpts = catalogColors.length > 0
+                          ? catalogColors
+                          : globalWarehouseColors.length > 0
+                            ? globalWarehouseColors
+                            : (catalogs?.fabricCatalog ?? []);
+                        return (
+                          <SearchableSelect
+                            options={colorOpts}
+                            value={f.value ?? ''}
+                            onChange={f.onChange}
+                            onBlur={f.onBlur}
+                            placeholder="Тёмно-синий, бордо..."
+                            className={styles.input}
+                          />
                         );
                       }} />
                     </div>

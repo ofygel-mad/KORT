@@ -5,7 +5,11 @@ import { createPortal } from 'react-dom';
 import { toast } from 'sonner';
 import { WORKSPACE_WIDGETS } from '../registry';
 import { usePlan, planIncludes, PLAN_LABELS } from '../../../shared/hooks/usePlan';
+import { useRole } from '../../../shared/hooks/useRole';
+import { useEmployeePermissions } from '../../../shared/hooks/useEmployeePermissions';
+import { useChapanPermissions } from '../../../shared/hooks/useChapanPermissions';
 import type { WorkspaceWidgetKind } from '../model/types';
+import type { ShortcutNavItemId } from '../../../shared/navigation/appNavigation';
 import styles from './Workspace.module.css';
 
 interface Props {
@@ -14,8 +18,33 @@ interface Props {
   onSelect: (kind: WorkspaceWidgetKind) => void;
 }
 
+function useCanAddWidget(id: ShortcutNavItemId): boolean {
+  const { isOwner, isAdmin } = useRole();
+  const perms = useEmployeePermissions();
+  const chapan = useChapanPermissions();
+
+  if (isOwner || isAdmin) return true;
+  if (perms.permissions.length === 0) return true;
+
+  switch (id) {
+    case 'leads': case 'deals': case 'customers': case 'tasks':
+      return perms.canAccessSales;
+    case 'warehouse': return perms.canAccessWarehouse;
+    case 'production': return perms.canAccessProduction;
+    case 'finance': case 'reports': case 'documents':
+      return perms.canAccessFinancial;
+    case 'employees': return perms.canManageTeam;
+    case 'chapan': return chapan.hasAnyAccess;
+    default: return true;
+  }
+}
+
 export function WorkspaceAddMenu({ open, onClose, onSelect }: Props) {
   const plan = usePlan();
+  const { isOwner, isAdmin } = useRole();
+  const perms = useEmployeePermissions();
+  const chapan = useChapanPermissions();
+  const hasEmployeePerms = perms.permissions.length > 0 && !isOwner && !isAdmin;
 
   useEffect(() => {
     if (!open) {
@@ -69,7 +98,21 @@ export function WorkspaceAddMenu({ open, onClose, onSelect }: Props) {
             <div className={styles.menuDivider} />
 
             <div className={styles.menuGrid}>
-              {WORKSPACE_WIDGETS.map((widget) => {
+              {WORKSPACE_WIDGETS.filter((widget) => {
+                // Если у сотрудника есть employee_permissions — скрываем недоступные разделы
+                if (!hasEmployeePerms) return true;
+                switch (widget.kind) {
+                  case 'leads': case 'deals': case 'customers': case 'tasks':
+                    return perms.canAccessSales;
+                  case 'warehouse': return perms.canAccessWarehouse;
+                  case 'production': return perms.canAccessProduction;
+                  case 'finance': case 'reports': case 'documents':
+                    return perms.canAccessFinancial;
+                  case 'employees': return perms.canManageTeam;
+                  case 'chapan': return chapan.hasAnyAccess;
+                  default: return true;
+                }
+              }).map((widget) => {
                 const Icon = widget.icon;
                 const isLocked = !planIncludes(plan, widget.planTier);
                 return (

@@ -36,6 +36,66 @@ function SelectOrText({ options, placeholder, className, ...props }: InputHTMLAt
   );
 }
 
+function SearchableSelect({ options, placeholder, className, value, onChange, onBlur, disabled }: {
+  options: string[];
+  placeholder?: string;
+  className?: string;
+  value: string;
+  onChange: (val: string) => void;
+  onBlur?: () => void;
+  disabled?: boolean;
+}) {
+  const [inputText, setInputText] = useState(value || '');
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => { setInputText(value || ''); }, [value]);
+
+  const filtered = !inputText
+    ? options
+    : options.filter(o => o.toLowerCase().includes(inputText.toLowerCase()));
+
+  const commit = (opt: string) => {
+    setInputText(opt);
+    onChange(opt);
+    setOpen(false);
+  };
+
+  return (
+    <div style={{ position: 'relative', width: '100%' }}>
+      <input
+        type="text"
+        value={inputText}
+        className={className}
+        placeholder={placeholder}
+        autoComplete="off"
+        disabled={disabled}
+        onFocus={() => setOpen(true)}
+        onChange={(e) => { setInputText(e.target.value); setOpen(true); }}
+        onBlur={() => {
+          setTimeout(() => {
+            setOpen(false);
+            if (inputText !== value) onChange(inputText);
+            onBlur?.();
+          }, 150);
+        }}
+      />
+      {open && filtered.length > 0 && (
+        <ul className={styles.searchableDropdown}>
+          {filtered.map((opt) => (
+            <li
+              key={opt}
+              className={`${styles.searchableDropdownItem}${opt === value ? ` ${styles.searchableDropdownItemSelected}` : ''}`}
+              onMouseDown={(e) => { e.preventDefault(); commit(opt); }}
+            >
+              {opt}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 function parseOptionalAmount(value: string) {
   if (!value.trim()) return undefined;
   const n = Number(value);
@@ -515,28 +575,30 @@ export default function ChapanEditOrderPage() {
                     <div className={styles.field}>
                       <label className={styles.label}>Модель <span className={styles.req}>*</span></label>
                       <Controller control={control} name={`items.${idx}.productName`} render={({ field: f }) => (
-                        products.length > 0 ? (
-                          <select {...f} disabled={!editable} className={`${styles.select} ${errors.items?.[idx]?.productName ? styles.inputError : ''}`}>
-                            <option value="">Выберите модель</option>
-                            {products.map(p => <option key={p} value={p}>{p}</option>)}
-                          </select>
-                        ) : (
-                          <input {...f} disabled={!editable} className={`${styles.input} ${errors.items?.[idx]?.productName ? styles.inputError : ''}`} placeholder="Назар — жуп шапан" />
-                        )
+                        <SearchableSelect
+                          options={products}
+                          value={f.value}
+                          onChange={f.onChange}
+                          onBlur={f.onBlur}
+                          disabled={!editable}
+                          placeholder="Назар — жуп шапан"
+                          className={`${styles.input} ${errors.items?.[idx]?.productName ? styles.inputError : ''}`}
+                        />
                       )} />
                       {errors.items?.[idx]?.productName && <span className={styles.fieldError}>{errors.items[idx]?.productName?.message}</span>}
                     </div>
                     <div className={styles.field}>
                       <label className={styles.label}>Размер <span className={styles.req}>*</span></label>
                       <Controller control={control} name={`items.${idx}.size`} render={({ field: f }) => (
-                        sizeOptions.length > 0 ? (
-                          <select {...f} disabled={!editable} className={`${styles.select} ${errors.items?.[idx]?.size ? styles.inputError : ''}`}>
-                            <option value="">— выбрать —</option>
-                            {sizeOptions.map(s => <option key={s} value={s}>{s}</option>)}
-                          </select>
-                        ) : (
-                          <input {...f} disabled={!editable} className={`${styles.input} ${errors.items?.[idx]?.size ? styles.inputError : ''}`} placeholder="48" />
-                        )
+                        <SearchableSelect
+                          options={sizeOptions}
+                          value={f.value}
+                          onChange={f.onChange}
+                          onBlur={f.onBlur}
+                          disabled={!editable}
+                          placeholder="48"
+                          className={`${styles.input} ${errors.items?.[idx]?.size ? styles.inputError : ''}`}
+                        />
                       )} />
                       {errors.items?.[idx]?.size && <span className={styles.fieldError}>{errors.items[idx]?.size?.message}</span>}
                     </div>

@@ -1095,6 +1095,54 @@
   color: var(--text-primary);
 }
 
+.employeeToggleRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--bg-surface-elevated, var(--bg-surface));
+  border: 1px solid var(--border-default);
+  cursor: pointer;
+  user-select: none;
+  font-size: 13px;
+  color: var(--text-secondary);
+  transition: border-color var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease);
+}
+
+.employeeToggleRow:hover {
+  border-color: var(--border-focused, var(--text-accent));
+  color: var(--text-primary);
+}
+
+.employeeToggleRowActive {
+  border-color: var(--text-accent);
+  color: var(--text-accent);
+  background: color-mix(in srgb, var(--text-accent) 8%, var(--bg-surface-elevated, var(--bg-surface)));
+}
+
+.employeeCheckbox {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  accent-color: var(--text-accent);
+  cursor: pointer;
+}
+
+.employeeLookupHint {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  padding: 4px 2px 0;
+  line-height: 1.4;
+}
+
+.employeeNameHint {
+  font-size: 13px;
+  color: var(--fill-positive, #22c55e);
+  padding: 4px 2px 0;
+  font-weight: 500;
+}
+
 .errorMessage,
 .pinInfo {
   padding: 12px 14px;

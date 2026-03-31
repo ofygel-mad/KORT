@@ -243,7 +243,31 @@ export function AddEmployeeModal({ loading, onSubmit, onClose }: Props) {
               Права доступа <span className={styles.required}>*</span>
             </label>
             <div className={styles.permList}>
-              {PERMISSION_OPTIONS.map((opt) => {
+              {PERMISSION_OPTIONS.filter((opt) => !opt.group).map((opt) => {
+                const checked = permissions.includes(opt.key);
+                return (
+                  <label key={opt.key} className={`${styles.permItem} ${checked ? styles.permItemChecked : ''}`}>
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => togglePermission(opt.key)}
+                      className={styles.permCheckbox}
+                    />
+                    <div className={styles.permInfo}>
+                      <span className={styles.permLabel}>{opt.label}</span>
+                      <span className={styles.permDesc}>{opt.description}</span>
+                    </div>
+                  </label>
+                );
+              })}
+            </div>
+
+            {/* ── Дополнительный модуль: Чапан ── */}
+            <div className={styles.permModuleDivider}>
+              <span className={styles.permModuleLabel}>Дополнительный модуль</span>
+            </div>
+            <div className={styles.permList}>
+              {PERMISSION_OPTIONS.filter((opt) => opt.group === 'Чапан').map((opt) => {
                 const checked = permissions.includes(opt.key);
                 return (
                   <label key={opt.key} className={`${styles.permItem} ${checked ? styles.permItemChecked : ''}`}>

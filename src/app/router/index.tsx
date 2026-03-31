@@ -5,6 +5,9 @@ import { PageLoader } from '../../shared/ui/PageLoader';
 import { ErrorBoundary } from '../../shared/ui/ErrorBoundary';
 import { useAuthStore } from '../../shared/stores/auth';
 import { usePlan, planIncludes, PLAN_LABELS, type OrgMode } from '../../shared/hooks/usePlan';
+import { useRole } from '../../shared/hooks/useRole';
+import { useEmployeePermissions } from '../../shared/hooks/useEmployeePermissions';
+import { useChapanPermissions } from '../../shared/hooks/useChapanPermissions';
 import { Settings } from 'lucide-react';
 
 function makePage(imp: () => Promise<{ default: ComponentType }>) {
@@ -137,6 +140,92 @@ function RequirePlan({ tier, children }: { tier: OrgMode; children: ReactNode })
   return <>{children}</>;
 }
 
+function PermissionDenied() {
+  return (
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      minHeight: '60vh',
+      gap: '16px',
+      textAlign: 'center',
+      padding: '40px 24px',
+    }}>
+      <div style={{
+        width: 56,
+        height: 56,
+        borderRadius: '50%',
+        background: 'color-mix(in srgb, var(--fill-danger, #ef4444) 12%, var(--bg-surface-elevated))',
+        border: '1.5px solid color-mix(in srgb, var(--fill-danger, #ef4444) 28%, transparent)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: 22,
+      }}>
+        🔒
+      </div>
+      <div>
+        <div style={{ fontSize: 18, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 8 }}>
+          Нет доступа
+        </div>
+        <div style={{ fontSize: 14, color: 'var(--text-secondary)', maxWidth: 360, lineHeight: 1.5 }}>
+          У вас нет прав для просмотра этого раздела. Обратитесь к руководителю.
+        </div>
+      </div>
+      <NavLink
+        to="/"
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 6,
+          padding: '8px 16px',
+          borderRadius: 8,
+          background: 'color-mix(in srgb, var(--fill-danger, #ef4444) 10%, var(--bg-surface))',
+          border: '1px solid color-mix(in srgb, var(--fill-danger, #ef4444) 24%, var(--brand-panel-border))',
+          color: 'var(--fill-danger, #ef4444)',
+          fontSize: 13,
+          fontWeight: 500,
+          textDecoration: 'none',
+        }}
+      >
+        На главную
+      </NavLink>
+    </div>
+  );
+}
+
+type PermissionCheck = 'sales' | 'warehouse' | 'production' | 'financial' | 'team' | 'chapan';
+
+/**
+ * Ограничивает доступ к маршруту для сотрудников без нужного права.
+ * Владельцы и пользователи без employee_permissions (admin/manager) проходят свободно.
+ */
+function RequirePermission({ check, children }: { check: PermissionCheck; children: ReactNode }) {
+  const { isOwner, isAdmin } = useRole();
+  const perms = useEmployeePermissions();
+  const chapan = useChapanPermissions();
+
+  // Владельцы и admins — всегда пропускаем
+  if (isOwner || isAdmin) return <>{children}</>;
+
+  // Пользователи без employee_permissions (manager/viewer без флагов) — пропускаем
+  if (perms.permissions.length === 0) return <>{children}</>;
+
+  let allowed = false;
+  switch (check) {
+    case 'sales':       allowed = perms.canAccessSales; break;
+    case 'warehouse':   allowed = perms.canAccessWarehouse; break;
+    case 'production':  allowed = perms.canAccessProduction; break;
+    case 'financial':   allowed = perms.canAccessFinancial; break;
+    case 'team':        allowed = perms.canManageTeam; break;
+    case 'chapan':      allowed = chapan.hasAnyAccess; break;
+  }
+
+  if (!allowed) return <PermissionDenied />;
+  return <>{children}</>;
+}
+
 export const appRouter = createBrowserRouter([
   // ── KORT Core ─────────────────────────────────────────
   {
@@ -149,47 +238,47 @@ export const appRouter = createBrowserRouter([
       },
       {
         path: 'crm/leads',
-        element: <RequireAuth><RequireOrg><LeadsPage /></RequireOrg></RequireAuth>,
+        element: <RequireAuth><RequireOrg><RequirePermission check="sales"><LeadsPage /></RequirePermission></RequireOrg></RequireAuth>,
       },
       {
         path: 'crm/deals',
-        element: <RequireAuth><RequireOrg><RequirePlan tier="advanced"><DealsPage /></RequirePlan></RequireOrg></RequireAuth>,
+        element: <RequireAuth><RequireOrg><RequirePlan tier="advanced"><RequirePermission check="sales"><DealsPage /></RequirePermission></RequirePlan></RequireOrg></RequireAuth>,
       },
       {
         path: 'crm/customers',
-        element: <RequireAuth><RequireOrg><CustomersPage /></RequireOrg></RequireAuth>,
+        element: <RequireAuth><RequireOrg><RequirePermission check="sales"><CustomersPage /></RequirePermission></RequireOrg></RequireAuth>,
       },
       {
         path: 'crm/tasks',
-        element: <RequireAuth><RequireOrg><RequirePlan tier="advanced"><TasksPage /></RequirePlan></RequireOrg></RequireAuth>,
+        element: <RequireAuth><RequireOrg><RequirePlan tier="advanced"><RequirePermission check="sales"><TasksPage /></RequirePermission></RequirePlan></RequireOrg></RequireAuth>,
       },
       {
         path: 'warehouse',
-        element: <RequireAuth><RequireOrg><WarehousePage /></RequireOrg></RequireAuth>,
+        element: <RequireAuth><RequireOrg><RequirePermission check="warehouse"><WarehousePage /></RequirePermission></RequireOrg></RequireAuth>,
       },
       {
         path: 'warehouse/:id',
-        element: <RequireAuth><RequireOrg><ChapanOrderDetailPage /></RequireOrg></RequireAuth>,
+        element: <RequireAuth><RequireOrg><RequirePermission check="warehouse"><ChapanOrderDetailPage /></RequirePermission></RequireOrg></RequireAuth>,
       },
       {
         path: 'production',
-        element: <RequireAuth><RequireOrg><RequirePlan tier="advanced"><ProductionPage /></RequirePlan></RequireOrg></RequireAuth>,
+        element: <RequireAuth><RequireOrg><RequirePlan tier="advanced"><RequirePermission check="production"><ProductionPage /></RequirePermission></RequirePlan></RequireOrg></RequireAuth>,
       },
       {
         path: 'finance',
-        element: <RequireAuth><RequireOrg><RequirePlan tier="advanced"><FinancePage /></RequirePlan></RequireOrg></RequireAuth>,
+        element: <RequireAuth><RequireOrg><RequirePlan tier="advanced"><RequirePermission check="financial"><FinancePage /></RequirePermission></RequirePlan></RequireOrg></RequireAuth>,
       },
       {
         path: 'employees',
-        element: <RequireAuth><RequireOrg><RequirePlan tier="advanced"><EmployeesPage /></RequirePlan></RequireOrg></RequireAuth>,
+        element: <RequireAuth><RequireOrg><RequirePlan tier="advanced"><RequirePermission check="team"><EmployeesPage /></RequirePermission></RequirePlan></RequireOrg></RequireAuth>,
       },
       {
         path: 'reports',
-        element: <RequireAuth><RequireOrg><RequirePlan tier="advanced"><ReportsPage /></RequirePlan></RequireOrg></RequireAuth>,
+        element: <RequireAuth><RequireOrg><RequirePlan tier="advanced"><RequirePermission check="financial"><ReportsPage /></RequirePermission></RequirePlan></RequireOrg></RequireAuth>,
       },
       {
         path: 'documents',
-        element: <RequireAuth><RequireOrg><RequirePlan tier="advanced"><DocumentsPage /></RequirePlan></RequireOrg></RequireAuth>,
+        element: <RequireAuth><RequireOrg><RequirePlan tier="advanced"><RequirePermission check="financial"><DocumentsPage /></RequirePermission></RequirePlan></RequireOrg></RequireAuth>,
       },
       {
         path: 'settings',
@@ -211,7 +300,7 @@ export const appRouter = createBrowserRouter([
   // ── Chapan Workzone — own shell, own layout ────────────
   {
     path: '/workzone/chapan',
-    element: <RequireAuth><RequirePlan tier="industrial"><ChapanShell /></RequirePlan></RequireAuth>,
+    element: <RequireAuth><RequirePlan tier="industrial"><RequirePermission check="chapan"><ChapanShell /></RequirePermission></RequirePlan></RequireAuth>,
     children: [
       {
         index: true,
