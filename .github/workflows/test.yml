@@ -193,11 +193,6 @@ jobs:
           node-version: '20'
           cache: 'pnpm'
 
-      - name: Install system dependencies for Playwright
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libwoff2-1.0.2 libglib2.0-0 libglib2.0-dev libgles2-mesa libgconf-2-4
-
       - name: Restore Playwright browsers cache
         uses: actions/cache@v4
         with:
