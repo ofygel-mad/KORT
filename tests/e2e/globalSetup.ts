@@ -31,7 +31,7 @@ async function globalSetup() {
     await page.getByRole('button', { name: 'Войти', exact: true }).click();
 
     // Wait for navigation away from login page
-    await page.waitForURL((url) => !url.pathname.includes('/auth/login'), { timeout: 10000 });
+    await page.waitForURL((url) => !url.pathname.includes('/auth/login'), { timeout: 30000 });
 
     // Add intro flag to sessionStorage (from helpers)
     await page.evaluate(() => {

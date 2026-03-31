@@ -233,8 +233,30 @@ jobs:
           CORS_ORIGIN: "http://localhost:4173"
         run: |
           node dist/index.js &
-          sleep 3
-          curl -s http://localhost:8000/health || echo "⚠️ Backend health check timeout"
+          echo "⏳ Waiting for backend to be ready..."
+          for i in {1..30}; do
+            if curl -s http://localhost:8000/health > /dev/null; then
+              echo "✅ Backend is ready"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "❌ Backend failed to start"
+          exit 1
+
+      - name: Start frontend preview server
+        run: |
+          pnpm preview &
+          echo "⏳ Waiting for frontend to be ready..."
+          for i in {1..30}; do
+            if curl -s http://localhost:4173 > /dev/null; then
+              echo "✅ Frontend is ready"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "❌ Frontend failed to start"
+          exit 1
 
       - name: Run E2E tests (Shard ${{ matrix.shard }}/${{ matrix.totalShards }})
         run: pnpm test:e2e --shard=${{ matrix.shard }}/${{ matrix.totalShards }}
