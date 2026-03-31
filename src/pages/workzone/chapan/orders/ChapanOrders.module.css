@@ -149,7 +149,7 @@
 
 .row {
   display: grid;
-  grid-template-columns: 2px 200px 180px 1fr 130px 80px;
+  grid-template-columns: 2px 1fr 200px 180px 130px 100px;
   align-items: center;
   gap: 0;
   padding: 0;
@@ -162,6 +162,7 @@
   text-align: left;
   width: 100%;
   overflow: hidden;
+  position: relative;
   transition: border-color 140ms, background 140ms, box-shadow 140ms;
 }
 .row:hover { border-color: var(--ch-border-plat); background: var(--ch-card); box-shadow: 0 2px 12px rgba(0,0,0,0.28); }
@@ -708,7 +709,7 @@
   font-weight: 700;
   color: var(--text-tertiary);
   letter-spacing: .04em;
-  margin-bottom: -2px;
+  white-space: nowrap;
 }
 
 .rowOrderNum {
@@ -820,8 +821,10 @@
   color: var(--ch-text-muted, #6b7280);
   cursor: pointer;
   flex-shrink: 0;
-  transition: color 140ms, border-color 140ms, background 140ms;
+  opacity: 0;
+  transition: color 140ms, border-color 140ms, background 140ms, opacity 140ms;
 }
+.row:hover .trashBtnRow { opacity: 1; }
 .trashBtnRow:hover {
   color: #EF4444;
   border-color: rgba(239, 68, 68, 0.25);

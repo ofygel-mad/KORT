@@ -321,7 +321,7 @@ export async function list(orgId: string, filters?: {
   archived?: boolean;
   hasWarehouseItems?: boolean;
 }) {
-  const where: Record<string, unknown> = { orgId };
+  const where: Record<string, unknown> = { orgId, deletedAt: null };
 
   if (filters?.archived === true) {
     where.isArchived = true;
