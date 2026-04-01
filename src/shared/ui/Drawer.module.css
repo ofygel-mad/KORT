@@ -123,7 +123,9 @@
 .body {
   flex: 1;
   overflow-y: auto;
-  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: auto;
+  touch-action: pan-y pinch-zoom;
 }
 
 /* Content padding — applied inside body for form-like drawers */

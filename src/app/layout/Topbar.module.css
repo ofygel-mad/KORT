@@ -359,6 +359,9 @@
   width: min(360px, calc(100vw - 24px));
   max-height: min(460px, calc(100dvh - 96px));
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: auto;
+  touch-action: pan-y pinch-zoom;
   border-radius: calc(var(--surface-radius-tight) + 4px);
   border: 1px solid var(--border-subtle);
   background: linear-gradient(180deg, color-mix(in srgb, var(--bg-surface) 88%, var(--bg-surface-inset) 12%) 0%, color-mix(in srgb, var(--bg-surface-elevated) 92%, var(--bg-surface-inset) 8%) 100%);

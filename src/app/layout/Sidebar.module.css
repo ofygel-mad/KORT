@@ -1,6 +1,8 @@
 /* ── Sidebar — hover-expand rail ───────────────────────────────────── */
 .sidebar {
   position: relative;
+  height: 100vh;
+  height: 100svh;
   height: 100dvh;
   width: 56px;
   padding: 16px 0 12px;
@@ -77,6 +79,8 @@
   gap: 2px;
   overflow-y: auto;
   overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y pinch-zoom;
   padding: 4px 0;
   scrollbar-width: thin;
   scrollbar-color: rgba(138,154,184,0.18) transparent;
