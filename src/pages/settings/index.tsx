@@ -4,18 +4,22 @@ import {
   Building2,
   Check,
   Copy,
+  Edit2,
   Globe,
   Key,
   MessageSquare,
   Monitor,
   MonitorCog,
   Moon,
+  Plus,
   ShieldCheck,
   Smartphone,
   Sun,
   Trash2,
   User,
+  UserX,
   Users,
+  X,
   Zap,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -23,7 +27,6 @@ import { useForm } from 'react-hook-form';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { api } from '../../shared/api/client';
-import type { TeamMemberResponse } from '../../shared/api/contracts';
 import { useCompanyAccess } from '../../shared/hooks/useCompanyAccess';
 import { useCapabilities } from '../../shared/hooks/useCapabilities';
 import { useRole } from '../../shared/hooks/useRole';
@@ -40,7 +43,9 @@ import { CompanyAccessGate } from '../../shared/ui/CompanyAccessGate';
 import { EmptyState } from '../../shared/ui/EmptyState';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { Skeleton } from '../../shared/ui/Skeleton';
-import { EmployeePanel } from '../../features/auth/EmployeePanel';
+import type { Employee, EmployeePermission, CreateEmployeeDto, UpdateEmployeeDto } from '../../entities/employee/types';
+import { PERMISSION_LABEL } from '../../entities/employee/types';
+import { useEmployees, useCreateEmployee, useUpdateEmployee, useDismissEmployee, useResetPassword, useRemoveEmployee } from '../../entities/employee/queries';
 import s from './Settings.module.css';
 
 interface OrgData {
@@ -80,7 +85,6 @@ type SectionKey =
   | 'company-access'
   | 'appearance'
   | 'security'
-  | 'team'
   | 'integrations'
   | 'webhooks'
   | 'templates'
@@ -100,7 +104,6 @@ const SECTIONS: Array<{ key: SectionKey; label: string; icon: JSX.Element }> = [
   { key: 'company-access', label: 'Компания и доступ', icon: <Users size={15} /> },
   { key: 'appearance', label: 'Оформление', icon: <MonitorCog size={15} /> },
   { key: 'security', label: 'Безопасность', icon: <ShieldCheck size={15} /> },
-  { key: 'team', label: 'Команда', icon: <Users size={15} /> },
   { key: 'integrations', label: 'Интеграции', icon: <Globe size={15} /> },
   { key: 'webhooks', label: 'Webhooks', icon: <Zap size={15} /> },
   { key: 'templates', label: 'Шаблоны', icon: <MessageSquare size={15} /> },
@@ -345,8 +348,162 @@ function OrgSection() {
   );
 }
 
+const ALL_EMP_PERMS: EmployeePermission[] = ['full_access', 'financial_report', 'sales', 'production', 'warehouse_manager', 'observer'];
+const EMP_DEPT_PRESETS = ['Менеджмент', 'Продажи', 'Производство', 'Склад', 'Финансы', 'IT'];
+
+function AddEmpDrawer({ onClose }: { onClose: () => void }) {
+  const createEmployee = useCreateEmployee();
+  const [form, setForm] = useState<CreateEmployeeDto>({
+    phone: '', full_name: '', department: '', permissions: ['sales'],
+  });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  function togglePerm(p: EmployeePermission) {
+    setForm(f => ({
+      ...f,
+      permissions: f.permissions.includes(p) ? f.permissions.filter(x => x !== p) : [...f.permissions, p],
+    }));
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const errs: Record<string, string> = {};
+    if (!form.full_name.trim()) errs.full_name = 'Введите имя';
+    if (!form.phone.trim()) errs.phone = 'Введите телефон';
+    if (!/^\+7\d{10}$/.test(form.phone.trim())) errs.phone = 'Формат: +7XXXXXXXXXX';
+    if (!form.department.trim()) errs.department = 'Введите отдел';
+    if (!form.permissions.length) errs.permissions = 'Выберите хотя бы одно право';
+    if (Object.keys(errs).length) { setErrors(errs); return; }
+    await createEmployee.mutateAsync(form);
+    onClose();
+  }
+
+  return (
+    <div className={s.empDrawerOverlay} onClick={onClose}>
+      <div className={s.empDrawer} onClick={e => e.stopPropagation()}>
+        <div className={s.empDrawerHeader}>
+          <span className={s.empDrawerTitle}>Добавить сотрудника</span>
+          <button className={s.empDrawerClose} onClick={onClose}><X size={16} /></button>
+        </div>
+        <form className={s.empDrawerBody} onSubmit={handleSubmit}>
+          <div className={s.empField}>
+            <label className={s.empLabel}>Имя <span className={s.empReq}>*</span></label>
+            <input className={`${s.empInput} ${errors.full_name ? s.empInputErr : ''}`}
+              value={form.full_name} onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))}
+              placeholder="Аманова Айгерим" autoFocus />
+            {errors.full_name && <span className={s.empErrMsg}>{errors.full_name}</span>}
+          </div>
+          <div className={s.empField}>
+            <label className={s.empLabel}>Телефон <span className={s.empReq}>*</span></label>
+            <input className={`${s.empInput} ${errors.phone ? s.empInputErr : ''}`}
+              value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
+              placeholder="+77001234567" type="tel" />
+            {errors.phone && <span className={s.empErrMsg}>{errors.phone}</span>}
+          </div>
+          <div className={s.empField}>
+            <label className={s.empLabel}>Отдел <span className={s.empReq}>*</span></label>
+            <input className={`${s.empInput} ${errors.department ? s.empInputErr : ''}`} list="emp-dept-list"
+              value={form.department} onChange={e => setForm(f => ({ ...f, department: e.target.value }))}
+              placeholder="Продажи" />
+            <datalist id="emp-dept-list">{EMP_DEPT_PRESETS.map(d => <option key={d} value={d} />)}</datalist>
+            {errors.department && <span className={s.empErrMsg}>{errors.department}</span>}
+          </div>
+          <div className={s.empField}>
+            <label className={s.empLabel}>Права доступа <span className={s.empReq}>*</span></label>
+            <div className={s.empPermGrid}>
+              {ALL_EMP_PERMS.map(p => (
+                <button key={p} type="button"
+                  className={`${s.empPermBtn} ${form.permissions.includes(p) ? s.empPermBtnActive : ''}`}
+                  onClick={() => togglePerm(p)}
+                >{PERMISSION_LABEL[p]}</button>
+              ))}
+            </div>
+            {errors.permissions && <span className={s.empErrMsg}>{errors.permissions}</span>}
+          </div>
+          <div className={s.empDrawerNote}>
+            Система создаст учётную запись. Временный пароль будет показан после создания.
+          </div>
+          <div className={s.empDrawerActions}>
+            <button type="button" className={s.empCancelBtn} onClick={onClose}>Отмена</button>
+            <button type="submit" className={s.empSubmitBtn} disabled={createEmployee.isPending}>
+              {createEmployee.isPending ? 'Создание...' : 'Добавить'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function EditEmpDrawer({ employee, onClose }: { employee: Employee; onClose: () => void }) {
+  const updateEmployee = useUpdateEmployee();
+  const [form, setForm] = useState<UpdateEmployeeDto>({
+    department: employee.department,
+    permissions: [...employee.permissions],
+  });
+
+  function togglePerm(p: EmployeePermission) {
+    setForm(f => ({
+      ...f,
+      permissions: (f.permissions ?? []).includes(p)
+        ? (f.permissions ?? []).filter(x => x !== p)
+        : [...(f.permissions ?? []), p],
+    }));
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    await updateEmployee.mutateAsync({ id: employee.id, dto: form });
+    onClose();
+  }
+
+  return (
+    <div className={s.empDrawerOverlay} onClick={onClose}>
+      <div className={s.empDrawer} onClick={e => e.stopPropagation()}>
+        <div className={s.empDrawerHeader}>
+          <span className={s.empDrawerTitle}>{employee.full_name}</span>
+          <button className={s.empDrawerClose} onClick={onClose}><X size={16} /></button>
+        </div>
+        <form className={s.empDrawerBody} onSubmit={handleSubmit}>
+          <div className={s.empField}>
+            <label className={s.empLabel}>Отдел</label>
+            <input className={s.empInput} list="emp-dept-list2"
+              value={form.department ?? ''} onChange={e => setForm(f => ({ ...f, department: e.target.value }))} />
+            <datalist id="emp-dept-list2">{EMP_DEPT_PRESETS.map(d => <option key={d} value={d} />)}</datalist>
+          </div>
+          <div className={s.empField}>
+            <label className={s.empLabel}>Права доступа</label>
+            <div className={s.empPermGrid}>
+              {ALL_EMP_PERMS.map(p => (
+                <button key={p} type="button"
+                  className={`${s.empPermBtn} ${(form.permissions ?? []).includes(p) ? s.empPermBtnActive : ''}`}
+                  onClick={() => togglePerm(p)}
+                >{PERMISSION_LABEL[p]}</button>
+              ))}
+            </div>
+          </div>
+          <div className={s.empDrawerActions}>
+            <button type="button" className={s.empCancelBtn} onClick={onClose}>Отмена</button>
+            <button type="submit" className={s.empSubmitBtn} disabled={updateEmployee.isPending}>Сохранить</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 function CompanyAccessSection() {
   const access = useCompanyAccess();
+  const { data, isLoading } = useEmployees();
+  const dismissEmployee = useDismissEmployee();
+  const resetPassword = useResetPassword();
+  const removeEmployee = useRemoveEmployee();
+  const [addOpen, setAddOpen] = useState(false);
+  const [editEmployee, setEditEmployee] = useState<Employee | null>(null);
+
+  const employees = data?.results ?? [];
+  const active = employees.filter(e => e.status === 'active');
+  const dismissed = employees.filter(e => e.status === 'dismissed');
 
   return (
     <>
@@ -369,14 +526,12 @@ function CompanyAccessSection() {
                 <div className={s.adminGateTitle}>Компания активна</div>
                 <div className={s.adminGateText}>
                   Вы управляете компанией «{access.companyName ?? 'Текущая организация'}».
-                  Сотрудники добавляются в разделе ниже.
                 </div>
               </div>
             </div>
           ) : (
             <CompanyAccessGate compact />
           )}
-
           <div className={s.fieldGrid}>
             <div className={s.field}>
               <label className={s.fieldLabel}>Текущая компания</label>
@@ -390,120 +545,124 @@ function CompanyAccessSection() {
         </div>
       </div>
 
-      {/* ── Управление сотрудниками (только для admin/owner) ── */}
+      {/* ── Сотрудники (только для admin/owner) ── */}
       {access.isAdmin && (
         <div className={s.section}>
           <div className={s.sectionHeader}>
             <div>
               <div className={s.sectionTitle}>Сотрудники</div>
-              <div className={s.sectionSubtitle}>
-                Добавление, права доступа и управление аккаунтами. Сотрудники входят через
-                номер телефона при первом визите.
-              </div>
+              <div className={s.sectionSubtitle}>Добавление, права доступа и управление аккаунтами</div>
             </div>
+            <button className={s.empAddBtn} onClick={() => setAddOpen(true)}>
+              <Plus size={13} /> Добавить
+            </button>
           </div>
-          <div className={s.sectionBody}>
-            <EmployeePanel />
+
+          <div className={s.teamTableWrap}>
+            {isLoading ? (
+              <div style={{ padding: '16px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {[1, 2, 3].map(i => <Skeleton key={i} height={52} radius={6} />)}
+              </div>
+            ) : (
+              <table className={s.teamTable}>
+                <thead>
+                  <tr>
+                    <th>Сотрудник</th>
+                    <th>Отдел</th>
+                    <th>Права</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {active.map(emp => (
+                    <tr key={emp.id}>
+                      <td>
+                        <div className={s.memberCell}>
+                          <div className={s.memberAvatar}>{emp.full_name.charAt(0)}</div>
+                          <div>
+                            <div className={s.memberName}>
+                              {emp.full_name}
+                              {emp.isPendingFirstLogin && (
+                                <span className={s.empPendingBadge} style={{ marginLeft: 6 }}>Не входил(а)</span>
+                              )}
+                            </div>
+                            {emp.phone && <div className={s.memberEmail}>{emp.phone}</div>}
+                          </div>
+                        </div>
+                      </td>
+                      <td style={{ color: 'var(--text-secondary)', fontSize: 12 }}>{emp.department}</td>
+                      <td>
+                        <div className={s.empPermTags}>
+                          {emp.permissions.map(p => (
+                            <span key={p} className={s.empPermTag}>{PERMISSION_LABEL[p]}</span>
+                          ))}
+                        </div>
+                      </td>
+                      <td>
+                        <div className={s.empActGroup}>
+                          <button className={s.empActBtn} title="Редактировать" onClick={() => setEditEmployee(emp)}>
+                            <Edit2 size={12} />
+                          </button>
+                          <button className={s.empActBtn} title="Сбросить пароль" onClick={() => resetPassword.mutate(emp.id)}>
+                            <Key size={12} />
+                          </button>
+                          <button className={`${s.empActBtn} ${s.empActBtnDanger}`} title="Деактивировать"
+                            onClick={() => { if (confirm(`Деактивировать ${emp.full_name}?`)) dismissEmployee.mutate(emp.id); }}>
+                            <UserX size={12} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {active.length === 0 && (
+                    <tr>
+                      <td colSpan={4} style={{ textAlign: 'center', color: 'var(--text-tertiary)', padding: '32px 12px', fontSize: 13 }}>
+                        Нет активных сотрудников
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            )}
           </div>
+
+          {dismissed.length > 0 && (
+            <>
+              <div className={s.empSectionLabel}>Деактивированные</div>
+              <div className={s.teamTableWrap}>
+                <table className={s.teamTable}>
+                  <tbody>
+                    {dismissed.map(emp => (
+                      <tr key={emp.id} className={s.empDimmed}>
+                        <td>
+                          <div className={s.memberCell}>
+                            <div className={s.memberAvatar}>{emp.full_name.charAt(0)}</div>
+                            <div className={s.memberName}>{emp.full_name}</div>
+                          </div>
+                        </td>
+                        <td style={{ color: 'var(--text-secondary)', fontSize: 12 }}>{emp.department}</td>
+                        <td><span className={s.empDismissedBadge}>Деактивирован</span></td>
+                        <td>
+                          <div className={s.empActGroup}>
+                            <button className={`${s.empActBtn} ${s.empActBtnDanger}`} title="Удалить"
+                              onClick={() => { if (confirm(`Удалить ${emp.full_name}?`)) removeEmployee.mutate(emp.id); }}>
+                              <Trash2 size={12} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
         </div>
       )}
+
+      {addOpen && <AddEmpDrawer onClose={() => setAddOpen(false)} />}
+      {editEmployee && <EditEmpDrawer employee={editEmployee} onClose={() => setEditEmployee(null)} />}
     </>
-  );
-}
-
-function TeamSection() {
-  const queryClient = useQueryClient();
-  const { isAdmin } = useRole();
-  const { data: team, isLoading } = useQuery<{ results: TeamMemberResponse[] }>({
-    queryKey: ['team'],
-    queryFn: () => api.get('/users/team/'),
-  });
-  const setRole = useMutation({
-    mutationFn: ({ userId, role }: { userId: string; role: string }) => api.patch(`/users/${userId}/role/`, { role }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['team'] });
-      toast.success('Роль обновлена');
-    },
-  });
-  const removeMember = useMutation({
-    mutationFn: (userId: string) => api.delete(`/company/employees/${userId}`),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['team'] });
-      toast.success('Участник удалён');
-    },
-    onError: () => toast.error('Не удалось удалить'),
-  });
-
-  return (
-    <div className={s.section}>
-      <div className={s.sectionHeader}>
-        <div>
-          <div className={s.sectionTitle}>Команда</div>
-          <div className={s.sectionSubtitle}>Активные сотрудники компании</div>
-        </div>
-        <Button size="sm" onClick={() => window.location.assign('/admin/team')}>Приглашения</Button>
-      </div>
-
-      <div className={s.teamTableWrap}>
-        <table className={s.teamTable}>
-          <tbody>
-            {isLoading
-              ? [1, 2, 3].map((item) => (
-                <tr key={item}>
-                  <td><Skeleton height={16} /></td>
-                </tr>
-              ))
-              : (team?.results ?? []).map((member) => (
-                <tr key={member.id}>
-                  <td>
-                    <div className={s.memberCell}>
-                      <div className={s.memberAvatar}>{member.full_name.charAt(0)}</div>
-                      <div>
-                        <div className={s.memberName}>{member.full_name}</div>
-                        <div className={s.memberEmail}>{member.email}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td>
-                    <Badge
-                      bg={member.status === 'active' ? 'var(--fill-positive-soft)' : 'var(--bg-surface-inset)'}
-                      color={member.status === 'active' ? 'var(--fill-positive-text)' : 'var(--text-secondary)'}
-                    >
-                      {member.status}
-                    </Badge>
-                  </td>
-                  <td>
-                    {isAdmin ? (
-                      <select
-                        value={member.role ?? 'viewer'}
-                        onChange={(event) => setRole.mutate({ userId: member.id, role: event.target.value })}
-                        className={`kort-input ${s.roleSelect}`}
-                      >
-                        <option value="admin">admin</option>
-                        <option value="manager">manager</option>
-                        <option value="viewer">viewer</option>
-                      </select>
-                    ) : (
-                      <span className={s.roleText}>{member.role ?? 'viewer'}</span>
-                    )}
-                  </td>
-                  {isAdmin && member.role !== 'owner' && (
-                    <td>
-                      <button
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', padding: '2px 4px', borderRadius: 4 }}
-                        title="Удалить из команды"
-                        onClick={() => { if (confirm(`Удалить ${member.full_name} из команды?`)) removeMember.mutate(member.id); }}
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </td>
-                  )}
-                </tr>
-              ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
   );
 }
 
@@ -1057,8 +1216,6 @@ export default function SettingsPage() {
         return access.isAdmin && access.hasCompanyAccess;
       case 'templates':
         return access.hasCompanyAccess;
-      case 'team':
-        return capabilities.canManageTeam;
       case 'integrations':
         return capabilities.canManageIntegrations;
       case 'webhooks':
@@ -1068,7 +1225,7 @@ export default function SettingsPage() {
       default:
         return false;
     }
-  }), [access.hasCompanyAccess, access.isAdmin, capabilities.canManageIntegrations, capabilities.canManageTeam, capabilities.canRunAutomations, capabilities.canViewAudit]);
+  }), [access.hasCompanyAccess, access.isAdmin, capabilities.canManageIntegrations, capabilities.canRunAutomations, capabilities.canViewAudit]);
 
   const requestedSection = (params.section as SectionKey | undefined) ?? 'company-access';
   const defaultSection = visibleSections[0]?.key ?? 'company-access';
@@ -1116,7 +1273,6 @@ export default function SettingsPage() {
               {section === 'company-access' && <CompanyAccessSection />}
               {section === 'appearance' && <AppearanceSection />}
               {section === 'security' && <SecuritySection />}
-              {section === 'team' && <TeamSection />}
               {section === 'api' && <ApiSection />}
               {section === 'integrations' && <StubSection title="Интеграции" subtitle="Каталог внешних подключений и ключей" />}
               {section === 'webhooks' && <StubSection title="Webhooks" subtitle="Доставка событий и автоматизации" />}
