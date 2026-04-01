@@ -17,4 +17,7 @@ export const employeeApi = {
 
   resetPassword: (id: string) =>
     api.post<{ tempPassword: string }>(`/company/employees/${id}/reset-password`, {}),
+
+  remove: (id: string) =>
+    api.delete<{ ok: boolean }>(`/company/employees/${id}`),
 };

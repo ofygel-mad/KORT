@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Plus, UserX, Key, Edit2, X } from 'lucide-react';
+import { Plus, UserX, Key, Edit2, X, Trash2 } from 'lucide-react';
 import { useViewportProfile } from '../../shared/hooks/useViewportProfile';
-import { useEmployees, useCreateEmployee, useUpdateEmployee, useDismissEmployee, useResetPassword } from '../../entities/employee/queries';
+import { useEmployees, useCreateEmployee, useUpdateEmployee, useDismissEmployee, useResetPassword, useRemoveEmployee } from '../../entities/employee/queries';
 import type { Employee, CreateEmployeeDto, UpdateEmployeeDto, EmployeePermission } from '../../entities/employee/types';
 import { PERMISSION_LABEL } from '../../entities/employee/types';
 import { Skeleton } from '../../shared/ui/Skeleton';
@@ -162,6 +162,7 @@ export default function EmployeesPage() {
   const { data, isLoading, isError } = useEmployees();
   const dismissEmployee = useDismissEmployee();
   const resetPassword = useResetPassword();
+  const removeEmployee = useRemoveEmployee();
   const [addOpen, setAddOpen] = useState(false);
   const [editEmployee, setEditEmployee] = useState<Employee | null>(null);
 
@@ -190,7 +191,12 @@ export default function EmployeesPage() {
           {active.map(emp => (
             <div key={emp.id} className={styles.mobileCard}>
               <div className={styles.mobileCardHead}>
-                <strong>{emp.full_name}</strong>
+                <div>
+                  <strong>{emp.full_name}</strong>
+                  {emp.isPendingFirstLogin && (
+                    <span className={styles.pendingBadge}>Не входил(а)</span>
+                  )}
+                </div>
                 <div className={styles.mobileCardActions}>
                   <button className={styles.iconBtn} onClick={() => setEditEmployee(emp)} title="Редактировать"><Edit2 size={13} /></button>
                   <button className={styles.iconBtn} onClick={() => resetPassword.mutate(emp.id)} title="Сбросить пароль"><Key size={13} /></button>
@@ -222,7 +228,13 @@ export default function EmployeesPage() {
                 <div key={emp.id} className={`${styles.mobileCard} ${styles.mobileCardDismissed}`}>
                   <div className={styles.mobileCardHead}>
                     <strong>{emp.full_name}</strong>
-                    <span className={styles.dismissedBadge}>Деактивирован</span>
+                    <div className={styles.mobileCardActions}>
+                      <span className={styles.dismissedBadge}>Деактивирован</span>
+                      <button className={`${styles.iconBtn} ${styles.iconBtnDanger}`} title="Удалить"
+                        onClick={() => { if (confirm(`Удалить ${emp.full_name}?`)) removeEmployee.mutate(emp.id); }}>
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
                   </div>
                   {emp.department && <div className={styles.mobileCardMeta}><span>{emp.department}</span></div>}
                 </div>
@@ -244,7 +256,12 @@ export default function EmployeesPage() {
                   {active.map(emp => (
                     <tr key={emp.id} className={styles.row}>
                       <td>
-                        <div className={styles.empName}>{emp.full_name}</div>
+                        <div className={styles.empName}>
+                          {emp.full_name}
+                          {emp.isPendingFirstLogin && (
+                            <span className={styles.pendingBadge}>Не входил(а)</span>
+                          )}
+                        </div>
                       </td>
                       <td className={styles.tdMono}>{emp.phone ?? '—'}</td>
                       <td className={styles.tdSecondary}>{emp.department}</td>
@@ -293,7 +310,13 @@ export default function EmployeesPage() {
                         <td><div className={styles.empName}>{emp.full_name}</div></td>
                         <td className={styles.tdMono}>{emp.phone ?? '—'}</td>
                         <td className={styles.tdSecondary}>{emp.department}</td>
-                        <td colSpan={3}><span className={styles.dismissedBadge}>Деактивирован</span></td>
+                        <td colSpan={2}><span className={styles.dismissedBadge}>Деактивирован</span></td>
+                        <td className={styles.tdActions}>
+                          <button className={`${styles.iconBtn} ${styles.iconBtnDanger}`} title="Удалить"
+                            onClick={() => { if (confirm(`Удалить ${emp.full_name}?`)) removeEmployee.mutate(emp.id); }}>
+                            <Trash2 size={13} />
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>

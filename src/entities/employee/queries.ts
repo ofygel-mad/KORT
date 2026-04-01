@@ -44,3 +44,12 @@ export const useResetPassword = () =>
     onSuccess: (data) => toast.success(`Временный пароль: ${data.tempPassword}`),
     onError: () => toast.error('Не удалось сбросить пароль'),
   });
+
+export const useRemoveEmployee = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => employeeApi.remove(id),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: employeeKeys.all }); toast.success('Сотрудник удалён'); },
+    onError: () => toast.error('Не удалось удалить сотрудника'),
+  });
+};

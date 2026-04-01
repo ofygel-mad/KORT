@@ -10,6 +10,7 @@ export interface Employee {
   department: string;
   permissions: EmployeePermission[];
   status: 'active' | 'dismissed';
+  isPendingFirstLogin?: boolean;
   addedByName: string | null;
   joinedAt: string;
 }

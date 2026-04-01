@@ -30,6 +30,7 @@
 .permTags { display:flex; gap:4px; flex-wrap:wrap; }
 .permTag { font-size:10px; padding:2px 7px; background:var(--fill-accent-soft,rgba(160,104,56,.1)); color:var(--fill-accent); border-radius:10px; font-weight:500; }
 .dismissedBadge { font-size:11px; padding:2px 8px; background:rgba(239,68,68,.1); color:var(--fill-negative); border-radius:10px; }
+.pendingBadge { display:inline-block; margin-left:6px; font-size:10px; padding:1px 7px; background:rgba(245,158,11,.12); color:#d97706; border-radius:10px; font-weight:500; }
 .sectionLabel { font-size:11px; font-weight:600; letter-spacing:.07em; text-transform:uppercase; color:var(--text-tertiary); padding:16px 14px 6px; }
 .empty { display:flex; flex-direction:column; align-items:center; gap:10px; padding:60px 20px; text-align:center; color:var(--text-tertiary); font-size:14px; }
 .emptyBtn { margin-top:4px; padding:7px 16px; background:var(--bg-surface-inset); border:1px solid var(--border-subtle); border-radius:7px; color:var(--text-secondary); font-size:13px; font-family:inherit; cursor:pointer; }

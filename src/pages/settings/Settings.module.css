@@ -5,9 +5,11 @@
 /* ── Page layout ─────────────────────────────────────────────── */
 .page {
   padding: var(--space-page-y) var(--space-page-x);
-  min-height: 100%;
+  height: 100%;
   display: flex;
   flex-direction: column;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* ── Two-column layout: sidebar + content ────────────────────── */

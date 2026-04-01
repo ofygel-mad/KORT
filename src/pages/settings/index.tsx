@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   Smartphone,
   Sun,
+  Trash2,
   User,
   Users,
   Zap,
@@ -424,6 +425,14 @@ function TeamSection() {
       toast.success('Роль обновлена');
     },
   });
+  const removeMember = useMutation({
+    mutationFn: (userId: string) => api.delete(`/company/employees/${userId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['team'] });
+      toast.success('Участник удалён');
+    },
+    onError: () => toast.error('Не удалось удалить'),
+  });
 
   return (
     <div className={s.section}>
@@ -478,6 +487,17 @@ function TeamSection() {
                       <span className={s.roleText}>{member.role ?? 'viewer'}</span>
                     )}
                   </td>
+                  {isAdmin && member.role !== 'owner' && (
+                    <td>
+                      <button
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', padding: '2px 4px', borderRadius: 4 }}
+                        title="Удалить из команды"
+                        onClick={() => { if (confirm(`Удалить ${member.full_name} из команды?`)) removeMember.mutate(member.id); }}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </td>
+                  )}
                 </tr>
               ))}
           </tbody>
