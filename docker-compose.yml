@@ -60,7 +60,7 @@ services:
     ports:
       - "${FRONTEND_PORT:-5173}:80"
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1/healthz >/dev/null 2>&1 || exit 1"]
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:80/healthz >/dev/null 2>&1 || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 20

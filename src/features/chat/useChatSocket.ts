@@ -117,6 +117,5 @@ export function useChatSocket() {
       wsRef.current?.close();
       wsRef.current = null;
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasCompanyAccess]);
 }

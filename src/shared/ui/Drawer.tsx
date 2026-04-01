@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import type { ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { X } from 'lucide-react';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { sheetVariants, overlayVariants } from '../motion/presets';
@@ -24,6 +24,29 @@ const SIZE_WIDTH: Record<DrawerSize, number> = { sm: 380, md: 480, lg: 600 };
 export function Drawer({ open, onClose, title, subtitle, children, size = 'md', footer, width }: DrawerProps) {
   const isMobile  = useIsMobile();
   const panelWidth = width ?? SIZE_WIDTH[size];
+
+  useEffect(() => {
+    if (!open || typeof document === 'undefined') return;
+
+    const body = document.body;
+    const currentCount = Number(body.dataset.kortDrawerCount ?? '0');
+    const nextCount = currentCount + 1;
+
+    body.dataset.kortDrawerCount = String(nextCount);
+    body.dataset.kortDrawerOpen = 'true';
+
+    return () => {
+      const remainingCount = Number(body.dataset.kortDrawerCount ?? '1') - 1;
+
+      if (remainingCount > 0) {
+        body.dataset.kortDrawerCount = String(remainingCount);
+        return;
+      }
+
+      delete body.dataset.kortDrawerCount;
+      delete body.dataset.kortDrawerOpen;
+    };
+  }, [open]);
 
   const titleBlock = (
     <div className={s.titleBlock}>

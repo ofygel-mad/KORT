@@ -27,8 +27,8 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 
 RUN chmod +x /usr/local/bin/start-nginx.sh
 
-ENV PORT=8080
+ENV PORT=80
 ENV BACKEND_URL=http://127.0.0.1:8000
 
-EXPOSE 8080
+EXPOSE 80
 CMD ["/usr/local/bin/start-nginx.sh"]

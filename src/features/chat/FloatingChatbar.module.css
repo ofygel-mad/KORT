@@ -11,7 +11,7 @@
   right: 14px;
   top: 50%;
   transform: translateY(-50%);
-  z-index: 1200;
+  z-index: 150;
 
   display: flex;
   flex-direction: column;
@@ -27,6 +27,11 @@
 
   opacity: 0.38;
   transition: opacity 0.22s ease, box-shadow 0.22s ease;
+}
+
+:global(body[data-kort-drawer-open='true']) .bar {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .barLit {
@@ -56,6 +61,7 @@
 .emptyHint {
   width: 32px;
   height: 32px;
+  pointer-events: none;
 }
 
 .profileBtn {

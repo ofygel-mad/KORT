@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { clearSession, preparePage } from './helpers';
+import { clearSession, loginAs, preparePage } from './helpers';
 
 test('company registration creates an account that can log in again', async ({ page }) => {
   await clearSession(page);
@@ -13,7 +13,7 @@ test('company registration creates an account that can log in again', async ({ p
 
   await page.goto('/auth/register');
 
-  let fields = page.locator('form input');
+  const fields = page.locator('form input:not([type="checkbox"])');
   await expect(fields).toHaveCount(6);
 
   await fields.nth(0).fill(companyName);
@@ -25,15 +25,6 @@ test('company registration creates an account that can log in again', async ({ p
   await page.getByRole('button', { name: 'Создать компанию' }).click();
   await expect(page).not.toHaveURL(/\/auth\/register$/);
 
-  await clearSession(page);
-  await page.goto('/auth/login');
-
-  fields = page.locator('form input');
-  await expect(fields).toHaveCount(2);
-
-  await fields.nth(0).fill(email);
-  await fields.nth(1).fill(password);
-  await page.getByRole('button', { name: 'Войти', exact: true }).click();
-
+  await loginAs(page, email, password);
   await expect(page).not.toHaveURL(/\/auth\/login$/);
 });

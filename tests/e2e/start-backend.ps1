@@ -6,10 +6,8 @@ $serverDir = Join-Path $repoRoot 'server'
 Set-Location $repoRoot
 docker compose up -d postgres | Out-Null
 
-$dbExists = docker compose exec -T postgres psql -U kort -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname = 'kort_db_test'"
-if (-not ($dbExists | Select-String -Pattern '1' -Quiet)) {
-  docker compose exec -T postgres psql -U kort -d postgres -c "CREATE DATABASE kort_db_test"
-}
+docker compose exec -T postgres psql -U kort -d postgres -c "DROP DATABASE IF EXISTS kort_db_test WITH (FORCE)" | Out-Null
+docker compose exec -T postgres psql -U kort -d postgres -c "CREATE DATABASE kort_db_test" | Out-Null
 
 Set-Location $serverDir
 

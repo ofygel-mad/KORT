@@ -8,7 +8,7 @@ test('company registration submits on Enter from password confirmation', async (
   await preparePage(page);
   await page.goto('/auth/register');
 
-  const fields = page.locator('form input');
+  const fields = page.locator('form input:not([type="checkbox"])');
   await expect(fields).toHaveCount(6);
 
   await fields.nth(0).fill(`Тестовая компания ${unique}`);
@@ -28,7 +28,7 @@ test('company registration footer stays visible on short desktop viewport', asyn
   await preparePage(page);
   await page.goto('/auth/register');
 
-  const fields = page.locator('form input');
+  const fields = page.locator('form input:not([type="checkbox"])');
   await expect(fields).toHaveCount(6);
 
   await fields.nth(0).fill('Тест');
@@ -63,7 +63,7 @@ test('login rejects an invalid password for an existing account', async ({ page,
   await preparePage(page);
   await page.goto('/auth/login');
 
-  const fields = page.locator('form input');
+  const fields = page.locator('form input:not([type="checkbox"])');
   await expect(fields).toHaveCount(2);
 
   await fields.nth(0).fill(email);

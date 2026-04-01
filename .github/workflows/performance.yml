@@ -33,7 +33,7 @@ jobs:
 
       - name: Analyze bundle size
         run: |
-          if [ -f "dist/index.js" ]; then
+          if [ -d "dist" ]; then
             echo "### 📦 Bundle Analysis" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "Frontend build size:" >> $GITHUB_STEP_SUMMARY
@@ -163,7 +163,7 @@ jobs:
 
       - name: Start preview server
         run: |
-          pnpm preview &
+          pnpm preview --host 127.0.0.1 --port 4173 &
           sleep 5
 
       - name: Run Lighthouse CI

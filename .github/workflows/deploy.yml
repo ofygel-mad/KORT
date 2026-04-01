@@ -178,7 +178,7 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
 
           # Test backend health
-          curl -s http://localhost:8000/health || echo "⚠️ Health endpoint not available" >> $GITHUB_STEP_SUMMARY
+          curl -s http://localhost:8000/api/v1/health || echo "⚠️ Health endpoint not available" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "✅ API endpoint verification completed" >> $GITHUB_STEP_SUMMARY
 

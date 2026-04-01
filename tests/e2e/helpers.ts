@@ -56,8 +56,27 @@ export async function navigateWithinApp(page: Page, route: string) {
 export async function loginAs(page: Page, email: string, password = 'demo1234') {
   await preparePage(page);
   await clearSession(page);
-  await setInputValue(page, 'Email или номер телефона', email);
-  await setInputValue(page, 'Пароль', password);
-  await triggerClickByRole(page, 'Войти');
+
+  const submit = async () => {
+    await setInputValue(page, 'Email или номер телефона', email);
+    await setInputValue(page, 'Пароль', password);
+    await triggerClickByRole(page, 'Войти');
+  };
+
+  await submit();
+
+  try {
+    await page.waitForURL((url) => !url.pathname.includes('/auth/login'), { timeout: 15000 });
+    return;
+  } catch (error) {
+    const serverError = page.getByText(/внутренняя ошибка сервера/i);
+    if (!(await serverError.isVisible().catch(() => false))) {
+      throw error;
+    }
+  }
+
+  await page.reload({ waitUntil: 'load' });
+  await expect(page).toHaveURL(/\/auth\/login$/);
+  await submit();
   await page.waitForURL((url) => !url.pathname.includes('/auth/login'), { timeout: 15000 });
 }

@@ -134,7 +134,6 @@ function MessageThread({
     markRead.mutate(conversationId);
     initialScrollDoneRef.current = false;
     prevMessageCountRef.current = 0;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversationId]);
 
   // Scroll to bottom on initial load
@@ -160,7 +159,6 @@ function MessageThread({
         bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages.length]);
 
   // Preserve scroll position when older messages are prepended
