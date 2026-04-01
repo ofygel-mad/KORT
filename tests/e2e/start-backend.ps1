@@ -24,4 +24,15 @@ $env:CONSOLE_SERVICE_PASSWORD = 'test1234'
 
 pnpm db:deploy | Out-Host
 pnpm db:seed | Out-Host
-pnpm exec tsx src/index.ts
+$stdoutLog = Join-Path $serverDir 'e2e-backend.out.log'
+$stderrLog = Join-Path $serverDir 'e2e-backend.err.log'
+$pnpmCmd = (Get-Command pnpm.cmd).Source
+$backendProcess = Start-Process `
+  -FilePath $pnpmCmd `
+  -ArgumentList @('exec', 'tsx', 'src/index.ts') `
+  -WorkingDirectory $serverDir `
+  -PassThru `
+  -RedirectStandardOutput $stdoutLog `
+  -RedirectStandardError $stderrLog
+
+Wait-Process -Id $backendProcess.Id

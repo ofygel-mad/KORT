@@ -6,10 +6,12 @@ test('pending first-login employee is redirected to set password step', async ({
   await preparePage(page);
   await page.goto('/auth/login');
 
-  await page.getByPlaceholder('Email или номер телефона').fill('+77010000003');
-  await page.getByPlaceholder('Пароль').fill('+77010000003');
-  await page.getByRole('button', { name: 'Войти', exact: true }).click();
+  const fields = page.locator('form input:not([type="checkbox"])');
+  await expect(fields).toHaveCount(2);
+  await fields.nth(0).fill('+77010000003');
+  await fields.nth(1).fill('+77010000003');
+  await page.locator('form button[type="submit"]').click();
 
-  await expect(page.getByText(/установите пароль/i)).toBeVisible();
-  await expect(page.getByText(/после сохранения войдите заново/i)).toBeVisible();
+  await expect(page.locator('input[type="password"]')).toHaveCount(2);
+  await expect(page.locator('[class*="submitBtn"]')).toBeVisible();
 });

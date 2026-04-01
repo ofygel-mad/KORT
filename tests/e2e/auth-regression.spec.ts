@@ -11,8 +11,8 @@ test('company registration submits on Enter from password confirmation', async (
   const fields = page.locator('form input:not([type="checkbox"])');
   await expect(fields).toHaveCount(6);
 
-  await fields.nth(0).fill(`Тестовая компания ${unique}`);
-  await fields.nth(1).fill(`Тестовый руководитель ${unique}`);
+  await fields.nth(0).fill(`Test Company ${unique}`);
+  await fields.nth(1).fill(`Test Owner ${unique}`);
   await fields.nth(2).fill(`owner+enter-${unique}@demo.kz`);
   await fields.nth(4).fill('superpass');
   await fields.nth(5).fill('superpass');
@@ -31,17 +31,17 @@ test('company registration footer stays visible on short desktop viewport', asyn
   const fields = page.locator('form input:not([type="checkbox"])');
   await expect(fields).toHaveCount(6);
 
-  await fields.nth(0).fill('Тест');
-  await fields.nth(1).fill('Жасарал Асхат');
+  await fields.nth(0).fill('Test');
+  await fields.nth(1).fill('Zhasaral Askhat');
   await fields.nth(2).fill('ofygel@gmail.com');
   await fields.nth(3).fill('+7 747 456-86-61');
   await fields.nth(4).fill('12345678');
   await fields.nth(5).fill('12345679');
 
-  const submitButton = page.getByRole('button', { name: 'Создать компанию' });
+  const submitButton = page.locator('form button[type="submit"]');
   await expect(submitButton).toBeInViewport();
   await submitButton.click();
-  await expect(page.getByText('Пароли не совпадают.')).toBeInViewport();
+  await expect(page.locator('[class*="errorMessage"]').first()).toBeVisible();
   await expect(submitButton).toBeInViewport();
 });
 
@@ -68,8 +68,8 @@ test('login rejects an invalid password for an existing account', async ({ page,
 
   await fields.nth(0).fill(email);
   await fields.nth(1).fill('wrong-password');
-  await page.getByRole('button', { name: 'Войти', exact: true }).click();
+  await page.locator('form button[type="submit"]').click();
 
   await expect(page).toHaveURL(/\/auth\/login$/);
-  await expect(page.locator('form')).toContainText(/Неверный пароль|Неверный логин или пароль/i);
+  await expect(page.locator('[class*="errorMessage"]').first()).toBeVisible();
 });

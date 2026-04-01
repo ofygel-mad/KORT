@@ -6,8 +6,8 @@ test('company registration creates an account that can log in again', async ({ p
   await preparePage(page);
 
   const unique = Date.now();
-  const companyName = `Тестовая компания ${unique}`;
-  const ownerName = `Тестовый руководитель ${unique}`;
+  const companyName = `Test Company ${unique}`;
+  const ownerName = `Test Owner ${unique}`;
   const email = `owner+${unique}@demo.kz`;
   const password = 'superpass1';
 
@@ -22,7 +22,7 @@ test('company registration creates an account that can log in again', async ({ p
   await fields.nth(4).fill(password);
   await fields.nth(5).fill(password);
 
-  await page.getByRole('button', { name: 'Создать компанию' }).click();
+  await page.locator('form button[type="submit"]').click();
   await expect(page).not.toHaveURL(/\/auth\/register$/);
 
   await loginAs(page, email, password);

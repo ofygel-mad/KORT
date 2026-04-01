@@ -92,6 +92,13 @@ type SectionKey =
   | 'templates'
   | 'api';
 
+type SectionAlias = SectionKey | 'team';
+
+function normalizeSectionKey(section: SectionAlias | undefined): SectionKey {
+  if (section === 'team') return 'company-access';
+  return section ?? 'company-access';
+}
+
 const ACCESS_LABELS: Record<string, string> = {
   active: 'Активен',
   pending: 'Ожидает подтверждения',
@@ -1330,7 +1337,7 @@ export default function SettingsPage() {
     }
   }), [access.hasCompanyAccess, access.isAdmin, capabilities.canManageIntegrations, capabilities.canRunAutomations, capabilities.canViewAudit]);
 
-  const requestedSection = (params.section as SectionKey | undefined) ?? 'company-access';
+  const requestedSection = normalizeSectionKey(params.section as SectionAlias | undefined);
   const defaultSection = visibleSections[0]?.key ?? 'company-access';
   const section = visibleSections.some((item) => item.key === requestedSection) ? requestedSection : defaultSection;
   const sectionKeys = visibleSections.map((item) => item.key);
