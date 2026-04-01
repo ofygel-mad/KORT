@@ -254,6 +254,93 @@
   position: relative;
 }
 
+/* ── Profile popover ── */
+.profileRoot {
+  position: relative;
+}
+
+.profilePopover {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 220px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  border-radius: calc(var(--surface-radius-tight) + 4px);
+  border: 1px solid var(--border-subtle);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--bg-surface) 88%, var(--bg-surface-inset) 12%) 0%, color-mix(in srgb, var(--bg-surface-elevated) 92%, var(--bg-surface-inset) 8%) 100%);
+  box-shadow: 0 24px 56px -28px rgba(16,24,40,0.22);
+  backdrop-filter: blur(14px) saturate(120%);
+  z-index: var(--z-drawer);
+  text-align: center;
+}
+
+.profilePopoverAvatar {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--fill-accent) 18%, #8A9AB8) 0%, color-mix(in srgb, var(--fill-accent) 28%, #5C6B84) 100%);
+  border: 1px solid color-mix(in srgb, var(--fill-accent) 24%, var(--border-default));
+  color: var(--text-on-accent, #fff);
+  font-size: 17px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+
+.profilePopoverName {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.profilePopoverContact {
+  font-size: 11px;
+  color: var(--text-secondary);
+  word-break: break-all;
+}
+
+.profilePopoverStatus {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: var(--bg-surface-inset);
+  border-radius: 8px;
+  padding: 4px 10px;
+  margin-top: 2px;
+}
+
+.profilePopoverLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 6px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--font-body);
+  color: var(--text-accent);
+  border: 1px solid color-mix(in srgb, var(--fill-accent) 22%, var(--border-subtle));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--fill-accent) 7%, var(--bg-surface));
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+  width: 100%;
+  justify-content: center;
+}
+
+.profilePopoverLink:hover {
+  background: color-mix(in srgb, var(--fill-accent) 13%, var(--bg-surface));
+  border-color: color-mix(in srgb, var(--fill-accent) 35%, var(--border-default));
+}
+
 .unreadDot {
   position: absolute;
   top: 7px;

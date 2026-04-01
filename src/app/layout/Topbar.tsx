@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useLocation, useMatch, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowLeft, Bell, ChevronRight, Search } from 'lucide-react';
+import { ArrowLeft, Bell, ChevronRight, Search, User } from 'lucide-react';
 import { ThemeSwitcher } from '../../shared/ui/ThemeSwitcher';
 import { addDocumentListener } from '../../shared/lib/browser';
 import { api } from '../../shared/api/client';
@@ -12,6 +12,7 @@ import { useT } from '../../shared/i18n';
 import { popoverVariants, t } from '../../shared/motion/presets';
 import { useCommandPalette } from '../../shared/stores/commandPalette';
 import { useAuthStore } from '../../shared/stores/auth';
+import { useProfileStore, MOODS } from '../../shared/stores/profile';
 import { useSharedBus } from '../../features/shared-bus';
 import type { GlobalNotifEvent } from '../../features/shared-bus';
 import styles from './Topbar.module.css';
@@ -203,6 +204,29 @@ export function Topbar({ chromeTone = 'dark' }: { chromeTone?: 'canvas' | 'dark'
   const isDashboard = location.pathname === '/';
   const showBack = location.pathname !== '/' && location.pathname !== '/onboarding';
   const backTarget = resolveBackTarget(location.pathname);
+  const { mood, statusText } = useProfileStore();
+  const [profileHover, setProfileHover] = useState(false);
+  const profileRef = useRef<HTMLDivElement>(null);
+  const hoverTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const initials = (user?.full_name ?? 'U')
+    .split(' ')
+    .filter(Boolean)
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+
+  const currentMood = MOODS.find((m) => m.key === mood);
+
+  function handleProfileMouseEnter() {
+    if (hoverTimeout.current) clearTimeout(hoverTimeout.current);
+    setProfileHover(true);
+  }
+
+  function handleProfileMouseLeave() {
+    hoverTimeout.current = setTimeout(() => setProfileHover(false), 200);
+  }
 
   return (
     <header className={styles.topbar} data-chrome={chromeTone}>
@@ -246,13 +270,56 @@ export function Topbar({ chromeTone = 'dark' }: { chromeTone?: 'canvas' | 'dark'
           {locale === 'ru' ? 'KK' : 'RU'}
         </button>
 
-        <button
-          className={styles.avatarBtn}
-          onClick={() => navigate('/settings')}
-          aria-label="Настройки профиля"
+        <div
+          ref={profileRef}
+          className={styles.profileRoot}
+          onMouseEnter={handleProfileMouseEnter}
+          onMouseLeave={handleProfileMouseLeave}
         >
-          {user?.full_name?.[0]?.toUpperCase() ?? 'U'}
-        </button>
+          <button
+            className={styles.avatarBtn}
+            onClick={() => navigate('/settings/profile')}
+            aria-label="Профиль"
+          >
+            {initials}
+          </button>
+
+          <AnimatePresence>
+            {profileHover && (
+              <motion.div
+                className={styles.profilePopover}
+                variants={popoverVariants}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+                onMouseEnter={handleProfileMouseEnter}
+                onMouseLeave={handleProfileMouseLeave}
+              >
+                <div className={styles.profilePopoverAvatar}>{initials}</div>
+                <div className={styles.profilePopoverName}>{user?.full_name ?? '—'}</div>
+                {(user?.email || user?.phone) && (
+                  <div className={styles.profilePopoverContact}>
+                    {user.email ?? user.phone}
+                  </div>
+                )}
+                {(currentMood?.key !== 'none' || statusText) && (
+                  <div className={styles.profilePopoverStatus}>
+                    {currentMood?.key !== 'none' && <span>{currentMood?.emoji}</span>}
+                    {statusText && <span>{statusText}</span>}
+                    {!statusText && currentMood?.key !== 'none' && <span>{currentMood?.label}</span>}
+                  </div>
+                )}
+                <button
+                  className={styles.profilePopoverLink}
+                  onClick={() => { setProfileHover(false); navigate('/settings/profile'); }}
+                >
+                  <User size={12} />
+                  Открыть профиль
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
     </header>
   );

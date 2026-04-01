@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   Smartphone,
   Sun,
+  User,
   Users,
   Zap,
 } from 'lucide-react';
@@ -31,6 +32,7 @@ import { useDocumentTitle } from '../../shared/hooks/useDocumentTitle';
 import { getDeviceId, usePinStore } from '../../shared/stores/pin';
 import { useAuthStore } from '../../shared/stores/auth';
 import { useUIStore, type Theme, type ThemePack } from '../../shared/stores/ui';
+import { useProfileStore, MOODS } from '../../shared/stores/profile';
 import { Badge } from '../../shared/ui/Badge';
 import { Button } from '../../shared/ui/Button';
 import { CompanyAccessGate } from '../../shared/ui/CompanyAccessGate';
@@ -72,6 +74,7 @@ interface OrgData {
 }
 
 type SectionKey =
+  | 'profile'
   | 'organization'
   | 'company-access'
   | 'appearance'
@@ -91,6 +94,7 @@ const ACCESS_LABELS: Record<string, string> = {
 };
 
 const SECTIONS: Array<{ key: SectionKey; label: string; icon: JSX.Element }> = [
+  { key: 'profile', label: 'Профиль', icon: <User size={15} /> },
   { key: 'organization', label: 'Организация', icon: <Building2 size={15} /> },
   { key: 'company-access', label: 'Компания и доступ', icon: <Users size={15} /> },
   { key: 'appearance', label: 'Оформление', icon: <MonitorCog size={15} /> },
@@ -741,6 +745,129 @@ function OwnerCredentialsCard() {
   );
 }
 
+function ProfileSection() {
+  const userAuth = useAuthStore((state) => state.user);
+  const setUser = useAuthStore((state) => state.setUser);
+  const queryClient = useQueryClient();
+  const { mood, statusText, setMood, setStatusText } = useProfileStore();
+
+  const [fullName, setFullName] = useState(userAuth?.full_name ?? '');
+  const [phone, setPhone] = useState(userAuth?.phone ?? '');
+
+  const { data: meData } = useQuery<{
+    id: string; full_name: string; email: string; phone: string | null; avatar_url: string | null;
+  }>({
+    queryKey: ['me'],
+    queryFn: () => api.get('/users/me/'),
+    staleTime: 30000,
+  });
+
+  useEffect(() => {
+    if (meData) {
+      setFullName(meData.full_name ?? '');
+      setPhone(meData.phone ?? '');
+    }
+  }, [meData]);
+
+  const mutation = useMutation({
+    mutationFn: (payload: { full_name?: string; phone?: string | null }) =>
+      api.patch('/users/me/', payload),
+    onSuccess: (data: any) => {
+      if (data?.user) setUser(data.user);
+      queryClient.invalidateQueries({ queryKey: ['me'] });
+      toast.success('Профиль обновлён');
+    },
+    onError: (err: any) => {
+      const msg = err?.response?.data?.message;
+      toast.error(msg ?? 'Не удалось сохранить изменения');
+    },
+  });
+
+  const initials = (fullName || userAuth?.full_name || '?')
+    .split(' ')
+    .filter(Boolean)
+    .map((w: string) => w[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+
+  return (
+    <div className={s.section}>
+      <div className={s.sectionHeader}>
+        <div>
+          <div className={s.sectionTitle}>Профиль</div>
+          <div className={s.sectionSubtitle}>Личная информация и статус</div>
+        </div>
+        <Button size="sm" loading={mutation.isPending} onClick={() => mutation.mutate({ full_name: fullName.trim() || undefined, phone: phone.trim() || null })}>
+          Сохранить
+        </Button>
+      </div>
+      <div className={s.sectionBody}>
+        <div className={s.profileAvatarRow}>
+          <div className={s.profileAvatar}>{initials}</div>
+          <div className={s.profileAvatarMeta}>
+            <div className={s.profileAvatarName}>{fullName || userAuth?.full_name}</div>
+            <div className={s.profileAvatarEmail}>{meData?.email ?? userAuth?.email ?? ''}</div>
+          </div>
+        </div>
+
+        <div className={s.fieldGrid}>
+          <div className={s.field}>
+            <label className={s.fieldLabel}>Имя</label>
+            <input
+              className="kort-input"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              placeholder="Ваше имя"
+              autoComplete="name"
+            />
+          </div>
+          <div className={s.field}>
+            <label className={s.fieldLabel}>Телефон</label>
+            <input
+              className="kort-input"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="+7 (XXX) XXX-XX-XX"
+              inputMode="tel"
+              autoComplete="tel"
+            />
+          </div>
+        </div>
+
+        <div className={s.field}>
+          <label className={s.fieldLabel}>Статус</label>
+          <input
+            className="kort-input"
+            value={statusText}
+            onChange={(e) => setStatusText(e.target.value)}
+            placeholder="Что сейчас делаете?"
+            maxLength={80}
+          />
+        </div>
+
+        <div>
+          <div className={s.fieldLabel} style={{ marginBottom: 8 }}>Настроение</div>
+          <div className={s.moodGrid}>
+            {MOODS.map((m) => (
+              <button
+                key={m.key}
+                type="button"
+                className={[s.moodItem, mood === m.key ? s.moodItemActive : ''].join(' ')}
+                onClick={() => setMood(m.key)}
+                title={m.label}
+              >
+                <span className={s.moodEmoji}>{m.emoji || '○'}</span>
+                <span className={s.moodLabel}>{m.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function SecuritySection() {
   const { isOwner } = useRole();
   const pin = usePinStore((state) => state.pin);
@@ -901,6 +1028,7 @@ export default function SettingsPage() {
 
   const visibleSections = useMemo(() => SECTIONS.filter((item) => {
     switch (item.key) {
+      case 'profile':
       case 'company-access':
       case 'appearance':
       case 'security':
@@ -963,6 +1091,7 @@ export default function SettingsPage() {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.13 }}
             >
+              {section === 'profile' && <ProfileSection />}
               {section === 'organization' && <OrgSection />}
               {section === 'company-access' && <CompanyAccessSection />}
               {section === 'appearance' && <AppearanceSection />}
