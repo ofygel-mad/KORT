@@ -6,6 +6,7 @@ import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
 import { MobileNav } from './MobileNav';
 import { CommandPalette } from '../../widgets/command-palette/CommandPalette';
+import { FloatingChatbar } from '../../features/chat/FloatingChatbar';
 import { useCommandPalette } from '../../shared/stores/commandPalette';
 import { useKeyboardShortcuts } from '../../shared/hooks/useKeyboardShortcuts';
 import { ShortcutsModal } from '../../shared/ui/ShortcutsModal';
@@ -119,6 +120,7 @@ export function AppShell() {
       {isMobile && <MobileNav />}
       {isOpen && <CommandPalette />}
       <ShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
+      <FloatingChatbar />
     </div>
   );
 }
