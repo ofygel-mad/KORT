@@ -246,10 +246,29 @@ export async function markRead(convId: string, userId: string) {
   });
   if (!participation) throw new ForbiddenError('Нет доступа к этому диалогу.');
 
+  const readAt = new Date();
+
   await prisma.conversationParticipant.update({
     where: { conversationId_userId: { conversationId: convId, userId } },
-    data: { unreadCount: 0, lastReadAt: new Date() },
+    data: { unreadCount: 0, lastReadAt: readAt },
   });
+
+  // Notify other participants that this user has read the conversation
+  const others = await prisma.conversationParticipant.findMany({
+    where: { conversationId: convId, userId: { not: userId } },
+    select: { userId: true },
+  });
+
+  const event = {
+    type: 'message.read',
+    conversation_id: convId,
+    reader_id: userId,
+    read_at: readAt.toISOString(),
+  };
+
+  for (const p of others) {
+    emitChatEvent?.(p.userId, event);
+  }
 
   return { ok: true };
 }
