@@ -3,6 +3,7 @@ import { Plus, X } from 'lucide-react';
 import { useDealsBoard, useCreateDeal } from '../../../entities/deal/queries';
 import type { Deal, DealStage, CreateDealDto } from '../../../entities/deal/types';
 import { DealDrawer } from './DealDrawer';
+import { useViewportProfile } from '../../../shared/hooks/useViewportProfile';
 import styles from './Deals.module.css';
 
 const STAGES: { key: DealStage; label: string; color: string }[] = [
@@ -24,6 +25,7 @@ export default function DealsPage() {
   const [creating, setCreating] = useState(false);
   const [newTitle, setNewTitle] = useState('');
 
+  const { isPhone } = useViewportProfile();
   const { data: board, isLoading, isError } = useDealsBoard();
   const createDeal = useCreateDeal();
 
@@ -71,7 +73,35 @@ export default function DealsPage() {
       )}
       {isError && <div className={styles.error}>Не удалось загрузить сделки</div>}
 
-      {!isLoading && !isError && (
+      {!isLoading && !isError && isPhone && (() => {
+        const allDeals = STAGES.flatMap(({ key }) => getStageDeals(key));
+        return (
+          <div className={styles.mobileList}>
+            {allDeals.map((deal) => {
+              const stage = STAGES.find(s => s.key === deal.stage);
+              return (
+                <button key={deal.id} className={styles.mobileCard} onClick={() => setSelectedId(deal.id)}>
+                  <div className={styles.mobileCardHead}>
+                    <strong>{deal.title}</strong>
+                    <span className={styles.mobileStagePill} style={{ ['--sc' as string]: stage?.color ?? 'var(--fill-info)' }}>
+                      {stage?.label ?? deal.stage}
+                    </span>
+                  </div>
+                  <div className={styles.mobileCardMeta}>
+                    {deal.fullName && <span>{deal.fullName}</span>}
+                    {deal.companyName && <span>{deal.companyName}</span>}
+                    {deal.assignedName && <span>{deal.assignedName}</span>}
+                  </div>
+                  {deal.amount && <div className={styles.mobileCardAmount}>{fmt(deal.amount)}</div>}
+                </button>
+              );
+            })}
+            {allDeals.length === 0 && <div className={styles.colEmpty}>Сделки не найдены</div>}
+          </div>
+        );
+      })()}
+
+      {!isLoading && !isError && !isPhone && (
         <div className={styles.kanban}>
           {STAGES.map(({ key, label, color }) => {
             const deals = getStageDeals(key);

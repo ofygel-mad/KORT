@@ -1,7 +1,8 @@
 .page {
   position: relative;
-  min-height: 100vh;
-  overflow: hidden;
+  min-height: var(--vvh, 100dvh);
+  overflow-x: hidden;
+  overflow-y: auto;
   background:
     radial-gradient(circle at top left, rgba(215, 119, 6, 0.16), transparent 34%),
     radial-gradient(circle at bottom right, rgba(79, 140, 255, 0.14), transparent 30%),
@@ -20,10 +21,10 @@
 }
 
 .content {
-  min-height: 100vh;
+  min-height: var(--vvh, 100dvh);
   display: grid;
   place-items: center;
-  padding: 24px;
+  padding: 24px 24px calc(24px + var(--vk-bottom, 0px));
 }
 
 .card {

@@ -38,13 +38,19 @@ export function MobileNav() {
   }, [location.pathname]);
 
   useEffect(() => {
-    const previousOverflow = document.body.style.overflow;
+    const scrollHost = document.querySelector('[data-app-scroll="true"]') as HTMLElement | null;
+    if (!scrollHost) return;
+
+    const previousOverflow = scrollHost.style.overflow;
+    const previousTouchAction = scrollHost.style.touchAction;
     if (moreOpen) {
-      document.body.style.overflow = 'hidden';
+      scrollHost.style.overflow = 'hidden';
+      scrollHost.style.touchAction = 'none';
     }
 
     return () => {
-      document.body.style.overflow = previousOverflow;
+      scrollHost.style.overflow = previousOverflow;
+      scrollHost.style.touchAction = previousTouchAction;
     };
   }, [moreOpen]);
 

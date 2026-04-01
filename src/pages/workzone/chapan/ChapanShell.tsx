@@ -84,15 +84,15 @@ export default function ChapanShell() {
 
       <ChapanInvoicesDrawer open={invoicesDrawerOpen} onClose={() => setInvoicesDrawerOpen(false)} initialFilter={invoicesDrawerFilter as 'all' | 'pending_confirmation' | 'confirmed' | 'rejected' | 'archived'} />
 
-      {/* Mobile bottom navigation — hidden on desktop via CSS */}
-      <nav className={styles.mobileNav}>
-        {navItems.slice(0, 5).map((item) => {
+      {/* Mobile horizontal rail — hidden on desktop via CSS */}
+      <nav className={styles.mobileRail}>
+        {navItems.map((item) => {
           const Icon = item.icon;
           return (
             <NavLink
               key={item.to}
               to={item.to}
-              className={({ isActive }) => `${styles.mobileNavItem} ${isActive ? styles.mobileNavItemActive : ''}`}
+              className={({ isActive }) => `${styles.mobileRailItem} ${isActive ? styles.mobileRailItemActive : ''}`}
             >
               <Icon size={18} />
               <span>{item.label}</span>

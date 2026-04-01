@@ -1,7 +1,8 @@
 import { useEffect, useRef } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, type InfiniteData } from '@tanstack/react-query';
 import { useAuthStore } from '../../shared/stores/auth';
 import { useChatStore } from '../../shared/stores/chat';
+import type { ChatMessage } from './types';
 
 const WS_BASE =
   (import.meta.env.VITE_API_BASE_URL ?? '/api/v1')
@@ -60,9 +61,19 @@ export function useChatSocket() {
 
           case 'message.new': {
             const convId = event.conversation_id as string;
-            // Invalidate the message list for that conversation
-            qc.invalidateQueries({ queryKey: ['chat', 'messages', convId] });
-            // Invalidate conversation list to refresh unread counts and last_message
+            const msg = event.message as ChatMessage;
+            // Append new message directly into the infinite query cache (preserves scroll history)
+            qc.setQueryData<InfiniteData<ChatMessage[]>>(
+              ['chat', 'messages', convId],
+              (old) => {
+                if (!old?.pages?.length) return old;
+                const pages = old.pages.map((p, i) =>
+                  i === old.pages.length - 1 ? [...p, msg] : p,
+                );
+                return { ...old, pages };
+              },
+            );
+            // Refresh conversation list for unread counts and last_message preview
             qc.invalidateQueries({ queryKey: ['chat', 'conversations'] });
             // Animate the floating bar
             notifyActivity();
@@ -74,9 +85,7 @@ export function useChatSocket() {
           }
 
           case 'message.read': {
-            const convId = event.conversation_id as string;
             qc.invalidateQueries({ queryKey: ['chat', 'conversations'] });
-            qc.invalidateQueries({ queryKey: ['chat', 'messages', convId] });
             break;
           }
 

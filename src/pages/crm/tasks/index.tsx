@@ -3,6 +3,7 @@ import { Plus, X } from 'lucide-react';
 import { useTasks, useCreateTask, useUpdateTaskStatus } from '../../../entities/task/queries';
 import type { Task, TaskStatus, TaskPriority } from '../../../entities/task/types';
 import { TaskDrawer } from './TaskDrawer';
+import { useViewportProfile } from '../../../shared/hooks/useViewportProfile';
 import styles from './Tasks.module.css';
 
 const COLS: { key: TaskStatus; label: string; color: string }[] = [
@@ -26,6 +27,7 @@ export default function TasksPage() {
   const [newTitle, setNewTitle] = useState('');
   const [filter, setFilter] = useState<'all' | 'mine' | 'overdue'>('all');
 
+  const { isPhone } = useViewportProfile();
   const params = { limit: 300, ...(filter === 'mine' ? { mine: true } : {}), ...(filter === 'overdue' ? { overdue: true } : {}) };
   const { data, isLoading, isError } = useTasks(params);
   const createTask = useCreateTask();
@@ -74,7 +76,35 @@ export default function TasksPage() {
       )}
       {isError && <div className={styles.error}>Не удалось загрузить задачи</div>}
 
-      {!isLoading && !isError && (
+      {!isLoading && !isError && isPhone && (
+        <div className={styles.mobileList}>
+          {tasks.map((task) => {
+            const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'done';
+            return (
+              <button key={task.id} className={styles.mobileCard} onClick={() => setSelectedId(task.id)}>
+                <div className={styles.mobileCardHead}>
+                  <span className={styles.mobileCardPrio} style={{ background: PRIORITY_COLOR[task.priority] }} />
+                  <strong>{task.title}</strong>
+                  <span className={styles.mobileStagePill} style={{ ['--sc' as string]: COLS.find(c => c.key === task.status)?.color ?? 'var(--text-tertiary)' }}>
+                    {COLS.find(c => c.key === task.status)?.label ?? task.status}
+                  </span>
+                </div>
+                <div className={styles.mobileCardMeta}>
+                  {task.assignedName && <span>{task.assignedName}</span>}
+                  {task.dueDate && (
+                    <span style={{ color: isOverdue ? 'var(--fill-danger)' : 'var(--text-tertiary)' }}>
+                      {new Date(task.dueDate).toLocaleDateString('ru-KZ', { day: '2-digit', month: 'short' })}
+                    </span>
+                  )}
+                </div>
+              </button>
+            );
+          })}
+          {tasks.length === 0 && <div className={styles.colEmpty}>Задачи не найдены</div>}
+        </div>
+      )}
+
+      {!isLoading && !isError && !isPhone && (
         <div className={styles.kanban}>
           {COLS.map(({ key, label, color }) => (
             <div key={key} className={styles.column}>

@@ -266,7 +266,21 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  scroll-behavior: smooth;
+}
+
+/* ── Load-older sentinel (top of messages list) ───────────────────────────── */
+.loadOlderSentinel {
+  min-height: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.loadingOlderText {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  padding: 4px 0 8px;
 }
 
 .messages::-webkit-scrollbar {
@@ -375,6 +389,10 @@
   opacity: 0.6;
   flex-shrink: 0;
   margin-bottom: 1px;
+}
+
+.bubbleOptimistic {
+  opacity: 0.65;
 }
 
 /* ── Input row ───────────────────────────────────────────────────────────── */

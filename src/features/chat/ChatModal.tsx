@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { MessageCircleMore, Send, X, Plus, MessageSquareDashed } from 'lucide-react';
 import { toast } from 'sonner';
@@ -7,6 +7,7 @@ import { useChatStore } from '../../shared/stores/chat';
 import {
   useChatConversations,
   useChatMessages,
+  useMarkRead,
   useSendMessage,
   useStartConversation,
 } from './hooks';
@@ -81,10 +82,14 @@ function ConvItem({
 
 // ── Message bubble ──────────────────────────────────────────────────────────
 
-function Bubble({ msg, isMine }: { msg: ChatMessage; isMine: boolean }) {
+function Bubble({ msg, isMine, isOptimistic }: { msg: ChatMessage; isMine: boolean; isOptimistic?: boolean }) {
   return (
     <div className={[styles.msgRow, isMine ? styles.msgRowMine : styles.msgRowTheirs].join(' ')}>
-      <div className={[styles.bubble, isMine ? styles.bubbleMine : styles.bubbleTheirs].join(' ')}>
+      <div className={[
+        styles.bubble,
+        isMine ? styles.bubbleMine : styles.bubbleTheirs,
+        isOptimistic ? styles.bubbleOptimistic : '',
+      ].join(' ')}>
         <span className={styles.bubbleText}>{msg.body}</span>
         <span className={styles.bubbleTime}>{formatTime(msg.created_at)}</span>
       </div>
@@ -103,16 +108,88 @@ function MessageThread({
   currentUserId: string;
   otherName: string;
 }) {
-  const { data: messages = [], isLoading } = useChatMessages(conversationId);
+  const {
+    data,
+    isLoading,
+    isFetchingPreviousPage,
+    hasPreviousPage,
+    fetchPreviousPage,
+  } = useChatMessages(conversationId);
   const send = useSendMessage(conversationId);
+  const markRead = useMarkRead();
   const [draft, setDraft] = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
+  const topSentinelRef = useRef<HTMLDivElement>(null);
+  const messagesRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const prevScrollHeightRef = useRef(0);
+  const initialScrollDoneRef = useRef(false);
+  const prevMessageCountRef = useRef(0);
 
-  // Auto-scroll to bottom when messages change
+  // Flatten pages into chronological message list
+  const messages = data?.pages.flat() ?? [];
+
+  // Mark as read when conversation opens
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    markRead.mutate(conversationId);
+    initialScrollDoneRef.current = false;
+    prevMessageCountRef.current = 0;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conversationId]);
+
+  // Scroll to bottom on initial load
+  useEffect(() => {
+    if (!isLoading && !initialScrollDoneRef.current && messages.length > 0) {
+      initialScrollDoneRef.current = true;
+      prevMessageCountRef.current = messages.length;
+      bottomRef.current?.scrollIntoView({ behavior: 'instant' });
+    }
+  }, [isLoading, messages.length]);
+
+  // Auto-scroll on new messages if user is near bottom
+  useEffect(() => {
+    if (!initialScrollDoneRef.current) return;
+    const container = messagesRef.current;
+    if (!container) return;
+    const newCount = messages.length;
+    const prevCount = prevMessageCountRef.current;
+    prevMessageCountRef.current = newCount;
+    if (newCount > prevCount && !isFetchingPreviousPage) {
+      const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 120;
+      if (isNearBottom) {
+        bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages.length]);
+
+  // Preserve scroll position when older messages are prepended
+  useLayoutEffect(() => {
+    const container = messagesRef.current;
+    if (!container) return;
+    if (isFetchingPreviousPage) {
+      prevScrollHeightRef.current = container.scrollHeight;
+    } else if (prevScrollHeightRef.current > 0) {
+      container.scrollTop += container.scrollHeight - prevScrollHeightRef.current;
+      prevScrollHeightRef.current = 0;
+    }
+  }, [isFetchingPreviousPage]);
+
+  // IntersectionObserver on top sentinel to load older messages
+  useEffect(() => {
+    const sentinel = topSentinelRef.current;
+    if (!sentinel) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && hasPreviousPage && !isFetchingPreviousPage) {
+          fetchPreviousPage();
+        }
+      },
+      { threshold: 0.1 },
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasPreviousPage, isFetchingPreviousPage, fetchPreviousPage]);
 
   // Group messages by date
   const grouped: Array<{ date: string; msgs: ChatMessage[] }> = [];
@@ -130,10 +207,9 @@ function MessageThread({
     const body = draft.trim();
     if (!body) return;
     setDraft('');
-    send.mutate(body, {
-      onError: () => toast.error('Не удалось отправить сообщение'),
-    });
+    send.mutate(body);
     inputRef.current?.focus();
+    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 30);
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
@@ -152,7 +228,14 @@ function MessageThread({
       </div>
 
       {/* Messages */}
-      <div className={styles.messages}>
+      <div ref={messagesRef} className={styles.messages}>
+        {/* Top sentinel — watched by IntersectionObserver to load older messages */}
+        <div ref={topSentinelRef} className={styles.loadOlderSentinel}>
+          {isFetchingPreviousPage && (
+            <span className={styles.loadingOlderText}>Загрузка...</span>
+          )}
+        </div>
+
         {isLoading && (
           <div className={styles.threadEmpty}>
             <span className={styles.threadEmptyText}>Загрузка...</span>
@@ -172,7 +255,12 @@ function MessageThread({
               <span className={styles.dateSepLabel}>{group.date}</span>
             </div>
             {group.msgs.map((msg) => (
-              <Bubble key={msg.id} msg={msg} isMine={msg.sender_id === currentUserId} />
+              <Bubble
+                key={msg.id}
+                msg={msg}
+                isMine={msg.sender_id === currentUserId}
+                isOptimistic={msg.id.startsWith('optimistic-')}
+              />
             ))}
           </div>
         ))}

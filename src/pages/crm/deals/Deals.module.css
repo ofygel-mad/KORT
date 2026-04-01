@@ -1,4 +1,11 @@
-.root{display:flex;flex-direction:column;height:100%;overflow:hidden;padding:24px;gap:16px}
+.root{display:flex;flex-direction:column;min-height:100%;padding:24px;gap:16px}
+.mobileList{display:grid;gap:10px}
+.mobileCard{display:grid;gap:10px;width:100%;padding:14px;border-radius:16px;border:1px solid var(--border-subtle);background:var(--bg-surface);text-align:left;font:inherit;color:inherit}
+.mobileCardHead{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.mobileCardHead strong{font-size:14px;font-weight:600;color:var(--text-primary)}
+.mobileCardMeta{display:flex;flex-wrap:wrap;gap:8px;color:var(--text-secondary);font-size:12px}
+.mobileStagePill{flex-shrink:0;font-size:11px;padding:4px 8px;border-radius:999px;background:color-mix(in srgb,var(--sc,var(--fill-info)) 12%,transparent);color:var(--sc,var(--fill-info));border:1px solid color-mix(in srgb,var(--sc,var(--fill-info)) 20%,transparent)}
+.mobileCardAmount{font-size:13px;font-weight:700;color:var(--fill-positive)}
 
 @media (max-width: 768px) {
   .root { padding:14px; gap:12px; }

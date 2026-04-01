@@ -35,6 +35,9 @@ export function getDevicePerformanceProfile(): DevicePerformanceProfile {
   const reducedMotion = hasWindow && typeof window.matchMedia === 'function'
     ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
     : false;
+  const coarsePointer = hasWindow && typeof window.matchMedia === 'function'
+    ? window.matchMedia('(pointer: coarse)').matches
+    : false;
 
   const lowTier = reducedMotion
     || (hardwareConcurrency !== null && hardwareConcurrency <= 4)
@@ -53,7 +56,7 @@ export function getDevicePerformanceProfile(): DevicePerformanceProfile {
     maxPixelRatio: tier === 'low' ? 1 : tier === 'balanced' ? 1.25 : 1.5,
     antialias: tier === 'high',
     enableBloom: tier !== 'low',
-    preferMinimalMotion: reducedMotion || tier === 'low',
+    preferMinimalMotion: reducedMotion || coarsePointer || tier === 'low',
     flightProjectionIntervalMs: tier === 'low' ? 96 : tier === 'balanced' ? 64 : 48,
   };
 }

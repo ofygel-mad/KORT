@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Plus, UserX, Key, Edit2, X } from 'lucide-react';
+import { useViewportProfile } from '../../shared/hooks/useViewportProfile';
 import { useEmployees, useCreateEmployee, useUpdateEmployee, useDismissEmployee, useResetPassword } from '../../entities/employee/queries';
 import type { Employee, CreateEmployeeDto, UpdateEmployeeDto, EmployeePermission } from '../../entities/employee/types';
 import { PERMISSION_LABEL } from '../../entities/employee/types';
@@ -157,6 +158,7 @@ function EditEmployeeDrawer({ employee, onClose }: { employee: Employee; onClose
 // ── Main page ──────────────────────────────────────────────────────────────────
 
 export default function EmployeesPage() {
+  const { isPhone } = useViewportProfile();
   const { data, isLoading, isError } = useEmployees();
   const dismissEmployee = useDismissEmployee();
   const resetPassword = useResetPassword();
@@ -183,7 +185,54 @@ export default function EmployeesPage() {
       )}
       {isError && <div className={styles.error}>Не удалось загрузить сотрудников</div>}
 
-      {!isLoading && !isError && (
+      {!isLoading && !isError && isPhone && (
+        <div className={styles.mobileList}>
+          {active.map(emp => (
+            <div key={emp.id} className={styles.mobileCard}>
+              <div className={styles.mobileCardHead}>
+                <strong>{emp.full_name}</strong>
+                <div className={styles.mobileCardActions}>
+                  <button className={styles.iconBtn} onClick={() => setEditEmployee(emp)} title="Редактировать"><Edit2 size={13} /></button>
+                  <button className={styles.iconBtn} onClick={() => resetPassword.mutate(emp.id)} title="Сбросить пароль"><Key size={13} /></button>
+                  <button className={`${styles.iconBtn} ${styles.iconBtnDanger}`} title="Деактивировать"
+                    onClick={() => { if (confirm(`Деактивировать ${emp.full_name}?`)) dismissEmployee.mutate(emp.id); }}>
+                    <UserX size={13} />
+                  </button>
+                </div>
+              </div>
+              <div className={styles.mobileCardMeta}>
+                {emp.department && <span>{emp.department}</span>}
+                {emp.phone && <span className={styles.tdMono}>{emp.phone}</span>}
+              </div>
+              <div className={styles.permTags}>
+                {emp.permissions.map(p => <span key={p} className={styles.permTag}>{PERMISSION_LABEL[p]}</span>)}
+              </div>
+            </div>
+          ))}
+          {active.length === 0 && (
+            <div className={styles.empty}>
+              <p>Сотрудников пока нет</p>
+              <button className={styles.emptyBtn} onClick={() => setAddOpen(true)}>Добавить первого сотрудника</button>
+            </div>
+          )}
+          {dismissed.length > 0 && (
+            <>
+              <div className={styles.sectionLabel}>Деактивированные</div>
+              {dismissed.map(emp => (
+                <div key={emp.id} className={`${styles.mobileCard} ${styles.mobileCardDismissed}`}>
+                  <div className={styles.mobileCardHead}>
+                    <strong>{emp.full_name}</strong>
+                    <span className={styles.dismissedBadge}>Деактивирован</span>
+                  </div>
+                  {emp.department && <div className={styles.mobileCardMeta}><span>{emp.department}</span></div>}
+                </div>
+              ))}
+            </>
+          )}
+        </div>
+      )}
+
+      {!isLoading && !isError && !isPhone && (
         <>
           <div className={styles.tableWrap}>
             {active.length > 0 && (

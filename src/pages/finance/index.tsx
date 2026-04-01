@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Plus, Download, BookOpen, BarChart3, X } from 'lucide-react';
+import { useViewportProfile } from '../../shared/hooks/useViewportProfile';
 import { useFinanceEntries, useFinanceSummary, useCreateEntry } from '../../entities/finance/queries';
 import type { EntryType, CreateEntryDto } from '../../entities/finance/types';
 import { ENTRY_TYPE_LABEL, INCOME_CATEGORIES, EXPENSE_CATEGORIES } from '../../entities/finance/types';
@@ -126,6 +127,7 @@ function AddEntryDrawer({ onClose }: { onClose: () => void }) {
 // ── Main page ──────────────────────────────────────────────────────────────────
 
 export default function FinancePage() {
+  const { isPhone } = useViewportProfile();
   const [tab, setTab] = useState<Tab>('journal');
   const [filterType, setFilterType] = useState('');
   const [period, setPeriod] = useState(currentPeriod());
@@ -195,9 +197,33 @@ export default function FinancePage() {
 
       {/* ── Journal ── */}
       {tab === 'journal' && (
-        <div className={styles.tableWrap}>
+        <div className={isPhone ? undefined : styles.tableWrap}>
           {entriesLoading ? (
             <div className={styles.skeletons}>{[...Array(8)].map((_,i) => <Skeleton key={i} height={48} radius={8} />)}</div>
+          ) : isPhone ? (
+            <div className={styles.mobileList}>
+              {entries.map(e => {
+                const isIncome = e.type === 'income' || e.type === 'return';
+                return (
+                  <div key={e.id} className={styles.mobileCard}>
+                    <div className={styles.mobileCardHead}>
+                      <span className={styles.mobileCardCategory}>{e.category}</span>
+                      <span className={styles.mobileCardAmount} style={{ color: isIncome ? 'var(--fill-positive)' : 'var(--fill-negative)' }}>
+                        {isIncome ? '+' : '−'}{fmtMoney(e.amount)}
+                      </span>
+                    </div>
+                    <div className={styles.mobileCardMeta}>
+                      <span className={styles.typeBadge} style={{ color: TYPE_COLOR[e.type], background: `${TYPE_COLOR[e.type]}18` }}>
+                        {ENTRY_TYPE_LABEL[e.type]}
+                      </span>
+                      {e.counterparty && <span>{e.counterparty}</span>}
+                      <span className={styles.mobileCardDate}>{fmtDate(e.createdAt)}</span>
+                    </div>
+                    {e.notes && <div className={styles.mobileCardNotes}>{e.notes}</div>}
+                  </div>
+                );
+              })}
+            </div>
           ) : (
             <table className={styles.table}>
               <thead>

@@ -4,6 +4,7 @@ import { useLeads, useUpdateLead, useCreateLead } from '../../../entities/lead/q
 import type { Lead, LeadStage, LeadPipeline } from '../../../entities/lead/types';
 import { LeadDrawer } from './LeadDrawer';
 import { CreateLeadModal } from './CreateLeadModal';
+import { useViewportProfile } from '../../../shared/hooks/useViewportProfile';
 import styles from './Leads.module.css';
 
 const STAGES: { key: LeadStage; label: string; color: string }[] = [
@@ -21,6 +22,7 @@ export default function LeadsPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const deferredSearch = useDeferredValue(search);
 
+  const { isPhone } = useViewportProfile();
   const { data, isLoading, isError } = useLeads({ pipeline, limit: 200 });
   const updateLead = useUpdateLead();
 
@@ -88,7 +90,40 @@ export default function LeadsPage() {
         </div>
       )}
 
-      {!isLoading && !isError && view === 'kanban' && (
+      {!isLoading && !isError && isPhone && (
+        <div className={styles.mobileList}>
+          {filtered.map((lead) => (
+            <button
+              key={lead.id}
+              className={styles.mobileCard}
+              onClick={() => setSelectedId(lead.id)}
+            >
+              <div className={styles.mobileCardHead}>
+                <strong>{lead.fullName}</strong>
+                <span
+                  className={styles.mobileStagePill}
+                  style={{ ['--sc' as string]: STAGES.find((s) => s.key === lead.stage)?.color ?? 'var(--fill-info)' }}
+                >
+                  {STAGES.find((s) => s.key === lead.stage)?.label ?? lead.stage}
+                </span>
+              </div>
+              <div className={styles.mobileCardMeta}>
+                {lead.phone && <span>{lead.phone}</span>}
+                {lead.source && <span>{lead.source}</span>}
+                {lead.assignedName && <span>{lead.assignedName}</span>}
+              </div>
+              {lead.budget && (
+                <div className={styles.mobileCardBudget}>
+                  {new Intl.NumberFormat('ru-KZ', { maximumFractionDigits: 0 }).format(lead.budget)} ₸
+                </div>
+              )}
+            </button>
+          ))}
+          {filtered.length === 0 && <div className={styles.empty}>Лиды не найдены</div>}
+        </div>
+      )}
+
+      {!isLoading && !isError && !isPhone && view === 'kanban' && (
         <div className={styles.kanban}>
           {STAGES.map(({ key, label, color }) => {
             const cards = byStage(key);
@@ -119,7 +154,7 @@ export default function LeadsPage() {
         </div>
       )}
 
-      {!isLoading && !isError && view === 'list' && (
+      {!isLoading && !isError && !isPhone && view === 'list' && (
         <div className={styles.listWrap}>
           <table className={styles.table}>
             <thead>

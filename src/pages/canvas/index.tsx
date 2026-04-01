@@ -1,8 +1,12 @@
-import { useMemo, useState, type ElementType } from 'react';
+import { Suspense, lazy, useMemo, useState, type ElementType } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { ArrowRight, LogOut, Settings } from 'lucide-react';
-import { WorkspaceCanvas } from '../../features/workspace/components/WorkspaceCanvas';
-import { WorkspaceAddMenu } from '../../features/workspace/components/WorkspaceAddMenu';
+const WorkspaceCanvas = lazy(() =>
+  import('../../features/workspace/components/WorkspaceCanvas').then((m) => ({ default: m.WorkspaceCanvas })),
+);
+const WorkspaceAddMenu = lazy(() =>
+  import('../../features/workspace/components/WorkspaceAddMenu').then((m) => ({ default: m.WorkspaceAddMenu })),
+);
 import { useWorkspaceStore } from '../../features/workspace/model/store';
 import type { WorkspaceWidgetKind } from '../../features/workspace/model/types';
 import { usePlan, planIncludes } from '../../shared/hooks/usePlan';
@@ -212,7 +216,9 @@ export default function CanvasPage() {
 
   return (
     <div className={styles.root}>
-      <WorkspaceCanvas />
+      <Suspense fallback={null}>
+        <WorkspaceCanvas />
+      </Suspense>
 
       {/* Add tile button */}
       <div className={styles.controls} data-workspace-ui="true">
@@ -221,11 +227,13 @@ export default function CanvasPage() {
         </button>
       </div>
 
-      <WorkspaceAddMenu
-        open={addMenuOpen}
-        onClose={() => setAddMenuOpen(false)}
-        onSelect={handleAddTile}
-      />
+      <Suspense fallback={null}>
+        <WorkspaceAddMenu
+          open={addMenuOpen}
+          onClose={() => setAddMenuOpen(false)}
+          onSelect={handleAddTile}
+        />
+      </Suspense>
     </div>
   );
 }
