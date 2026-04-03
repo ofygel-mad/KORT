@@ -58,7 +58,8 @@ const AcceptInvitePage  = makePage(() => import('../../pages/auth/accept-invite'
 const ResetPasswordPage = makePage(() => import('../../pages/auth/reset-password'));
 
 // Chapan Workzone — own layout
-const ChapanShell        = makePage(() => import('../../pages/workzone/chapan/ChapanShell'));
+const ChapanShell           = makePage(() => import('../../pages/workzone/chapan/ChapanShell'));
+const ChapanWarehousePage   = makePage(() => import('../../pages/workzone/chapan/warehouse/ChapanWarehouse'));
 const ChapanOrdersPage   = makePage(() => import('../../pages/workzone/chapan/orders/ChapanOrders'));
 const ChapanNewOrderPage = makePage(() => import('../../pages/workzone/chapan/orders/ChapanNewOrder'));
 const ChapanOrderDetailPage = makePage(() => import('../../pages/workzone/chapan/orders/ChapanOrderDetail'));
@@ -380,6 +381,10 @@ export const appRouter = createBrowserRouter([
       {
         path: 'archive/:id',
         element: <RequirePermission check="chapan_archive"><ChapanOrderDetailPage /></RequirePermission>,
+      },
+      {
+        path: 'warehouse',
+        element: <ChapanWarehousePage />,
       },
       {
         path: 'settings',
