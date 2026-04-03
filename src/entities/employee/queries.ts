@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { employeeApi } from './api';
-import type { CreateEmployeeDto, UpdateEmployeeDto } from './types';
+import type { CreateEmployeeDto, UpdateEmployeeDto, Employee } from './types';
 
 export const employeeKeys = {
   all: ['employees'] as const,
@@ -24,8 +24,22 @@ export const useUpdateEmployee = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, dto }: { id: string; dto: UpdateEmployeeDto }) => employeeApi.update(id, dto),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: employeeKeys.all }); toast.success('Сохранено'); },
-    onError: () => toast.error('Не удалось сохранить'),
+    onSuccess: (updatedEmployee: Employee) => {
+      // Immediately patch the cache so reopening the drawer shows fresh data
+      qc.setQueryData(
+        employeeKeys.list,
+        (old: { count: number; results: Employee[] } | undefined) => {
+          if (!old) return old;
+          return {
+            ...old,
+            results: old.results.map(e => e.id === updatedEmployee.id ? updatedEmployee : e),
+          };
+        },
+      );
+      qc.invalidateQueries({ queryKey: employeeKeys.all });
+      toast.success('Сохранено');
+    },
+    onError: (e: any) => toast.error(e?.response?.data?.message ?? 'Не удалось сохранить'),
   });
 };
 

@@ -539,8 +539,8 @@ export function AuthModal({ open, onClose, onAuthSuccess, initialStep }: AuthMod
       setError('Пароли не совпадают.');
       return;
     }
-    if (companyPassword.length < 8) {
-      setError('Пароль должен содержать не менее 8 символов.');
+    if (companyPassword.length < 6) {
+      setError('Пароль должен содержать не менее 6 символов.');
       return;
     }
     if (companyPhone.trim() && !isKazakhPhoneComplete(companyPhone)) {
