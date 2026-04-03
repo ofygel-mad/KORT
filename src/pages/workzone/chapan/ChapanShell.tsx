@@ -12,7 +12,7 @@ import { useEmployeePermissions } from '../../../shared/hooks/useEmployeePermiss
 // Статичный список используется только как источник данных; фильтрация — ниже
 const ALL_SECTION_NAV = [
   { to: '/workzone/chapan/orders',     label: 'Заказы',       icon: Package,   perm: 'orders'     },
-  { to: '/workzone/chapan/production', label: 'Производство', icon: Factory,   perm: 'production' },
+  { to: '/workzone/chapan/production', label: 'Цех', icon: Factory,   perm: 'production' },
   { to: '/workzone/chapan/ready',      label: 'Готово',       icon: CheckCheck, perm: 'ready'     },
   { to: '/workzone/chapan/archive',    label: 'Архив',        icon: Archive,   perm: 'archive'    },
 ] as const;
@@ -117,7 +117,7 @@ export default function ChapanShell() {
 
   const navItems = [
     ...ALL_SECTION_NAV.filter((item) => sectionAccess[item.perm]),
-    ...((isAdmin || canAccessWarehouseNav) ? [{ to: '/warehouse' as const,                   label: 'Склад',   icon: Warehouse }] : []),
+    ...((isAdmin || canAccessWarehouseNav) ? [{ to: '/workzone/chapan/warehouse' as const,    label: 'Склад',   icon: Warehouse }] : []),
     ...(isAbsolute                         ? [{ to: '/workzone/chapan/orders/trash' as const, label: 'Корзина', icon: Trash2   }] : []),
   ];
 
