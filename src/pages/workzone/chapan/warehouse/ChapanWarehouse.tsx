@@ -1142,7 +1142,11 @@ export default function ChapanWarehousePage() {
       )}
 
       {/* ── Каталог tab ── */}
-      {tab === 'catalog' && <WarehouseCatalog />}
+      {tab === 'catalog' && (
+        <div className={styles.tableWrap}>
+          <WarehouseCatalog />
+        </div>
+      )}
 
       {/* Drawers */}
       {addItemOpen && <AddItemDrawer onClose={() => setAddItemOpen(false)} />}
