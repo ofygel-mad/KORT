@@ -40,6 +40,9 @@ const DealsPage      = makePage(() => import('../../pages/crm/deals'));
 const CustomersPage  = makePage(() => import('../../pages/crm/customers'));
 const TasksPage      = makePage(() => import('../../pages/crm/tasks'));
 const WarehousePage  = makePage(() => import('../../pages/warehouse'));
+const WarehouseTwinPage = makePage(() => import('../../pages/warehouse/Twin'));
+const WarehouseOperationsPage = makePage(() => import('../../pages/warehouse/Operations'));
+const WarehouseControlTowerPage = makePage(() => import('../../pages/warehouse/ControlTower'));
 const ProductionPage = makePage(() => import('../../pages/production'));
 const FinancePage    = makePage(() => import('../../pages/finance'));
 const EmployeesPage  = makePage(() => import('../../pages/employees'));
@@ -287,6 +290,18 @@ export const appRouter = createBrowserRouter([
       {
         path: 'warehouse',
         element: <RequireAuth><RequireOrg><RequirePermission check="warehouse"><WarehousePage /></RequirePermission></RequireOrg></RequireAuth>,
+      },
+      {
+        path: 'warehouse/twin',
+        element: <RequireAuth><RequireOrg><RequirePermission check="warehouse"><WarehouseTwinPage /></RequirePermission></RequireOrg></RequireAuth>,
+      },
+      {
+        path: 'warehouse/control-tower',
+        element: <RequireAuth><RequireOrg><RequirePermission check="warehouse"><WarehouseControlTowerPage /></RequirePermission></RequireOrg></RequireAuth>,
+      },
+      {
+        path: 'warehouse/operations',
+        element: <RequireAuth><RequireOrg><RequirePermission check="warehouse"><WarehouseOperationsPage /></RequirePermission></RequireOrg></RequireAuth>,
       },
       {
         path: 'warehouse/:id',

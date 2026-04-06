@@ -33,7 +33,7 @@ services:
       JWT_REFRESH_TTL: ${JWT_REFRESH_TTL:-7d}
       PORT: 8000
       HOST: 0.0.0.0
-      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5174}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173,http://127.0.0.1:5173}
       CONSOLE_SERVICE_PASSWORD: ${CONSOLE_SERVICE_PASSWORD:-kortdev1234}
       NODE_ENV: production
       R2_ACCOUNT_ID: ${R2_ACCOUNT_ID}

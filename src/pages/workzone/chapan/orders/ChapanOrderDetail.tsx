@@ -1,10 +1,11 @@
 ﻿import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { CheckCircle2, Clock, CreditCard, MessageSquare, AlertTriangle, Pencil, ArchiveIcon, RotateCcw, Download, Package, XCircle, FileText, Paperclip, Trash2, Upload } from 'lucide-react';
-import { useOrder, useFulfillFromStock, useConfirmOrder, useChangeOrderStatus, useAddPayment, useAddOrderActivity, useRestoreOrder, useCloseOrder, useCreateInvoice, useSetRequiresInvoice, useConfirmSeamstress, useRouteSingleItem, useUploadAttachment, useDeleteAttachment } from '../../../../entities/order/queries';
+import { useOrder, useOrderWarehouseState, useFulfillFromStock, useConfirmOrder, useChangeOrderStatus, useAddPayment, useAddOrderActivity, useRestoreOrder, useCloseOrder, useCreateInvoice, useSetRequiresInvoice, useConfirmSeamstress, useRouteSingleItem, useUploadAttachment, useDeleteAttachment } from '../../../../entities/order/queries';
 import { useProductsAvailability } from '../../../../entities/warehouse/queries';
 import type { OrderItem, OrderItemFulfillmentMode, OrderStatus, Priority, Urgency, OrderAttachment } from '../../../../entities/order/types';
 import { attachmentsApi } from '../../../../entities/order/api';
+import { useOrderWarehouseLiveSync } from '../../../../entities/order/live';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -161,6 +162,8 @@ export default function ChapanOrderDetailPage() {
   })();
 
   const { data: order, isLoading, isError } = useOrder(id!);
+  const { data: warehouseState } = useOrderWarehouseState(id!);
+  const warehouseLive = useOrderWarehouseLiveSync(id, Boolean(id));
   const fulfillFromStock = useFulfillFromStock();
   const confirmOrder = useConfirmOrder();
   const changeStatus = useChangeOrderStatus();
@@ -271,6 +274,10 @@ export default function ChapanOrderDetailPage() {
 
   const warehouseItems = orderItems.filter((item) => currentRoutes[item.id] === 'warehouse');
   const productionItems = orderItems.filter((item) => currentRoutes[item.id] === 'production');
+  const shouldShowWarehouseState =
+    warehouseItems.length > 0
+    || (warehouseState?.reservationSummary.total ?? 0) > 0
+    || (warehouseState?.documentSummary.total ?? 0) > 0;
   const hasUnfinishedProduction = productionItems.some((pItem) => {
     const pTask = productionTaskByItemId.get(pItem.id);
     return !pTask || pTask.status !== 'done';
@@ -681,6 +688,164 @@ export default function ChapanOrderDetailPage() {
             </div>
           )}
 
+          {shouldShowWarehouseState && (
+            <div className={styles.card}>
+              <div className={styles.cardLabel}>Warehouse Twin</div>
+              <div style={{ display: 'grid', gap: 12 }}>
+                <div
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    width: 'fit-content',
+                    padding: '4px 10px',
+                    borderRadius: 999,
+                    fontSize: 11,
+                    fontWeight: 600,
+                    background: `color-mix(in srgb, ${warehouseLive.isConnected ? 'var(--fill-positive)' : 'var(--fill-warning)'} 14%, transparent)`,
+                    color: warehouseLive.isConnected ? 'var(--fill-positive)' : 'var(--fill-warning)',
+                  }}
+                >
+                  {warehouseLive.isConnected
+                    ? `Live sync connected${warehouseLive.lastSyncAt ? ` · ${fmtDatetime(warehouseLive.lastSyncAt)}` : ''}`
+                    : 'Live sync reconnecting'}
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
+                  <div style={{ border: '1px solid var(--border-subtle)', borderRadius: 10, padding: '10px 12px', background: 'var(--bg-surface)' }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--text-tertiary)' }}>Site</div>
+                    <div style={{ marginTop: 6, fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
+                      {warehouseState?.site?.name ?? 'Не определён'}
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 4 }}>
+                      {warehouseState?.site?.code ?? 'Pending resolution'}
+                    </div>
+                  </div>
+                  <div style={{ border: '1px solid var(--border-subtle)', borderRadius: 10, padding: '10px 12px', background: 'var(--bg-surface)' }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--text-tertiary)' }}>Reservations</div>
+                    <div style={{ marginTop: 6, fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
+                      {warehouseState?.reservationSummary.active ?? 0} active / {warehouseState?.reservationSummary.total ?? 0}
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 4 }}>
+                      Qty reserved: {warehouseState?.reservationSummary.qtyReserved ?? 0}
+                    </div>
+                  </div>
+                  <div style={{ border: '1px solid var(--border-subtle)', borderRadius: 10, padding: '10px 12px', background: 'var(--bg-surface)' }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--text-tertiary)' }}>Documents</div>
+                    <div style={{ marginTop: 6, fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
+                      {warehouseState?.documentSummary.handoff ?? 0} handoff / {warehouseState?.documentSummary.shipment ?? 0} shipment
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 4 }}>
+                      Total: {warehouseState?.documentSummary.total ?? 0}
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gap: 8 }}>
+                  {(warehouseState?.items ?? []).map((item) => (
+                    <div
+                      key={item.orderItemId}
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'minmax(0, 1.3fr) minmax(0, .9fr) auto',
+                        gap: 12,
+                        border: '1px solid var(--border-subtle)',
+                        borderRadius: 10,
+                        padding: '10px 12px',
+                        background: 'var(--bg-surface)',
+                      }}
+                    >
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{item.productName}</div>
+                        <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 4 }}>
+                          {item.attributesSummary ?? item.variantKey ?? 'Variant pending'}
+                        </div>
+                      </div>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
+                          Site: {item.site?.code ?? warehouseState?.site?.code ?? '—'}
+                        </div>
+                        <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 4 }}>
+                          Bins: {item.binCodes.length ? item.binCodes.join(', ') : '—'}
+                        </div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 6,
+                            padding: '4px 8px',
+                            borderRadius: 999,
+                            fontSize: 11,
+                            fontWeight: 600,
+                            background: `color-mix(in srgb, ${
+                              item.reservationStatus === 'active'
+                                ? 'var(--fill-warning)'
+                                : item.reservationStatus === 'consumed'
+                                  ? 'var(--fill-info, #4ea1ff)'
+                                  : item.reservationStatus === 'released'
+                                    ? 'var(--fill-negative)'
+                                    : 'var(--border-default)'
+                            } 16%, transparent)`,
+                            color:
+                              item.reservationStatus === 'active'
+                                ? 'var(--fill-warning)'
+                                : item.reservationStatus === 'consumed'
+                                  ? 'var(--fill-info, #4ea1ff)'
+                                  : item.reservationStatus === 'released'
+                                    ? 'var(--fill-negative)'
+                                    : 'var(--text-secondary)',
+                          }}
+                        >
+                          {item.reservationStatus}
+                        </div>
+                        <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 6 }}>
+                          Qty: {item.qtyReserved}/{item.quantity}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+
+                  {!warehouseState?.items?.length && (
+                    <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
+                      Warehouse read model ещё не собрал item-level state для этого заказа.
+                    </div>
+                  )}
+                </div>
+
+                {(warehouseState?.documents?.length ?? 0) > 0 && (
+                  <div style={{ display: 'grid', gap: 6 }}>
+                    {warehouseState?.documents.map((document) => (
+                      <div
+                        key={document.id}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: 12,
+                          padding: '9px 12px',
+                          borderRadius: 10,
+                          border: '1px solid var(--border-subtle)',
+                          background: 'var(--bg-surface)',
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>
+                            {document.documentType === 'handoff_to_warehouse' ? 'Передача на склад' : 'Отгрузка'}
+                          </div>
+                          <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 4 }}>
+                            {document.referenceNo ?? document.site?.name ?? 'Без reference'} · {fmtDatetime(document.postedAt)}
+                          </div>
+                        </div>
+                        <div style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600 }}>{document.status}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {productionItems.length > 0 && (
             <div className={styles.card}>
               <div className={styles.cardLabel}>Производство</div>
@@ -867,4 +1032,3 @@ export default function ChapanOrderDetailPage() {
     </div>
   );
 }
-

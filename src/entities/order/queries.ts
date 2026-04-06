@@ -18,6 +18,8 @@ export const orderKeys = {
   all: ['chapan_orders'] as const,
   list: (filters?: object) => [...orderKeys.all, filters] as const,
   detail: (id: string) => [...orderKeys.all, id] as const,
+  warehouseState: (id: string) => [...orderKeys.all, id, 'warehouse-state'] as const,
+  warehouseStates: (ids: string[]) => [...orderKeys.all, 'warehouse-states', ids] as const,
   production: ['chapan_production'] as const,
   productionList: (filters?: object) => [...orderKeys.production, filters] as const,
   invoices: ['chapan_invoices'] as const,
@@ -45,6 +47,25 @@ export const useOrder = (id: string) =>
     enabled: Boolean(id),
     staleTime: 120_000,
   });
+
+export const useOrderWarehouseState = (id: string) =>
+  useQuery({
+    queryKey: orderKeys.warehouseState(id),
+    queryFn: () => ordersApi.getWarehouseState(id),
+    enabled: Boolean(id),
+    staleTime: 15_000,
+  });
+
+export const useOrderWarehouseStates = (ids: string[]) => {
+  const sortedIds = [...new Set(ids)].sort();
+
+  return useQuery({
+    queryKey: orderKeys.warehouseStates(sortedIds),
+    queryFn: () => ordersApi.listWarehouseStates(sortedIds),
+    enabled: sortedIds.length > 0,
+    staleTime: 15_000,
+  });
+};
 
 export const useCreateOrder = () => {
   const qc = useQueryClient();
@@ -79,6 +100,7 @@ export const useRestoreOrder = () => {
     onSuccess: (_data, { id }) => {
       qc.invalidateQueries({ queryKey: orderKeys.list() });
       qc.invalidateQueries({ queryKey: orderKeys.detail(id) });
+      qc.invalidateQueries({ queryKey: orderKeys.warehouseState(id) });
       toast.success('Заказ восстановлен');
     },
     onError: (error) => toast.error(readApiErrorMessage(error, 'Не удалось восстановить заказ')),
@@ -105,6 +127,7 @@ export const useCloseOrder = () => {
     onSuccess: (_data, id) => {
       qc.invalidateQueries({ queryKey: orderKeys.list() });
       qc.invalidateQueries({ queryKey: orderKeys.detail(id) });
+      qc.invalidateQueries({ queryKey: orderKeys.warehouseState(id) });
       qc.invalidateQueries({ queryKey: orderKeys.production });
       toast.success('Сделка закрыта, заказ отправлен в архив');
     },
@@ -119,6 +142,7 @@ export const useFulfillFromStock = () => {
     onSuccess: (_data, id) => {
       qc.invalidateQueries({ queryKey: orderKeys.list() });
       qc.invalidateQueries({ queryKey: orderKeys.detail(id) });
+      qc.invalidateQueries({ queryKey: orderKeys.warehouseState(id) });
       toast.success('Заказ переведён в «Готово»');
     },
     onError: (error) => toast.error(readApiErrorMessage(error, 'Не удалось выполнить со склада')),
@@ -133,6 +157,7 @@ export const useRouteOrderItems = () => {
     onSuccess: (_data, { id }) => {
       qc.invalidateQueries({ queryKey: orderKeys.list() });
       qc.invalidateQueries({ queryKey: orderKeys.detail(id) });
+      qc.invalidateQueries({ queryKey: orderKeys.warehouseState(id) });
       qc.invalidateQueries({ queryKey: orderKeys.production });
       toast.success('Маршрут позиций обновлён');
     },
@@ -147,6 +172,7 @@ export const useConfirmOrder = () => {
     onSuccess: (_data, id) => {
       qc.invalidateQueries({ queryKey: orderKeys.list() });
       qc.invalidateQueries({ queryKey: orderKeys.detail(id) });
+      qc.invalidateQueries({ queryKey: orderKeys.warehouseState(id) });
       qc.invalidateQueries({ queryKey: orderKeys.production });
       toast.success('Заказ подтверждён и отправлен в цех');
     },
@@ -162,6 +188,7 @@ export const useChangeOrderStatus = () => {
     onSuccess: (_data, { id }) => {
       qc.invalidateQueries({ queryKey: orderKeys.list() });
       qc.invalidateQueries({ queryKey: orderKeys.detail(id) });
+      qc.invalidateQueries({ queryKey: orderKeys.warehouseState(id) });
     },
     onError: () => toast.error('Не удалось изменить статус'),
   });
@@ -193,6 +220,7 @@ export const useShipOrder = () => {
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: orderKeys.list() });
       qc.invalidateQueries({ queryKey: orderKeys.detail(vars.id) });
+      qc.invalidateQueries({ queryKey: orderKeys.warehouseState(vars.id) });
       toast.success('Заказ отправлен клиенту');
     },
     onError: (error) => toast.error(readApiErrorMessage(error, 'Не удалось отправить заказ')),
@@ -230,6 +258,7 @@ export const useReturnToReady = () => {
     onSuccess: (_data, { id }) => {
       qc.invalidateQueries({ queryKey: orderKeys.list() });
       qc.invalidateQueries({ queryKey: orderKeys.detail(id) });
+      qc.invalidateQueries({ queryKey: orderKeys.warehouseState(id) });
       qc.invalidateQueries({ queryKey: orderKeys.invoices });
       toast.success('Заказ возвращён в раздел «Готово»');
     },
@@ -468,6 +497,7 @@ export const useRouteSingleItem = () => {
       ordersApi.routeItem(orderId, itemId, fulfillmentMode),
     onSuccess: (_data, { orderId }) => {
       void qc.invalidateQueries({ queryKey: orderKeys.detail(orderId) });
+      void qc.invalidateQueries({ queryKey: orderKeys.warehouseState(orderId) });
       void qc.invalidateQueries({ queryKey: orderKeys.list() });
       void qc.invalidateQueries({ queryKey: orderKeys.production });
     },

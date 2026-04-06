@@ -1,4 +1,5 @@
-import { useDeferredValue, useMemo, useState } from 'react';
+import { useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   AlertCircle, AlertTriangle, Archive, CheckCircle2, ChevronRight, Download,
   FileText, Package, PackageCheck, Phone, Plus, Search, Send, TrendingDown, User, X, CheckSquare, BookOpen,
@@ -7,6 +8,7 @@ import { WarehouseCatalog } from '../../../warehouse/WarehouseCatalog';
 import {
   useWarehouseItems, useWarehouseMovements, useWarehouseAlerts,
   useWarehouseCategories, useCreateItem, useAddMovement, useDeleteItem, useResolveAlert,
+  useWarehouseFoundationSites, useWarehouseFoundationSiteControlTower, useWarehouseFoundationSiteHealth,
 } from '../../../../entities/warehouse/queries';
 import {
   useInvoices, useConfirmWarehouse, useOrders, useShipOrder, useOrder, useArchiveInvoice,
@@ -603,6 +605,7 @@ export default function ChapanWarehousePage() {
   const [addItemOpen, setAddItemOpen] = useState(false);
   const [addMovOpen, setAddMovOpen] = useState(false);
   const [preselectItem, setPreselectItem] = useState<string | undefined>();
+  const [selectedCanonicalSiteId, setSelectedCanonicalSiteId] = useState('');
 
   // Detail drawers
   const [selectedInvoice, setSelectedInvoice] = useState<ChapanInvoice | null>(null);
@@ -646,6 +649,15 @@ export default function ChapanWarehousePage() {
   const alertCount = alerts.length;
   const incomingCount = pendingInvoices.length;
   const totalUnits = useMemo(() => items.reduce((sum, i) => sum + i.qty, 0), [items]);
+  const { data: canonicalSites } = useWarehouseFoundationSites();
+  const { data: canonicalSiteHealth } = useWarehouseFoundationSiteHealth(selectedCanonicalSiteId || undefined);
+  const { data: canonicalControlTower } = useWarehouseFoundationSiteControlTower(selectedCanonicalSiteId || undefined);
+
+  useEffect(() => {
+    if (!selectedCanonicalSiteId && canonicalSites?.results?.length) {
+      setSelectedCanonicalSiteId(canonicalSites.results[0].id);
+    }
+  }, [canonicalSites?.results, selectedCanonicalSiteId]);
 
   function handleExportItems() {
     exportToCSV(items.map(i => ({
@@ -661,7 +673,7 @@ export default function ChapanWarehousePage() {
   }
 
   return (
-    <div className={styles.root}>
+    <div className={styles.root} style={{ height: 'auto', overflow: 'visible' }}>
       {/* Header + tabs */}
       <div className={styles.header}>
         <h1 className={styles.title}>Склад</h1>
@@ -729,6 +741,66 @@ export default function ChapanWarehousePage() {
       )}
 
       {/* ── Приёмка tab ── */}
+      {canonicalSites?.results?.length ? (
+        <div
+          style={{
+            border: '1px solid var(--border-subtle)',
+            borderRadius: 12,
+            padding: 14,
+            background: 'linear-gradient(180deg, color-mix(in srgb, var(--bg-surface-elevated) 78%, transparent), var(--bg-surface))',
+            display: 'grid',
+            gap: 12,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Canonical Warehouse Twin</div>
+              <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 3 }}>
+                Chapan warehouse flow is now bridged with the new foundation and control-tower layers.
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <select
+                className={styles.select}
+                value={selectedCanonicalSiteId}
+                onChange={(event) => setSelectedCanonicalSiteId(event.target.value)}
+                style={{ minWidth: 160 }}
+              >
+                {canonicalSites.results.map((site) => (
+                  <option key={site.id} value={site.id}>{site.code}</option>
+                ))}
+              </select>
+              <Link to="/warehouse" className={styles.exportBtn}>Foundation</Link>
+              <Link to="/warehouse/operations" className={styles.exportBtn}>Operations</Link>
+              <Link to="/warehouse/control-tower" className={styles.exportBtn}>Control Tower</Link>
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 10 }}>
+            <div className={styles.drawerCard}>
+              <div className={styles.drawerCardLabel}>Health</div>
+              <div className={styles.drawerCardRowSecondary}>Score: {canonicalControlTower?.healthScore ?? 0}</div>
+              <div className={styles.drawerCardRowSecondary}>Alerts: {canonicalControlTower?.alerts.length ?? 0}</div>
+            </div>
+            <div className={styles.drawerCard}>
+              <div className={styles.drawerCardLabel}>Reservations</div>
+              <div className={styles.drawerCardRowSecondary}>Active: {canonicalSiteHealth?.operations.reservations.active ?? 0}</div>
+              <div className={styles.drawerCardRowSecondary}>Consumed: {canonicalSiteHealth?.operations.reservations.consumed ?? 0}</div>
+            </div>
+            <div className={styles.drawerCard}>
+              <div className={styles.drawerCardLabel}>Documents</div>
+              <div className={styles.drawerCardRowSecondary}>Handoffs: {canonicalSiteHealth?.operations.documents.handoffs ?? 0}</div>
+              <div className={styles.drawerCardRowSecondary}>Shipments: {canonicalSiteHealth?.operations.documents.shipments ?? 0}</div>
+            </div>
+            <div className={styles.drawerCard}>
+              <div className={styles.drawerCardLabel}>Inventory</div>
+              <div className={styles.drawerCardRowSecondary}>On hand: {fmtNum(canonicalSiteHealth?.inventory.qtyOnHand ?? 0)}</div>
+              <div className={styles.drawerCardRowSecondary}>Reserved: {fmtNum(canonicalSiteHealth?.inventory.qtyReserved ?? 0)}</div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {tab === 'incoming' && (
         invoicesLoading ? (
           <div className={styles.skeletons}>{[...Array(4)].map((_, i) => <Skeleton key={i} height={56} radius={8} />)}</div>

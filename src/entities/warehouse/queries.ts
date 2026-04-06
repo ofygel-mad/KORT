@@ -1,7 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { warehouseApi, warehouseCatalogApi } from './api';
-import type { CreateItemDto, AddMovementDto } from './types';
+import type {
+  CreateItemDto, AddMovementDto, CreateWarehouseSiteDto,
+  CreateWarehouseZoneDto, CreateWarehouseBinDto, UpsertWarehouseVariantDto,
+  PostStockReceiptDto, PostStockTransferDto, CreateStockReservationDto,
+  WarehousePoolPolicyDto,
+} from './types';
 
 export const warehouseKeys = {
   all: ['warehouse'] as const,
@@ -10,6 +15,29 @@ export const warehouseKeys = {
   alerts: ['warehouse', 'alerts'] as const,
   categories: ['warehouse', 'categories'] as const,
   summary: ['warehouse', 'summary'] as const,
+  foundation: {
+    status: ['warehouse', 'foundation', 'status'] as const,
+    sites: ['warehouse', 'foundation', 'sites'] as const,
+    siteStructure: (siteId: string) => ['warehouse', 'foundation', 'site-structure', siteId] as const,
+    siteHealth: (siteId: string) => ['warehouse', 'foundation', 'site-health', siteId] as const,
+    controlTower: (siteId: string) => ['warehouse', 'foundation', 'site-control-tower', siteId] as const,
+    feed: (siteId: string, params?: object) => ['warehouse', 'foundation', 'site-feed', siteId, params] as const,
+    twin: (siteId: string, params?: object) => ['warehouse', 'foundation', 'site-twin', siteId, params] as const,
+    pools: (siteId: string) => ['warehouse', 'foundation', 'site-pools', siteId] as const,
+    taskTimeline: (taskId: string) => ['warehouse', 'foundation', 'task-timeline', taskId] as const,
+    exceptionTimeline: (exceptionId: string) => ['warehouse', 'foundation', 'exception-timeline', exceptionId] as const,
+    layoutCompare: (leftVersionId: string, rightVersionId: string) =>
+      ['warehouse', 'foundation', 'layout-compare', leftVersionId, rightVersionId] as const,
+    publishAudit: (siteId: string) => ['warehouse', 'foundation', 'publish-audit', siteId] as const,
+    routeHistory: (siteId: string, params?: object) => ['warehouse', 'foundation', 'route-history', siteId, params] as const,
+    variants: ['warehouse', 'foundation', 'variants'] as const,
+    balances: (siteId: string, params?: object) => ['warehouse', 'foundation', 'balances', siteId, params] as const,
+    reservations: (siteId: string, params?: object) => ['warehouse', 'foundation', 'reservations', siteId, params] as const,
+    tasks: (siteId: string, params?: object) => ['warehouse', 'foundation', 'tasks', siteId, params] as const,
+    exceptions: (siteId: string, params?: object) => ['warehouse', 'foundation', 'exceptions', siteId, params] as const,
+    documents: (siteId: string, params?: object) => ['warehouse', 'foundation', 'documents', siteId, params] as const,
+    outbox: ['warehouse', 'foundation', 'outbox'] as const,
+  },
   catalog: {
     definitions: ['warehouse', 'catalog', 'definitions'] as const,
     products: ['warehouse', 'catalog', 'products'] as const,
@@ -31,6 +59,147 @@ export const useWarehouseCategories = () =>
 
 export const useWarehouseSummary = () =>
   useQuery({ queryKey: warehouseKeys.summary, queryFn: () => warehouseApi.getSummary(), staleTime: 60_000 });
+
+export const useWarehouseFoundationStatus = () =>
+  useQuery({
+    queryKey: warehouseKeys.foundation.status,
+    queryFn: () => warehouseApi.getFoundationStatus(),
+    staleTime: 30_000,
+  });
+
+export const useWarehouseFoundationSites = () =>
+  useQuery({
+    queryKey: warehouseKeys.foundation.sites,
+    queryFn: () => warehouseApi.listFoundationSites(),
+    staleTime: 60_000,
+  });
+
+export const useWarehouseFoundationSiteStructure = (siteId?: string) =>
+  useQuery({
+    queryKey: warehouseKeys.foundation.siteStructure(siteId ?? 'unknown'),
+    queryFn: () => warehouseApi.getFoundationSiteStructure(siteId!),
+    enabled: Boolean(siteId),
+    staleTime: 30_000,
+  });
+
+export const useWarehouseFoundationSiteHealth = (siteId?: string) =>
+  useQuery({
+    queryKey: warehouseKeys.foundation.siteHealth(siteId ?? 'unknown'),
+    queryFn: () => warehouseApi.getFoundationSiteHealth(siteId!),
+    enabled: Boolean(siteId),
+    staleTime: 15_000,
+  });
+
+export const useWarehouseFoundationSiteControlTower = (siteId?: string) =>
+  useQuery({
+    queryKey: warehouseKeys.foundation.controlTower(siteId ?? 'unknown'),
+    queryFn: () => warehouseApi.getFoundationSiteControlTower(siteId!),
+    enabled: Boolean(siteId),
+    staleTime: 15_000,
+  });
+
+export const useWarehouseFoundationSiteFeed = (siteId?: string, params?: { limit?: number }) =>
+  useQuery({
+    queryKey: warehouseKeys.foundation.feed(siteId ?? 'unknown', params),
+    queryFn: () => warehouseApi.getFoundationSiteFeed(siteId!, params),
+    enabled: Boolean(siteId),
+    staleTime: 10_000,
+  });
+
+export const useWarehouseFoundationTwinRuntime = (siteId?: string, params?: { draftVersionId?: string }) =>
+  useQuery({
+    queryKey: warehouseKeys.foundation.twin(siteId ?? 'unknown', params),
+    queryFn: () => warehouseApi.getFoundationTwinRuntime(siteId!, params),
+    enabled: Boolean(siteId),
+    staleTime: 10_000,
+  });
+
+export const useWarehouseFoundationAssigneePools = (siteId?: string) =>
+  useQuery({
+    queryKey: warehouseKeys.foundation.pools(siteId ?? 'unknown'),
+    queryFn: () => warehouseApi.listFoundationAssigneePools(siteId!),
+    enabled: Boolean(siteId),
+    staleTime: 30_000,
+  });
+
+export const useWarehouseFoundationTaskTimeline = (taskId?: string) =>
+  useQuery({
+    queryKey: warehouseKeys.foundation.taskTimeline(taskId ?? 'unknown'),
+    queryFn: () => warehouseApi.getFoundationTaskTimeline(taskId!),
+    enabled: Boolean(taskId),
+    staleTime: 15_000,
+  });
+
+export const useWarehouseFoundationExceptionTimeline = (exceptionId?: string) =>
+  useQuery({
+    queryKey: warehouseKeys.foundation.exceptionTimeline(exceptionId ?? 'unknown'),
+    queryFn: () => warehouseApi.getFoundationExceptionTimeline(exceptionId!),
+    enabled: Boolean(exceptionId),
+    staleTime: 15_000,
+  });
+
+export const useWarehouseFoundationLayoutCompare = (leftVersionId?: string, rightVersionId?: string) =>
+  useQuery({
+    queryKey: warehouseKeys.foundation.layoutCompare(leftVersionId ?? 'unknown', rightVersionId ?? 'unknown'),
+    queryFn: () => warehouseApi.compareFoundationLayoutVersions(leftVersionId!, rightVersionId!),
+    enabled: Boolean(leftVersionId && rightVersionId),
+    staleTime: 15_000,
+  });
+
+export const useWarehouseFoundationVariants = () =>
+  useQuery({
+    queryKey: warehouseKeys.foundation.variants,
+    queryFn: () => warehouseApi.listFoundationVariants(),
+    staleTime: 60_000,
+  });
+
+export const useWarehouseFoundationBalances = (siteId?: string, params?: { variantId?: string; binId?: string }) =>
+  useQuery({
+    queryKey: warehouseKeys.foundation.balances(siteId ?? 'unknown', params),
+    queryFn: () => warehouseApi.listFoundationBalances(siteId!, params),
+    enabled: Boolean(siteId),
+    staleTime: 15_000,
+  });
+
+export const useWarehouseFoundationReservations = (siteId?: string, params?: { status?: string }) =>
+  useQuery({
+    queryKey: warehouseKeys.foundation.reservations(siteId ?? 'unknown', params),
+    queryFn: () => warehouseApi.listFoundationReservations(siteId!, params),
+    enabled: Boolean(siteId),
+    staleTime: 15_000,
+  });
+
+export const useWarehouseFoundationTasks = (siteId?: string, params?: { status?: string; taskType?: string }) =>
+  useQuery({
+    queryKey: warehouseKeys.foundation.tasks(siteId ?? 'unknown', params),
+    queryFn: () => warehouseApi.listFoundationTasks(siteId!, params),
+    enabled: Boolean(siteId),
+    staleTime: 10_000,
+  });
+
+export const useWarehouseFoundationExceptions = (siteId?: string, params?: { status?: string; severity?: string }) =>
+  useQuery({
+    queryKey: warehouseKeys.foundation.exceptions(siteId ?? 'unknown', params),
+    queryFn: () => warehouseApi.listFoundationExceptions(siteId!, params),
+    enabled: Boolean(siteId),
+    staleTime: 10_000,
+  });
+
+export const useWarehouseFoundationDocuments = (siteId?: string, params?: { documentType?: string }) =>
+  useQuery({
+    queryKey: warehouseKeys.foundation.documents(siteId ?? 'unknown', params),
+    queryFn: () => warehouseApi.listFoundationDocuments(siteId!, params),
+    enabled: Boolean(siteId),
+    staleTime: 15_000,
+  });
+
+export const useWarehouseFoundationOutboxRuntime = () =>
+  useQuery({
+    queryKey: warehouseKeys.foundation.outbox,
+    queryFn: () => warehouseApi.getFoundationOutboxRuntime(),
+    staleTime: 10_000,
+    refetchInterval: 10_000,
+  });
 
 export const useCreateItem = () => {
   const qc = useQueryClient();
@@ -68,7 +237,326 @@ export const useAddMovement = () => {
   });
 };
 
+export const useCreateWarehouseFoundationSite = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: CreateWarehouseSiteDto) => warehouseApi.createFoundationSite(dto),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.status });
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.sites });
+      toast.success('Склад foundation создан');
+    },
+    onError: () => toast.error('Не удалось создать foundation-склад'),
+  });
+};
+
+export const useCreateWarehouseFoundationZone = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ siteId, dto }: { siteId: string; dto: CreateWarehouseZoneDto }) =>
+      warehouseApi.createFoundationZone(siteId, dto),
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.status });
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.sites });
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.siteHealth(variables.siteId) });
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.controlTower(variables.siteId) });
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.siteStructure(variables.siteId) });
+      toast.success('Зона foundation создана');
+    },
+    onError: () => toast.error('Не удалось создать foundation-зону'),
+  });
+};
+
+export const useCreateWarehouseFoundationBin = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ siteId, dto }: { siteId: string; dto: CreateWarehouseBinDto }) =>
+      warehouseApi.createFoundationBin(siteId, dto),
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.status });
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.siteHealth(variables.siteId) });
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.controlTower(variables.siteId) });
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.siteStructure(variables.siteId) });
+      toast.success('Ячейка foundation создана');
+    },
+    onError: () => toast.error('Не удалось создать foundation-ячейку'),
+  });
+};
+
+export const useUpsertWarehouseFoundationVariant = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: UpsertWarehouseVariantDto) => warehouseApi.upsertFoundationVariant(dto),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.variants });
+      toast.success('Variant foundation сохранён');
+    },
+    onError: () => toast.error('Не удалось сохранить foundation-variant'),
+  });
+};
+
+export const usePostWarehouseFoundationReceipt = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: PostStockReceiptDto) => warehouseApi.postFoundationReceipt(dto),
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.status });
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.siteStructure(variables.warehouseSiteId) });
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.siteHealth(variables.warehouseSiteId) });
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.controlTower(variables.warehouseSiteId) });
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.balances(variables.warehouseSiteId) });
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.feed(variables.warehouseSiteId) });
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.outbox });
+      toast.success('Receipt записан в canonical warehouse');
+    },
+    onError: () => toast.error('Не удалось записать receipt'),
+  });
+};
+
+export const usePostWarehouseFoundationTransfer = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: PostStockTransferDto) => warehouseApi.postFoundationTransfer(dto),
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.siteHealth(variables.warehouseSiteId) });
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.controlTower(variables.warehouseSiteId) });
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.balances(variables.warehouseSiteId) });
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.feed(variables.warehouseSiteId) });
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.outbox });
+      toast.success('Transfer записан в canonical warehouse');
+    },
+    onError: () => toast.error('Не удалось записать transfer'),
+  });
+};
+
+export const useCreateWarehouseFoundationReservation = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: CreateStockReservationDto) => warehouseApi.createFoundationReservation(dto),
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.siteHealth(variables.warehouseSiteId) });
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.controlTower(variables.warehouseSiteId) });
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.balances(variables.warehouseSiteId) });
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.reservations(variables.warehouseSiteId) });
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.feed(variables.warehouseSiteId) });
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.outbox });
+      toast.success('Reservation создан');
+    },
+    onError: () => toast.error('Не удалось создать reservation'),
+  });
+};
+
+export const useReleaseWarehouseFoundationReservation = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ reservationId, reason, siteId }: { reservationId: string; reason?: string; siteId?: string }) =>
+      warehouseApi.releaseFoundationReservation(reservationId, reason).then((result) => ({ result, siteId })),
+    onSuccess: ({ siteId }) => {
+      if (siteId) {
+        qc.invalidateQueries({ queryKey: warehouseKeys.foundation.balances(siteId) });
+        qc.invalidateQueries({ queryKey: warehouseKeys.foundation.reservations(siteId) });
+        qc.invalidateQueries({ queryKey: warehouseKeys.foundation.siteHealth(siteId) });
+        qc.invalidateQueries({ queryKey: warehouseKeys.foundation.controlTower(siteId) });
+        qc.invalidateQueries({ queryKey: warehouseKeys.foundation.feed(siteId) });
+      } else {
+        qc.invalidateQueries({ queryKey: warehouseKeys.foundation.status });
+      }
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.outbox });
+      toast.success('Reservation released');
+    },
+    onError: () => toast.error('Не удалось снять reservation'),
+  });
+};
+
 /** Check finished-goods availability for a list of product names (Chapan integration) */
+export const useConsumeWarehouseFoundationReservation = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ reservationId, reason, siteId }: { reservationId: string; reason?: string; siteId?: string }) =>
+      warehouseApi.consumeFoundationReservation(reservationId, reason).then((result) => ({ result, siteId })),
+    onSuccess: ({ siteId }) => {
+      if (siteId) {
+        qc.invalidateQueries({ queryKey: warehouseKeys.foundation.balances(siteId) });
+        qc.invalidateQueries({ queryKey: warehouseKeys.foundation.reservations(siteId) });
+        qc.invalidateQueries({ queryKey: warehouseKeys.foundation.siteHealth(siteId) });
+        qc.invalidateQueries({ queryKey: warehouseKeys.foundation.controlTower(siteId) });
+        qc.invalidateQueries({ queryKey: warehouseKeys.foundation.feed(siteId) });
+      } else {
+        qc.invalidateQueries({ queryKey: warehouseKeys.foundation.status });
+      }
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.outbox });
+      toast.success('Reservation consumed');
+    },
+    onError: () => toast.error('РќРµ СѓРґР°Р»РѕСЃСЊ СЃРїРёСЃР°С‚СЊ reservation'),
+  });
+};
+
+export const useSyncWarehouseFoundationOperationalState = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (siteId: string) => warehouseApi.syncFoundationOperationalState(siteId),
+    onSuccess: (_data, siteId) => {
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.controlTower(siteId) });
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.siteHealth(siteId) });
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.tasks(siteId) });
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.exceptions(siteId) });
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.twin(siteId) });
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.feed(siteId) });
+      toast.success('Warehouse runtime synced');
+    },
+    onError: () => toast.error('РќРµ СѓРґР°Р»РѕСЃСЊ СЃРёРЅС…СЂРѕРЅРёР·РёСЂРѕРІР°С‚СЊ warehouse runtime'),
+  });
+};
+
+export const useCreateWarehouseFoundationLayoutDraft = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ siteId, notes }: { siteId: string; notes?: string }) =>
+      warehouseApi.createFoundationLayoutDraft(siteId, notes ? { notes } : {}),
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.siteStructure(variables.siteId) });
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.twin(variables.siteId) });
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.feed(variables.siteId) });
+      toast.success('Layout draft created');
+    },
+    onError: () => toast.error('РќРµ СѓРґР°Р»РѕСЃСЊ СЃРѕР·РґР°С‚СЊ layout draft'),
+  });
+};
+
+export const useUpdateWarehouseFoundationLayoutNode = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ siteId, draftId, nodeId, dto }: { siteId: string; draftId: string; nodeId: string; dto: Record<string, unknown> }) =>
+      warehouseApi.updateFoundationLayoutNode(draftId, nodeId, dto),
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.twin(variables.siteId) });
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.feed(variables.siteId) });
+    },
+    onError: () => toast.error('РќРµ СѓРґР°Р»РѕСЃСЊ РѕР±РЅРѕРІРёС‚СЊ layout node'),
+  });
+};
+
+export const usePublishWarehouseFoundationLayoutDraft = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      siteId,
+      draftId,
+      dto,
+    }: {
+      siteId: string;
+      draftId: string;
+      dto?: { force?: boolean; forceReason?: string };
+    }) => warehouseApi.publishFoundationLayoutDraft(draftId, dto),
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.siteStructure(variables.siteId) });
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.controlTower(variables.siteId) });
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.twin(variables.siteId) });
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.feed(variables.siteId) });
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.pools(variables.siteId) });
+      toast.success('Layout draft published');
+    },
+    onError: () => toast.error('РќРµ СѓРґР°Р»РѕСЃСЊ РѕРїСѓР±Р»РёРєРѕРІР°С‚СЊ layout draft'),
+  });
+};
+
+export const useValidateWarehouseFoundationLayoutDraft = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ siteId, draftId }: { siteId: string; draftId: string }) =>
+      warehouseApi.validateFoundationLayoutDraft(draftId),
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.twin(variables.siteId) });
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.controlTower(variables.siteId) });
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.feed(variables.siteId) });
+      toast.success('Layout draft validated');
+    },
+    onError: () => toast.error('Не удалось провалидировать layout draft'),
+  });
+};
+
+export const useUpdateWarehouseFoundationTaskStatus = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ siteId, taskId, status }: { siteId: string; taskId: string; status: string }) =>
+      warehouseApi.updateFoundationTaskStatus(taskId, status),
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.controlTower(variables.siteId) });
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.tasks(variables.siteId) });
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.twin(variables.siteId) });
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.feed(variables.siteId) });
+      toast.success('Task status updated');
+    },
+    onError: () => toast.error('РќРµ СѓРґР°Р»РѕСЃСЊ РѕР±РЅРѕРІРёС‚СЊ task'),
+  });
+};
+
+export const useCommandWarehouseFoundationTask = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      siteId,
+      taskId,
+      dto,
+    }: {
+      siteId: string;
+      taskId: string;
+      dto: { command: 'assign' | 'start' | 'pause' | 'complete' | 'cancel' | 'replenish'; assigneeName?: string; assigneeRole?: string; poolId?: string };
+    }) => warehouseApi.commandFoundationTask(taskId, dto),
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.controlTower(variables.siteId) });
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.tasks(variables.siteId) });
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.twin(variables.siteId) });
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.feed(variables.siteId) });
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.pools(variables.siteId) });
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.taskTimeline(variables.taskId) });
+      toast.success('Task command applied');
+    },
+    onError: () => toast.error('Не удалось выполнить warehouse task command'),
+  });
+};
+
+export const useUpdateWarehouseFoundationExceptionStatus = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ siteId, exceptionId, status }: { siteId: string; exceptionId: string; status: string }) =>
+      warehouseApi.updateFoundationExceptionStatus(exceptionId, status),
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.controlTower(variables.siteId) });
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.exceptions(variables.siteId) });
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.twin(variables.siteId) });
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.feed(variables.siteId) });
+      toast.success('Exception status updated');
+    },
+    onError: () => toast.error('РќРµ СѓРґР°Р»РѕСЃСЊ РѕР±РЅРѕРІРёС‚СЊ exception'),
+  });
+};
+
+export const useCommandWarehouseFoundationException = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      siteId,
+      exceptionId,
+      dto,
+    }: {
+      siteId: string;
+      exceptionId: string;
+      dto: { command: 'assign' | 'acknowledge' | 'resolve' | 'escalate' | 'reopen'; ownerName?: string; ownerRole?: string; poolId?: string; resolutionCode?: string };
+    }) => warehouseApi.commandFoundationException(exceptionId, dto),
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.controlTower(variables.siteId) });
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.exceptions(variables.siteId) });
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.twin(variables.siteId) });
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.feed(variables.siteId) });
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.pools(variables.siteId) });
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.exceptionTimeline(variables.exceptionId) });
+      toast.success('Exception command applied');
+    },
+    onError: () => toast.error('Не удалось выполнить exception command'),
+  });
+};
+
 export const useProductsAvailability = (names: string[]) => {
   const sorted = [...names].sort();
   return useQuery({
@@ -305,5 +793,68 @@ export const useImportFieldOptions = () => {
       toast.success(`Значения импортированы: +${data.created}, пропущено ${data.skipped}`);
     },
     onError: (err: any) => toast.error(err?.response?.data?.message ?? 'Ошибка импорта'),
+  });
+};
+
+// ── Execution engine / publish audit hooks ─────────────────────────────────────
+
+export const useWarehouseFoundationLayoutPublishAudit = (siteId?: string) =>
+  useQuery({
+    queryKey: warehouseKeys.foundation.publishAudit(siteId ?? 'unknown'),
+    queryFn: () => warehouseApi.getFoundationLayoutPublishAudit(siteId!),
+    enabled: Boolean(siteId),
+    staleTime: 15_000,
+  });
+
+export const useWarehouseFoundationRouteHistory = (siteId?: string, params?: { limit?: number; taskType?: string }) =>
+  useQuery({
+    queryKey: warehouseKeys.foundation.routeHistory(siteId ?? 'unknown', params),
+    queryFn: () => warehouseApi.getFoundationRouteHistory(siteId!, params),
+    enabled: Boolean(siteId),
+    staleTime: 15_000,
+  });
+
+export const useRollbackWarehouseFoundationLayout = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ siteId, targetVersionId, reason }: { siteId: string; targetVersionId: string; reason?: string }) =>
+      warehouseApi.rollbackFoundationLayout(siteId, { targetVersionId, reason }),
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.twin(variables.siteId) });
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.publishAudit(variables.siteId) });
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.sites });
+      toast.success('Layout успешно откачен к предыдущей версии');
+    },
+    onError: () => toast.error('Не удалось откатить layout'),
+  });
+};
+
+export const useTriggerSlaEscalation = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (siteId: string) => warehouseApi.triggerSlaEscalation(siteId),
+    onSuccess: (data, siteId) => {
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.twin(siteId) });
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.pools(siteId) });
+      if (data.escalated > 0) {
+        toast.warning(`SLA: ${data.escalated} задач эскалировано`);
+      } else {
+        toast.success('Нет задач с нарушенным SLA');
+      }
+    },
+    onError: () => toast.error('Ошибка при эскалации SLA'),
+  });
+};
+
+export const useUpdatePoolPolicy = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ poolId, dto }: { poolId: string; dto: WarehousePoolPolicyDto }) =>
+      warehouseApi.updatePoolPolicy(poolId, dto),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: warehouseKeys.foundation.sites });
+      toast.success('Политика пула обновлена');
+    },
+    onError: () => toast.error('Не удалось обновить политику пула'),
   });
 };

@@ -7,7 +7,38 @@ import { redirectTo } from '../lib/browser';
 import { useAuthStore } from '../stores/auth';
 import { readApiErrorMessage } from './errors';
 
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api/v1';
+function resolveApiBaseUrl() {
+  const configured = String(import.meta.env.VITE_API_BASE_URL ?? '').trim();
+
+  if (!configured) {
+    return '/api/v1';
+  }
+
+  if (!import.meta.env.DEV || typeof window === 'undefined') {
+    return configured;
+  }
+
+  try {
+    const isAbsoluteUrl = /^[a-z]+:\/\//i.test(configured);
+    if (!isAbsoluteUrl) {
+      return configured;
+    }
+
+    const parsed = new URL(configured);
+    const isLocalBackend = parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1';
+
+    if (!isLocalBackend) {
+      return configured;
+    }
+
+    // In local development prefer the Vite proxy to avoid fragile CORS/origin mismatches.
+    return parsed.pathname.replace(/\/+$/, '') || '/api/v1';
+  } catch {
+    return configured;
+  }
+}
+
+export const API_BASE_URL = resolveApiBaseUrl();
 
 // Mock API disabled — all data from real backend
 

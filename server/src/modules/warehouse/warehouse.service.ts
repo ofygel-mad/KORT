@@ -14,6 +14,11 @@ import { prisma } from '../../lib/prisma.js';
 import { AppError } from '../../lib/errors.js';
 import { nanoid } from 'nanoid';
 import { Prisma } from '@prisma/client';
+import {
+  createStockReservation as createCanonicalStockReservation,
+  consumeStockReservationInTx as consumeCanonicalStockReservationInTx,
+  releaseStockReservationInTx as releaseCanonicalStockReservationInTx,
+} from './warehouse-inventory-core.service.js';
 
 // ─────────────────────────────────────────────────────────────
 //  Types
@@ -77,6 +82,72 @@ export interface ShortageReport {
   reservedCount: number;
   shortageCount: number;
   checkedAt: string;
+}
+
+export interface WarehouseOrderReservationSummary {
+  mode: 'canonical' | 'skipped';
+  reason?: string;
+  siteId?: string;
+  reservedCount: number;
+  replayedCount: number;
+  failedCount: number;
+  skippedCount: number;
+  items: Array<{
+    itemId: string;
+    variantKey?: string | null;
+    status: 'reserved' | 'replayed' | 'failed' | 'skipped';
+    reason?: string;
+    reservationId?: string;
+  }>;
+}
+
+export interface WarehouseOrderConsumptionSummary {
+  mode: 'canonical' | 'skipped';
+  reason?: string;
+  siteId?: string;
+  consumedCount: number;
+  replayedCount: number;
+  failedCount: number;
+  skippedCount: number;
+  items: Array<{
+    itemId: string;
+    variantKey?: string | null;
+    status: 'consumed' | 'replayed' | 'failed' | 'skipped';
+    reason?: string;
+    reservationId?: string;
+  }>;
+}
+
+function normalizeWarehouseName(value: string): string {
+  return value.trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+function buildWarehouseVariantKey(productName: string, attributes: Record<string, string>) {
+  const base = normalizeWarehouseName(productName);
+  const parts = Object.entries(attributes)
+    .filter(([, value]) => value.trim())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([key, value]) => `${key}:${normalizeWarehouseName(value)}`);
+  return [base, ...parts].join('|');
+}
+
+function readStringMapFromJson(value?: Prisma.JsonValue | null): Record<string, string> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return {};
+  }
+
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>)
+      .map(([key, raw]) => [key.trim(), String(raw ?? '').trim()] as const)
+      .filter(([key, raw]) => key && raw),
+  );
+}
+
+function summarizeVariantAttributes(attributes: Record<string, string>) {
+  return Object.entries(attributes)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([key, value]) => `${key}: ${value}`)
+    .join(', ');
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -435,6 +506,323 @@ export async function listBOMProducts(orgId: string) {
   return groups.map((g) => ({ productKey: g.productKey, lineCount: g._count.itemId }));
 }
 
+async function getSingleActiveWarehouseSite(orgId: string) {
+  const sites = await prisma.warehouseSite.findMany({
+    where: { orgId, status: 'active' },
+    orderBy: { createdAt: 'asc' },
+    select: { id: true, code: true, name: true },
+    take: 2,
+  });
+
+  if (sites.length !== 1) {
+    return null;
+  }
+
+  return sites[0];
+}
+
+type WarehouseReservationOrderItem = {
+  id: string;
+  productName: string;
+  quantity: number;
+  variantKey?: string | null;
+  attributesJson?: Prisma.JsonValue | null;
+  attributesSummary?: string | null;
+};
+
+async function findOrCreateCanonicalVariantForOrderItem(
+  orgId: string,
+  orderItem: WarehouseReservationOrderItem,
+): Promise<{ variantId?: string; variantKey?: string; reason?: string }> {
+  const product = await prisma.warehouseProductCatalog.findFirst({
+    where: {
+      orgId,
+      normalizedName: normalizeWarehouseName(orderItem.productName),
+      isActive: true,
+    },
+    include: {
+      fieldLinks: {
+        include: { definition: true },
+      },
+    },
+  });
+
+  if (!product) {
+    return { reason: 'product_catalog_not_found' };
+  }
+
+  const attributes = readStringMapFromJson(orderItem.attributesJson);
+  const availabilityFields = new Set(
+    product.fieldLinks
+      .filter((link) => link.definition.affectsAvailability)
+      .map((link) => link.definition.code),
+  );
+  const attributesForKey =
+    availabilityFields.size > 0
+      ? Object.fromEntries(Object.entries(attributes).filter(([key]) => availabilityFields.has(key)))
+      : attributes;
+
+  const variantKey =
+    orderItem.variantKey?.trim() ||
+    buildWarehouseVariantKey(product.name ?? orderItem.productName, attributesForKey);
+
+  if (!variantKey) {
+    return { reason: 'variant_key_missing' };
+  }
+
+  let variant = await prisma.warehouseVariant.findFirst({
+    where: {
+      orgId,
+      productCatalogId: product.id,
+      variantKey,
+    },
+    select: { id: true, variantKey: true },
+  });
+
+  if (!variant) {
+    try {
+      variant = await prisma.warehouseVariant.create({
+        data: {
+          orgId,
+          productCatalogId: product.id,
+          variantKey,
+          attributesJson: Object.keys(attributes).length > 0 ? attributes : undefined,
+          attributesSummary: orderItem.attributesSummary?.trim() || summarizeVariantAttributes(attributes) || null,
+        },
+        select: { id: true, variantKey: true },
+      });
+    } catch (error) {
+      if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== 'P2002') {
+        throw error;
+      }
+
+      variant = await prisma.warehouseVariant.findFirst({
+        where: {
+          orgId,
+          productCatalogId: product.id,
+          variantKey,
+        },
+        select: { id: true, variantKey: true },
+      });
+    }
+  }
+
+  if (!variant) {
+    return { reason: 'variant_resolution_failed' };
+  }
+
+  return {
+    variantId: variant.id,
+    variantKey: variant.variantKey,
+  };
+}
+
+export async function reserveOrderWarehouseItems(
+  orgId: string,
+  orderId: string,
+  actorName = 'system',
+): Promise<WarehouseOrderReservationSummary> {
+  const order = await prisma.chapanOrder.findFirst({
+    where: { id: orderId, orgId },
+    include: { items: true },
+  });
+  if (!order) {
+    throw new AppError(404, 'Заказ не найден');
+  }
+
+  const warehouseItems = order.items.filter((item) => item.fulfillmentMode === 'warehouse');
+  if (warehouseItems.length === 0) {
+    return {
+      mode: 'skipped',
+      reason: 'no_warehouse_items',
+      reservedCount: 0,
+      replayedCount: 0,
+      failedCount: 0,
+      skippedCount: 0,
+      items: [],
+    };
+  }
+
+  const site = await getSingleActiveWarehouseSite(orgId);
+  if (!site) {
+    return {
+      mode: 'skipped',
+      reason: 'single_active_site_required',
+      reservedCount: 0,
+      replayedCount: 0,
+      failedCount: 0,
+      skippedCount: warehouseItems.length,
+      items: warehouseItems.map((item) => ({
+        itemId: item.id,
+        variantKey: item.variantKey,
+        status: 'skipped',
+        reason: 'single_active_site_required',
+      })),
+    };
+  }
+
+  const summary: WarehouseOrderReservationSummary = {
+    mode: 'canonical',
+    siteId: site.id,
+    reservedCount: 0,
+    replayedCount: 0,
+    failedCount: 0,
+    skippedCount: 0,
+    items: [],
+  };
+
+  for (const item of warehouseItems) {
+    const resolved = await findOrCreateCanonicalVariantForOrderItem(orgId, item);
+    if (!resolved.variantId || !resolved.variantKey) {
+      summary.skippedCount += 1;
+      summary.items.push({
+        itemId: item.id,
+        variantKey: item.variantKey,
+        status: 'skipped',
+        reason: resolved.reason ?? 'variant_resolution_failed',
+      });
+      continue;
+    }
+
+    try {
+      const result = await createCanonicalStockReservation(orgId, {
+        warehouseSiteId: site.id,
+        variantId: resolved.variantId,
+        qty: item.quantity,
+        sourceType: 'chapan_order_item',
+        sourceId: order.id,
+        sourceLineId: item.id,
+        idempotencyKey: `chapan-order-item:${item.id}:reserve:v1`,
+        actorName,
+        reason: `Canonical reservation for order ${order.orderNumber}`,
+      });
+
+      if (result.replayed) {
+        summary.replayedCount += 1;
+        summary.items.push({
+          itemId: item.id,
+          variantKey: resolved.variantKey,
+          status: 'replayed',
+          reservationId: result.reservation?.id,
+        });
+      } else {
+        summary.reservedCount += 1;
+        summary.items.push({
+          itemId: item.id,
+          variantKey: resolved.variantKey,
+          status: 'reserved',
+          reservationId: result.reservation?.id,
+        });
+      }
+    } catch (error) {
+      summary.failedCount += 1;
+      summary.items.push({
+        itemId: item.id,
+        variantKey: resolved.variantKey,
+        status: 'failed',
+        reason: error instanceof Error ? error.message : 'reservation_failed',
+      });
+    }
+  }
+
+  return summary;
+}
+
+export async function consumeOrderWarehouseReservations(
+  orgId: string,
+  orderId: string,
+  actorName = 'system',
+): Promise<WarehouseOrderConsumptionSummary> {
+  return prisma.$transaction((tx) => consumeOrderWarehouseReservationsTx(tx, orgId, orderId, actorName));
+}
+
+export async function consumeOrderWarehouseReservationsTx(
+  tx: Prisma.TransactionClient,
+  orgId: string,
+  orderId: string,
+  actorName = 'system',
+): Promise<WarehouseOrderConsumptionSummary> {
+  const reservations = await tx.warehouseStockReservation.findMany({
+    where: {
+      orgId,
+      sourceType: 'chapan_order_item',
+      sourceId: orderId,
+      status: { in: ['active', 'consumed'] },
+    },
+    include: {
+      variant: {
+        select: {
+          variantKey: true,
+        },
+      },
+    },
+    orderBy: { createdAt: 'asc' },
+  });
+
+  if (reservations.length === 0) {
+    return {
+      mode: 'skipped',
+      reason: 'no_canonical_reservations',
+      consumedCount: 0,
+      replayedCount: 0,
+      failedCount: 0,
+      skippedCount: 0,
+      items: [],
+    };
+  }
+
+  const summary: WarehouseOrderConsumptionSummary = {
+    mode: 'canonical',
+    siteId: reservations[0]?.warehouseSiteId,
+    consumedCount: 0,
+    replayedCount: 0,
+    failedCount: 0,
+    skippedCount: 0,
+    items: [],
+  };
+
+  for (const reservation of reservations) {
+    try {
+      const result = await consumeCanonicalStockReservationInTx(
+        tx,
+        orgId,
+        reservation.id,
+        actorName,
+        `Canonical fulfillment consume for order ${orderId}`,
+      );
+
+      if (result.replayed) {
+        summary.replayedCount += 1;
+        summary.items.push({
+          itemId: reservation.sourceLineId ?? reservation.id,
+          variantKey: reservation.variant.variantKey,
+          status: 'replayed',
+          reservationId: reservation.id,
+        });
+      } else {
+        summary.consumedCount += 1;
+        summary.items.push({
+          itemId: reservation.sourceLineId ?? reservation.id,
+          variantKey: reservation.variant.variantKey,
+          status: 'consumed',
+          reservationId: reservation.id,
+        });
+      }
+    } catch (error) {
+      summary.failedCount += 1;
+      summary.items.push({
+        itemId: reservation.sourceLineId ?? reservation.id,
+        variantKey: reservation.variant.variantKey,
+        status: 'failed',
+        reservationId: reservation.id,
+        reason: error instanceof Error ? error.message : 'consume_failed',
+      });
+    }
+  }
+
+  return summary;
+}
+
 // ─────────────────────────────────────────────────────────────
 //  Order BOM check & reservation (Chapan integration)
 // ─────────────────────────────────────────────────────────────
@@ -605,25 +993,79 @@ async function upsertShortageAlert(
  * Release all reservations for a cancelled/completed order.
  */
 export async function releaseOrderReservations(orgId: string, sourceId: string) {
-  const reservations = await prisma.warehouseReservation.findMany({
-    where: { orgId, sourceId, status: 'active' },
+  return prisma.$transaction((tx) => releaseOrderReservationsTx(tx, orgId, sourceId));
+}
+
+export async function releaseOrderReservationsTx(
+  tx: Prisma.TransactionClient,
+  orgId: string,
+  sourceId: string,
+  actorName = 'system',
+) {
+  const canonicalReservations = await tx.warehouseStockReservation.findMany({
+    where: {
+      orgId,
+      sourceId,
+      sourceType: 'chapan_order_item',
+    },
+    select: {
+      id: true,
+      compatibilityReservationId: true,
+    },
   });
 
-  for (const res of reservations) {
-    await prisma.$transaction(async (tx) => {
-      await tx.warehouseReservation.update({ where: { id: res.id }, data: { status: 'released' } });
-      await tx.warehouseItem.update({
-        where: { id: res.itemId },
-        data: { qtyReserved: { decrement: res.qty } },
-      });
-    });
+  let releasedCanonicalCount = 0;
+
+  for (const reservation of canonicalReservations) {
+    const result = await releaseCanonicalStockReservationInTx(
+      tx,
+      orgId,
+      reservation.id,
+      actorName,
+      `Release reservations for order ${sourceId}`,
+    );
+
+    if (!result.replayed) {
+      releasedCanonicalCount += 1;
+    }
   }
 
-  // Resolve related shortage alerts
-  await prisma.warehouseAlert.updateMany({
+  const compatibilityReservationIds = canonicalReservations
+    .map((reservation) => reservation.compatibilityReservationId)
+    .filter((value): value is string => Boolean(value));
+
+  const reservations = await tx.warehouseReservation.findMany({
+    where: {
+      orgId,
+      sourceId,
+      status: 'active',
+      ...(compatibilityReservationIds.length > 0 ? { id: { notIn: compatibilityReservationIds } } : {}),
+    },
+  });
+
+  let releasedCompatibilityCount = 0;
+
+  for (const reservation of reservations) {
+    await tx.warehouseReservation.update({
+      where: { id: reservation.id },
+      data: { status: 'released' },
+    });
+    await tx.warehouseItem.update({
+      where: { id: reservation.itemId },
+      data: { qtyReserved: { decrement: reservation.qty } },
+    });
+    releasedCompatibilityCount += 1;
+  }
+
+  await tx.warehouseAlert.updateMany({
     where: { orgId, sourceId, type: 'shortage_for_order', status: 'open' },
     data: { status: 'resolved', resolvedAt: new Date() },
   });
+
+  return {
+    releasedCanonicalCount,
+    releasedCompatibilityCount,
+  };
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -708,8 +1150,58 @@ export async function checkProductNamesAvailability(
   const result: Record<string, { available: boolean; qty: number; itemName: string | null }> = {};
 
   for (const name of unique) {
+    const trimmedName = name.trim();
+    const normalizedName = normalizeWarehouseName(trimmedName);
+
+    const catalogProducts = await prisma.warehouseProductCatalog.findMany({
+      where: {
+        orgId,
+        OR: [
+          { normalizedName },
+          { name: { contains: trimmedName, mode: 'insensitive' } },
+        ],
+      },
+      select: { id: true, name: true },
+      take: 10,
+    });
+
+    if (catalogProducts.length > 0) {
+      const canonicalVariants = await prisma.warehouseVariant.findMany({
+        where: {
+          orgId,
+          productCatalogId: {
+            in: catalogProducts.map((product) => product.id),
+          },
+        },
+        select: { id: true },
+      });
+
+      if (canonicalVariants.length > 0) {
+        const canonicalBalances = await prisma.warehouseStockBalance.aggregate({
+          where: {
+            orgId,
+            variantId: {
+              in: canonicalVariants.map((variant) => variant.id),
+            },
+            stockStatus: 'available',
+          },
+          _sum: {
+            qtyAvailable: true,
+          },
+        });
+
+        const totalAvailable = canonicalBalances._sum.qtyAvailable ?? 0;
+        result[name] = {
+          available: totalAvailable > 0,
+          qty: totalAvailable,
+          itemName: catalogProducts[0]?.name ?? trimmedName,
+        };
+        continue;
+      }
+    }
+
     const items = await prisma.warehouseItem.findMany({
-      where: { orgId, name: { contains: name, mode: 'insensitive' } },
+      where: { orgId, name: { contains: trimmedName, mode: 'insensitive' } },
       select: { id: true, name: true, qty: true, qtyReserved: true },
     });
     const totalAvailable = items.reduce((sum, i) => sum + Math.max(0, i.qty - i.qtyReserved), 0);

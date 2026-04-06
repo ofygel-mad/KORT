@@ -169,6 +169,87 @@ export interface OrderTransfer {
   createdAt: string;
 }
 
+export interface OrderWarehouseDocument {
+  id: string;
+  documentType: 'handoff_to_warehouse' | 'shipment';
+  status: string;
+  referenceNo?: string | null;
+  postedAt: string;
+  site?: {
+    id: string;
+    code: string;
+    name: string;
+  } | null;
+}
+
+export interface OrderWarehouseItemState {
+  orderItemId: string;
+  productName: string;
+  quantity: number;
+  fulfillmentMode?: OrderItemFulfillmentMode | null;
+  variantKey?: string | null;
+  attributesSummary?: string | null;
+  reservationId?: string | null;
+  reservationStatus: string;
+  qtyReserved: number;
+  site?: {
+    id: string;
+    code: string;
+    name: string;
+  } | null;
+  binCodes: string[];
+}
+
+export interface OrderWarehouseState {
+  orderId: string;
+  orderNumber: string;
+  orderStatus: OrderStatus | string;
+  site?: {
+    id: string;
+    code: string;
+    name: string;
+  } | null;
+  reservationSummary: {
+    total: number;
+    active: number;
+    consumed: number;
+    released: number;
+    qtyReserved: number;
+  };
+  documentSummary: {
+    total: number;
+    handoff: number;
+    shipment: number;
+  };
+  documents: OrderWarehouseDocument[];
+  items: OrderWarehouseItemState[];
+}
+
+export interface OrderWarehouseLiveSnapshot {
+  orderId: string;
+  generatedAt: string;
+  warehouseState: OrderWarehouseState;
+}
+
+export interface OrderWarehouseStatePatchEvent {
+  orderId: string;
+  generatedAt: string;
+  warehouseState: OrderWarehouseState;
+}
+
+export interface OrderWarehouseMetricsPatchEvent {
+  orderId: string;
+  generatedAt: string;
+  site: OrderWarehouseState['site'];
+  reservationSummary: OrderWarehouseState['reservationSummary'];
+  documentSummary: OrderWarehouseState['documentSummary'];
+}
+
+export interface OrderWarehouseStatesResponse {
+  count: number;
+  results: OrderWarehouseState[];
+}
+
 // ── Create/Update DTOs ────────────────────────────────────────────────────────
 
 export interface CreateOrderDto {

@@ -1,8 +1,8 @@
 import { memo, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bell, Check, LayoutGrid, Layers, List, Plus, Search, SlidersHorizontal, Trash2, X } from 'lucide-react';
-import { useOrders, useTrashOrder } from '../../../../entities/order/queries';
-import type { ChapanOrder, OrderStatus } from '../../../../entities/order/types';
+import { useOrders, useOrderWarehouseStates, useTrashOrder } from '../../../../entities/order/queries';
+import type { ChapanOrder, OrderStatus, OrderWarehouseState } from '../../../../entities/order/types';
 import { useProductsAvailability } from '../../../../entities/warehouse/queries';
 import type { ProductsAvailabilityMap } from '../../../../entities/warehouse/types';
 import { useAuthStore } from '../../../../shared/stores/auth';
@@ -36,6 +36,24 @@ function isOverdue(d: string | null) { return !!d && new Date(d) < new Date(); }
 function fmtDate(d: string | null) {
   if (!d) return '';
   return new Date(d).toLocaleDateString('ru-KZ', { day: '2-digit', month: 'short' });
+}
+
+function getWarehouseBadge(state?: OrderWarehouseState) {
+  if (!state) return null;
+
+  if (state.documentSummary.shipment > 0) {
+    return { label: `shipment ${state.documentSummary.shipment}`, tone: 'in' as const };
+  }
+
+  if (state.reservationSummary.active > 0) {
+    return { label: `резерв ${state.reservationSummary.qtyReserved}`, tone: 'in' as const };
+  }
+
+  if (state.documentSummary.handoff > 0 || state.site?.code) {
+    return { label: state.site?.code ? `site ${state.site.code}` : 'warehouse linked', tone: 'in' as const };
+  }
+
+  return null;
 }
 
 const ORDER_MONEY_FORMATTER = new Intl.NumberFormat('ru-KZ', { maximumFractionDigits: 0 });
@@ -212,6 +230,12 @@ export default function ChapanOrdersPage() {
     ),
   ], [orders]);
   const { data: stockMap } = useProductsAvailability(newProductNames);
+  const orderIdsForWarehouseState = useMemo(() => orders.map((order) => order.id), [orders]);
+  const { data: warehouseStatesData } = useOrderWarehouseStates(orderIdsForWarehouseState);
+  const warehouseStatesByOrderId = useMemo(
+    () => new Map((warehouseStatesData?.results ?? []).map((state) => [state.orderId, state] as const)),
+    [warehouseStatesData?.results],
+  );
 
   const showToolbarCreateButton =
     isLoading || isError || hasActiveFilters || (data?.count ?? 0) > 0;
@@ -368,7 +392,7 @@ export default function ChapanOrdersPage() {
             <div className={styles.grid}>
               {displayGroups.map((g, i) =>
                 g.kind === 'single'
-                  ? <OrderCard key={g.order.id} order={g.order} onSelectOrder={setSelectedOrderId} hasAlert={activeAlertOrderIds.has(g.order.id)} stockMap={stockMap} onTrash={handleTrash} />
+                  ? <OrderCard key={g.order.id} order={g.order} onSelectOrder={setSelectedOrderId} hasAlert={activeAlertOrderIds.has(g.order.id)} stockMap={stockMap} warehouseState={warehouseStatesByOrderId.get(g.order.id)} onTrash={handleTrash} />
                   : <BatchCard key={`batch-${i}`} group={g} onSelectOrder={setSelectedOrderId} />
               )}
             </div>
@@ -376,7 +400,7 @@ export default function ChapanOrdersPage() {
             <div className={styles.list}>
               {displayGroups.map((g, i) =>
                 g.kind === 'single'
-                  ? <OrderRow key={g.order.id} order={g.order} onSelectOrder={setSelectedOrderId} hasAlert={activeAlertOrderIds.has(g.order.id)} stockMap={stockMap} onTrash={handleTrash} />
+                  ? <OrderRow key={g.order.id} order={g.order} onSelectOrder={setSelectedOrderId} hasAlert={activeAlertOrderIds.has(g.order.id)} stockMap={stockMap} warehouseState={warehouseStatesByOrderId.get(g.order.id)} onTrash={handleTrash} />
                   : <BatchRow key={`batch-${i}`} group={g} onSelectOrder={setSelectedOrderId} />
               )}
             </div>
@@ -474,7 +498,7 @@ export default function ChapanOrdersPage() {
 
 // ── Single grid card ──────────────────────────────────────────────────────────
 
-const OrderCard = memo(function OrderCard({ order, onSelectOrder, hasAlert, stockMap, onTrash }: { order: ChapanOrder; onSelectOrder: (id: string) => void; hasAlert?: boolean; stockMap?: ProductsAvailabilityMap; onTrash?: (id: string) => void }) {
+const OrderCard = memo(function OrderCard({ order, onSelectOrder, hasAlert, stockMap, warehouseState, onTrash }: { order: ChapanOrder; onSelectOrder: (id: string) => void; hasAlert?: boolean; stockMap?: ProductsAvailabilityMap; warehouseState?: OrderWarehouseState; onTrash?: (id: string) => void }) {
   const overdue = isOverdue(order.dueDate);
   const first = order.items?.[0];
   const more = (order.items?.length ?? 0) - 1;
@@ -482,6 +506,7 @@ const OrderCard = memo(function OrderCard({ order, onSelectOrder, hasAlert, stoc
   const stockInfo = showStock ? stockMap![first!.productName] : undefined;
   const isUrgent = (order.urgency ?? order.priority) === 'urgent';
   const isDemanding = order.isDemandingClient ?? (order.priority === 'vip');
+  const warehouseBadge = getWarehouseBadge(warehouseState);
 
   return (
     <div
@@ -516,6 +541,11 @@ const OrderCard = memo(function OrderCard({ order, onSelectOrder, hasAlert, stoc
         {stockInfo !== undefined && (
           <span className={stockInfo.available ? styles.stockPillIn : styles.stockPillOut}>
             {stockInfo.available ? `склад: ${stockInfo.qty} шт.` : 'нет на складе'}
+          </span>
+        )}
+        {warehouseBadge && (
+          <span className={warehouseBadge.tone === 'in' ? styles.stockPillIn : styles.stockPillOut}>
+            {warehouseBadge.label}
           </span>
         )}
         {onTrash && (
@@ -667,7 +697,7 @@ const BatchCard = memo(function BatchCard({ group, onSelectOrder }: { group: { o
 
 // ── Single list row ───────────────────────────────────────────────────────────
 
-const OrderRow = memo(function OrderRow({ order, onSelectOrder, hasAlert, stockMap, onTrash }: { order: ChapanOrder; onSelectOrder: (id: string) => void; hasAlert?: boolean; stockMap?: ProductsAvailabilityMap; onTrash?: (id: string) => void }) {
+const OrderRow = memo(function OrderRow({ order, onSelectOrder, hasAlert, stockMap, warehouseState, onTrash }: { order: ChapanOrder; onSelectOrder: (id: string) => void; hasAlert?: boolean; stockMap?: ProductsAvailabilityMap; warehouseState?: OrderWarehouseState; onTrash?: (id: string) => void }) {
   const overdue = isOverdue(order.dueDate);
   const first = order.items?.[0];
   const more = (order.items?.length ?? 0) - 1;
@@ -675,6 +705,7 @@ const OrderRow = memo(function OrderRow({ order, onSelectOrder, hasAlert, stockM
   const stockInfo = showStock ? stockMap![first!.productName] : undefined;
   const isUrgent = (order.urgency ?? order.priority) === 'urgent';
   const isDemanding = order.isDemandingClient ?? (order.priority === 'vip');
+  const warehouseBadge = getWarehouseBadge(warehouseState);
 
   return (
     <div
@@ -714,6 +745,11 @@ const OrderRow = memo(function OrderRow({ order, onSelectOrder, hasAlert, stockM
         {stockInfo !== undefined && (
           <span className={stockInfo.available ? styles.stockPillIn : styles.stockPillOut}>
             {stockInfo.available ? `склад: ${stockInfo.qty} шт.` : 'нет на складе'}
+          </span>
+        )}
+        {warehouseBadge && (
+          <span className={warehouseBadge.tone === 'in' ? styles.stockPillIn : styles.stockPillOut}>
+            {warehouseBadge.label}
           </span>
         )}
       </div>

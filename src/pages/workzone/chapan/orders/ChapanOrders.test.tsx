@@ -26,6 +26,7 @@ vi.mock('../../../../features/workzone/chapan/store', () => ({
 vi.mock('../../../../entities/order/queries', () => ({
   useOrders: (params: unknown) => useOrdersMock(params),
   useTrashOrder: () => ({ mutate: vi.fn() }),
+  useOrderWarehouseStates: () => ({ data: undefined }),
 }));
 
 vi.mock('../../../../entities/warehouse/queries', () => ({

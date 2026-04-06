@@ -2,7 +2,7 @@ import { api, apiClient } from '../../shared/api/client';
 import type {
   ChapanOrder, ChapanInvoice, CreateOrderDto, UpdateOrderDto, AddPaymentDto, ListResponse,
   ProductionTask, ChapanCatalogs, ChapanProfile, ChapanClient, ChapanChangeRequest, CreateOrderItemDto, InvoiceDocumentPayload,
-  OrderAttachment,
+  OrderAttachment, OrderWarehouseState,
 } from './types';
 
 // ── Orders ────────────────────────────────────────────────────────────────────
@@ -24,6 +24,14 @@ export const ordersApi = {
 
   get: (id: string) =>
     api.get<ChapanOrder>(`/chapan/orders/${id}`),
+
+  getWarehouseState: (id: string) =>
+    api.get<OrderWarehouseState>(`/chapan/orders/${id}/warehouse-state`),
+
+  listWarehouseStates: (ids: string[]) =>
+    api.get<{ count: number; results: OrderWarehouseState[] }>('/chapan/orders/warehouse-states', {
+      ids: ids.join(','),
+    }),
 
   create: (dto: CreateOrderDto, idempotencyKey?: string) =>
     api.post<ChapanOrder>(
