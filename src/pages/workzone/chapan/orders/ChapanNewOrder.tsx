@@ -8,7 +8,7 @@ import { Plus, Trash2, Calculator, AlertCircle, Paperclip, X, ImagePlus, Pencil 
 import { useId } from 'react';
 import { useCreateOrder, useChapanCatalogs, useChapanProfile, useUpdateBankCommission } from '../../../../entities/order/queries';
 import { useAuthStore } from '../../../../shared/stores/auth';
-import { useProductsAvailability, useOrderFormCatalog, useCatalogDefinitions } from '../../../../entities/warehouse/queries';
+import { useProductsAvailability, useVariantAvailability, useOrderFormCatalog, useCatalogDefinitions } from '../../../../entities/warehouse/queries';
 import type { OrderFormField } from '../../../../entities/warehouse/types';
 import { attachmentsApi } from '../../../../entities/order/api';
 import type { Urgency } from '../../../../entities/order/types';
@@ -346,7 +346,18 @@ export default function ChapanNewOrderPage() {
   const deferredProductNames = useDeferredValue(
     items.map((i) => i.productName).filter(Boolean),
   );
+  const deferredVariants = useDeferredValue(
+    items
+      .filter((i) => i.productName?.trim())
+      .map((i) => ({
+        name: i.productName,
+        color: i.color || undefined,
+        gender: i.gender || undefined,
+        size: i.size || undefined,
+      })),
+  );
   const { data: stockMap } = useProductsAvailability(deferredProductNames);
+  const { data: variantMap } = useVariantAvailability(deferredVariants);
   const paymentMethod    = watch('paymentMethod');
   const orderDiscountRaw = watch('orderDiscount');
   const prepaymentRaw    = watch('prepayment');
@@ -617,7 +628,27 @@ export default function ChapanNewOrderPage() {
               const lineDisc    = Number(items[idx]?.itemDiscount) || 0;
               const lineTotal   = Math.max(0, linePrice - lineDisc);
               const itemStockName = items[idx]?.productName;
-              const itemStock = itemStockName && stockMap ? stockMap[itemStockName] : undefined;
+              const _item = items[idx];
+              const _variantKey = (() => {
+                if (!_item?.productName?.trim()) return null;
+                const attrs: Record<string, string> = {};
+                if (_item.color?.trim()) attrs.color = _item.color.trim();
+                if (_item.gender?.trim()) attrs.gender = _item.gender.trim();
+                if (_item.size?.trim()) attrs.size = _item.size.trim();
+                const attrParts = Object.entries(attrs)
+                  .sort(([a], [b]) => a.localeCompare(b))
+                  .map(([k, v]) => `${k}=${v.toLowerCase()}`)
+                  .join(':');
+                return attrParts
+                  ? `${_item.productName.toLowerCase()}:${attrParts}`
+                  : _item.productName.toLowerCase();
+              })();
+              const variantStock = _variantKey && variantMap ? variantMap[_variantKey] : undefined;
+              const itemStock = variantStock
+                ? { available: variantStock.available > 0, qty: variantStock.available, status: variantStock.status }
+                : itemStockName && stockMap
+                  ? { available: stockMap[itemStockName]?.available ?? false, qty: stockMap[itemStockName]?.qty ?? 0, status: undefined as undefined }
+                  : undefined;
               // Warehouse smart catalog: check if this product has catalog fields
               const catalogFields = warehouseProductMap[itemStockName ?? ''] ?? [];
               const hasWarehouseCatalog = catalogFields.length > 0;
@@ -649,8 +680,14 @@ export default function ChapanNewOrderPage() {
                       )} />
                       {errors.items?.[idx]?.productName && <span className={styles.fieldError}>{errors.items[idx]?.productName?.message}</span>}
                       {itemStock !== undefined && (
-                        <span className={itemStock.available ? styles.stockBadgeIn : styles.stockBadgeOut}>
-                          {itemStock.available ? `В наличии: ${itemStock.qty} шт.` : 'Нет на складе'}
+                        <span className={
+                          itemStock.status === 'low' ? styles.stockBadgeLow
+                          : itemStock.available ? styles.stockBadgeIn
+                          : styles.stockBadgeOut
+                        }>
+                          {itemStock.available
+                            ? `В наличии: ${itemStock.qty} шт.${itemStock.status === 'low' ? ' (мало)' : ''}`
+                            : 'Нет на складе'}
                         </span>
                       )}
                     </div>

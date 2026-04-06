@@ -5,7 +5,7 @@ import type {
   CreateItemDto, AddMovementDto, CreateWarehouseSiteDto,
   CreateWarehouseZoneDto, CreateWarehouseBinDto, UpsertWarehouseVariantDto,
   PostStockReceiptDto, PostStockTransferDto, CreateStockReservationDto,
-  WarehousePoolPolicyDto,
+  WarehousePoolPolicyDto, ImportOpeningBalanceRow,
 } from './types';
 
 export const warehouseKeys = {
@@ -234,6 +234,19 @@ export const useAddMovement = () => {
     mutationFn: (dto: AddMovementDto) => warehouseApi.addMovement(dto),
     onSuccess: () => { qc.invalidateQueries({ queryKey: warehouseKeys.all }); toast.success('Движение записано'); },
     onError: () => toast.error('Ошибка при записи движения'),
+  });
+};
+
+export const useImportOpeningBalance = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (rows: ImportOpeningBalanceRow[]) => warehouseApi.importOpeningBalance(rows),
+    onSuccess: (result) => {
+      qc.invalidateQueries({ queryKey: warehouseKeys.all });
+      const msg = `Импорт: создано ${result.created}, обновлено ${result.updated}${result.skipped > 0 ? `, пропущено ${result.skipped}` : ''}`;
+      result.errors.length > 0 ? toast.warning(msg) : toast.success(msg);
+    },
+    onError: () => toast.error('Ошибка при импорте остатков'),
   });
 };
 
@@ -563,6 +576,22 @@ export const useProductsAvailability = (names: string[]) => {
     queryKey: ['warehouse_products_availability', sorted],
     queryFn: () => warehouseApi.checkProducts(sorted),
     enabled: sorted.length > 0,
+    staleTime: 30_000,
+  });
+};
+
+export const useVariantAvailability = (
+  variants: Array<{ name: string; color?: string; size?: string; gender?: string }>,
+) => {
+  const stable = JSON.stringify(
+    [...variants]
+      .filter((v) => v.name?.trim())
+      .sort((a, b) => a.name.localeCompare(b.name)),
+  );
+  return useQuery({
+    queryKey: ['warehouse_variant_availability', stable],
+    queryFn: () => warehouseApi.checkVariants(JSON.parse(stable)),
+    enabled: variants.some((v) => v.name?.trim()),
     staleTime: 30_000,
   });
 };

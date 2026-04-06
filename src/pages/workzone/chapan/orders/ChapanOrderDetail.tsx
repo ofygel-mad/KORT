@@ -1,7 +1,7 @@
 ﻿import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { CheckCircle2, Clock, CreditCard, MessageSquare, AlertTriangle, Pencil, ArchiveIcon, RotateCcw, Download, Package, XCircle, FileText, Paperclip, Trash2, Upload } from 'lucide-react';
-import { useOrder, useOrderWarehouseState, useFulfillFromStock, useConfirmOrder, useChangeOrderStatus, useAddPayment, useAddOrderActivity, useRestoreOrder, useCloseOrder, useCreateInvoice, useSetRequiresInvoice, useConfirmSeamstress, useRouteSingleItem, useUploadAttachment, useDeleteAttachment } from '../../../../entities/order/queries';
+import { useOrder, useOrderWarehouseState, useFulfillFromStock, useConfirmOrder, useChangeOrderStatus, useAddPayment, useAddOrderActivity, useRestoreOrder, useCloseOrder, useCreateInvoice, useSetRequiresInvoice, useConfirmSeamstress, useRouteSingleItem, useRouteOrderItems, useUploadAttachment, useDeleteAttachment } from '../../../../entities/order/queries';
 import { useProductsAvailability } from '../../../../entities/warehouse/queries';
 import type { OrderItem, OrderItemFulfillmentMode, OrderStatus, Priority, Urgency, OrderAttachment } from '../../../../entities/order/types';
 import { attachmentsApi } from '../../../../entities/order/api';
@@ -175,6 +175,7 @@ export default function ChapanOrderDetailPage() {
   const setRequiresInvoice = useSetRequiresInvoice();
   const confirmSeamstress = useConfirmSeamstress();
   const routeSingleItem = useRouteSingleItem();
+  const routeOrderItems = useRouteOrderItems();
   const uploadAttachment = useUploadAttachment(id!);
   const deleteAttachment = useDeleteAttachment(id!);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -185,6 +186,39 @@ export default function ChapanOrderDetailPage() {
 
   const productNames = [...new Set((order?.items ?? []).map((item) => item.productName).filter(Boolean))];
   const { data: stockMap } = useProductsAvailability(productNames);
+
+  // Local routing state for new orders: user selects per-item mode without API calls.
+  // Only committed when the user clicks the global confirm/route button.
+  const [localRoutes, setLocalRoutes] = useState<Record<string, 'warehouse' | 'production'>>({});
+
+  // Initialize localRoutes from server-side fulfillmentMode when order changes.
+  useEffect(() => {
+    if (!order || order.status !== 'new') { setLocalRoutes({}); return; }
+    const initial: Record<string, 'warehouse' | 'production'> = {};
+    for (const item of order.items ?? []) {
+      if (item.fulfillmentMode === 'warehouse' || item.fulfillmentMode === 'production') {
+        initial[item.id] = item.fulfillmentMode;
+      }
+    }
+    setLocalRoutes(initial);
+  }, [order?.id, order?.status]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // When stockMap loads, fill in smart defaults for items not yet routed.
+  useEffect(() => {
+    if (!order || order.status !== 'new' || !stockMap) return;
+    setLocalRoutes((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      for (const item of order.items ?? []) {
+        if (!next[item.id]) {
+          const stock = stockMap[item.productName];
+          next[item.id] = (stock?.qty ?? 0) >= item.quantity ? 'warehouse' : 'production';
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [stockMap, order?.id, order?.status]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [showPayForm, setShowPayForm] = useState(false);
   const [comment, setComment] = useState('');
@@ -282,10 +316,13 @@ export default function ChapanOrderDetailPage() {
     const pTask = productionTaskByItemId.get(pItem.id);
     return !pTask || pTask.status !== 'done';
   });
-  const allInStock = orderItems.length > 0 && orderItems.every((item) => {
-    const stock = stockMap?.[item.productName];
-    return (stock?.qty ?? 0) >= item.quantity;
-  });
+
+  // For new orders: use localRoutes to drive the confirm button logic.
+  const isNewOrder = order.status === 'new';
+  const allLocalAssigned = isNewOrder && orderItems.length > 0
+    && orderItems.every((i) => localRoutes[i.id] === 'warehouse' || localRoutes[i.id] === 'production');
+  const localWarehouseCount = isNewOrder ? orderItems.filter((i) => localRoutes[i.id] === 'warehouse').length : 0;
+  const localProductionCount = isNewOrder ? orderItems.filter((i) => localRoutes[i.id] === 'production').length : 0;
 
   return (
     <div className={styles.root}>
@@ -356,10 +393,13 @@ export default function ChapanOrderDetailPage() {
               {(order.items ?? []).map((item) => {
                 const stock = stockMap?.[item.productName];
                 const hasEnoughStock = (stock?.qty ?? 0) >= item.quantity;
-                const route = currentRoutes[item.id] ?? 'unassigned';
+                // On new orders, use localRoutes for display; on other statuses use server-side routes.
+                const route = isNewOrder
+                  ? (localRoutes[item.id] ?? 'unassigned')
+                  : (currentRoutes[item.id] ?? 'unassigned');
 
                 const task = productionTaskByItemId.get(item.id);
-                const badgeLabel = route === 'production' && task && order.status !== 'new'
+                const badgeLabel = route === 'production' && task && !isNewOrder
                   ? (PROD_STATUS_LABEL[task.status] ?? ROUTE_LABEL[route])
                   : ROUTE_LABEL[route];
                 const isRouteable = ['new', 'confirmed', 'in_production'].includes(order.status);
@@ -376,7 +416,7 @@ export default function ChapanOrderDetailPage() {
                       ? (task?.status === 'done' ? styles.routeBadgeDone : styles.routeBadgeProduction)
                       : styles.routeBadgePending;
 
-                const showBadge = isTerminal || (order.status !== 'new' && route !== 'unassigned');
+                const showBadge = isTerminal || (!isNewOrder && route !== 'unassigned');
 
                 return (
                   <div key={item.id} className={styles.itemRow}>
@@ -403,22 +443,47 @@ export default function ChapanOrderDetailPage() {
                       )}
                       {isRouteable && (
                         <div className={styles.routeActions}>
-                          <button
-                            type="button"
-                            className={`${styles.routeActionBtn} ${route === 'warehouse' ? styles.routeActionBtnActive : ''}`}
-                            onClick={() => routeSingleItem.mutate({ orderId: order.id, itemId: item.id, fulfillmentMode: 'warehouse' })}
-                            disabled={routeSingleItem.isPending || route === 'warehouse'}
-                          >
-                            Готово
-                          </button>
-                          <button
-                            type="button"
-                            className={`${styles.routeActionBtn} ${styles.routeActionBtnPrimary} ${route === 'production' ? styles.routeActionBtnActive : ''}`}
-                            onClick={() => routeSingleItem.mutate({ orderId: order.id, itemId: item.id, fulfillmentMode: 'production' })}
-                            disabled={routeSingleItem.isPending || route === 'production'}
-                          >
-                            В производство
-                          </button>
+                          {isNewOrder ? (
+                            // On new orders: update local state only — no API call until global confirm.
+                            <>
+                              <button
+                                type="button"
+                                className={`${styles.routeActionBtn} ${route === 'warehouse' ? styles.routeActionBtnActive : ''}`}
+                                onClick={() => setLocalRoutes((prev) => ({ ...prev, [item.id]: 'warehouse' }))}
+                                disabled={route === 'warehouse'}
+                              >
+                                Склад
+                              </button>
+                              <button
+                                type="button"
+                                className={`${styles.routeActionBtn} ${styles.routeActionBtnPrimary} ${route === 'production' ? styles.routeActionBtnActive : ''}`}
+                                onClick={() => setLocalRoutes((prev) => ({ ...prev, [item.id]: 'production' }))}
+                                disabled={route === 'production'}
+                              >
+                                В цех
+                              </button>
+                            </>
+                          ) : (
+                            // On confirmed/in_production: save immediately via routeSingleItem.
+                            <>
+                              <button
+                                type="button"
+                                className={`${styles.routeActionBtn} ${route === 'warehouse' ? styles.routeActionBtnActive : ''}`}
+                                onClick={() => routeSingleItem.mutate({ orderId: order.id, itemId: item.id, fulfillmentMode: 'warehouse' })}
+                                disabled={routeSingleItem.isPending || route === 'warehouse'}
+                              >
+                                Склад
+                              </button>
+                              <button
+                                type="button"
+                                className={`${styles.routeActionBtn} ${styles.routeActionBtnPrimary} ${route === 'production' ? styles.routeActionBtnActive : ''}`}
+                                onClick={() => routeSingleItem.mutate({ orderId: order.id, itemId: item.id, fulfillmentMode: 'production' })}
+                                disabled={routeSingleItem.isPending || route === 'production'}
+                              >
+                                В цех
+                              </button>
+                            </>
+                          )}
                         </div>
                       )}
                     </div>
@@ -525,20 +590,16 @@ export default function ChapanOrderDetailPage() {
                 </button>
               )}
 
-              {order.status === 'new' && (
+              {isNewOrder && (
                 <>
-                  {warehouseItems.length > 0 && productionItems.length > 0 ? (
-                    <button
-                      className={`${styles.actionBtn} ${styles.actionPrimary}`}
-                      onClick={() => confirmOrder.mutate(order.id, {
-                        onSuccess: () => { setSelectedOrderId(null); navigate('/workzone/chapan/orders'); },
-                      })}
-                      disabled={confirmOrder.isPending}
-                    >
+                  {!allLocalAssigned ? (
+                    // Not all items have a route assigned yet — show disabled hint
+                    <button className={`${styles.actionBtn} ${styles.actionPrimary}`} disabled>
                       <Package size={14} />
-                      {confirmOrder.isPending ? 'Отправка...' : 'Подтвердить маршрут'}
+                      Назначьте маршрут для каждой позиции
                     </button>
-                  ) : allInStock ? (
+                  ) : localProductionCount === 0 ? (
+                    // All items → warehouse (Готово)
                     <button
                       className={`${styles.actionBtn} ${styles.actionSecondary}`}
                       onClick={() => fulfillFromStock.mutate(order.id, {
@@ -549,7 +610,8 @@ export default function ChapanOrderDetailPage() {
                       <Package size={14} />
                       {fulfillFromStock.isPending ? 'Перевод...' : 'Перевести в Готово'}
                     </button>
-                  ) : (
+                  ) : localWarehouseCount === 0 ? (
+                    // All items → production (В цех)
                     <button
                       className={`${styles.actionBtn} ${styles.actionPrimary}`}
                       onClick={() => confirmOrder.mutate(order.id, {
@@ -559,6 +621,25 @@ export default function ChapanOrderDetailPage() {
                     >
                       <Package size={14} />
                       {confirmOrder.isPending ? 'Отправка...' : 'Отправить в цех'}
+                    </button>
+                  ) : (
+                    // Mixed routing — some warehouse, some production
+                    <button
+                      className={`${styles.actionBtn} ${styles.actionPrimary}`}
+                      onClick={() => routeOrderItems.mutate(
+                        {
+                          id: order.id,
+                          items: orderItems.map((i) => ({
+                            itemId: i.id,
+                            fulfillmentMode: localRoutes[i.id] as 'warehouse' | 'production',
+                          })),
+                        },
+                        { onSuccess: () => { setSelectedOrderId(null); navigate('/workzone/chapan/orders'); } },
+                      )}
+                      disabled={routeOrderItems.isPending}
+                    >
+                      <Package size={14} />
+                      {routeOrderItems.isPending ? 'Применение...' : `Подтвердить маршрут (${localWarehouseCount} склад · ${localProductionCount} цех)`}
                     </button>
                   )}
                 </>

@@ -13,6 +13,7 @@ export interface WarehouseItem {
   sku?: string | null;
   unit: string;
   qty: number;
+  qtyReserved: number;
   qtyMin: number;
   qtyMax?: number | null;
   costPrice?: number | null;
@@ -20,6 +21,9 @@ export interface WarehouseItem {
   category?: WarehouseCategory | null;
   tags: string[];
   notes?: string | null;
+  variantKey?: string | null;
+  attributesJson?: Record<string, string> | null;
+  attributesSummary?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -33,6 +37,10 @@ export interface WarehouseMovement {
   item?: Pick<WarehouseItem, 'id' | 'name' | 'unit'>;
   type: MovementType;
   qty: number;
+  qtyBefore?: number | null;
+  qtyAfter?: number | null;
+  sourceId?: string | null;
+  sourceType?: string | null;
   reason?: string | null;
   author: string;
   createdAt: string;
@@ -1069,6 +1077,9 @@ export interface CreateItemDto {
   costPrice?: number;
   categoryId?: string;
   notes?: string;
+  color?: string;
+  gender?: string;
+  size?: string;
 }
 
 export interface AddMovementDto {
@@ -1076,6 +1087,22 @@ export interface AddMovementDto {
   type: MovementType;
   qty: number;
   reason?: string;
+}
+
+export interface ImportOpeningBalanceRow {
+  name: string;
+  color?: string;
+  gender?: string;
+  size?: string;
+  qty: number;
+  costPrice?: number;
+}
+
+export interface ImportOpeningBalanceResult {
+  created: number;
+  updated: number;
+  skipped: number;
+  errors: Array<{ row: number; reason: string }>;
 }
 
 export type StockStatus = 'ok' | 'low' | 'critical';
@@ -1087,6 +1114,18 @@ export interface ProductStockInfo {
 }
 
 export type ProductsAvailabilityMap = Record<string, ProductStockInfo>;
+
+export type VariantAvailabilityStatus = 'ok' | 'low' | 'none';
+
+export interface VariantAvailabilityResult {
+  qty: number;
+  available: number;
+  status: VariantAvailabilityStatus;
+  itemName: string | null;
+}
+
+/** key = variantKey (e.g. "платье:color=красный:size=m") */
+export type VariantAvailabilityMap = Record<string, VariantAvailabilityResult>;
 
 // ── Smart Catalog types ────────────────────────────────────────────────────────
 

@@ -20,6 +20,8 @@ const TABLE_KEYS = [
   'orders',
   'unitPrice',
 ] as const satisfies ReadonlyArray<keyof InvoiceDocumentRow>;
+
+const WAREHOUSE_PRICE_LABEL = 'Внутр. цена';
 const ALL_ORDERS_FILTER = '__all__';
 
 function cloneDocument(document: InvoiceDocumentPayload): InvoiceDocumentPayload {
@@ -288,8 +290,8 @@ export default function ChapanInvoicePreviewModal({
         ...prev,
         rows: prev.rows.map((row) => {
           if (row.id !== rowId) return row;
-          if (key === 'quantity' || key === 'unitPrice') {
-            return { ...row, [key]: value === '' ? 0 : Number(value) || 0 };
+          if (key === 'quantity' || key === 'unitPrice' || key === 'warehouseUnitPrice') {
+            return { ...row, [key]: value === '' ? null : Number(value) || 0 };
           }
           return { ...row, [key]: value };
         }),
@@ -457,9 +459,15 @@ export default function ChapanInvoicePreviewModal({
                     <table className={styles.table}>
                       <thead>
                         <tr>
-                          {Object.entries(draft.columns).map(([key, label]) => (
-                            <th key={key}>{label}</th>
-                          ))}
+                          {Object.entries(draft.columns)
+                            .filter(([key]) => key !== 'lineTotal')
+                            .map(([key, label]) => (
+                              <th key={key}>{label}</th>
+                            ))}
+                          {visibleRows.some((r) => r.warehouseUnitPrice != null) && (
+                            <th>{WAREHOUSE_PRICE_LABEL}</th>
+                          )}
+                          {draft.columns.lineTotal && <th>{draft.columns.lineTotal}</th>}
                         </tr>
                       </thead>
 
@@ -467,6 +475,7 @@ export default function ChapanInvoicePreviewModal({
                         {visibleRows.map((row) => {
                           const lineTotal = (Number(row.quantity) || 0) * (Number(row.unitPrice) || 0);
                           const isActive = row.id === activeRowId;
+                          const showWarehousePrice = visibleRows.some((r) => r.warehouseUnitPrice != null);
                           return (
                             <tr
                               key={row.id}
@@ -475,7 +484,7 @@ export default function ChapanInvoicePreviewModal({
                             >
                               {TABLE_KEYS.map((key) => (
                                 <td key={key}>
-                                  {editing && key === 'unitPrice' ? (
+                                  {editing && (key === 'unitPrice' || key === 'quantity') ? (
                                     <input
                                       type="number"
                                       step="any"
@@ -510,6 +519,23 @@ export default function ChapanInvoicePreviewModal({
                                   )}
                                 </td>
                               ))}
+                              {showWarehousePrice && (
+                                <td>
+                                  {editing ? (
+                                    <input
+                                      type="number"
+                                      step="any"
+                                      value={row.warehouseUnitPrice != null ? String(row.warehouseUnitPrice) : ''}
+                                      onChange={(event) => updateRow(row.id, 'warehouseUnitPrice', event.target.value)}
+                                      className={styles.cellInput}
+                                      placeholder="—"
+                                      onClick={(event) => event.stopPropagation()}
+                                    />
+                                  ) : (
+                                    row.warehouseUnitPrice != null ? formatMoney(row.warehouseUnitPrice) : '—'
+                                  )}
+                                </td>
+                              )}
                               <td className={styles.lineTotal}>{formatMoney(lineTotal)}</td>
                             </tr>
                           );

@@ -2,7 +2,8 @@ import { api, apiClient } from '../../shared/api/client';
 import type {
   WarehouseItem, WarehouseMovement, WarehouseAlert, WarehouseCategory,
   WarehouseSummary, PaginatedWarehouseItems, PaginatedMovements,
-  CreateItemDto, AddMovementDto, ProductsAvailabilityMap,
+  CreateItemDto, AddMovementDto, ProductsAvailabilityMap, ImportOpeningBalanceRow, ImportOpeningBalanceResult,
+  VariantAvailabilityMap,
   WarehouseFieldDefinition, WarehouseProductCatalog, OrderFormCatalog,
   VariantAvailability, ImportResult, WarehouseFoundationStatus,
   WarehouseSite, WarehouseSiteStructure, WarehouseSiteHealthSnapshot, WarehouseSiteControlTowerSnapshot, WarehouseZone, WarehouseBin,
@@ -34,6 +35,9 @@ export const warehouseApi = {
 
   deleteItem: (id: string) =>
     api.delete<{ ok: boolean }>(`/warehouse/items/${id}`),
+
+  importOpeningBalance: (rows: ImportOpeningBalanceRow[]) =>
+    api.post<ImportOpeningBalanceResult>('/warehouse/items/import-opening-balance', { rows }),
 
   // Movements
   listMovements: (params?: { itemId?: string; type?: string; page?: number; limit?: number }) =>
@@ -181,6 +185,10 @@ export const warehouseApi = {
   // Chapan integration: check if finished products are in stock by name
   checkProducts: (names: string[]) =>
     api.post<ProductsAvailabilityMap>('/warehouse/products-availability', { names }),
+
+  // Chapan integration: check stock by full variant (name + color/size/gender)
+  checkVariants: (variants: Array<{ name: string; color?: string; size?: string; gender?: string }>) =>
+    api.post<VariantAvailabilityMap>('/warehouse/items/variant-availability', { variants }),
 
   // Layout rollback
   rollbackFoundationLayout: (siteId: string, dto: { targetVersionId: string; reason?: string }) =>

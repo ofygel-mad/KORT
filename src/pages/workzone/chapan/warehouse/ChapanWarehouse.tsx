@@ -2,23 +2,25 @@ import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   AlertCircle, AlertTriangle, Archive, CheckCircle2, ChevronRight, Download,
-  FileText, Package, PackageCheck, Phone, Plus, Search, Send, TrendingDown, User, X, CheckSquare, BookOpen,
+  FileText, Package, PackageCheck, Phone, Plus, RotateCcw, Search, Send, TrendingDown, User, Upload, X, XCircle, CheckSquare, BookOpen,
 } from 'lucide-react';
 import { WarehouseCatalog } from '../../../warehouse/WarehouseCatalog';
 import {
   useWarehouseItems, useWarehouseMovements, useWarehouseAlerts,
   useWarehouseCategories, useCreateItem, useAddMovement, useDeleteItem, useResolveAlert,
   useWarehouseFoundationSites, useWarehouseFoundationSiteControlTower, useWarehouseFoundationSiteHealth,
+  useImportOpeningBalance,
 } from '../../../../entities/warehouse/queries';
 import {
   useInvoices, useConfirmWarehouse, useOrders, useShipOrder, useOrder, useArchiveInvoice,
-  useCloseOrder,
+  useCloseOrder, useReturnToReady, useRejectInvoice,
 } from '../../../../entities/order/queries';
-import type { WarehouseItem, MovementType, CreateItemDto, AddMovementDto } from '../../../../entities/warehouse/types';
+import type { WarehouseItem, MovementType, CreateItemDto, AddMovementDto, ImportOpeningBalanceRow } from '../../../../entities/warehouse/types';
 import type { ChapanInvoice, ChapanOrder } from '../../../../entities/order/types';
 import { getStockStatus } from '../../../../entities/warehouse/types';
 import { Skeleton } from '../../../../shared/ui/Skeleton';
 import { exportToCSV } from '../../../../shared/lib/export';
+import { toast } from 'sonner';
 import styles from '../../../warehouse/Warehouse.module.css';
 
 type Tab = 'incoming' | 'invoice_archive' | 'orders_wh' | 'to_ship' | 'shipped' | 'items' | 'movements' | 'alerts' | 'catalog';
@@ -58,8 +60,20 @@ function fmtMoney(n: number) {
 function InvoiceDetailDrawer({ invoice, onClose }: { invoice: ChapanInvoice; onClose: () => void }) {
   const confirmWarehouse = useConfirmWarehouse();
   const archiveInvoice = useArchiveInvoice();
+  const rejectInvoice = useRejectInvoice();
   const [downloading, setDownloading] = useState(false);
+  const [showRejectForm, setShowRejectForm] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
   const alreadyConfirmed = invoice.warehouseConfirmed;
+  const alreadyRejected = invoice.status === 'rejected';
+
+  function handleReject() {
+    if (!rejectReason.trim()) return;
+    rejectInvoice.mutate(
+      { id: invoice.id, reason: rejectReason.trim() },
+      { onSuccess: () => { setShowRejectForm(false); setRejectReason(''); onClose(); } },
+    );
+  }
 
   async function handleDownload() {
     if (downloading) return;
@@ -187,24 +201,71 @@ function InvoiceDetailDrawer({ invoice, onClose }: { invoice: ChapanInvoice; onC
             className={styles.drawerActionBtn}
             onClick={() => void handleDownload()}
             disabled={downloading}
+            style={{ background: 'var(--bg-surface-inset)', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)' }}
           >
             <Download size={15} />
             {downloading ? 'Скачивание...' : 'Скачать накладную'}
           </button>
-          {alreadyConfirmed ? (
+          {alreadyRejected ? (
+            <div className={styles.drawerRejectedNotice}>
+              <XCircle size={16} />
+              Накладная отклонена{invoice.rejectionReason ? `: ${invoice.rejectionReason}` : ''}
+            </div>
+          ) : alreadyConfirmed ? (
             <div className={styles.drawerConfirmedNotice}>
               <CheckCircle2 size={16} />
               Накладная принята — товар поступил на склад
             </div>
+          ) : showRejectForm ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '.05em', textTransform: 'uppercase', color: 'var(--text-tertiary)' }}>
+                Причина отклонения
+              </div>
+              <input
+                className={styles.input}
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                placeholder="Несоответствие состава, брак, нет сопроводительных документов..."
+                autoFocus
+                onKeyDown={(e) => { if (e.key === 'Enter') handleReject(); if (e.key === 'Escape') setShowRejectForm(false); }}
+              />
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  className={styles.drawerSecondaryBtn}
+                  style={{ flex: 1 }}
+                  onClick={() => { setShowRejectForm(false); setRejectReason(''); }}
+                >
+                  Отмена
+                </button>
+                <button
+                  className={`${styles.drawerActionBtn} ${styles.drawerActionBtnDanger}`}
+                  style={{ flex: 2 }}
+                  onClick={handleReject}
+                  disabled={rejectInvoice.isPending || !rejectReason.trim()}
+                >
+                  <XCircle size={14} />
+                  {rejectInvoice.isPending ? 'Отклонение...' : 'Отклонить накладную'}
+                </button>
+              </div>
+            </div>
           ) : (
-            <button
-              className={`${styles.drawerActionBtn} ${styles.drawerActionBtnPrimary}`}
-              onClick={() => { confirmWarehouse.mutate(invoice.id); onClose(); }}
-              disabled={confirmWarehouse.isPending}
-            >
-              <PackageCheck size={16} />
-              {confirmWarehouse.isPending ? 'Подтверждение...' : 'Подтвердить получение товара'}
-            </button>
+            <>
+              <button
+                className={`${styles.drawerActionBtn} ${styles.drawerActionBtnPrimary}`}
+                onClick={() => { confirmWarehouse.mutate(invoice.id); onClose(); }}
+                disabled={confirmWarehouse.isPending}
+              >
+                <PackageCheck size={16} />
+                {confirmWarehouse.isPending ? 'Подтверждение...' : 'Подтвердить получение товара'}
+              </button>
+              <button
+                className={`${styles.drawerActionBtn} ${styles.drawerActionBtnDanger}`}
+                onClick={() => setShowRejectForm(true)}
+              >
+                <XCircle size={14} />
+                Отклонить накладную
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -218,8 +279,11 @@ function OrderDetailDrawer({ orderId, onClose }: { orderId: string; onClose: () 
   const { data: order, isLoading } = useOrder(orderId);
   const shipOrder = useShipOrder();
   const closeOrder = useCloseOrder();
+  const returnToReady = useReturnToReady();
   const [closeUnpaidWarning, setCloseUnpaidWarning] = useState(false);
   const [showShipForm, setShowShipForm] = useState(false);
+  const [showReturnForm, setShowReturnForm] = useState(false);
+  const [returnReason, setReturnReason] = useState('');
   const [shipFormData, setShipFormData] = useState({
     courierType: '',
     recipientName: '',
@@ -332,10 +396,57 @@ function OrderDetailDrawer({ orderId, onClose }: { orderId: string; onClose: () 
                   ))}
                 </div>
               )}
+
+              {/* requiresInvoice flag */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--text-secondary)', padding: '8px 12px', background: 'var(--bg-surface-inset)', borderRadius: 8, border: '1px solid var(--border-subtle)' }}>
+                <FileText size={12} style={{ color: 'var(--text-tertiary)', flexShrink: 0 }} />
+                <span>Накладная обязательна:</span>
+                <strong style={{ marginLeft: 'auto', color: order.requiresInvoice ? 'var(--fill-warning)' : 'var(--fill-positive)', flexShrink: 0 }}>
+                  {order.requiresInvoice ? 'Да' : 'Нет'}
+                </strong>
+              </div>
             </div>
 
             <div className={styles.drawerFooter}>
-              {order.status === 'shipped' ? (
+              {/* Return-to-Ready form (replaces all other actions when active) */}
+              {showReturnForm ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '.05em', textTransform: 'uppercase', color: 'var(--text-tertiary)' }}>
+                    Причина возврата в «Готово»
+                  </div>
+                  <input
+                    className={styles.input}
+                    value={returnReason}
+                    onChange={(e) => setReturnReason(e.target.value)}
+                    placeholder="Несоответствие состава, расхождение по количеству, нет накладной..."
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Escape') { setShowReturnForm(false); setReturnReason(''); }
+                    }}
+                  />
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button
+                      className={styles.drawerSecondaryBtn}
+                      style={{ flex: 1 }}
+                      onClick={() => { setShowReturnForm(false); setReturnReason(''); }}
+                    >
+                      Отмена
+                    </button>
+                    <button
+                      className={`${styles.drawerActionBtn} ${styles.drawerActionBtnDanger}`}
+                      style={{ flex: 2 }}
+                      onClick={() => {
+                        if (!returnReason.trim()) return;
+                        returnToReady.mutate({ id: order.id, reason: returnReason.trim() }, { onSuccess: onClose });
+                      }}
+                      disabled={returnToReady.isPending || !returnReason.trim()}
+                    >
+                      <RotateCcw size={14} />
+                      {returnToReady.isPending ? 'Возврат...' : 'Вернуть в «Готово»'}
+                    </button>
+                  </div>
+                </div>
+              ) : order.status === 'shipped' ? (
                 <>
                   <button
                     className={`${styles.drawerActionBtn} ${styles.drawerActionBtnSuccess}`}
@@ -355,7 +466,7 @@ function OrderDetailDrawer({ orderId, onClose }: { orderId: string; onClose: () 
                         <strong>Остаток: {fmtMoney(order.totalAmount - order.paidAmount)}</strong>
                       </div>
                       <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                        <button className={styles.drawerActionBtn} style={{ flex: 1, fontSize: 12 }} onClick={() => setCloseUnpaidWarning(false)}>Отмена</button>
+                        <button className={styles.drawerSecondaryBtn} style={{ flex: 1, fontSize: 12 }} onClick={() => setCloseUnpaidWarning(false)}>Отмена</button>
                         <button className={`${styles.drawerActionBtn} ${styles.drawerActionBtnSuccess}`} style={{ flex: 1, fontSize: 12 }} onClick={() => { closeOrder.mutate(order.id); onClose(); }}>Закрыть всё равно</button>
                       </div>
                     </div>
@@ -392,7 +503,7 @@ function OrderDetailDrawer({ orderId, onClose }: { orderId: string; onClose: () 
                       ))}
                       <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
                         <button
-                          className={styles.drawerActionBtn}
+                          className={styles.drawerSecondaryBtn}
                           style={{ flex: 1, fontSize: 12 }}
                           onClick={() => setShowShipForm(false)}
                         >
@@ -426,17 +537,39 @@ function OrderDetailDrawer({ orderId, onClose }: { orderId: string; onClose: () 
                       Отправить клиенту
                     </button>
                   )}
+                  {!showShipForm && order.status === 'on_warehouse' && (
+                    <button
+                      className={`${styles.drawerActionBtn} ${styles.drawerActionBtnDanger}`}
+                      style={{ fontSize: 12 }}
+                      onClick={() => setShowReturnForm(true)}
+                    >
+                      <RotateCcw size={14} />
+                      Вернуть в «Готово»
+                    </button>
+                  )}
                 </>
               ) : (
-                <div className={styles.drawerUnpaidNote}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <AlertTriangle size={15} style={{ flexShrink: 0 }} />
-                    <strong>Заказ не оплачен</strong>
+                <>
+                  <div className={styles.drawerUnpaidNote}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <AlertTriangle size={15} style={{ flexShrink: 0 }} />
+                      <strong>Заказ не оплачен</strong>
+                    </div>
+                    <div style={{ marginTop: 4, paddingLeft: 23 }}>
+                      Остаток: {fmtMoney(order.totalAmount - order.paidAmount)} — свяжитесь с менеджером
+                    </div>
                   </div>
-                  <div style={{ marginTop: 4, paddingLeft: 23 }}>
-                    Остаток: {fmtMoney(order.totalAmount - order.paidAmount)} — свяжитесь с менеджером
-                  </div>
-                </div>
+                  {order.status === 'on_warehouse' && (
+                    <button
+                      className={`${styles.drawerActionBtn} ${styles.drawerActionBtnDanger}`}
+                      style={{ fontSize: 12 }}
+                      onClick={() => setShowReturnForm(true)}
+                    >
+                      <RotateCcw size={14} />
+                      Вернуть в «Готово»
+                    </button>
+                  )}
+                </>
               )}
             </div>
           </>
@@ -473,17 +606,34 @@ function AddItemDrawer({ onClose }: { onClose: () => void }) {
         <form className={styles.drawerBody} onSubmit={handleSubmit}>
           <div className={styles.field}>
             <label className={styles.label}>Название <span className={styles.req}>*</span></label>
-            <input className={styles.input} value={form.name} onChange={sf('name')} placeholder="Шерсть кашемир" required autoFocus />
+            <input className={styles.input} value={form.name} onChange={sf('name')} placeholder="Чапан классик" required autoFocus />
           </div>
           <div className={styles.row2}>
             <div className={styles.field}>
               <label className={styles.label}>Уникальный номер</label>
-              <input className={styles.input} value={form.sku ?? ''} onChange={sf('sku')} placeholder="WOOL-01" />
+              <input className={styles.input} value={form.sku ?? ''} onChange={sf('sku')} placeholder="CHAP-01" />
             </div>
             <div className={styles.field}>
               <label className={styles.label}>Ед. изм.</label>
               <input className={styles.input} value={form.unit ?? 'шт'} onChange={sf('unit')} placeholder="шт / кг / м" />
             </div>
+          </div>
+          <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--text-tertiary)', marginTop: 4 }}>
+            Вариант товара
+          </div>
+          <div className={styles.row2}>
+            <div className={styles.field}>
+              <label className={styles.label}>Цвет</label>
+              <input className={styles.input} value={form.color ?? ''} onChange={sf('color')} placeholder="Синий" />
+            </div>
+            <div className={styles.field}>
+              <label className={styles.label}>Пол</label>
+              <input className={styles.input} value={form.gender ?? ''} onChange={sf('gender')} placeholder="Мужской" />
+            </div>
+          </div>
+          <div className={styles.field}>
+            <label className={styles.label}>Размер</label>
+            <input className={styles.input} value={form.size ?? ''} onChange={sf('size')} placeholder="48, XL, 42-60..." />
           </div>
           <div className={styles.row2}>
             <div className={styles.field}>
@@ -505,7 +655,7 @@ function AddItemDrawer({ onClose }: { onClose: () => void }) {
             </div>
           )}
           <div className={styles.field}>
-            <label className={styles.label}>Цена закупки (₸)</label>
+            <label className={styles.label}>Цена (₸)</label>
             <input className={styles.input} type="number" min="0" value={form.costPrice ?? ''} onChange={sf('costPrice')} placeholder="0" />
           </div>
           <div className={styles.drawerActions}>
@@ -544,7 +694,7 @@ function AddMovementDrawer({ items, preselectItemId, onClose }: { items: Warehou
           <div className={styles.field}>
             <label className={styles.label}>Тип операции</label>
             <div className={styles.typeGroup}>
-              {(['in','out','adjustment','write_off'] as MovementType[]).map(t => (
+              {(['in','out','return','adjustment','write_off'] as MovementType[]).map(t => (
                 <button key={t} type="button"
                   className={`${styles.typeBtn} ${form.type === t ? styles.typeBtnActive : ''}`}
                   onClick={() => setForm(f => ({ ...f, type: t }))}
@@ -582,6 +732,197 @@ function AddMovementDrawer({ items, preselectItemId, onClose }: { items: Warehou
   );
 }
 
+// ── Import Opening Balance Drawer ─────────────────────────────────────────────
+
+const IMPORT_TEMPLATE = 'наименование,цвет,пол,размер,остаток,цена\nЧапан классик,Синий,Мужской,52,10,15000\nЧапан классик,Чёрный,Женский,48,5,14000';
+
+function parseImportCsv(raw: string): ImportOpeningBalanceRow[] {
+  const lines = raw.trim().split('\n').filter(Boolean);
+  if (lines.length < 2) return [];
+  const header = lines[0].split(',').map(h => h.trim().toLowerCase());
+  const nameIdx = header.findIndex(h => h.includes('наим') || h.includes('name') || h.includes('товар') || h.includes('модель'));
+  const colorIdx = header.findIndex(h => h.includes('цвет') || h === 'color');
+  const genderIdx = header.findIndex(h => h.includes('пол') || h === 'gender');
+  const sizeIdx = header.findIndex(h => h.includes('разм') || h === 'size');
+  const qtyIdx = header.findIndex(h => h.includes('остат') || h.includes('кол') || h === 'qty' || h === 'quantity');
+  const priceIdx = header.findIndex(h => h.includes('цена') || h === 'price' || h === 'cost');
+
+  if (nameIdx === -1 || qtyIdx === -1) return [];
+
+  return lines.slice(1).map(line => {
+    const cells = line.split(',').map(c => c.trim());
+    return {
+      name: cells[nameIdx] ?? '',
+      color: colorIdx >= 0 ? (cells[colorIdx] || undefined) : undefined,
+      gender: genderIdx >= 0 ? (cells[genderIdx] || undefined) : undefined,
+      size: sizeIdx >= 0 ? (cells[sizeIdx] || undefined) : undefined,
+      qty: parseFloat(cells[qtyIdx] ?? '0') || 0,
+      costPrice: priceIdx >= 0 ? (parseFloat(cells[priceIdx] ?? '') || undefined) : undefined,
+    };
+  }).filter(r => r.name && r.qty >= 0);
+}
+
+function ImportBalanceDrawer({ onClose }: { onClose: () => void }) {
+  const importBalance = useImportOpeningBalance();
+  const [csvText, setCsvText] = useState('');
+  const [preview, setPreview] = useState<ImportOpeningBalanceRow[]>([]);
+  const [result, setResult] = useState<{ created: number; updated: number; skipped: number; errors: Array<{ row: number; reason: string }> } | null>(null);
+
+  function handleParse() {
+    setPreview(parseImportCsv(csvText));
+  }
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const text = evt.target?.result as string;
+      setCsvText(text);
+      setPreview(parseImportCsv(text));
+    };
+    reader.readAsText(file, 'utf-8');
+  }
+
+  async function handleImport() {
+    if (preview.length === 0) return;
+    const res = await importBalance.mutateAsync(preview);
+    setResult(res);
+    setPreview([]);
+  }
+
+  return (
+    <div className={styles.drawerOverlay} onClick={onClose}>
+      <div className={styles.drawer} style={{ width: 680 }} onClick={e => e.stopPropagation()}>
+        <div className={styles.drawerHeader}>
+          <div>
+            <div className={styles.drawerTitle}>Загрузить начальные остатки</div>
+            <div className={styles.drawerSubtitle}>CSV файл: наименование, цвет, пол, размер, остаток, цена</div>
+          </div>
+          <button className={styles.drawerClose} onClick={onClose}><X size={14} /></button>
+        </div>
+
+        <div className={styles.drawerBody}>
+          {result ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+                {[
+                  { label: 'Создано', value: result.created, color: 'var(--fill-positive)' },
+                  { label: 'Обновлено', value: result.updated, color: 'var(--fill-accent)' },
+                  { label: 'Пропущено', value: result.skipped, color: 'var(--text-tertiary)' },
+                ].map(({ label, value, color }) => (
+                  <div key={label} className={styles.drawerCard} style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 24, fontWeight: 700, color }}>{value}</div>
+                    <div className={styles.drawerCardLabel}>{label}</div>
+                  </div>
+                ))}
+              </div>
+              {result.errors.length > 0 && (
+                <div style={{ background: 'rgba(239,68,68,.08)', border: '1px solid rgba(239,68,68,.2)', borderRadius: 9, padding: '10px 14px' }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--fill-negative)', marginBottom: 6 }}>
+                    Ошибки ({result.errors.length})
+                  </div>
+                  {result.errors.map(e => (
+                    <div key={e.row} style={{ fontSize: 12, color: 'var(--fill-negative)' }}>
+                      Строка {e.row}: {e.reason}
+                    </div>
+                  ))}
+                </div>
+              )}
+              <button className={`${styles.drawerActionBtn} ${styles.drawerActionBtnPrimary}`} onClick={onClose}>
+                Закрыть
+              </button>
+            </div>
+          ) : preview.length > 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                Распознано строк: <strong style={{ color: 'var(--text-primary)' }}>{preview.length}</strong>. Проверьте данные перед импортом.
+              </div>
+              <div className={styles.tableWrap} style={{ maxHeight: 300 }}>
+                <table className={styles.table}>
+                  <thead>
+                    <tr><th>Название</th><th>Цвет</th><th>Пол</th><th>Размер</th><th>Остаток</th><th>Цена</th></tr>
+                  </thead>
+                  <tbody>
+                    {preview.slice(0, 50).map((row, i) => (
+                      <tr key={i} className={styles.row}>
+                        <td className={styles.tdName}>{row.name}</td>
+                        <td className={styles.tdSecondary}>{row.color || '—'}</td>
+                        <td className={styles.tdSecondary}>{row.gender || '—'}</td>
+                        <td className={styles.tdSecondary}>{row.size || '—'}</td>
+                        <td className={styles.tdNum}>{row.qty}</td>
+                        <td className={styles.tdSecondary}>{row.costPrice != null ? fmtMoney(row.costPrice) : '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {preview.length > 50 && (
+                  <div style={{ padding: '8px 14px', fontSize: 12, color: 'var(--text-tertiary)' }}>
+                    ...и ещё {preview.length - 50} строк
+                  </div>
+                )}
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button className={styles.drawerSecondaryBtn} style={{ flex: 1 }} onClick={() => setPreview([])}>
+                  Назад
+                </button>
+                <button
+                  className={`${styles.drawerActionBtn} ${styles.drawerActionBtnPrimary}`}
+                  style={{ flex: 2 }}
+                  onClick={() => void handleImport()}
+                  disabled={importBalance.isPending}
+                >
+                  <Upload size={14} />
+                  {importBalance.isPending ? 'Импорт...' : `Загрузить ${preview.length} позиций`}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <label style={{
+                  flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+                  padding: '9px 14px', border: '1px dashed var(--border-default)', borderRadius: 8,
+                  cursor: 'pointer', fontSize: 13, color: 'var(--text-secondary)', background: 'var(--bg-surface-inset)',
+                }}>
+                  <Upload size={14} />
+                  Выбрать CSV файл
+                  <input type="file" accept=".csv,.txt" style={{ display: 'none' }} onChange={handleFileChange} />
+                </label>
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--text-tertiary)', textAlign: 'center' }}>— или —</div>
+              <div className={styles.field}>
+                <label className={styles.label}>Вставить CSV текст</label>
+                <textarea
+                  className={styles.input}
+                  style={{ minHeight: 160, resize: 'vertical', fontFamily: 'monospace', fontSize: 12 }}
+                  value={csvText}
+                  onChange={e => setCsvText(e.target.value)}
+                  placeholder={IMPORT_TEMPLATE}
+                />
+              </div>
+              <div style={{ background: 'var(--bg-surface-inset)', borderRadius: 8, padding: '10px 14px', fontSize: 12, color: 'var(--text-tertiary)' }}>
+                <strong style={{ color: 'var(--text-secondary)' }}>Формат CSV:</strong> наименование, цвет, пол, размер, остаток, цена (первая строка — заголовок)
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button className={styles.drawerSecondaryBtn} style={{ flex: 1 }} onClick={onClose}>Отмена</button>
+                <button
+                  className={`${styles.drawerActionBtn} ${styles.drawerActionBtnPrimary}`}
+                  style={{ flex: 2 }}
+                  onClick={handleParse}
+                  disabled={!csvText.trim()}
+                >
+                  Проверить данные
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Clickable table row helper ────────────────────────────────────────────────
 
 function ClickRow({ children, onClick }: { children: React.ReactNode; onClick: () => void }) {
@@ -604,6 +945,7 @@ export default function ChapanWarehousePage() {
   const deferredSearch = useDeferredValue(search);
   const [addItemOpen, setAddItemOpen] = useState(false);
   const [addMovOpen, setAddMovOpen] = useState(false);
+  const [importBalanceOpen, setImportBalanceOpen] = useState(false);
   const [preselectItem, setPreselectItem] = useState<string | undefined>();
   const [selectedCanonicalSiteId, setSelectedCanonicalSiteId] = useState('');
 
@@ -660,9 +1002,21 @@ export default function ChapanWarehousePage() {
   }, [canonicalSites?.results, selectedCanonicalSiteId]);
 
   function handleExportItems() {
+    if (!items.length) {
+      toast.info('Нет данных для экспорта');
+      return;
+    }
     exportToCSV(items.map(i => ({
-      'Название': i.name, 'Уникальный номер': i.sku ?? '', 'Ед.изм': i.unit,
-      'Остаток': i.qty, 'Мин.остаток': i.qtyMin, 'Категория': i.category?.name ?? '', 'Цена закупки': i.costPrice ?? '',
+      'Название': i.name,
+      'Вариант': i.attributesSummary ?? '',
+      'Уникальный номер': i.sku ?? '',
+      'Ед.изм': i.unit,
+      'Остаток': i.qty,
+      'Зарезервировано': i.qtyReserved,
+      'Доступно': i.qty - i.qtyReserved,
+      'Мин.остаток': i.qtyMin,
+      'Категория': i.category?.name ?? '',
+      'Цена закупки': i.costPrice ?? '',
     })), 'склад_остатки.csv');
   }
   function handleExportMovements() {
@@ -740,67 +1094,6 @@ export default function ChapanWarehousePage() {
         </div>
       )}
 
-      {/* ── Приёмка tab ── */}
-      {canonicalSites?.results?.length ? (
-        <div
-          style={{
-            border: '1px solid var(--border-subtle)',
-            borderRadius: 12,
-            padding: 14,
-            background: 'linear-gradient(180deg, color-mix(in srgb, var(--bg-surface-elevated) 78%, transparent), var(--bg-surface))',
-            display: 'grid',
-            gap: 12,
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Canonical Warehouse Twin</div>
-              <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 3 }}>
-                Chapan warehouse flow is now bridged with the new foundation and control-tower layers.
-              </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-              <select
-                className={styles.select}
-                value={selectedCanonicalSiteId}
-                onChange={(event) => setSelectedCanonicalSiteId(event.target.value)}
-                style={{ minWidth: 160 }}
-              >
-                {canonicalSites.results.map((site) => (
-                  <option key={site.id} value={site.id}>{site.code}</option>
-                ))}
-              </select>
-              <Link to="/warehouse" className={styles.exportBtn}>Foundation</Link>
-              <Link to="/warehouse/operations" className={styles.exportBtn}>Operations</Link>
-              <Link to="/warehouse/control-tower" className={styles.exportBtn}>Control Tower</Link>
-            </div>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 10 }}>
-            <div className={styles.drawerCard}>
-              <div className={styles.drawerCardLabel}>Health</div>
-              <div className={styles.drawerCardRowSecondary}>Score: {canonicalControlTower?.healthScore ?? 0}</div>
-              <div className={styles.drawerCardRowSecondary}>Alerts: {canonicalControlTower?.alerts.length ?? 0}</div>
-            </div>
-            <div className={styles.drawerCard}>
-              <div className={styles.drawerCardLabel}>Reservations</div>
-              <div className={styles.drawerCardRowSecondary}>Active: {canonicalSiteHealth?.operations.reservations.active ?? 0}</div>
-              <div className={styles.drawerCardRowSecondary}>Consumed: {canonicalSiteHealth?.operations.reservations.consumed ?? 0}</div>
-            </div>
-            <div className={styles.drawerCard}>
-              <div className={styles.drawerCardLabel}>Documents</div>
-              <div className={styles.drawerCardRowSecondary}>Handoffs: {canonicalSiteHealth?.operations.documents.handoffs ?? 0}</div>
-              <div className={styles.drawerCardRowSecondary}>Shipments: {canonicalSiteHealth?.operations.documents.shipments ?? 0}</div>
-            </div>
-            <div className={styles.drawerCard}>
-              <div className={styles.drawerCardLabel}>Inventory</div>
-              <div className={styles.drawerCardRowSecondary}>On hand: {fmtNum(canonicalSiteHealth?.inventory.qtyOnHand ?? 0)}</div>
-              <div className={styles.drawerCardRowSecondary}>Reserved: {fmtNum(canonicalSiteHealth?.inventory.qtyReserved ?? 0)}</div>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
       {tab === 'incoming' && (
         invoicesLoading ? (
           <div className={styles.skeletons}>{[...Array(4)].map((_, i) => <Skeleton key={i} height={56} radius={8} />)}</div>
@@ -819,9 +1112,23 @@ export default function ChapanWarehousePage() {
                 </tr>
               </thead>
               <tbody>
-                {pendingInvoices.map((inv) => (
+                {pendingInvoices.map((inv) => {
+                  const oneConfirmed = inv.seamstressConfirmed !== inv.warehouseConfirmed;
+                  const confirmedAt = inv.seamstressConfirmedAt || inv.warehouseConfirmedAt;
+                  const ageHours = confirmedAt
+                    ? (Date.now() - new Date(confirmedAt).getTime()) / 3_600_000
+                    : 0;
+                  const isStale = oneConfirmed && ageHours >= 24;
+                  return (
                   <ClickRow key={inv.id} onClick={() => setSelectedInvoice(inv)}>
-                    <td className={styles.tdName}>#{inv.invoiceNumber}</td>
+                    <td className={styles.tdName}>
+                      #{inv.invoiceNumber}
+                      {isStale && (
+                        <span style={{ marginLeft: 6, display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11, fontWeight: 600, color: '#EF4444', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 4, padding: '1px 5px' }}>
+                          <AlertCircle size={10} /> Зависла
+                        </span>
+                      )}
+                    </td>
                     <td className={styles.tdDate}>{fmtDate(inv.createdAt)}</td>
                     <td className={styles.tdNum}>{inv.items?.length ?? 0} заказ(а)</td>
                     <td className={styles.tdSecondary}>{inv.createdByName}</td>
@@ -836,7 +1143,8 @@ export default function ChapanWarehousePage() {
                       </button>
                     </td>
                   </ClickRow>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -1085,6 +1393,7 @@ export default function ChapanWarehousePage() {
               <input className={styles.searchInput} value={search} onChange={e => setSearch(e.target.value)} placeholder="Поиск по названию..." />
             </div>
             <button className={styles.exportBtn} onClick={handleExportItems}><Download size={13} /> Excel</button>
+            <button className={styles.exportBtn} onClick={() => setImportBalanceOpen(true)}><Upload size={13} /> Импорт остатков</button>
             <button className={styles.addBtn} onClick={() => setAddItemOpen(true)}><Plus size={14} /> Добавить</button>
           </div>
 
@@ -1094,7 +1403,7 @@ export default function ChapanWarehousePage() {
             <div className={styles.tableWrap}>
               <table className={styles.table}>
                 <thead>
-                  <tr><th>Название</th><th>Уникальный номер</th><th>Кат.</th><th>Остаток</th><th>Мин.</th><th>Статус</th><th></th></tr>
+                  <tr><th>Название</th><th>Вариант</th><th>Кат.</th><th>Остаток</th><th>Мин.</th><th>Статус</th><th></th></tr>
                 </thead>
                 <tbody>
                   {items.map(item => {
@@ -1102,7 +1411,9 @@ export default function ChapanWarehousePage() {
                     return (
                       <tr key={item.id} className={styles.row}>
                         <td className={styles.tdName}>{item.name}</td>
-                        <td className={styles.tdMono}>{item.sku ?? '—'}</td>
+                        <td className={styles.tdSecondary} style={{ fontSize: 11 }}>
+                          {item.attributesSummary ?? (item.sku ? <span className={styles.tdMono}>{item.sku}</span> : '—')}
+                        </td>
                         <td className={styles.tdSecondary}>{item.category?.name ?? '—'}</td>
                         <td className={styles.tdNum}>{fmtNum(item.qty)} {item.unit}</td>
                         <td className={styles.tdSecondary}>{fmtNum(item.qtyMin)} {item.unit}</td>
@@ -1124,7 +1435,13 @@ export default function ChapanWarehousePage() {
                 <div className={styles.empty}>
                   <Package size={32} className={styles.emptyIcon} />
                   <p>Склад пуст</p>
-                  <button className={styles.emptyBtn} onClick={() => setAddItemOpen(true)}>Добавить первую позицию</button>
+                  <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                    <button className={styles.emptyBtn} onClick={() => setImportBalanceOpen(true)}>
+                      <Upload size={13} style={{ verticalAlign: 'middle', marginRight: 4 }} />
+                      Загрузить из CSV
+                    </button>
+                    <button className={styles.emptyBtn} onClick={() => setAddItemOpen(true)}>Добавить вручную</button>
+                  </div>
                 </div>
               )}
             </div>
@@ -1149,25 +1466,44 @@ export default function ChapanWarehousePage() {
             <div className={styles.tableWrap}>
               <table className={styles.table}>
                 <thead>
-                  <tr><th>Дата</th><th>Тип</th><th>Позиция</th><th>Кол-во</th><th>Причина</th><th>Автор</th></tr>
+                  <tr><th>Дата</th><th>Тип</th><th>Позиция</th><th>Кол-во</th><th>До → После</th><th>Причина</th><th>Автор</th></tr>
                 </thead>
                 <tbody>
-                  {movements.map(m => (
-                    <tr key={m.id} className={styles.row}>
-                      <td className={styles.tdDate}>{fmtDate(m.createdAt)}</td>
-                      <td>
-                        <span className={styles.movBadge} style={{ color: MOVEMENT_COLOR[m.type], background: `${MOVEMENT_COLOR[m.type]}18` }}>
-                          {MOVEMENT_LABEL[m.type]}
-                        </span>
-                      </td>
-                      <td className={styles.tdName}>{m.item?.name ?? m.itemId}</td>
-                      <td className={styles.tdNum} style={{ color: m.type === 'in' || m.type === 'return' ? 'var(--fill-positive)' : 'var(--fill-negative)' }}>
-                        {m.type === 'in' || m.type === 'return' ? '+' : '-'}{fmtNum(m.qty)} {m.item?.unit}
-                      </td>
-                      <td className={styles.tdSecondary}>{m.reason ?? '—'}</td>
-                      <td className={styles.tdSecondary}>{m.author}</td>
-                    </tr>
-                  ))}
+                  {movements.map(m => {
+                    const isIncoming = m.type === 'in' || m.type === 'return';
+                    const sourceLabel = m.sourceType === 'chapan_order' ? 'Заказ'
+                      : m.sourceType === 'opening_balance' ? 'Нач.остаток'
+                      : m.sourceType === 'deal' ? 'Сделка'
+                      : null;
+                    return (
+                      <tr key={m.id} className={styles.row}>
+                        <td className={styles.tdDate}>{fmtDate(m.createdAt)}</td>
+                        <td>
+                          <span className={styles.movBadge} style={{ color: MOVEMENT_COLOR[m.type], background: `${MOVEMENT_COLOR[m.type]}18` }}>
+                            {MOVEMENT_LABEL[m.type]}
+                          </span>
+                        </td>
+                        <td className={styles.tdName}>{m.item?.name ?? m.itemId}</td>
+                        <td className={styles.tdNum} style={{ color: isIncoming ? 'var(--fill-positive)' : 'var(--fill-negative)' }}>
+                          {isIncoming ? '+' : '-'}{fmtNum(Math.abs(m.qty))} {m.item?.unit}
+                        </td>
+                        <td className={styles.tdSecondary} style={{ fontSize: 11, whiteSpace: 'nowrap' }}>
+                          {m.qtyBefore != null && m.qtyAfter != null
+                            ? `${fmtNum(m.qtyBefore)} → ${fmtNum(m.qtyAfter)}`
+                            : '—'}
+                        </td>
+                        <td className={styles.tdSecondary}>
+                          {m.reason ?? '—'}
+                          {sourceLabel && (
+                            <span style={{ marginLeft: 6, fontSize: 10, padding: '1px 5px', borderRadius: 4, background: 'var(--bg-surface-inset)', color: 'var(--text-tertiary)', border: '1px solid var(--border-subtle)' }}>
+                              {sourceLabel}
+                            </span>
+                          )}
+                        </td>
+                        <td className={styles.tdSecondary}>{m.author}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
               {movements.length === 0 && (
@@ -1215,8 +1551,67 @@ export default function ChapanWarehousePage() {
 
       {/* ── Каталог tab ── */}
       {tab === 'catalog' && (
-        <div className={styles.tableWrap}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <WarehouseCatalog />
+
+          {canonicalSites?.results?.length ? (
+            <div
+              style={{
+                border: '1px solid var(--border-subtle)',
+                borderRadius: 12,
+                padding: 14,
+                background: 'linear-gradient(180deg, color-mix(in srgb, var(--bg-surface-elevated) 78%, transparent), var(--bg-surface))',
+                display: 'grid',
+                gap: 12,
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Warehouse Foundation</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 3 }}>
+                    Системный слой: хранилища, резервы, документы, контрол-тауэр
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <select
+                    className={styles.select}
+                    value={selectedCanonicalSiteId}
+                    onChange={(event) => setSelectedCanonicalSiteId(event.target.value)}
+                    style={{ minWidth: 160 }}
+                  >
+                    {canonicalSites.results.map((site) => (
+                      <option key={site.id} value={site.id}>{site.code}</option>
+                    ))}
+                  </select>
+                  <Link to="/warehouse" className={styles.exportBtn}>Foundation</Link>
+                  <Link to="/warehouse/operations" className={styles.exportBtn}>Operations</Link>
+                  <Link to="/warehouse/control-tower" className={styles.exportBtn}>Control Tower</Link>
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 10 }}>
+                <div className={styles.drawerCard}>
+                  <div className={styles.drawerCardLabel}>Health</div>
+                  <div className={styles.drawerCardRowSecondary}>Score: {canonicalControlTower?.healthScore ?? 0}</div>
+                  <div className={styles.drawerCardRowSecondary}>Alerts: {canonicalControlTower?.alerts.length ?? 0}</div>
+                </div>
+                <div className={styles.drawerCard}>
+                  <div className={styles.drawerCardLabel}>Reservations</div>
+                  <div className={styles.drawerCardRowSecondary}>Active: {canonicalSiteHealth?.operations.reservations.active ?? 0}</div>
+                  <div className={styles.drawerCardRowSecondary}>Consumed: {canonicalSiteHealth?.operations.reservations.consumed ?? 0}</div>
+                </div>
+                <div className={styles.drawerCard}>
+                  <div className={styles.drawerCardLabel}>Documents</div>
+                  <div className={styles.drawerCardRowSecondary}>Handoffs: {canonicalSiteHealth?.operations.documents.handoffs ?? 0}</div>
+                  <div className={styles.drawerCardRowSecondary}>Shipments: {canonicalSiteHealth?.operations.documents.shipments ?? 0}</div>
+                </div>
+                <div className={styles.drawerCard}>
+                  <div className={styles.drawerCardLabel}>Inventory</div>
+                  <div className={styles.drawerCardRowSecondary}>On hand: {fmtNum(canonicalSiteHealth?.inventory.qtyOnHand ?? 0)}</div>
+                  <div className={styles.drawerCardRowSecondary}>Reserved: {fmtNum(canonicalSiteHealth?.inventory.qtyReserved ?? 0)}</div>
+                </div>
+              </div>
+            </div>
+          ) : null}
         </div>
       )}
 
@@ -1225,6 +1620,7 @@ export default function ChapanWarehousePage() {
       {addMovOpen && (
         <AddMovementDrawer items={items} preselectItemId={preselectItem} onClose={() => { setAddMovOpen(false); setPreselectItem(undefined); }} />
       )}
+      {importBalanceOpen && <ImportBalanceDrawer onClose={() => setImportBalanceOpen(false)} />}
       {selectedInvoice && (
         <InvoiceDetailDrawer invoice={selectedInvoice} onClose={() => setSelectedInvoice(null)} />
       )}

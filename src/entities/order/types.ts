@@ -425,6 +425,8 @@ export interface InvoiceDocumentRow {
   quantity: number;
   orders: string;
   unitPrice: number;
+  /** Internal (warehouse) cost price — split-price P2 */
+  warehouseUnitPrice?: number | null;
   sourceOrders?: InvoiceDocumentSourceOrder[];
 }
 

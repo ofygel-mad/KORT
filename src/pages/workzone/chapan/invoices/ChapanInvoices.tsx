@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FileText, Check, Clock, X, Download } from 'lucide-react';
+import { FileText, Check, Clock, X, Download, AlertTriangle } from 'lucide-react';
 import {
   useInvoices,
   useConfirmSeamstress,
@@ -118,6 +118,30 @@ export default function ChapanInvoicesPage() {
         </div>
       </div>
 
+      {!isLoading && !isError && invoices.length > 0 && (() => {
+        const now = Date.now();
+        const pending = invoices.filter((inv) => inv.status === 'pending_confirmation');
+        const waitingSeamstress = pending.filter((inv) => !inv.seamstressConfirmed).length;
+        const waitingWarehouse = pending.filter((inv) => !inv.warehouseConfirmed).length;
+        const stale = pending.filter((inv) => {
+          const confirmedAt = inv.seamstressConfirmedAt || inv.warehouseConfirmedAt;
+          const ageH = confirmedAt
+            ? (now - new Date(confirmedAt).getTime()) / 3_600_000
+            : 0;
+          return (inv.seamstressConfirmed !== inv.warehouseConfirmed) && ageH >= 24;
+        }).length;
+        if (pending.length === 0) return null;
+        return (
+          <div className={styles.sverkaBar}>
+            <AlertTriangle size={14} style={{ flexShrink: 0, color: '#D97706' }} />
+            <span className={styles.sverkaTitle}>Сверка:</span>
+            {waitingSeamstress > 0 && <span className={styles.sverkaChip}>Ждёт цех: <strong>{waitingSeamstress}</strong></span>}
+            {waitingWarehouse > 0 && <span className={styles.sverkaChip}>Ждёт склад: <strong>{waitingWarehouse}</strong></span>}
+            {stale > 0 && <span className={`${styles.sverkaChip} ${styles.sverkaChipDanger}`}>Зависших: <strong>{stale}</strong></span>}
+          </div>
+        );
+      })()}
+
       {!isLoading && <div className={styles.count}>{data?.count ?? 0} накладных</div>}
 
       {isLoading && (
@@ -213,11 +237,24 @@ function InvoiceRow({
 }) {
   const orderCount = invoice.items?.length ?? 0;
   const isPending = invoice.status === 'pending_confirmation';
+  const oneConfirmed = invoice.seamstressConfirmed !== invoice.warehouseConfirmed;
+  const confirmedAt = invoice.seamstressConfirmedAt || invoice.warehouseConfirmedAt;
+  const ageHours = confirmedAt
+    ? (Date.now() - new Date(confirmedAt).getTime()) / 3_600_000
+    : 0;
+  const isStale = isPending && oneConfirmed && ageHours >= 24;
 
   return (
     <div className={styles.row}>
       <div className={styles.rowNum}>
-        <span className={styles.invoiceNumber}>#{invoice.invoiceNumber}</span>
+        <span className={styles.invoiceNumber}>
+          #{invoice.invoiceNumber}
+          {isStale && (
+            <span className={styles.staleBadge}>
+              <AlertTriangle size={10} /> Зависла
+            </span>
+          )}
+        </span>
         <span className={styles.invoiceDate}>{fmtDate(invoice.createdAt)}</span>
         <span className={styles.creatorLine}>{invoice.createdByName}</span>
       </div>

@@ -191,7 +191,7 @@ async function buildOrderItemVariantSnapshot(
 }
 
 function buildCanonicalReservationActivityContent(summary: {
-  mode: 'canonical' | 'skipped';
+  mode: 'canonical' | 'skipped' | 'simple';
   reason?: string;
   reservedCount: number;
   replayedCount: number;
@@ -586,6 +586,12 @@ export async function returnToReady(
     });
   });
 
+  // P3: Release simple warehouse reservations on return-to-ready
+  try {
+    const { releaseOrderReservations } = await import('../warehouse/warehouse.service.js');
+    await releaseOrderReservations(orgId, id);
+  } catch { /* non-fatal */ }
+
   return { ok: true };
 }
 
@@ -951,6 +957,17 @@ export async function updateStatus(orgId: string, id: string, status: string, au
     }
   }
 
+  // P3 guard: если накладная обязательна, нельзя принять на склад без подтверждённой накладной
+  if (status === 'on_warehouse' && order.requiresInvoice) {
+    const confirmedInvoice = await prisma.chapanInvoice.findFirst({
+      where: { orgId, status: 'confirmed', items: { some: { orderId: id } } },
+      select: { id: true },
+    });
+    if (!confirmedInvoice) {
+      throw new ValidationError('Для этого заказа обязательна накладная. Сначала создайте и подтвердите накладную с обеих сторон.');
+    }
+  }
+
   if (status === 'shipped' && order.paymentStatus !== 'paid') {
     const balance = order.totalAmount - order.paidAmount;
 
@@ -1030,6 +1047,14 @@ export async function updateStatus(orgId: string, id: string, status: string, au
       },
     });
   });
+
+  // P3: Release simple warehouse reservations on cancellation
+  if (status === 'cancelled') {
+    try {
+      const { releaseOrderReservations } = await import('../warehouse/warehouse.service.js');
+      await releaseOrderReservations(orgId, id);
+    } catch { /* non-fatal */ }
+  }
 
   fireSheetSync(orgId, id);
 }
@@ -1454,6 +1479,12 @@ export async function close(orgId: string, id: string, authorId: string, authorN
     }
   });
 
+  // P3: Consume simple warehouse reservations on close (order completed)
+  try {
+    const { consumeSimpleOrderReservations } = await import('../warehouse/warehouse.service.js');
+    await consumeSimpleOrderReservations(orgId, id, authorName);
+  } catch { /* non-fatal */ }
+
   fireSheetSync(orgId, id);
 }
 
@@ -1545,6 +1576,12 @@ export async function shipOrder(
       },
     });
   });
+
+  // P3: Consume simple (non-canonical) warehouse reservations on shipment
+  try {
+    const { consumeSimpleOrderReservations } = await import('../warehouse/warehouse.service.js');
+    await consumeSimpleOrderReservations(orgId, id, authorName);
+  } catch { /* non-fatal */ }
 
   fireSheetSync(orgId, id);
 }
