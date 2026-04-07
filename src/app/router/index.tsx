@@ -70,6 +70,7 @@ const ChapanEditOrderPage   = makePage(() => import('../../pages/workzone/chapan
 const ChapanProductionPage  = makePage(() => import('../../pages/workzone/chapan/production/ChapanProduction'));
 const ChapanReadyPage       = makePage(() => import('../../pages/workzone/chapan/ready/ChapanReady'));
 const ChapanInvoicesPage    = makePage(() => import('../../pages/workzone/chapan/invoices/ChapanInvoices'));
+const ChapanReturnsPage     = makePage(() => import('../../pages/workzone/chapan/returns/ChapanReturns'));
 const ChapanArchivePage     = makePage(() => import('../../pages/workzone/chapan/archive/ChapanArchive'));
 const ChapanTrashPage       = makePage(() => import('../../pages/workzone/chapan/orders/ChapanTrash'));
 
@@ -384,6 +385,10 @@ export const appRouter = createBrowserRouter([
       {
         path: 'invoices',
         element: <ChapanInvoicesPage />,
+      },
+      {
+        path: 'returns',
+        element: <ChapanReturnsPage />,
       },
       {
         path: 'orders/trash',

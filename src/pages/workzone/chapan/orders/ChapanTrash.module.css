@@ -111,6 +111,13 @@
   padding: 80px 20px; text-align: center; color: var(--ch-text-muted, #6b7280);
 }
 
+@media (max-width: 768px) {
+  .root { padding: 12px; gap: 14px; }
+
+  .restoreBtn,
+  .deleteBtn { min-height: 40px; }
+}
+
 @media (max-width: 600px) {
   .row { flex-direction: column; align-items: flex-start; }
   .rowActions { width: 100%; }

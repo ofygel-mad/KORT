@@ -222,3 +222,34 @@
 }
 .confirmBtn:hover { background: rgba(16, 185, 129, 0.15); }
 .confirmBtn:disabled { opacity: 0.5; cursor: default; }
+
+@media (max-width: 768px) {
+  .panel {
+    width: 100%;
+    max-width: 100%;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* Larger touch targets */
+  .closeBtn {
+    width: 40px;
+    height: 40px;
+  }
+
+  .downloadBtn {
+    width: 36px;
+    height: 36px;
+  }
+
+  .filterTab {
+    min-height: 36px;
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+
+  .confirmBtn {
+    min-height: 36px;
+    padding: 6px 12px;
+    font-size: 11px;
+  }
+}

@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { ordersApi, usersApi, productionApi, chapanSettingsApi, invoicesApi, changeRequestsApi, attachmentsApi } from './api';
+import { ordersApi, usersApi, productionApi, chapanSettingsApi, invoicesApi, changeRequestsApi, attachmentsApi, returnsApi } from './api';
 import type {
   CreateOrderDto,
   UpdateOrderDto,
@@ -9,6 +9,7 @@ import type {
   ChapanProfile,
   CreateOrderItemDto,
   InvoiceDocumentPayload,
+  CreateReturnDto,
 } from './types';
 import { readApiErrorMessage } from '../../shared/api/errors';
 
@@ -29,6 +30,9 @@ export const orderKeys = {
   catalogs: ['chapan_catalogs'] as const,
   clients: ['chapan_clients'] as const,
   changeRequests: ['chapan_change_requests'] as const,
+  returns: ['chapan_returns'] as const,
+  returnsList: (filters?: object) => ['chapan_returns', filters] as const,
+  returnDetail: (id: string) => ['chapan_returns', id] as const,
 };
 
 // ── Orders ────────────────────────────────────────────────────────────────────
@@ -647,3 +651,77 @@ export function useChangeEmail() {
       usersApi.changeEmail(new_email, current_password),
   });
 }
+
+// ── Manager reassignment ──────────────────────────────────────────────────────
+
+export function useOrgManagers() {
+  return useQuery({
+    queryKey: ['chapan_org_managers'],
+    queryFn: () => ordersApi.listManagers(),
+    staleTime: 5 * 60_000,
+  });
+}
+
+export function useReassignManager() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orderId, managerId }: { orderId: string; managerId: string }) =>
+      ordersApi.reassignManager(orderId, managerId),
+    onSuccess: (updatedOrder) => {
+      qc.setQueryData(orderKeys.detail(updatedOrder.id), updatedOrder);
+      qc.invalidateQueries({ queryKey: orderKeys.list() });
+      toast.success('Менеджер переназначен');
+    },
+    onError: (err: unknown) => {
+      const msg = readApiErrorMessage(err) ?? 'Не удалось переназначить менеджера';
+      toast.error(msg);
+    },
+  });
+}
+
+// ── Returns (Акты возврата) ───────────────────────────────────────────────────
+
+export const useReturns = (params?: { orderId?: string; status?: string }) =>
+  useQuery({
+    queryKey: orderKeys.returnsList(params),
+    queryFn: () => returnsApi.list(params),
+    staleTime: 60_000,
+  });
+
+export const useCreateReturn = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: CreateReturnDto) => returnsApi.create(dto),
+    onSuccess: (_data, dto) => {
+      qc.invalidateQueries({ queryKey: orderKeys.returns });
+      qc.invalidateQueries({ queryKey: orderKeys.detail(dto.orderId) });
+      toast.success('Черновик возврата создан');
+    },
+    onError: (error) => toast.error(readApiErrorMessage(error, 'Не удалось создать возврат')),
+  });
+};
+
+export const useConfirmReturn = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => returnsApi.confirm(id),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: orderKeys.returns });
+      qc.invalidateQueries({ queryKey: orderKeys.detail(data.orderId) });
+      toast.success(`Возврат ${data.returnNumber} подтверждён, склад пополнен`);
+    },
+    onError: (error) => toast.error(readApiErrorMessage(error, 'Не удалось подтвердить возврат')),
+  });
+};
+
+export const useDeleteReturnDraft = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => returnsApi.deleteDraft(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: orderKeys.returns });
+      toast.success('Черновик возврата удалён');
+    },
+    onError: (error) => toast.error(readApiErrorMessage(error, 'Не удалось удалить возврат')),
+  });
+};

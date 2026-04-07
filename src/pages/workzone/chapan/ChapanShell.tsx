@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { Archive, CheckCheck, ChevronLeft, Factory, Package, Trash2, Warehouse } from 'lucide-react';
+import { Archive, CheckCheck, ChevronLeft, Factory, Package, Trash2, Warehouse, Undo2 } from 'lucide-react';
 import { useAuthStore } from '../../../shared/stores/auth';
 import { useChapanPermissions } from '../../../shared/hooks/useChapanPermissions';
 import { ThemeSwitcher } from '../../../shared/ui/ThemeSwitcher';
@@ -117,8 +117,9 @@ export default function ChapanShell() {
 
   const navItems = [
     ...ALL_SECTION_NAV.filter((item) => sectionAccess[item.perm]),
-    ...((isAdmin || canAccessWarehouseNav) ? [{ to: '/workzone/chapan/warehouse' as const,    label: 'Склад',   icon: Warehouse }] : []),
-    ...(isAbsolute                         ? [{ to: '/workzone/chapan/orders/trash' as const, label: 'Корзина', icon: Trash2   }] : []),
+    ...((isAdmin || canAccessWarehouseNav) ? [{ to: '/workzone/chapan/warehouse' as const,    label: 'Склад',    icon: Warehouse }] : []),
+    ...(isAdmin                            ? [{ to: '/workzone/chapan/returns' as const,      label: 'Возвраты', icon: Undo2     }] : []),
+    ...(isAbsolute                         ? [{ to: '/workzone/chapan/orders/trash' as const, label: 'Корзина',  icon: Trash2    }] : []),
   ];
 
   return (
@@ -139,6 +140,23 @@ export default function ChapanShell() {
           <ThemeSwitcher />
         </div>
       </div>
+
+      {/* Mobile horizontal rail — hidden on desktop via CSS */}
+      <nav className={styles.mobileRail}>
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          return (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              className={({ isActive }) => `${styles.mobileRailItem} ${isActive ? styles.mobileRailItemActive : ''}`}
+            >
+              <Icon size={18} />
+              <span>{item.label}</span>
+            </NavLink>
+          );
+        })}
+      </nav>
 
       <div className={styles.body}>
         <aside className={styles.sidebar}>
@@ -189,23 +207,6 @@ export default function ChapanShell() {
       )}
 
       <ChapanInvoicesDrawer open={invoicesDrawerOpen} onClose={() => setInvoicesDrawerOpen(false)} initialFilter={invoicesDrawerFilter as 'all' | 'pending_confirmation' | 'confirmed' | 'rejected' | 'archived'} />
-
-      {/* Mobile horizontal rail — hidden on desktop via CSS */}
-      <nav className={styles.mobileRail}>
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          return (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              className={({ isActive }) => `${styles.mobileRailItem} ${isActive ? styles.mobileRailItemActive : ''}`}
-            >
-              <Icon size={18} />
-              <span>{item.label}</span>
-            </NavLink>
-          );
-        })}
-      </nav>
     </div>
   );
 }

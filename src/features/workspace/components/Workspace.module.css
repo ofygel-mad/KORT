@@ -1766,6 +1766,31 @@
   flex-shrink: 0;
 }
 
+.tileSectionBadge {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--tile-color, var(--fill-accent)) 85%, var(--text-secondary));
+  background: color-mix(in srgb, var(--tile-color, var(--fill-accent)) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--tile-color, var(--fill-accent)) 24%, transparent);
+  padding: 2px 5px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+
+.tilePreviewWrap {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--tile-color, var(--fill-accent)) 4%, var(--bg-canvas, var(--bg-surface)));
+  position: relative;
+  isolation: isolate;
+}
+
 .tileDesc {
   font-size: 11px;
   color: var(--text-secondary);

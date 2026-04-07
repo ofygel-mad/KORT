@@ -1,9 +1,11 @@
 ﻿import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { CheckCircle2, Clock, CreditCard, MessageSquare, AlertTriangle, Pencil, ArchiveIcon, RotateCcw, Download, Package, XCircle, FileText, Paperclip, Trash2, Upload } from 'lucide-react';
-import { useOrder, useOrderWarehouseState, useFulfillFromStock, useConfirmOrder, useChangeOrderStatus, useAddPayment, useAddOrderActivity, useRestoreOrder, useCloseOrder, useCreateInvoice, useSetRequiresInvoice, useConfirmSeamstress, useRouteSingleItem, useRouteOrderItems, useUploadAttachment, useDeleteAttachment } from '../../../../entities/order/queries';
+import { CheckCircle2, Clock, CreditCard, MessageSquare, AlertTriangle, Pencil, ArchiveIcon, RotateCcw, Download, Package, XCircle, FileText, Paperclip, Trash2, Upload, Undo2 } from 'lucide-react';
+import { useOrder, useOrderWarehouseState, useFulfillFromStock, useConfirmOrder, useChangeOrderStatus, useAddPayment, useAddOrderActivity, useRestoreOrder, useCloseOrder, useCreateInvoice, useSetRequiresInvoice, useConfirmSeamstress, useRouteSingleItem, useRouteOrderItems, useUploadAttachment, useDeleteAttachment, useReassignManager, useOrgManagers, useReturns, useCreateReturn, useConfirmReturn, useDeleteReturnDraft } from '../../../../entities/order/queries';
+import { useChapanPermissions } from '../../../../shared/hooks/useChapanPermissions';
 import { useProductsAvailability } from '../../../../entities/warehouse/queries';
-import type { OrderItem, OrderItemFulfillmentMode, OrderStatus, Priority, Urgency, OrderAttachment } from '../../../../entities/order/types';
+import type { OrderItem, OrderItemFulfillmentMode, OrderStatus, Priority, Urgency, OrderAttachment, ReturnReason, ReturnRefundMethod, ReturnItemCondition, RETURN_REASON_LABELS, RETURN_REFUND_METHOD_LABELS } from '../../../../entities/order/types';
+import { RETURN_REASON_LABELS as REASON_LABELS, RETURN_REFUND_METHOD_LABELS as REFUND_LABELS, RETURN_CONDITION_LABELS } from '../../../../entities/order/types';
 import { attachmentsApi } from '../../../../entities/order/api';
 import { useOrderWarehouseLiveSync } from '../../../../entities/order/live';
 import { useForm } from 'react-hook-form';
@@ -146,7 +148,7 @@ export default function ChapanOrderDetailPage() {
   // чтобы возврат на список заказов не вызывал повторный редирект.
   useEffect(() => {
     setSelectedOrderId(null);
-  }, []);
+  }, [setSelectedOrderId]);
 
   const detailContext = (() => {
     if (location.pathname.startsWith('/workzone/chapan/ready/')) {
@@ -178,7 +180,11 @@ export default function ChapanOrderDetailPage() {
   const routeOrderItems = useRouteOrderItems();
   const uploadAttachment = useUploadAttachment(id!);
   const deleteAttachment = useDeleteAttachment(id!);
+  const reassignManager = useReassignManager();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const { canReassignManager } = useChapanPermissions();
+  const { data: orgManagers } = useOrgManagers();
 
   const pendingInvoice = order?.status === 'ready'
     ? order.invoiceOrders?.find((io) => io.invoice.status === 'pending_confirmation')?.invoice
@@ -201,7 +207,7 @@ export default function ChapanOrderDetailPage() {
       }
     }
     setLocalRoutes(initial);
-  }, [order?.id, order?.status]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [order]);
 
   // When stockMap loads, fill in smart defaults for items not yet routed.
   useEffect(() => {
@@ -218,7 +224,7 @@ export default function ChapanOrderDetailPage() {
       }
       return changed ? next : prev;
     });
-  }, [stockMap, order?.id, order?.status]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [stockMap, order]);
 
   const [showPayForm, setShowPayForm] = useState(false);
   const [comment, setComment] = useState('');
@@ -227,6 +233,63 @@ export default function ChapanOrderDetailPage() {
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
   const [closeUnpaidWarning, setCloseUnpaidWarning] = useState(false);
   const [invoiceDownloading, setInvoiceDownloading] = useState(false);
+  const [reassignOpen, setReassignOpen] = useState(false);
+  const [selectedNewManagerId, setSelectedNewManagerId] = useState('');
+
+  // ── Return form state ──────────────────────────────────────────────────────
+  const [showReturnForm, setShowReturnForm] = useState(false);
+  const [returnReason, setReturnReason] = useState<ReturnReason>('defect');
+  const [returnNotes, setReturnNotes] = useState('');
+  const [returnRefundMethod, setReturnRefundMethod] = useState<ReturnRefundMethod>('cash');
+  type ReturnItemDraft = { selected: boolean; qty: number; condition: ReturnItemCondition };
+  const [returnItemDrafts, setReturnItemDrafts] = useState<Record<string, ReturnItemDraft>>({});
+
+  const { data: returnsData } = useReturns({ orderId: id! });
+  const existingReturns = returnsData?.results ?? [];
+  const createReturn = useCreateReturn();
+  const confirmReturn = useConfirmReturn();
+  const deleteReturnDraft = useDeleteReturnDraft();
+
+  function openReturnForm() {
+    const drafts: Record<string, ReturnItemDraft> = {};
+    for (const item of order?.items ?? []) {
+      drafts[item.id] = { selected: true, qty: item.quantity, condition: 'good' };
+    }
+    setReturnItemDrafts(drafts);
+    setReturnReason('defect');
+    setReturnNotes('');
+    setReturnRefundMethod('cash');
+    setShowReturnForm(true);
+  }
+
+  async function handleSubmitReturn() {
+    if (!order) return;
+    const items = (order.items ?? [])
+      .filter((item) => returnItemDrafts[item.id]?.selected)
+      .map((item) => ({
+        orderItemId: item.id,
+        productName: item.productName,
+        size: item.size,
+        fabric: item.fabric ?? undefined,
+        color: item.color ?? undefined,
+        gender: item.gender ?? undefined,
+        qty: returnItemDrafts[item.id]?.qty ?? item.quantity,
+        unitPrice: item.unitPrice,
+        refundAmount: (returnItemDrafts[item.id]?.qty ?? item.quantity) * item.unitPrice,
+        condition: returnItemDrafts[item.id]?.condition ?? 'good',
+      }));
+    if (items.length === 0) return;
+
+    createReturn.mutate(
+      { orderId: order.id, reason: returnReason, reasonNotes: returnNotes || undefined, refundMethod: returnRefundMethod, items },
+      {
+        onSuccess: (draft) => {
+          setShowReturnForm(false);
+          confirmReturn.mutate(draft.id);
+        },
+      },
+    );
+  }
 
   const {
     register: registerPay,
@@ -351,7 +414,7 @@ export default function ChapanOrderDetailPage() {
             {order.clientPhoneForeign && (
               <a href={`tel:${order.clientPhoneForeign}`} className={styles.clientPhone}>{order.clientPhoneForeign}</a>
             )}
-            {(order.city || order.deliveryType || order.source || order.dueDate) && (
+            {(order.city || order.deliveryType || order.source || order.dueDate || order.managerName) && (
               <div className={styles.clientMeta}>
                 {order.city && (
                   <div className={styles.clientMetaRow}>
@@ -383,6 +446,11 @@ export default function ChapanOrderDetailPage() {
                     </span>
                   </div>
                 )}
+                <div className={styles.clientMetaRow}>
+                  <span className={styles.clientMetaIcon}>👤</span>
+                  <span className={styles.clientMetaLabel}>Менеджер</span>
+                  <span className={styles.clientMetaValue}>{order.managerName ?? 'Не указан'}</span>
+                </div>
               </div>
             )}
           </div>
@@ -590,6 +658,16 @@ export default function ChapanOrderDetailPage() {
                 </button>
               )}
 
+              {canReassignManager && (
+                <button
+                  className={`${styles.actionBtn} ${styles.actionSecondary}`}
+                  onClick={() => { setSelectedNewManagerId(order.managerId ?? ''); setReassignOpen(true); }}
+                >
+                  <span style={{ fontSize: 13 }}>👤</span>
+                  Переназначить менеджера
+                </button>
+              )}
+
               {isNewOrder && (
                 <>
                   {!allLocalAssigned ? (
@@ -733,6 +811,95 @@ export default function ChapanOrderDetailPage() {
 
               {!['completed', 'cancelled'].includes(order.status) && <button className={`${styles.actionBtn} ${styles.actionDanger}`} onClick={() => setCancelConfirmOpen(true)} disabled={changeStatus.isPending}>Отменить заказ</button>}
 
+              {['shipped', 'completed'].includes(order.status) && !showReturnForm && (
+                <button className={`${styles.actionBtn} ${styles.actionReturn}`} onClick={openReturnForm}>
+                  <Undo2 size={13} />
+                  Оформить возврат
+                </button>
+              )}
+
+              {['shipped', 'completed'].includes(order.status) && showReturnForm && (
+                <div className={styles.returnForm}>
+                  <div className={styles.returnFormTitle}>Акт возврата</div>
+
+                  <div className={styles.returnField}>
+                    <label className={styles.returnLabel}>Причина</label>
+                    <select className={styles.returnSelect} value={returnReason} onChange={(e) => setReturnReason(e.target.value as ReturnReason)}>
+                      {(Object.entries(REASON_LABELS) as [ReturnReason, string][]).map(([k, v]) => (
+                        <option key={k} value={k}>{v}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className={styles.returnField}>
+                    <label className={styles.returnLabel}>Метод возврата денег</label>
+                    <select className={styles.returnSelect} value={returnRefundMethod} onChange={(e) => setReturnRefundMethod(e.target.value as ReturnRefundMethod)}>
+                      {(Object.entries(REFUND_LABELS) as [ReturnRefundMethod, string][]).map(([k, v]) => (
+                        <option key={k} value={k}>{v}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className={styles.returnField}>
+                    <label className={styles.returnLabel}>Позиции возврата</label>
+                    <div className={styles.returnItems}>
+                      {(order.items ?? []).map((item) => {
+                        const draft = returnItemDrafts[item.id] ?? { selected: true, qty: item.quantity, condition: 'good' as ReturnItemCondition };
+                        return (
+                          <div key={item.id} className={`${styles.returnItem} ${!draft.selected ? styles.returnItemDisabled : ''}`}>
+                            <input
+                              type="checkbox"
+                              checked={draft.selected}
+                              onChange={(e) => setReturnItemDrafts((prev) => ({ ...prev, [item.id]: { ...draft, selected: e.target.checked } }))}
+                            />
+                            <div className={styles.returnItemName}>
+                              <span>{item.productName}</span>
+                              <span className={styles.returnItemMeta}>{item.size}{item.color ? ` · ${item.color}` : ''}</span>
+                            </div>
+                            <input
+                              type="number"
+                              min={1}
+                              max={item.quantity}
+                              className={styles.returnQtyInput}
+                              value={draft.qty}
+                              disabled={!draft.selected}
+                              onChange={(e) => setReturnItemDrafts((prev) => ({ ...prev, [item.id]: { ...draft, qty: Math.max(1, Math.min(item.quantity, Number(e.target.value))) } }))}
+                            />
+                            <select
+                              className={styles.returnConditionSelect}
+                              value={draft.condition}
+                              disabled={!draft.selected}
+                              onChange={(e) => setReturnItemDrafts((prev) => ({ ...prev, [item.id]: { ...draft, condition: e.target.value as ReturnItemCondition } }))}
+                            >
+                              {(Object.entries(RETURN_CONDITION_LABELS) as [ReturnItemCondition, string][]).map(([k, v]) => (
+                                <option key={k} value={k}>{v}</option>
+                              ))}
+                            </select>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className={styles.returnField}>
+                    <label className={styles.returnLabel}>Примечание (необязательно)</label>
+                    <input className={styles.returnSelect} value={returnNotes} onChange={(e) => setReturnNotes(e.target.value)} placeholder="Доп. информация о возврате..." />
+                  </div>
+
+                  <div className={styles.returnFormActions}>
+                    <button
+                      className={styles.returnSubmitBtn}
+                      onClick={handleSubmitReturn}
+                      disabled={createReturn.isPending || confirmReturn.isPending || !(order.items ?? []).some((i) => returnItemDrafts[i.id]?.selected)}
+                    >
+                      <Undo2 size={13} />
+                      {createReturn.isPending || confirmReturn.isPending ? 'Оформление...' : 'Подтвердить возврат'}
+                    </button>
+                    <button className={styles.returnCancelBtn} onClick={() => setShowReturnForm(false)}>Отмена</button>
+                  </div>
+                </div>
+              )}
+
               {order.status === 'completed' && (
                 <>
                   <div className={styles.completedBadge}>Заказ завершён</div>
@@ -751,6 +918,39 @@ export default function ChapanOrderDetailPage() {
               )}
             </div>
           </div>
+
+          {existingReturns.length > 0 && (
+            <div className={styles.card}>
+              <div className={styles.cardLabel}>Возвраты</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {existingReturns.map((ret) => (
+                  <div key={ret.id} className={styles.returnHistoryRow}>
+                    <div className={styles.returnHistoryLeft}>
+                      <span className={styles.returnHistoryNum}>{ret.returnNumber}</span>
+                      <span className={styles.returnHistoryReason}>{REASON_LABELS[ret.reason]}</span>
+                      <span className={styles.returnHistoryDate}>{new Date(ret.createdAt).toLocaleDateString('ru-KZ', { day: '2-digit', month: 'short' })}</span>
+                    </div>
+                    <div className={styles.returnHistoryRight}>
+                      <span className={styles.returnHistoryAmount}>−{new Intl.NumberFormat('ru-KZ', { maximumFractionDigits: 0 }).format(ret.totalRefundAmount)} ₸</span>
+                      <span className={`${styles.returnHistoryStatus} ${ret.status === 'confirmed' ? styles.returnHistoryStatusDone : styles.returnHistoryStatusDraft}`}>
+                        {ret.status === 'confirmed' ? 'Подтверждён' : 'Черновик'}
+                      </span>
+                      {ret.status === 'draft' && (
+                        <button
+                          className={styles.returnConfirmMiniBtn}
+                          onClick={() => confirmReturn.mutate(ret.id)}
+                          disabled={confirmReturn.isPending}
+                        >
+                          <CheckCircle2 size={11} />
+                          Подтвердить
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {warehouseItems.length > 0 && (
             <div className={styles.card}>
@@ -1105,6 +1305,58 @@ export default function ChapanOrderDetailPage() {
             <div className={styles.confirmActions}>
               <button type="button" className={styles.confirmSecondary} onClick={() => setCloseUnpaidWarning(false)}>Отмена</button>
               <button type="button" className={styles.confirmDanger} onClick={() => { setCloseUnpaidWarning(false); closeOrder.mutate(order.id); }} disabled={closeOrder.isPending}>Закрыть всё равно</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {reassignOpen && (
+        <div className={styles.confirmOverlay} role="dialog" aria-modal="true" aria-labelledby="reassign-title" onClick={() => setReassignOpen(false)}>
+          <div className={styles.confirmDialog} onClick={(e) => e.stopPropagation()} style={{ maxWidth: 400 }}>
+            <div className={styles.confirmTitle} id="reassign-title">Переназначить менеджера</div>
+            <div className={styles.confirmText} style={{ marginBottom: 4 }}>
+              Текущий менеджер: <strong>{order.managerName ?? 'Не указан'}</strong>
+            </div>
+            <div className={styles.confirmText} style={{ marginBottom: 12, fontSize: 12, color: 'var(--text-tertiary)' }}>
+              Действие будет зафиксировано в истории заказа.
+            </div>
+            <select
+              value={selectedNewManagerId}
+              onChange={(e) => setSelectedNewManagerId(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '8px 10px',
+                borderRadius: 8,
+                border: '1px solid var(--border-subtle)',
+                background: 'var(--bg-surface)',
+                color: 'var(--text-primary)',
+                fontSize: 13,
+                marginBottom: 16,
+              }}
+            >
+              <option value="">— Выберите менеджера —</option>
+              {(orgManagers ?? []).map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name}{m.role === 'owner' ? ' (Владелец)' : m.role === 'admin' ? ' (Адм.)' : ''}
+                </option>
+              ))}
+            </select>
+            <div className={styles.confirmActions}>
+              <button type="button" className={styles.confirmSecondary} onClick={() => setReassignOpen(false)}>Отмена</button>
+              <button
+                type="button"
+                className={styles.confirmPrimary}
+                disabled={!selectedNewManagerId || selectedNewManagerId === order.managerId || reassignManager.isPending}
+                onClick={() => {
+                  if (!selectedNewManagerId) return;
+                  reassignManager.mutate(
+                    { orderId: order.id, managerId: selectedNewManagerId },
+                    { onSuccess: () => setReassignOpen(false) },
+                  );
+                }}
+              >
+                {reassignManager.isPending ? 'Сохранение...' : 'Сохранить'}
+              </button>
             </div>
           </div>
         </div>

@@ -329,26 +329,31 @@
     display: flex;
     gap: 8px;
     overflow-x: auto;
-    padding: 10px 14px;
+    padding: 8px 14px;
     background: color-mix(in srgb, var(--bg-surface) 92%, transparent);
+    backdrop-filter: blur(18px) saturate(130%);
+    -webkit-backdrop-filter: blur(18px) saturate(130%);
     border-bottom: 1px solid var(--border-subtle);
     -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
   }
+  .mobileRail::-webkit-scrollbar { display: none; }
 
   .mobileRailItem {
     flex: 0 0 auto;
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    min-height: 38px;
-    padding: 0 12px;
+    min-height: 44px;
+    padding: 0 14px;
     border-radius: 999px;
     text-decoration: none;
     color: var(--text-secondary);
     background: var(--bg-surface-elevated);
     border: 1px solid var(--border-subtle);
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 600;
+    white-space: nowrap;
   }
 
   .mobileRailItemActive {

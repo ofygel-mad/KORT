@@ -129,9 +129,39 @@
   .orderRow { grid-template-columns: 2px 1fr 1fr; grid-template-rows: auto auto auto; }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
   .root { padding: 12px; gap: 12px; }
   .headerSub { padding-left: 0; }
-  .toolbar { align-items: stretch; }
+
+  .toolbar { flex-direction: column; align-items: stretch; }
   .tabs { width: 100%; }
+
+  /* Convert grid rows to flex columns — avoids auto-placement issues with the 2px stripe */
+  .invoiceRow,
+  .orderRow {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Turn stripe into top accent bar */
+  .rowStripe {
+    height: 3px;
+    width: 100%;
+    border-radius: 10px 10px 0 0;
+  }
+
+  .cell, .cellActions {
+    border-left: none !important;
+    border-top: 1px solid var(--ch-border);
+  }
+
+  .cellActions {
+    justify-content: flex-start;
+  }
+
+  .actionBtn { min-height: 40px; }
+}
+
+@media (max-width: 640px) {
+  .headerSub { padding-left: 0; }
 }

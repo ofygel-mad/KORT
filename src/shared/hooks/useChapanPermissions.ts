@@ -29,6 +29,8 @@ export function useChapanPermissions() {
   const canConfirmInvoice = isChapanAdmin || has('chapan_confirm_invoice');
   const canAccessInvoices = canAccessReady || canConfirmInvoice || canAccessWarehouseNav;
   const canRestoreArchive = canCreateOrder;
+  // Переназначение менеджера: admin/owner или сотрудник с chapan_full_access / full_access
+  const canReassignManager = isAdmin || isChapanAdmin;
   const hasAnyAccess =
     canAccessOrders
     || canAccessProduction
@@ -49,6 +51,7 @@ export function useChapanPermissions() {
     canManageProduction,
     canConfirmInvoice,
     canRestoreArchive,
+    canReassignManager,
     hasAnyAccess,
   };
 }

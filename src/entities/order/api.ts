@@ -2,7 +2,8 @@ import { api, apiClient } from '../../shared/api/client';
 import type {
   ChapanOrder, ChapanInvoice, CreateOrderDto, UpdateOrderDto, AddPaymentDto, ListResponse,
   ProductionTask, ChapanCatalogs, ChapanProfile, ChapanClient, ChapanChangeRequest, CreateOrderItemDto, InvoiceDocumentPayload,
-  OrderAttachment, OrderWarehouseState,
+  OrderAttachment, OrderWarehouseState, OrgManager,
+  ChapanReturn, CreateReturnDto,
 } from './types';
 
 // ── Orders ────────────────────────────────────────────────────────────────────
@@ -111,6 +112,12 @@ export const ordersApi = {
 
   routeItem: (orderId: string, itemId: string, fulfillmentMode: 'warehouse' | 'production') =>
     api.post<{ ok: boolean }>(`/chapan/orders/${orderId}/items/${itemId}/route`, { fulfillmentMode }),
+
+  reassignManager: (orderId: string, managerId: string) =>
+    api.patch<ChapanOrder>(`/chapan/orders/${orderId}/manager`, { managerId }),
+
+  listManagers: () =>
+    api.get<OrgManager[]>('/chapan/orders/managers'),
 };
 
 // ── Production ────────────────────────────────────────────────────────────────
@@ -235,6 +242,25 @@ export const attachmentsApi = {
 
   delete: (orderId: string, attachmentId: string) =>
     api.delete<{ ok: boolean }>(`/chapan/orders/${orderId}/attachments/${attachmentId}`),
+};
+
+// ── Returns (Акты возврата) ───────────────────────────────────────────────────
+
+export const returnsApi = {
+  list: (params?: { orderId?: string; status?: string }) =>
+    api.get<{ count: number; results: ChapanReturn[] }>('/chapan/returns', params),
+
+  get: (id: string) =>
+    api.get<ChapanReturn>(`/chapan/returns/${id}`),
+
+  create: (dto: CreateReturnDto) =>
+    api.post<ChapanReturn>('/chapan/returns', dto),
+
+  confirm: (id: string) =>
+    api.post<ChapanReturn>(`/chapan/returns/${id}/confirm`, {}),
+
+  deleteDraft: (id: string) =>
+    api.delete<{ ok: boolean }>(`/chapan/returns/${id}`),
 };
 
 // ── Users / account API ───────────────────────────────────────────────────────

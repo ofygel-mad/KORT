@@ -15,6 +15,6 @@ test('team settings show seeded employees', async ({ page }) => {
   await navigateWithinApp(page, '/settings/team');
 
   await expect(page).toHaveURL(/\/settings$/);
-  await expect(page.getByText('Demo Company', { exact: true })).toBeVisible();
+  await expect(page.getByText('Workspace', { exact: true })).toBeVisible();
   await expect(page.getByRole('row', { name: /\+77010000003/ })).toBeVisible();
 });

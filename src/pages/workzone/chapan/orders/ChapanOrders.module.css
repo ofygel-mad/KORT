@@ -763,6 +763,10 @@
     transform: none;
   }
 
+  .batchCard:hover {
+    transform: none;
+  }
+
   .row {
     grid-template-columns: auto 1fr auto auto;
   }
@@ -774,6 +778,18 @@
   .searchWrap {
     flex: 1;
     min-width: 0;
+  }
+
+  /* Touch: trash button always visible, enlarged to 40×40 tap area */
+  .trashBtn {
+    width: 36px;
+    height: 36px;
+  }
+
+  .trashBtnRow {
+    opacity: 1;
+    width: 36px;
+    height: 36px;
   }
 }
 

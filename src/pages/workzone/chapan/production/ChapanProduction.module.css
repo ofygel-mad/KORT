@@ -23,6 +23,7 @@
 
 .searchInput {
   width: 180px;
+  max-width: 100%;
   padding: 6px 10px 6px 28px;
   background: rgba(255,255,255,.05);
   border: 1px solid rgba(255,255,255,.1);
@@ -644,7 +645,9 @@
     padding: 12px;
   }
 
+  /* .board is display:grid — use grid-template-columns to stack, not flex-direction */
   .board {
+    display: flex;
     flex-direction: column;
     gap: 16px;
   }
@@ -655,9 +658,10 @@
     max-height: none;
   }
 
+  /* Remove height cap on mobile — column scrolls with the page */
   .columnCards {
-    max-height: 60vh;
-    overflow-y: auto;
+    max-height: none;
+    overflow-y: visible;
   }
 
   .card {
@@ -675,7 +679,17 @@
     flex: 1;
     min-width: 80px;
     font-size: 12px;
-    padding: 7px 10px;
+    padding: 9px 10px;
+    min-height: 40px;
+  }
+
+  .searchInput {
+    width: 100%;
+  }
+
+  .headerRight {
+    flex-wrap: wrap;
+    gap: 8px;
   }
 }
 

@@ -134,10 +134,27 @@
   .rowActions { grid-column: 2 / span 2; grid-row: 4; border-left: none; border-top: 1px solid var(--ch-border); justify-content: flex-start; }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
   .root { padding: 12px; gap: 12px; }
   .headerSub { padding-left: 0; }
   .toolbar { flex-direction: column; align-items: stretch; }
   .searchWrap { min-width: 0; max-width: none; }
   .statusSelect { width: 100%; }
+
+  /* Increase touch targets */
+  .viewBtn {
+    width: 40px;
+    height: 40px;
+  }
+
+  .restoreBtn {
+    min-height: 40px;
+  }
+
+  /* Row actions full-width on small screens */
+  .rowActions { gap: 8px; flex-wrap: wrap; }
+}
+
+@media (max-width: 640px) {
+  .headerSub { padding-left: 0; }
 }
