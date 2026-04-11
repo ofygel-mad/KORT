@@ -215,6 +215,21 @@
   white-space: nowrap;
 }
 
+.pendingRoutingBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .05em;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: color-mix(in srgb, #D94F4F 14%, transparent);
+  border: 1px solid color-mix(in srgb, #D94F4F 30%, transparent);
+  color: #D94F4F;
+  white-space: nowrap;
+}
+
 .statusBadge {
   font-size: 10px;
   font-weight: 700;

@@ -164,7 +164,7 @@ export function MobileNav() {
 
               {planIncludes(plan, 'industrial') && (
                 <div className={styles.drawerSection}>
-                  <div className={styles.drawerSectionLabel}>Воркзоны</div>
+                  <div className={styles.drawerSectionLabel}>Кабинеты</div>
                   <NavLink
                     to={CHAPAN_NAV_ITEM.to}
                     className={({ isActive }) =>

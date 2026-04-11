@@ -1,13 +1,12 @@
 ﻿import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { CheckCircle2, Clock, CreditCard, MessageSquare, AlertTriangle, Pencil, ArchiveIcon, RotateCcw, Download, Package, XCircle, FileText, Paperclip, Trash2, Upload, Undo2 } from 'lucide-react';
-import { useOrder, useOrderWarehouseState, useFulfillFromStock, useConfirmOrder, useChangeOrderStatus, useAddPayment, useAddOrderActivity, useRestoreOrder, useCloseOrder, useCreateInvoice, useSetRequiresInvoice, useConfirmSeamstress, useRouteSingleItem, useRouteOrderItems, useUploadAttachment, useDeleteAttachment, useReassignManager, useOrgManagers, useReturns, useCreateReturn, useConfirmReturn, useDeleteReturnDraft } from '../../../../entities/order/queries';
+import { useOrder, useChangeOrderStatus, useAddPayment, useAddOrderActivity, useRestoreOrder, useCloseOrder, useCreateInvoice, useSetRequiresInvoice, useConfirmSeamstress, useRouteSingleItem, useUploadAttachment, useDeleteAttachment, useReassignManager, useOrgManagers, useReturns, useCreateReturn, useConfirmReturn, useDeleteReturnDraft } from '../../../../entities/order/queries';
 import { useChapanPermissions } from '../../../../shared/hooks/useChapanPermissions';
 import { useProductsAvailability } from '../../../../entities/warehouse/queries';
 import type { OrderItem, OrderItemFulfillmentMode, OrderStatus, Priority, Urgency, OrderAttachment, ReturnReason, ReturnRefundMethod, ReturnItemCondition, RETURN_REASON_LABELS, RETURN_REFUND_METHOD_LABELS } from '../../../../entities/order/types';
 import { RETURN_REASON_LABELS as REASON_LABELS, RETURN_REFUND_METHOD_LABELS as REFUND_LABELS, RETURN_CONDITION_LABELS } from '../../../../entities/order/types';
 import { attachmentsApi } from '../../../../entities/order/api';
-import { useOrderWarehouseLiveSync } from '../../../../entities/order/live';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -164,10 +163,6 @@ export default function ChapanOrderDetailPage() {
   })();
 
   const { data: order, isLoading, isError } = useOrder(id!);
-  const { data: warehouseState } = useOrderWarehouseState(id!);
-  const warehouseLive = useOrderWarehouseLiveSync(id, Boolean(id));
-  const fulfillFromStock = useFulfillFromStock();
-  const confirmOrder = useConfirmOrder();
   const changeStatus = useChangeOrderStatus();
   const addPayment = useAddPayment();
   const addActivity = useAddOrderActivity();
@@ -177,7 +172,6 @@ export default function ChapanOrderDetailPage() {
   const setRequiresInvoice = useSetRequiresInvoice();
   const confirmSeamstress = useConfirmSeamstress();
   const routeSingleItem = useRouteSingleItem();
-  const routeOrderItems = useRouteOrderItems();
   const uploadAttachment = useUploadAttachment(id!);
   const deleteAttachment = useDeleteAttachment(id!);
   const reassignManager = useReassignManager();
@@ -193,38 +187,9 @@ export default function ChapanOrderDetailPage() {
   const productNames = [...new Set((order?.items ?? []).map((item) => item.productName).filter(Boolean))];
   const { data: stockMap } = useProductsAvailability(productNames);
 
-  // Local routing state for new orders: user selects per-item mode without API calls.
-  // Only committed when the user clicks the global confirm/route button.
-  const [localRoutes, setLocalRoutes] = useState<Record<string, 'warehouse' | 'production'>>({});
-
-  // Initialize localRoutes from server-side fulfillmentMode when order changes.
-  useEffect(() => {
-    if (!order || order.status !== 'new') { setLocalRoutes({}); return; }
-    const initial: Record<string, 'warehouse' | 'production'> = {};
-    for (const item of order.items ?? []) {
-      if (item.fulfillmentMode === 'warehouse' || item.fulfillmentMode === 'production') {
-        initial[item.id] = item.fulfillmentMode;
-      }
-    }
-    setLocalRoutes(initial);
-  }, [order]);
-
-  // When stockMap loads, fill in smart defaults for items not yet routed.
-  useEffect(() => {
-    if (!order || order.status !== 'new' || !stockMap) return;
-    setLocalRoutes((prev) => {
-      const next = { ...prev };
-      let changed = false;
-      for (const item of order.items ?? []) {
-        if (!next[item.id]) {
-          const stock = stockMap[item.productName];
-          next[item.id] = (stock?.qty ?? 0) >= item.quantity ? 'warehouse' : 'production';
-          changed = true;
-        }
-      }
-      return changed ? next : prev;
-    });
-  }, [stockMap, order]);
+  // Route confirmation modal state
+  type RouteConfirmDraft = { itemId: string; itemName: string; fulfillmentMode: 'warehouse' | 'production' };
+  const [routeConfirmDraft, setRouteConfirmDraft] = useState<RouteConfirmDraft | null>(null);
 
   const [showPayForm, setShowPayForm] = useState(false);
   const [comment, setComment] = useState('');
@@ -348,6 +313,16 @@ export default function ChapanOrderDetailPage() {
     }
   }
 
+  function handleRouteConfirm() {
+    if (!routeConfirmDraft || !order) return;
+    const closeModal = () => setRouteConfirmDraft(null);
+
+    routeSingleItem.mutate(
+      { orderId: order.id, itemId: routeConfirmDraft.itemId, fulfillmentMode: routeConfirmDraft.fulfillmentMode },
+      { onSuccess: closeModal },
+    );
+  }
+
   if (isLoading) {
     return <div className={styles.root}><div className={styles.loadingSkeleton}>{Array.from({ length: 4 }).map((_, i) => <div key={i} className={styles.skeletonBlock} />)}</div></div>;
   }
@@ -371,21 +346,13 @@ export default function ChapanOrderDetailPage() {
 
   const warehouseItems = orderItems.filter((item) => currentRoutes[item.id] === 'warehouse');
   const productionItems = orderItems.filter((item) => currentRoutes[item.id] === 'production');
-  const shouldShowWarehouseState =
-    warehouseItems.length > 0
-    || (warehouseState?.reservationSummary.total ?? 0) > 0
-    || (warehouseState?.documentSummary.total ?? 0) > 0;
+  const unroutedItems = orderItems.filter((item) => currentRoutes[item.id] === 'unassigned');
   const hasUnfinishedProduction = productionItems.some((pItem) => {
     const pTask = productionTaskByItemId.get(pItem.id);
     return !pTask || pTask.status !== 'done';
   });
 
-  // For new orders: use localRoutes to drive the confirm button logic.
   const isNewOrder = order.status === 'new';
-  const allLocalAssigned = isNewOrder && orderItems.length > 0
-    && orderItems.every((i) => localRoutes[i.id] === 'warehouse' || localRoutes[i.id] === 'production');
-  const localWarehouseCount = isNewOrder ? orderItems.filter((i) => localRoutes[i.id] === 'warehouse').length : 0;
-  const localProductionCount = isNewOrder ? orderItems.filter((i) => localRoutes[i.id] === 'production').length : 0;
 
   return (
     <div className={styles.root}>
@@ -457,17 +424,19 @@ export default function ChapanOrderDetailPage() {
 
           <div className={styles.card}>
             <div className={styles.cardLabel}>Позиции заказа</div>
+            {orderItems.length > 0 && (
+              <div className={styles.routeSummaryHint}>
+                Зафиксировано: {warehouseItems.length} готово · {productionItems.length} в цехе · {unroutedItems.length} без решения
+              </div>
+            )}
             <div className={styles.itemsList}>
               {(order.items ?? []).map((item) => {
                 const stock = stockMap?.[item.productName];
                 const hasEnoughStock = (stock?.qty ?? 0) >= item.quantity;
-                // On new orders, use localRoutes for display; on other statuses use server-side routes.
-                const route = isNewOrder
-                  ? (localRoutes[item.id] ?? 'unassigned')
-                  : (currentRoutes[item.id] ?? 'unassigned');
+                const route = currentRoutes[item.id] ?? 'unassigned';
 
                 const task = productionTaskByItemId.get(item.id);
-                const badgeLabel = route === 'production' && task && !isNewOrder
+                const badgeLabel = route === 'production' && task
                   ? (PROD_STATUS_LABEL[task.status] ?? ROUTE_LABEL[route])
                   : ROUTE_LABEL[route];
                 const isRouteable = ['new', 'confirmed', 'in_production'].includes(order.status);
@@ -483,6 +452,11 @@ export default function ChapanOrderDetailPage() {
                     : route === 'production'
                       ? (task?.status === 'done' ? styles.routeBadgeDone : styles.routeBadgeProduction)
                       : styles.routeBadgePending;
+                const routeHint = route === 'warehouse'
+                  ? (isWaiting ? 'Зафиксировано как готово. Ожидает завершения остальных позиций.' : 'Зафиксировано как готово.')
+                  : route === 'production'
+                    ? (task?.status === 'done' ? 'Позиция отшита и зафиксирована цехом.' : 'Зафиксировано: отправлено в цех.')
+                    : 'Маршрут для этой позиции ещё не выбран.';
 
                 const showBadge = isTerminal || (!isNewOrder && route !== 'unassigned');
 
@@ -509,49 +483,29 @@ export default function ChapanOrderDetailPage() {
                           {hasEnoughStock ? <><CheckCircle2 size={10} /> В наличии ({stock.qty} шт.)</> : <><XCircle size={10} /> Нет в наличии</>}
                         </span>
                       )}
+                      <span className={`${styles.routeHint} ${route === 'unassigned' ? styles.routeHintMuted : styles.routeHintStrong}`}>
+                        {routeHint}
+                      </span>
                       {isRouteable && (
                         <div className={styles.routeActions}>
-                          {isNewOrder ? (
-                            // On new orders: update local state only — no API call until global confirm.
-                            <>
-                              <button
-                                type="button"
-                                className={`${styles.routeActionBtn} ${route === 'warehouse' ? styles.routeActionBtnActive : ''}`}
-                                onClick={() => setLocalRoutes((prev) => ({ ...prev, [item.id]: 'warehouse' }))}
-                                disabled={route === 'warehouse'}
-                              >
-                                Склад
-                              </button>
-                              <button
-                                type="button"
-                                className={`${styles.routeActionBtn} ${styles.routeActionBtnPrimary} ${route === 'production' ? styles.routeActionBtnActive : ''}`}
-                                onClick={() => setLocalRoutes((prev) => ({ ...prev, [item.id]: 'production' }))}
-                                disabled={route === 'production'}
-                              >
-                                В цех
-                              </button>
-                            </>
-                          ) : (
-                            // On confirmed/in_production: save immediately via routeSingleItem.
-                            <>
-                              <button
-                                type="button"
-                                className={`${styles.routeActionBtn} ${route === 'warehouse' ? styles.routeActionBtnActive : ''}`}
-                                onClick={() => routeSingleItem.mutate({ orderId: order.id, itemId: item.id, fulfillmentMode: 'warehouse' })}
-                                disabled={routeSingleItem.isPending || route === 'warehouse'}
-                              >
-                                Склад
-                              </button>
-                              <button
-                                type="button"
-                                className={`${styles.routeActionBtn} ${styles.routeActionBtnPrimary} ${route === 'production' ? styles.routeActionBtnActive : ''}`}
-                                onClick={() => routeSingleItem.mutate({ orderId: order.id, itemId: item.id, fulfillmentMode: 'production' })}
-                                disabled={routeSingleItem.isPending || route === 'production'}
-                              >
-                                В цех
-                              </button>
-                            </>
-                          )}
+                          <button
+                            type="button"
+                            className={`${styles.routeActionBtn} ${route === 'warehouse' ? styles.routeActionBtnActive : ''}`}
+                            onClick={() => setRouteConfirmDraft({ itemId: item.id, itemName: buildItemLine(item), fulfillmentMode: 'warehouse' })}
+                            disabled={routeSingleItem.isPending || route === 'warehouse'}
+                            title={route === 'warehouse' ? 'Позиция уже зафиксирована как готовая' : undefined}
+                          >
+                            Готово
+                          </button>
+                          <button
+                            type="button"
+                            className={`${styles.routeActionBtn} ${styles.routeActionBtnPrimary} ${route === 'production' ? styles.routeActionBtnActive : ''}`}
+                            onClick={() => setRouteConfirmDraft({ itemId: item.id, itemName: buildItemLine(item), fulfillmentMode: 'production' })}
+                            disabled={routeSingleItem.isPending || route === 'production'}
+                            title={route === 'production' ? 'Позиция уже отправлена в цех' : undefined}
+                          >
+                            В цех
+                          </button>
                         </div>
                       )}
                     </div>
@@ -669,58 +623,10 @@ export default function ChapanOrderDetailPage() {
               )}
 
               {isNewOrder && (
-                <>
-                  {!allLocalAssigned ? (
-                    // Not all items have a route assigned yet — show disabled hint
-                    <button className={`${styles.actionBtn} ${styles.actionPrimary}`} disabled>
-                      <Package size={14} />
-                      Назначьте маршрут для каждой позиции
-                    </button>
-                  ) : localProductionCount === 0 ? (
-                    // All items → warehouse (Готово)
-                    <button
-                      className={`${styles.actionBtn} ${styles.actionSecondary}`}
-                      onClick={() => fulfillFromStock.mutate(order.id, {
-                        onSuccess: () => { setSelectedOrderId(null); navigate('/workzone/chapan/ready'); },
-                      })}
-                      disabled={fulfillFromStock.isPending}
-                    >
-                      <Package size={14} />
-                      {fulfillFromStock.isPending ? 'Перевод...' : 'Перевести в Готово'}
-                    </button>
-                  ) : localWarehouseCount === 0 ? (
-                    // All items → production (В цех)
-                    <button
-                      className={`${styles.actionBtn} ${styles.actionPrimary}`}
-                      onClick={() => confirmOrder.mutate(order.id, {
-                        onSuccess: () => { setSelectedOrderId(null); navigate('/workzone/chapan/orders'); },
-                      })}
-                      disabled={confirmOrder.isPending}
-                    >
-                      <Package size={14} />
-                      {confirmOrder.isPending ? 'Отправка...' : 'Отправить в цех'}
-                    </button>
-                  ) : (
-                    // Mixed routing — some warehouse, some production
-                    <button
-                      className={`${styles.actionBtn} ${styles.actionPrimary}`}
-                      onClick={() => routeOrderItems.mutate(
-                        {
-                          id: order.id,
-                          items: orderItems.map((i) => ({
-                            itemId: i.id,
-                            fulfillmentMode: localRoutes[i.id] as 'warehouse' | 'production',
-                          })),
-                        },
-                        { onSuccess: () => { setSelectedOrderId(null); navigate('/workzone/chapan/orders'); } },
-                      )}
-                      disabled={routeOrderItems.isPending}
-                    >
-                      <Package size={14} />
-                      {routeOrderItems.isPending ? 'Применение...' : `Подтвердить маршрут (${localWarehouseCount} склад · ${localProductionCount} цех)`}
-                    </button>
-                  )}
-                </>
+                <div className={styles.newOrderRouteHint}>
+                  <Package size={13} />
+                  Назначьте маршрут для каждой позиции выше
+                </div>
               )}
 
               {['ready', 'transferred', 'on_warehouse', 'completed'].includes(order.status) && (
@@ -730,68 +636,36 @@ export default function ChapanOrderDetailPage() {
                 </button>
               )}
 
-              {order.status === 'ready' && (
-                pendingInvoice ? (
-                  <div className={styles.invoicePanel}>
-                    <div className={styles.invoicePanelTitle}>
-                      <Clock size={12} />
-                      Накладная <span className={styles.invoicePanelNum}>#{pendingInvoice.invoiceNumber}</span> ожидает подтверждения
-                    </div>
-                    <div className={styles.invoiceConfirms}>
-                      <span className={`${styles.invoiceChip} ${pendingInvoice.seamstressConfirmed ? styles.invoiceChipDone : ''}`}>
-                        {pendingInvoice.seamstressConfirmed ? <CheckCircle2 size={11} /> : <Clock size={11} />}
-                        Швея
-                      </span>
-                      <span className={`${styles.invoiceChip} ${pendingInvoice.warehouseConfirmed ? styles.invoiceChipDone : ''}`}>
-                        {pendingInvoice.warehouseConfirmed ? <CheckCircle2 size={11} /> : <Clock size={11} />}
-                        Склад
-                      </span>
-                    </div>
-                    {!pendingInvoice.seamstressConfirmed && (
-                      <button
-                        className={styles.invoiceConfirmBtn}
-                        onClick={() => confirmSeamstress.mutate(pendingInvoice.id)}
-                        disabled={confirmSeamstress.isPending}
-                      >
-                        <CheckCircle2 size={13} />
-                        {confirmSeamstress.isPending ? 'Подтверждение...' : 'Подтвердить отправку'}
-                      </button>
-                    )}
-                    <div className={styles.invoicePanelHint}>
-                      Заказ перейдёт на склад после двустороннего подтверждения
-                    </div>
+              {order.status === 'ready' && pendingInvoice && (
+                <div className={styles.invoicePanel}>
+                  <div className={styles.invoicePanelTitle}>
+                    <Clock size={12} />
+                    Накладная <span className={styles.invoicePanelNum}>#{pendingInvoice.invoiceNumber}</span> ожидает подтверждения
                   </div>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div className={styles.invoiceConfirms}>
+                    <span className={`${styles.invoiceChip} ${pendingInvoice.seamstressConfirmed ? styles.invoiceChipDone : ''}`}>
+                      {pendingInvoice.seamstressConfirmed ? <CheckCircle2 size={11} /> : <Clock size={11} />}
+                      Швея
+                    </span>
+                    <span className={`${styles.invoiceChip} ${pendingInvoice.warehouseConfirmed ? styles.invoiceChipDone : ''}`}>
+                      {pendingInvoice.warehouseConfirmed ? <CheckCircle2 size={11} /> : <Clock size={11} />}
+                      Склад
+                    </span>
+                  </div>
+                  {!pendingInvoice.seamstressConfirmed && (
                     <button
-                      className={`${styles.actionBtn} ${styles.actionSecondary}`}
-                      onClick={() => void handleTransferToWarehouse()}
-                      disabled={createInvoice.isPending || changeStatus.isPending}
+                      className={styles.invoiceConfirmBtn}
+                      onClick={() => confirmSeamstress.mutate(pendingInvoice.id)}
+                      disabled={confirmSeamstress.isPending}
                     >
-                      {createInvoice.isPending ? 'Создание накладной...' : 'На склад'}
+                      <CheckCircle2 size={13} />
+                      {confirmSeamstress.isPending ? 'Подтверждение...' : 'Подтвердить отправку'}
                     </button>
-                    <div
-                      className={`${styles.invoiceToggle} ${order.requiresInvoice ? styles.invoiceToggleOn : ''}`}
-                      onClick={() => { if (!setRequiresInvoice.isPending) setRequiresInvoice.mutate({ id: order.id, requiresInvoice: !order.requiresInvoice }); }}
-                      style={{ opacity: setRequiresInvoice.isPending ? 0.6 : 1 }}
-                      role="switch"
-                      aria-checked={order.requiresInvoice}
-                      tabIndex={0}
-                      onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); if (!setRequiresInvoice.isPending) setRequiresInvoice.mutate({ id: order.id, requiresInvoice: !order.requiresInvoice }); } }}
-                    >
-                      <div className={`${styles.invoiceToggleIcon} ${order.requiresInvoice ? styles.invoiceToggleIconOn : ''}`}>
-                        <FileText size={13} />
-                      </div>
-                      <div className={styles.invoiceToggleContent}>
-                        <div className={styles.invoiceToggleLabel}>Прикрепить накладную</div>
-                        <div className={styles.invoiceToggleDesc}>Создать при отправке на склад</div>
-                      </div>
-                      <div className={`${styles.toggleTrack} ${order.requiresInvoice ? styles.toggleTrackOn : ''}`}>
-                        <div className={styles.toggleKnob} />
-                      </div>
-                    </div>
+                  )}
+                  <div className={styles.invoicePanelHint}>
+                    Заказ перейдёт на склад после двустороннего подтверждения
                   </div>
-                )
+                </div>
               )}
               {order.status === 'transferred' && <button className={`${styles.actionBtn} ${styles.actionSecondary}`} onClick={() => changeStatus.mutate({ id: order.id, status: 'completed' })} disabled={changeStatus.isPending}>Завершить заказ</button>}
 
@@ -969,164 +843,6 @@ export default function ChapanOrderDetailPage() {
             </div>
           )}
 
-          {shouldShowWarehouseState && (
-            <div className={styles.card}>
-              <div className={styles.cardLabel}>Warehouse Twin</div>
-              <div style={{ display: 'grid', gap: 12 }}>
-                <div
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    width: 'fit-content',
-                    padding: '4px 10px',
-                    borderRadius: 999,
-                    fontSize: 11,
-                    fontWeight: 600,
-                    background: `color-mix(in srgb, ${warehouseLive.isConnected ? 'var(--fill-positive)' : 'var(--fill-warning)'} 14%, transparent)`,
-                    color: warehouseLive.isConnected ? 'var(--fill-positive)' : 'var(--fill-warning)',
-                  }}
-                >
-                  {warehouseLive.isConnected
-                    ? `Live sync connected${warehouseLive.lastSyncAt ? ` · ${fmtDatetime(warehouseLive.lastSyncAt)}` : ''}`
-                    : 'Live sync reconnecting'}
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
-                  <div style={{ border: '1px solid var(--border-subtle)', borderRadius: 10, padding: '10px 12px', background: 'var(--bg-surface)' }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--text-tertiary)' }}>Site</div>
-                    <div style={{ marginTop: 6, fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
-                      {warehouseState?.site?.name ?? 'Не определён'}
-                    </div>
-                    <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 4 }}>
-                      {warehouseState?.site?.code ?? 'Pending resolution'}
-                    </div>
-                  </div>
-                  <div style={{ border: '1px solid var(--border-subtle)', borderRadius: 10, padding: '10px 12px', background: 'var(--bg-surface)' }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--text-tertiary)' }}>Reservations</div>
-                    <div style={{ marginTop: 6, fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
-                      {warehouseState?.reservationSummary.active ?? 0} active / {warehouseState?.reservationSummary.total ?? 0}
-                    </div>
-                    <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 4 }}>
-                      Qty reserved: {warehouseState?.reservationSummary.qtyReserved ?? 0}
-                    </div>
-                  </div>
-                  <div style={{ border: '1px solid var(--border-subtle)', borderRadius: 10, padding: '10px 12px', background: 'var(--bg-surface)' }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--text-tertiary)' }}>Documents</div>
-                    <div style={{ marginTop: 6, fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
-                      {warehouseState?.documentSummary.handoff ?? 0} handoff / {warehouseState?.documentSummary.shipment ?? 0} shipment
-                    </div>
-                    <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 4 }}>
-                      Total: {warehouseState?.documentSummary.total ?? 0}
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{ display: 'grid', gap: 8 }}>
-                  {(warehouseState?.items ?? []).map((item) => (
-                    <div
-                      key={item.orderItemId}
-                      style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'minmax(0, 1.3fr) minmax(0, .9fr) auto',
-                        gap: 12,
-                        border: '1px solid var(--border-subtle)',
-                        borderRadius: 10,
-                        padding: '10px 12px',
-                        background: 'var(--bg-surface)',
-                      }}
-                    >
-                      <div style={{ minWidth: 0 }}>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{item.productName}</div>
-                        <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 4 }}>
-                          {item.attributesSummary ?? item.variantKey ?? 'Variant pending'}
-                        </div>
-                      </div>
-                      <div style={{ minWidth: 0 }}>
-                        <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
-                          Site: {item.site?.code ?? warehouseState?.site?.code ?? '—'}
-                        </div>
-                        <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 4 }}>
-                          Bins: {item.binCodes.length ? item.binCodes.join(', ') : '—'}
-                        </div>
-                      </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <div
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 6,
-                            padding: '4px 8px',
-                            borderRadius: 999,
-                            fontSize: 11,
-                            fontWeight: 600,
-                            background: `color-mix(in srgb, ${
-                              item.reservationStatus === 'active'
-                                ? 'var(--fill-warning)'
-                                : item.reservationStatus === 'consumed'
-                                  ? 'var(--fill-info, #4ea1ff)'
-                                  : item.reservationStatus === 'released'
-                                    ? 'var(--fill-negative)'
-                                    : 'var(--border-default)'
-                            } 16%, transparent)`,
-                            color:
-                              item.reservationStatus === 'active'
-                                ? 'var(--fill-warning)'
-                                : item.reservationStatus === 'consumed'
-                                  ? 'var(--fill-info, #4ea1ff)'
-                                  : item.reservationStatus === 'released'
-                                    ? 'var(--fill-negative)'
-                                    : 'var(--text-secondary)',
-                          }}
-                        >
-                          {item.reservationStatus}
-                        </div>
-                        <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 6 }}>
-                          Qty: {item.qtyReserved}/{item.quantity}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-
-                  {!warehouseState?.items?.length && (
-                    <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
-                      Warehouse read model ещё не собрал item-level state для этого заказа.
-                    </div>
-                  )}
-                </div>
-
-                {(warehouseState?.documents?.length ?? 0) > 0 && (
-                  <div style={{ display: 'grid', gap: 6 }}>
-                    {warehouseState?.documents.map((document) => (
-                      <div
-                        key={document.id}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          gap: 12,
-                          padding: '9px 12px',
-                          borderRadius: 10,
-                          border: '1px solid var(--border-subtle)',
-                          background: 'var(--bg-surface)',
-                        }}
-                      >
-                        <div>
-                          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>
-                            {document.documentType === 'handoff_to_warehouse' ? 'Передача на склад' : 'Отгрузка'}
-                          </div>
-                          <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 4 }}>
-                            {document.referenceNo ?? document.site?.name ?? 'Без reference'} · {fmtDatetime(document.postedAt)}
-                          </div>
-                        </div>
-                        <div style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600 }}>{document.status}</div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
           {productionItems.length > 0 && (
             <div className={styles.card}>
               <div className={styles.cardLabel}>Производство</div>
@@ -1270,6 +986,39 @@ export default function ChapanOrderDetailPage() {
           </div>
         </div>
       </div>
+
+      {routeConfirmDraft && (
+        <div className={styles.confirmOverlay} role="dialog" aria-modal="true" aria-labelledby="route-confirm-title" onClick={() => setRouteConfirmDraft(null)}>
+          <div className={styles.confirmDialog} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.confirmTitle} id="route-confirm-title">
+              {routeConfirmDraft.fulfillmentMode === 'warehouse' ? 'Отметить как Готово?' : 'Отправить в цех?'}
+            </div>
+
+            <div className={styles.confirmText}>
+              Позиция <strong>«{routeConfirmDraft.itemName}»</strong> будет{' '}
+              {routeConfirmDraft.fulfillmentMode === 'warehouse' ? 'отмечена как готовая к отправке' : 'отправлена в цех на пошив'}.
+            </div>
+
+            <div className={styles.confirmActions}>
+              <button
+                type="button"
+                className={styles.confirmSecondary}
+                onClick={() => setRouteConfirmDraft(null)}
+              >
+                Отмена
+              </button>
+              <button
+                type="button"
+                className={styles.confirmPrimary}
+                onClick={handleRouteConfirm}
+                disabled={routeSingleItem.isPending}
+              >
+                {routeSingleItem.isPending ? 'Подождите...' : 'Подтвердить'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {cancelConfirmOpen && (
         <div className={styles.confirmOverlay} role="dialog" aria-modal="true" aria-labelledby="cancel-title" onClick={() => setCancelConfirmOpen(false)}>

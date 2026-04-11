@@ -10,7 +10,7 @@ import { useChapanUiStore } from '../../../../features/workzone/chapan/store';
 import ChapanInvoicePreviewModal from '../invoices/ChapanInvoicePreviewModal';
 import styles from './ChapanReady.module.css';
 
-type ReadyStatus = Extract<OrderStatus, 'ready'>;
+type ReadyStatus = Extract<OrderStatus, 'confirmed' | 'in_production' | 'ready'>;
 type ViewMode = 'grid' | 'list';
 type ReadyOrder = ChapanOrder & { status: ReadyStatus };
 type DisplayGroup =
@@ -18,11 +18,15 @@ type DisplayGroup =
   | { kind: 'batch'; orders: ReadyOrder[] };
 
 const STATUS_LABEL: Record<ReadyStatus, string> = {
+  confirmed: 'Частично готово',
+  in_production: 'Частично готово',
   ready: 'Готово',
 };
 
 
 const STATUS_COLOR: Record<ReadyStatus, string> = {
+  confirmed: '#8B5CF6',
+  in_production: '#E5922A',
   ready: '#4FC999',
 };
 
@@ -75,6 +79,18 @@ function isOverdue(date: string | null) {
 
 function hasPendingProduction(order: ReadyOrder): boolean {
   return (order.productionTasks ?? []).some(task => task.status !== 'done');
+}
+
+function hasWarehouseFulfillment(order: ChapanOrder): boolean {
+  return (order.items ?? []).some(item => item.fulfillmentMode === 'warehouse');
+}
+
+function hasPendingRouting(order: ReadyOrder): boolean {
+  return (order.items ?? []).some(item => !item.fulfillmentMode || item.fulfillmentMode === 'unassigned');
+}
+
+function pendingRoutingCount(order: ReadyOrder): number {
+  return (order.items ?? []).filter(item => !item.fulfillmentMode || item.fulfillmentMode === 'unassigned').length;
 }
 
 function buildItemSignature(orderItem: ChapanOrder['items'][number]) {
@@ -164,7 +180,6 @@ export default function ChapanReadyPage() {
   const userId = useAuthStore((state) => state.user?.id);
 
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<ReadyStatus | ''>('');
   const [viewMode, setViewModeState] = useState<ViewMode>('grid');
   const [grouped, setGroupedState] = useState(true);
   const [showViewMenu, setShowViewMenu] = useState(false);
@@ -219,10 +234,15 @@ export default function ChapanReadyPage() {
     });
   };
 
-  const requestedStatuses = statusFilter ? statusFilter : 'ready';
-  const { data, isLoading, isError } = useOrders({
+  const { data: readyData, isLoading: readyLoading, isError: readyError } = useOrders({
     archived: false,
-    statuses: requestedStatuses,
+    statuses: 'ready',
+    search: deferredSearch || undefined,
+    limit: 200,
+  });
+  const { data: partialData, isLoading: partialLoading, isError: partialError } = useOrders({
+    archived: false,
+    hasWarehouseItems: true,
     search: deferredSearch || undefined,
     limit: 200,
   });
@@ -234,9 +254,21 @@ export default function ChapanReadyPage() {
   const createInvoice = useCreateInvoice();
   const previewInvoiceDocument = usePreviewInvoiceDocument();
 
-  const orders = (data?.results ?? []).filter((order): order is ReadyOrder => (
-    order.status === 'ready'
-  ));
+  const isLoading = readyLoading || partialLoading;
+  const isError = readyError || partialError;
+
+  const orderMap = new Map<string, ReadyOrder>();
+  for (const order of readyData?.results ?? []) {
+    if (order.status === 'ready') {
+      orderMap.set(order.id, order as ReadyOrder);
+    }
+  }
+  for (const order of partialData?.results ?? []) {
+    if ((order.status === 'confirmed' || order.status === 'in_production') && hasWarehouseFulfillment(order)) {
+      orderMap.set(order.id, order as ReadyOrder);
+    }
+  }
+  const orders = [...orderMap.values()];
 
   const displayGroups = grouped
     ? buildGroups(orders)
@@ -253,6 +285,12 @@ export default function ChapanReadyPage() {
   }
 
   async function dispatchReadyOrders(targetOrders: ReadyOrder[], onSuccess?: () => void) {
+    const pendingRouting = targetOrders.filter(o => hasPendingRouting(o));
+    if (pendingRouting.length > 0) {
+      setWorkshopBlockedOrders(pendingRouting.map(o => `#${o.orderNumber} — сначала назначьте маршрут всем позициям`));
+      return;
+    }
+
     const pendingWorkshop = targetOrders.filter(o => hasPendingProduction(o));
     if (pendingWorkshop.length > 0) {
       setWorkshopBlockedOrders(pendingWorkshop.map(o => `#${o.orderNumber}`));
@@ -480,7 +518,7 @@ export default function ChapanReadyPage() {
 
       {!isLoading && (
         <div className={styles.count}>
-          {data?.count ?? 0} заказов в работе после пошива
+          {orders.length} заказов с готовыми позициями
         </div>
       )}
 
@@ -498,7 +536,7 @@ export default function ChapanReadyPage() {
         <div className={styles.emptyState}>
           <div className={styles.emptyTitle}>Пока пусто</div>
           <div className={styles.emptyText}>
-            Как только швея завершит карточку, заказ появится здесь.
+            Как только по заказу появится хотя бы одна готовая позиция, он появится здесь.
           </div>
         </div>
       )}
@@ -588,10 +626,16 @@ export default function ChapanReadyPage() {
             <button
               className={`${styles.floatingAction} ${styles.floatingActionPrimary}`}
               onClick={handleTransferToWarehouse}
-              disabled={createInvoice.isPending || selectedOrders.some(hasPendingProduction)}
+              disabled={createInvoice.isPending || selectedOrders.some(hasPendingProduction) || selectedOrders.some(hasPendingRouting)}
             >
               <Warehouse size={13} />
-              {selectedOrders.some(hasPendingProduction) ? 'Ждём цех' : createInvoice.isPending ? 'Создание...' : `На склад (${selectedIds.size})`}
+              {selectedOrders.some(hasPendingRouting)
+                ? 'Назначьте маршрут'
+                : selectedOrders.some(hasPendingProduction)
+                  ? 'Ждём цех'
+                  : createInvoice.isPending
+                    ? 'Создание...'
+                    : `На склад (${selectedIds.size})`}
             </button>
           </div>
         </div>
@@ -701,6 +745,8 @@ function ReadyCard({
   const moreItems = (order.items?.length ?? 0) - 1;
   const nextStageLabel = getStageActionLabel(order.status);
   const isPendingWorkshop = hasPendingProduction(order);
+  const isPendingRouting = hasPendingRouting(order);
+  const pendingCount = pendingRoutingCount(order);
 
   const handleClick = selectMode && onToggleSelect ? onToggleSelect : onOpen;
 
@@ -722,6 +768,9 @@ function ReadyCard({
 
       <div className={styles.cardHead}>
         <span className={styles.statusBadge}>{STATUS_LABEL[order.status]}</span>
+        {isPendingRouting && (
+          <span className={styles.pendingRoutingBadge}><AlertTriangle size={10} /> {pendingCount} без маршрута</span>
+        )}
         {isPendingWorkshop && (
           <span className={styles.workshopBadge}><Clock size={10} /> Ждём цех</span>
         )}
@@ -758,8 +807,8 @@ function ReadyCard({
 
       {!selectMode && (
         <div className={styles.actions} onClick={(event) => event.stopPropagation()}>
-          <button className={styles.primaryAction} onClick={onAdvance} disabled={isPendingWorkshop}>
-            {isPendingWorkshop ? 'Ждём цех' : nextStageLabel}
+          <button className={styles.primaryAction} onClick={onAdvance} disabled={isPendingWorkshop || isPendingRouting}>
+            {isPendingRouting ? 'Назначьте маршрут' : isPendingWorkshop ? 'Ждём цех' : nextStageLabel}
           </button>
         </div>
       )}
@@ -794,6 +843,7 @@ function ReadyBatchCard({
   const nextStageLabel = getStageActionLabel(firstOrder.status);
   const allSelected = selectedIds ? orders.every((o) => selectedIds.has(o.id)) : false;
   const anyPendingWorkshop = orders.some(hasPendingProduction);
+  const anyPendingRouting = orders.some(hasPendingRouting);
 
   const handleSummaryClick = selectMode && onToggleSelectMany
     ? onToggleSelectMany
@@ -836,8 +886,8 @@ function ReadyBatchCard({
 
       {!selectMode && (
         <div className={styles.actions}>
-          <button className={styles.primaryAction} onClick={onAdvance} disabled={anyPendingWorkshop}>
-            {anyPendingWorkshop ? 'Ждём цех' : `На склад ×${orders.length}`}
+          <button className={styles.primaryAction} onClick={onAdvance} disabled={anyPendingWorkshop || anyPendingRouting}>
+            {anyPendingRouting ? 'Назначьте маршрут' : anyPendingWorkshop ? 'Ждём цех' : `На склад ×${orders.length}`}
           </button>
         </div>
       )}
@@ -877,6 +927,8 @@ function ReadyRow({
   const firstItem = order.items?.[0];
   const nextStageLabel = getStageActionLabel(order.status);
   const isPendingWorkshop = hasPendingProduction(order);
+  const isPendingRouting = hasPendingRouting(order);
+  const pendingCount = pendingRoutingCount(order);
 
   const handleClick = selectMode && onToggleSelect ? onToggleSelect : onOpen;
 
@@ -900,6 +952,9 @@ function ReadyRow({
           {isSelected && <Check size={13} className={styles.rowCheckmark} />}
           <span className={styles.orderNumber}>#{order.orderNumber}</span>
           <span className={styles.statusBadge}>{STATUS_LABEL[order.status]}</span>
+          {isPendingRouting && (
+            <span className={styles.pendingRoutingBadge}><AlertTriangle size={10} /> {pendingCount} без маршрута</span>
+          )}
           {isPendingWorkshop && (
             <span className={styles.workshopBadge}><Clock size={10} /> Ждём цех</span>
           )}
@@ -917,8 +972,8 @@ function ReadyRow({
 
       {!selectMode && (
         <div className={styles.actions} onClick={(event) => event.stopPropagation()}>
-          <button className={styles.primaryAction} onClick={onAdvance} disabled={isPendingWorkshop}>
-            {isPendingWorkshop ? 'Ждём цех' : nextStageLabel}
+          <button className={styles.primaryAction} onClick={onAdvance} disabled={isPendingWorkshop || isPendingRouting}>
+            {isPendingRouting ? 'Назначьте маршрут' : isPendingWorkshop ? 'Ждём цех' : nextStageLabel}
           </button>
         </div>
       )}
@@ -949,6 +1004,7 @@ function ReadyBatchRow({
   const nextStageLabel = getStageActionLabel(firstOrder.status);
   const allSelected = selectedIds ? orders.every((o) => selectedIds.has(o.id)) : false;
   const anyPendingWorkshop = orders.some(hasPendingProduction);
+  const anyPendingRouting = orders.some(hasPendingRouting);
 
   const handleClick = selectMode && onToggleSelectMany
     ? onToggleSelectMany
@@ -985,8 +1041,8 @@ function ReadyBatchRow({
 
         {!selectMode && (
           <div className={styles.actions} onClick={(event) => event.stopPropagation()}>
-            <button className={styles.primaryAction} onClick={onAdvance} disabled={anyPendingWorkshop}>
-              {anyPendingWorkshop ? 'Ждём цех' : `На склад ×${orders.length}`}
+            <button className={styles.primaryAction} onClick={onAdvance} disabled={anyPendingWorkshop || anyPendingRouting}>
+              {anyPendingRouting ? 'Назначьте маршрут' : anyPendingWorkshop ? 'Ждём цех' : `На склад ×${orders.length}`}
             </button>
           </div>
         )}

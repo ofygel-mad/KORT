@@ -83,7 +83,7 @@ export function Sidebar({ chromeTone = 'dark' }: { chromeTone?: 'canvas' | 'dark
           <>
             <div className={styles.navDivider} />
             <div className={styles.navGroup}>
-              <div className={styles.navGroupLabel}>Воркзоны</div>
+              <div className={styles.navGroupLabel}>Кабинеты</div>
               <SidebarRouteItem
                 item={CHAPAN_NAV_ITEM}
                 className={styles.navItemChapan}

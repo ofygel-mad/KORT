@@ -131,7 +131,7 @@ const MODES: ModeCard[] = [
     features: ['Всё из «Продвинутого»', 'Кастомные рабочие зоны', 'Индивидуальные интеграции', 'API и расширенный аудит'],
     modules: [
       { label: 'Все модули', color: '#7C3AED' },
-      { label: 'Воркзоны', color: '#7C3AED' },
+      { label: 'Кабинеты', color: '#7C3AED' },
     ],
     icon: <Factory size={20} />,
     color: '#7C3AED',

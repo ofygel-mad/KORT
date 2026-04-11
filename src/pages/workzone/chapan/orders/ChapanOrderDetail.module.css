@@ -141,6 +141,7 @@
 .actionArchive:hover { border-color:var(--ch-plat-border); color:var(--ch-plat-bright); }
 .archivedBadge { display:flex; align-items:center; justify-content:center; padding:10px 14px; border-radius:8px; font-size:13px; font-weight:600; border:1px solid rgba(180,192,210,.18); color:var(--ch-text-muted); }
 .actions { display:flex; flex-direction:column; gap:14px; }
+.newOrderRouteHint { display:flex; align-items:center; gap:8px; padding:10px 14px; border-radius:8px; font-size:13px; color:var(--ch-text-muted); border:1px dashed var(--ch-border); }
 .completedBadge,
 .cancelledBadge { display:flex; align-items:center; justify-content:center; padding:10px 14px; border-radius:8px; font-size:13px; font-weight:600; border:1px solid var(--ch-border); }
 .completedBadge { background:rgba(16,185,129,.08); border-color:rgba(16,185,129,.24); color:var(--ch-green); }
@@ -177,6 +178,8 @@
   position: fixed;
   inset: 0;
   background: rgba(5, 7, 11, 0.68);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -255,6 +258,57 @@
   cursor: pointer;
   transition: background 130ms, border-color 130ms;
 }
+
+/* Route confirmation modal list */
+.routeConfirmList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 4px 0;
+}
+
+.routeConfirmItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--ch-surface);
+  border: 1px solid var(--ch-border);
+  font-size: 12px;
+}
+
+.routeConfirmItemName {
+  color: var(--ch-text);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.routeConfirmGotovo {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(79, 201, 153, 0.14);
+  color: #4FC999;
+  border: 1px solid rgba(79, 201, 153, 0.28);
+}
+
+.routeConfirmCex {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(229, 146, 42, 0.14);
+  color: #E5922A;
+  border: 1px solid rgba(229, 146, 42, 0.28);
+}
 .confirmDanger:hover {
   background: rgba(217, 79, 79, 0.2);
   border-color: rgba(217, 79, 79, 0.55);
@@ -290,6 +344,8 @@
 .routeActionBtnPrimary:hover:not(:disabled) { background:rgba(229,146,42,.20); border-color:rgba(229,146,42,.55); color:#F4A94A; }
 .routeActionBtn:disabled { opacity:.45; cursor:not-allowed; }
 .routeHint { font-size:11px; color:var(--ch-text-muted); margin-top:4px; }
+.routeHintStrong { color:var(--ch-text-dim); }
+.routeHintMuted { color:var(--ch-text-muted); }
 .routeSummaryHint { font-size:12px; color:var(--ch-text-muted); line-height:1.45; }
 .routeList { display:flex; flex-direction:column; gap:8px; }
 .routeListItem { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; padding:10px 12px; background:var(--ch-card); border:1px solid var(--ch-border); border-radius:8px; }

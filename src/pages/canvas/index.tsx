@@ -191,7 +191,7 @@ export default function CanvasPage() {
 
           {planIncludes(plan, 'industrial') && (!hasEmployeePerms || chapan.hasAnyAccess) && (
             <section className={styles.mobileSection}>
-              <div className={styles.mobileSectionLabel}>Воркзоны</div>
+              <div className={styles.mobileSectionLabel}>Кабинеты</div>
               <div className={styles.mobileSectionGrid}>
                 <MobileMenuCard
                   item={{

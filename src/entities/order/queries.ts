@@ -77,7 +77,7 @@ export const useCreateOrder = () => {
     mutationFn: ({ idempotencyKey, ...dto }: CreateOrderDto & { idempotencyKey?: string }) =>
       ordersApi.create(dto as CreateOrderDto, idempotencyKey),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: orderKeys.list() });
+      qc.invalidateQueries({ queryKey: orderKeys.all });
       toast.success('Заказ создан');
     },
     onError: () => toast.error('Не удалось создать заказ'),
@@ -89,7 +89,7 @@ export const useUpdateOrder = () => {
   return useMutation({
     mutationFn: ({ id, dto }: { id: string; dto: UpdateOrderDto }) => ordersApi.update(id, dto),
     onSuccess: (_data, { id }) => {
-      qc.invalidateQueries({ queryKey: orderKeys.list() });
+      qc.invalidateQueries({ queryKey: orderKeys.all });
       qc.invalidateQueries({ queryKey: orderKeys.detail(id) });
       toast.success('Заказ обновлён');
     },
@@ -102,7 +102,7 @@ export const useRestoreOrder = () => {
   return useMutation({
     mutationFn: ({ id, status }: { id: string; status?: string }) => ordersApi.restore(id, status),
     onSuccess: (_data, { id }) => {
-      qc.invalidateQueries({ queryKey: orderKeys.list() });
+      qc.invalidateQueries({ queryKey: orderKeys.all });
       qc.invalidateQueries({ queryKey: orderKeys.detail(id) });
       qc.invalidateQueries({ queryKey: orderKeys.warehouseState(id) });
       toast.success('Заказ восстановлен');
@@ -116,7 +116,7 @@ export const useArchiveOrder = () => {
   return useMutation({
     mutationFn: (id: string) => ordersApi.archive(id),
     onSuccess: (_data, id) => {
-      qc.invalidateQueries({ queryKey: orderKeys.list() });
+      qc.invalidateQueries({ queryKey: orderKeys.all });
       qc.invalidateQueries({ queryKey: orderKeys.detail(id) });
       toast.success('Заказ перемещён в архив');
     },
@@ -129,7 +129,7 @@ export const useCloseOrder = () => {
   return useMutation({
     mutationFn: (id: string) => ordersApi.close(id),
     onSuccess: (_data, id) => {
-      qc.invalidateQueries({ queryKey: orderKeys.list() });
+      qc.invalidateQueries({ queryKey: orderKeys.all });
       qc.invalidateQueries({ queryKey: orderKeys.detail(id) });
       qc.invalidateQueries({ queryKey: orderKeys.warehouseState(id) });
       qc.invalidateQueries({ queryKey: orderKeys.production });
@@ -144,7 +144,7 @@ export const useFulfillFromStock = () => {
   return useMutation({
     mutationFn: (id: string) => ordersApi.fulfillFromStock(id),
     onSuccess: (_data, id) => {
-      qc.invalidateQueries({ queryKey: orderKeys.list() });
+      qc.invalidateQueries({ queryKey: orderKeys.all });
       qc.invalidateQueries({ queryKey: orderKeys.detail(id) });
       qc.invalidateQueries({ queryKey: orderKeys.warehouseState(id) });
       toast.success('Заказ переведён в «Готово»');
@@ -159,7 +159,7 @@ export const useRouteOrderItems = () => {
     mutationFn: ({ id, items }: { id: string; items: Array<{ itemId: string; fulfillmentMode: 'warehouse' | 'production' }> }) =>
       ordersApi.routeItems(id, items),
     onSuccess: (_data, { id }) => {
-      qc.invalidateQueries({ queryKey: orderKeys.list() });
+      qc.invalidateQueries({ queryKey: orderKeys.all });
       qc.invalidateQueries({ queryKey: orderKeys.detail(id) });
       qc.invalidateQueries({ queryKey: orderKeys.warehouseState(id) });
       qc.invalidateQueries({ queryKey: orderKeys.production });
@@ -174,7 +174,7 @@ export const useConfirmOrder = () => {
   return useMutation({
     mutationFn: (id: string) => ordersApi.confirm(id),
     onSuccess: (_data, id) => {
-      qc.invalidateQueries({ queryKey: orderKeys.list() });
+      qc.invalidateQueries({ queryKey: orderKeys.all });
       qc.invalidateQueries({ queryKey: orderKeys.detail(id) });
       qc.invalidateQueries({ queryKey: orderKeys.warehouseState(id) });
       qc.invalidateQueries({ queryKey: orderKeys.production });
@@ -190,7 +190,7 @@ export const useChangeOrderStatus = () => {
     mutationFn: ({ id, status }: { id: string; status: string }) =>
       ordersApi.changeStatus(id, status),
     onSuccess: (_data, { id }) => {
-      qc.invalidateQueries({ queryKey: orderKeys.list() });
+      qc.invalidateQueries({ queryKey: orderKeys.all });
       qc.invalidateQueries({ queryKey: orderKeys.detail(id) });
       qc.invalidateQueries({ queryKey: orderKeys.warehouseState(id) });
     },
@@ -222,7 +222,7 @@ export const useShipOrder = () => {
       shippingNote?: string;
     }) => ordersApi.ship(id, data),
     onSuccess: (_data, vars) => {
-      qc.invalidateQueries({ queryKey: orderKeys.list() });
+      qc.invalidateQueries({ queryKey: orderKeys.all });
       qc.invalidateQueries({ queryKey: orderKeys.detail(vars.id) });
       qc.invalidateQueries({ queryKey: orderKeys.warehouseState(vars.id) });
       toast.success('Заказ отправлен клиенту');
@@ -260,7 +260,7 @@ export const useReturnToReady = () => {
     mutationFn: ({ id, reason }: { id: string; reason: string }) =>
       ordersApi.returnToReady(id, reason),
     onSuccess: (_data, { id }) => {
-      qc.invalidateQueries({ queryKey: orderKeys.list() });
+      qc.invalidateQueries({ queryKey: orderKeys.all });
       qc.invalidateQueries({ queryKey: orderKeys.detail(id) });
       qc.invalidateQueries({ queryKey: orderKeys.warehouseState(id) });
       qc.invalidateQueries({ queryKey: orderKeys.invoices });
@@ -291,7 +291,13 @@ export const useUpdateProductionStatus = () => {
   return useMutation({
     mutationFn: ({ taskId, status }: { taskId: string; status: string }) =>
       productionApi.updateStatus(taskId, status),
-    onSuccess: () => qc.invalidateQueries({ queryKey: orderKeys.production }),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: orderKeys.production });
+      qc.invalidateQueries({ queryKey: orderKeys.all });
+      if (data.orderId) {
+        qc.invalidateQueries({ queryKey: orderKeys.detail(data.orderId) });
+      }
+    },
     onError: () => toast.error('Не удалось изменить статус задания'),
   });
 };
@@ -300,7 +306,10 @@ export const useClaimProductionTask = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (taskId: string) => productionApi.claim(taskId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: orderKeys.production }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: orderKeys.production });
+      qc.invalidateQueries({ queryKey: orderKeys.all });
+    },
     onError: (error) => toast.error(readApiErrorMessage(error, 'Не удалось взять заказ в работу')),
   });
 };
@@ -473,7 +482,7 @@ export const useApproveChangeRequest = () => {
     mutationFn: (crId: string) => changeRequestsApi.approve(crId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: orderKeys.changeRequests });
-      qc.invalidateQueries({ queryKey: orderKeys.list() });
+      qc.invalidateQueries({ queryKey: orderKeys.all });
       qc.invalidateQueries({ queryKey: orderKeys.production });
       toast.success('Изменения согласованы, заказ возвращён на маршрутизацию');
     },
@@ -502,7 +511,7 @@ export const useRouteSingleItem = () => {
     onSuccess: (_data, { orderId }) => {
       void qc.invalidateQueries({ queryKey: orderKeys.detail(orderId) });
       void qc.invalidateQueries({ queryKey: orderKeys.warehouseState(orderId) });
-      void qc.invalidateQueries({ queryKey: orderKeys.list() });
+      void qc.invalidateQueries({ queryKey: orderKeys.all });
       void qc.invalidateQueries({ queryKey: orderKeys.production });
     },
     onError: (error) => toast.error(readApiErrorMessage(error, 'Не удалось маршрутизировать позицию')),
@@ -669,7 +678,7 @@ export function useReassignManager() {
       ordersApi.reassignManager(orderId, managerId),
     onSuccess: (updatedOrder) => {
       qc.setQueryData(orderKeys.detail(updatedOrder.id), updatedOrder);
-      qc.invalidateQueries({ queryKey: orderKeys.list() });
+      qc.invalidateQueries({ queryKey: orderKeys.all });
       toast.success('Менеджер переназначен');
     },
     onError: (err: unknown) => {

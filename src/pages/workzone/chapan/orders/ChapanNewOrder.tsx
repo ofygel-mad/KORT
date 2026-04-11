@@ -474,6 +474,8 @@ export default function ChapanNewOrderPage() {
   const allProductNames = [...new Set([...products, ...warehouseProductNames])];
   // Global color options from warehouse field definitions (fallback when product has no linked color field)
   const globalWarehouseColors = fieldDefinitions?.find(d => d.code === 'color')?.options.map(o => o.label) ?? [];
+  // Global length options from warehouse field definitions (single source of truth)
+  const globalWarehouseLengths = fieldDefinitions?.find(d => d.code === 'length')?.options.map(o => o.label) ?? [];
   // Helper: get catalog options for a field code given current productName
   function getCatalogOptions(productName: string, code: string): string[] {
     const fields = warehouseProductMap[productName];
@@ -734,15 +736,18 @@ export default function ChapanNewOrderPage() {
                       <label className={styles.label}>Длина изделия</label>
                       <Controller control={control} name={`items.${idx}.length`} render={({ field: f }) => {
                         const catalogLengths = getCatalogOptions(items[idx]?.productName ?? '', 'length');
-                        const opts = catalogLengths.length > 0 ? catalogLengths : ['Стандарт', 'Удлинённый', 'Укороченный'];
+                        const opts = catalogLengths.length > 0 ? catalogLengths : globalWarehouseLengths;
                         return (
-                          <SelectOrText
-                            {...f}
+                          <select
                             value={f.value ?? ''}
-                            options={opts}
-                            placeholder="Стандарт"
+                            onChange={e => f.onChange(e.target.value)}
+                            onBlur={f.onBlur}
                             className={styles.input}
-                          />
+                            disabled={opts.length === 0}
+                          >
+                            <option value="">— выбрать —</option>
+                            {opts.map(o => <option key={o} value={o}>{o}</option>)}
+                          </select>
                         );
                       }} />
                     </div>

@@ -20,6 +20,9 @@ export const ordersApi = {
     limit?: number;
     archived?: boolean;
     hasWarehouseItems?: boolean;
+    createdFrom?: string;
+    createdTo?: string;
+    managerId?: string;
   }) =>
     api.get<ListResponse<ChapanOrder>>('/chapan/orders', params),
 
@@ -135,7 +138,7 @@ export const productionApi = {
     api.post<{ ok: boolean }>(`/chapan/production/${taskId}/claim`, {}),
 
   updateStatus: (taskId: string, status: string) =>
-    api.patch<{ ok: boolean }>(`/chapan/production/${taskId}/status`, { status }),
+    api.patch<{ ok: boolean; orderId: string }>(`/chapan/production/${taskId}/status`, { status }),
 
   assignWorker: (taskId: string, worker: string | null) =>
     api.patch<{ ok: boolean }>(`/chapan/production/${taskId}/assign`, { worker }),

@@ -22,6 +22,7 @@ export const DEFAULT_NUMERIC_SIZE_CATALOG = [
   '38', '40', '42', '44', '46', '48', '50', '52', '54', '56', '58', '60',
 ] as const;
 
+
 export const DEFAULT_PAYMENT_METHODS = [
   'Наличные', 'Kaspi QR', 'Kaspi Терминал', 'Перевод', 'Халык',
 ] as const;
