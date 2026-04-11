@@ -782,10 +782,17 @@ const OrderCard = memo(function OrderCard({ order, onSelectOrder, hasAlert, stoc
       <div className={styles.cardFoot}>
         <span className={styles.cardAmount}>{fmt(order.totalAmount)}</span>
         <span className={styles.cardPay} style={{ color: PAY_COLOR[order.paymentStatus] }}>{PAY_LABEL[order.paymentStatus]}</span>
+      </div>
+      <div className={styles.cardDates}>
+        <span className={styles.cardDateLabel}>Создан:</span>
+        <span className={styles.cardDateValue}>{fmtDate(order.createdAt)}</span>
         {order.dueDate && (
-          <span className={styles.cardDate} style={{ color: overdue ? '#EF4444' : '#4A5268' }}>
-            {fmtDate(order.dueDate)}
-          </span>
+          <>
+            <span className={styles.cardDateLabel}>Завершить до:</span>
+            <span className={styles.cardDateValue} style={{ color: overdue ? '#EF4444' : '#10B981' }}>
+              {fmtDate(order.dueDate)}
+            </span>
+          </>
         )}
       </div>
     </div>
@@ -984,10 +991,17 @@ const OrderRow = memo(function OrderRow({ order, onSelectOrder, hasAlert, stockM
         </span>
       </div>
       <div className={styles.rowDate}>
-        {order.dueDate
-          ? <span style={{ color: overdue ? '#EF4444' : '#6B7280' }}>{fmtDate(order.dueDate)}</span>
-          : <span className={styles.rowDateEmpty}>—</span>
-        }
+        <div className={styles.rowDateInner}>
+          <span className={styles.rowDateLabel}>Создан:</span>
+          <span>{fmtDate(order.createdAt)}</span>
+        </div>
+        <div className={styles.rowDateInner}>
+          <span className={styles.rowDateLabel}>До:</span>
+          {order.dueDate
+            ? <span style={{ color: overdue ? '#EF4444' : '#10B981' }}>{fmtDate(order.dueDate)}</span>
+            : <span className={styles.rowDateEmpty}>—</span>
+          }
+        </div>
         {onTrash && (
           <button type="button" className={styles.trashBtnRow} title="В корзину" onClick={e => { e.stopPropagation(); onTrash(order.id); }}>
             <Trash2 size={13} />
