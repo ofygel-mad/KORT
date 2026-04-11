@@ -3,6 +3,7 @@ import { prisma } from '../../lib/prisma.js';
 import { AppError, NotFoundError, ValidationError } from '../../lib/errors.js';
 import { getNextInvoiceNumberCandidate } from './invoice-number.js';
 import { postWarehouseOperationDocument } from '../warehouse/warehouse-operations.service.js';
+import { validateStatusTransitionRules } from './status-validator.js';
 import {
   buildInvoiceDocumentPayload,
   normalizeInvoiceDocumentPayload,
@@ -102,6 +103,8 @@ async function loadInvoiceSourceOrders(
           quantity: true,
           unitPrice: true,
           color: true,
+          gender: true,
+          length: true,
         },
       },
     },
@@ -566,6 +569,30 @@ async function advanceOrdersToWarehouse(
   invoiceNumber: string,
 ) {
   for (const item of items) {
+    const order = await tx.chapanOrder.findFirst({
+      where: { id: item.orderId },
+      include: { items: { select: { fulfillmentMode: true } } },
+    });
+    if (!order) continue;
+
+    // Validate transition from 'ready' to 'on_warehouse'
+    const hasWarehouseItems = order.items.some((i) => i.fulfillmentMode === 'warehouse');
+    const transitionValidation = validateStatusTransitionRules(
+      'ready' as any,
+      'on_warehouse' as any,
+      {
+        hasWarehouseItems,
+        requiresInvoice: order.requiresInvoice,
+        hasConfirmedInvoice: true, // We're in invoice confirmation flow
+      },
+    );
+
+    if (!transitionValidation.valid) {
+      throw new ValidationError(
+        `Невозможно перевести заказ ${order.orderNumber} на склад: ${transitionValidation.reason}`,
+      );
+    }
+
     await tx.chapanOrder.update({
       where: { id: item.orderId },
       data: { status: 'on_warehouse' },

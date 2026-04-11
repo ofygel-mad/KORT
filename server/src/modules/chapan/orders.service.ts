@@ -3,6 +3,8 @@ import { prisma } from '../../lib/prisma.js';
 import { NotFoundError, ValidationError } from '../../lib/errors.js';
 import { normalizeProductionStatus } from './workflow.js';
 import { syncOrderToSheets } from './sheets.sync.js';
+import { syncOrderStatus } from './production.service.js';
+import { validateStatusTransitionRules } from './status-validator.js';
 import {
   applyWarehouseOrderTransitionSideEffectsTx as applyWarehouseOrderTransitionSideEffectsTxV2,
   consumeCanonicalWarehouseReservationsForOrder as consumeCanonicalWarehouseReservationsForOrderV2,
@@ -447,6 +449,9 @@ export async function list(orgId: string, filters?: {
   sortBy?: string;
   archived?: boolean;
   hasWarehouseItems?: boolean;
+  createdFrom?: Date;
+  createdTo?: Date;
+  managerId?: string;
 }) {
   const where: Record<string, unknown> = { orgId, deletedAt: null };
 
@@ -478,6 +483,15 @@ export async function list(orgId: string, filters?: {
       { clientName: { contains: q, mode: 'insensitive' } },
       { items: { some: { productName: { contains: q, mode: 'insensitive' } } } },
     ];
+  }
+  if (filters?.createdFrom || filters?.createdTo) {
+    where.createdAt = {
+      ...(filters.createdFrom ? { gte: filters.createdFrom } : {}),
+      ...(filters.createdTo ? { lte: filters.createdTo } : {}),
+    };
+  }
+  if (filters?.managerId) {
+    where.managerId = filters.managerId;
   }
 
   const orderBy: Record<string, string> = {};
@@ -949,26 +963,38 @@ export async function updateStatus(orgId: string, id: string, status: string, au
   if (!order) throw new NotFoundError('ChapanOrder', id);
   if (order.isArchived) throw new ValidationError('Сначала восстановите заказ из архива');
 
-  if (status === 'ready') {
-    const tasks = await prisma.chapanProductionTask.findMany({
-      where: { orderId: id },
-      select: { status: true },
-    });
-    if (tasks.length > 0 && !tasks.every((t) => t.status === 'done')) {
-      throw new ValidationError('Нельзя перевести заказ в статус «Готово», пока не завершены все производственные задачи');
-    }
+  // Centralized status transition validation
+  const productionTasks = await prisma.chapanProductionTask.findMany({
+    where: { orderId: id },
+    select: { status: true },
+  });
+  const hasProductionTasks = productionTasks.length > 0;
+  const productionTasksCompleted = hasProductionTasks ? productionTasks.every((t) => t.status === 'done') : true;
+
+  const confirmedInvoice = order.requiresInvoice
+    ? await prisma.chapanInvoice.findFirst({
+        where: { orgId, status: 'confirmed', items: { some: { orderId: id } } },
+        select: { id: true },
+      })
+    : null;
+
+  const transitionValidation = validateStatusTransitionRules(
+    order.status as any,
+    status as any,
+    {
+      hasProductionTasks,
+      productionTasksCompleted,
+      hasWarehouseItems: order.items.some((item) => item.fulfillmentMode === 'warehouse'),
+      requiresInvoice: order.requiresInvoice,
+      hasConfirmedInvoice: !!confirmedInvoice,
+    },
+  );
+
+  if (!transitionValidation.valid) {
+    throw new ValidationError(transitionValidation.reason || 'Invalid status transition');
   }
 
-  // P3 guard: если накладная обязательна, нельзя принять на склад без подтверждённой накладной
-  if (status === 'on_warehouse' && order.requiresInvoice) {
-    const confirmedInvoice = await prisma.chapanInvoice.findFirst({
-      where: { orgId, status: 'confirmed', items: { some: { orderId: id } } },
-      select: { id: true },
-    });
-    if (!confirmedInvoice) {
-      throw new ValidationError('Для этого заказа обязательна накладная. Сначала создайте и подтвердите накладную с обеих сторон.');
-    }
-  }
+  // Note: Additional validation logic below provides domain-specific checks
 
   if (status === 'shipped' && order.paymentStatus !== 'paid') {
     const balance = order.totalAmount - order.paidAmount;
@@ -1840,14 +1866,30 @@ export async function routeSingleItem(
 ) {
   const order = await prisma.chapanOrder.findFirst({
     where: { id: orderId, orgId },
-    include: { items: true },
+    include: {
+      items: true,
+      productionTasks: {
+        select: { orderItemId: true },
+      },
+    },
   });
   if (!order) throw new NotFoundError('ChapanOrder', orderId);
-  if (!['new', 'confirmed'].includes(order.status)) {
-    throw new ValidationError('Маршрутизацию позиции можно задать только для нового или подтверждённого заказа');
+  if (!['new', 'confirmed', 'in_production'].includes(order.status)) {
+    throw new ValidationError('Маршрутизацию позиции можно задать только для нового, подтверждённого заказа или заказа в производстве');
   }
   const item = order.items.find((i) => i.id === itemId);
   if (!item) throw new NotFoundError('ChapanOrderItem', itemId);
+
+  const currentMode =
+    item.fulfillmentMode === 'warehouse' || item.fulfillmentMode === 'production'
+      ? item.fulfillmentMode
+      : order.productionTasks.some((task) => task.orderItemId === itemId)
+        ? 'production'
+        : 'unassigned';
+
+  if (currentMode === fulfillmentMode) {
+    return;
+  }
 
   await prisma.$transaction(async (tx) => {
     await tx.chapanOrderItem.update({ where: { id: itemId }, data: { fulfillmentMode } });
@@ -1886,6 +1928,13 @@ export async function routeSingleItem(
       },
     });
   });
+
+  // Re-derive order status after routing change.
+  // Use the effective status after the transaction (new → confirmed inside tx).
+  const effectiveStatus = order.status === 'new' ? 'confirmed' : order.status;
+  if (['confirmed', 'in_production'].includes(effectiveStatus)) {
+    await syncOrderStatus(orderId, authorId, authorName);
+  }
 }
 
 
@@ -2020,4 +2069,3 @@ export async function listOrgManagers(orgId: string) {
     role: m.role,
   }));
 }
-

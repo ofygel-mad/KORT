@@ -470,6 +470,7 @@ export interface ChapanInvoice {
   warehouseConfirmedAt: string | null;
   warehouseConfirmedBy: string | null;
   rejectedBy: string | null;
+  rejectedAt: string | null;
   rejectionReason: string | null;
   documentPayload?: InvoiceDocumentPayload | null;
   notes: string | null;
@@ -539,7 +540,7 @@ export interface ChapanReturn {
   confirmedAt: string | null;
   confirmedBy: string | null;
   totalRefundAmount: number;
-  refundMethod: ReturnRefundMethod | null;
+  refundMethod: ReturnRefundMethod;
   createdAt: string;
   updatedAt: string;
   order: {
@@ -569,6 +570,6 @@ export interface CreateReturnDto {
   orderId: string;
   reason: ReturnReason;
   reasonNotes?: string;
-  refundMethod?: ReturnRefundMethod;
+  refundMethod: ReturnRefundMethod;
   items: CreateReturnItemDto[];
 }
